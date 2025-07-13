@@ -1,0 +1,64 @@
+{
+  "mcpServers": {
+    "zen": {
+      "type": "stdio",
+      "command": "/home/spide/zen-mcp-server/.zen_venv/bin/python",
+      "args": [
+        "/home/spide/zen-mcp-server/server.py"
+      ],
+      "env": {}
+    },
+    "context7": {
+      "type": "stdio",
+      "command": "npx", 
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "tavily": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "tavily-mcp@0.1.3"],
+      "env": {
+        "TAVILY_API_KEY": "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"
+      }
+    },
+    "duckduckgo": {
+      "type": "stdio", 
+      "command": "npx",
+      "args": ["-y", "@oevortex/ddg_search"]
+    },
+    "notion": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "/home/spide/projects/GitHub/mcp-notion-server/build/index.js"
+      ],
+      "env": {
+        "NOTION_API_TOKEN": "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",
+        "NOTION_MARKDOWN_CONVERSION": "true"
+      }
+    },
+    "github": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": ""
+      }
+    },
+    "desktop-commander": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@wonderwhy-er/desktop-commander"]
+    },
+    "playwright-generic": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["@executeautomation/playwright-mcp-server", "--port", "3335"]
+    },
+    "gsuite": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["--directory", "/home/spide/projects/GitHub/mcp-gsuite", "run", "mcp-gsuite"]
+    }
+  }
+}
