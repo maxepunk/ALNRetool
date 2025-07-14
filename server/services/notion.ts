@@ -7,23 +7,34 @@ const limiter = new Bottleneck({
   minTime: 340, // ms between requests
 });
 
-const notionClient = new Client({ 
-  auth: process.env.NOTION_API_KEY 
-});
+// Lazy initialization to ensure env vars are loaded
+let notionClient: Client | null = null;
+
+function getNotionClient() {
+  if (!notionClient) {
+    if (!process.env.NOTION_API_KEY) {
+      throw new Error('NOTION_API_KEY is not configured');
+    }
+    notionClient = new Client({ 
+      auth: process.env.NOTION_API_KEY 
+    });
+  }
+  return notionClient;
+}
 
 // Wrap the Notion client methods with rate limiting
 export const notion = {
   databases: {
-    query: limiter.wrap(notionClient.databases.query.bind(notionClient.databases)),
-    retrieve: limiter.wrap(notionClient.databases.retrieve.bind(notionClient.databases)),
+    query: limiter.wrap((params: any) => getNotionClient().databases.query(params)),
+    retrieve: limiter.wrap((params: any) => getNotionClient().databases.retrieve(params)),
   },
   pages: {
-    retrieve: limiter.wrap(notionClient.pages.retrieve.bind(notionClient.pages)),
-    update: limiter.wrap(notionClient.pages.update.bind(notionClient.pages)),
+    retrieve: limiter.wrap((params: any) => getNotionClient().pages.retrieve(params)),
+    update: limiter.wrap((params: any) => getNotionClient().pages.update(params)),
   },
   blocks: {
     children: {
-      list: limiter.wrap(notionClient.blocks.children.list.bind(notionClient.blocks.children)),
+      list: limiter.wrap((params: any) => getNotionClient().blocks.children.list(params)),
     }
   }
 };
