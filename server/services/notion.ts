@@ -2,9 +2,12 @@ import { Client } from '@notionhq/client';
 import Bottleneck from 'bottleneck';
 
 // Notion's rate limit is 3 requests per second.
-// 1000ms / 3 = ~333ms per request. We'll add a small buffer.
+// Use reservoir-based limiting for better throughput
 const limiter = new Bottleneck({
-  minTime: 340, // ms between requests
+  reservoir: 3, // 3 requests available
+  reservoirRefreshAmount: 3, // refill to 3
+  reservoirRefreshInterval: 1000, // every 1 second
+  maxConcurrent: 1, // sequential for safety
 });
 
 // Lazy initialization to ensure env vars are loaded

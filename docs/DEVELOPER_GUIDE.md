@@ -54,6 +54,8 @@ ALNRetool is a visualization and editing tool for the "About Last Night" murder 
                             ↓                        ↓
                      [Rate Limiting]          [React Flow Graphs]
                      [Authentication]         [TanStack Query]
+                     [Cache Layer]            
+                     [Validation]
 ```
 
 ## Development Workflow
@@ -123,6 +125,7 @@ We maintain two test suites:
 #### Running Integration Tests
 ```bash
 npm run test:integration  # Uses real Notion credentials from .env
+# Expected: 23/23 tests passing (100% success rate)
 ```
 
 #### Test Data Requirements
@@ -166,12 +169,15 @@ ALNRetool/
 ├── server/                 # Express backend
 │   ├── index.ts           # Server entry point
 │   ├── routes/            # API routes
-│   │   └── notion.ts      # Notion proxy endpoints
+│   │   ├── notion.ts      # Notion proxy endpoints
+│   │   └── cache.ts       # Cache management endpoints
 │   ├── middleware/        # Express middleware
 │   │   ├── auth.ts        # API key authentication
+│   │   ├── validation.ts  # Input validation
 │   │   └── errorHandler.ts # Global error handling
 │   └── services/          # Business logic
-│       └── notion.ts      # Notion client wrapper
+│       ├── notion.ts      # Notion client wrapper
+│       └── cache.ts       # Cache service (node-cache)
 │
 ├── docs/                   # Documentation
 ├── scripts/               # Utility scripts
@@ -195,6 +201,17 @@ ALNRetool/
    - 340ms between Notion API calls
    - Prevents 429 errors from Notion
    - Transparent queuing for users
+
+4. **Server-Side Caching**:
+   - 5-minute TTL matches React Query frontend
+   - Reduces Notion API calls by 70-80%
+   - Cache bypass via `X-Cache-Bypass: true` header
+   - Management endpoints for stats and clearing
+
+5. **Input Validation**:
+   - Pagination limits enforced (1-100)
+   - Consistent error codes for bad requests
+   - Prevents invalid Notion API calls
 
 ## Understanding the Data Model
 

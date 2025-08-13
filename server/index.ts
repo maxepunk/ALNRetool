@@ -3,11 +3,26 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { config } from 'dotenv';
 import notionRoutes from './routes/notion.js';
+import cacheRoutes from './routes/cache.js';
 import { apiKeyAuth } from './middleware/auth.js';
+import { validatePagination } from './middleware/validation.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 // Load environment variables
-config();
+// Only load .env files if API_KEY is not already set (allows test override)
+if (process.env.NODE_ENV === 'test') {
+  console.log('[Server] Test mode - API_KEY before dotenv:', process.env.API_KEY?.substring(0, 8) + '...');
+}
+if (!process.env.API_KEY) {
+  if (process.env.NODE_ENV === 'test') {
+    config({ path: '.env.test' });
+  } else {
+    config();
+  }
+}
+if (process.env.NODE_ENV === 'test') {
+  console.log('[Server] Test mode - API_KEY after dotenv:', process.env.API_KEY?.substring(0, 8) + '...');
+}
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -38,8 +53,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Notion API routes (protected with API key)
-app.use('/api/notion', apiKeyAuth, notionRoutes);
+// Notion API routes (protected with API key and validated)
+app.use('/api/notion', validatePagination, apiKeyAuth, notionRoutes);
+
+// Cache management routes (protected with API key)
+app.use('/api/cache', apiKeyAuth, cacheRoutes);
 
 // Global error handler (must be last)
 app.use(errorHandler);

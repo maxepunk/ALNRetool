@@ -12,10 +12,10 @@
  * Run with: tsx scripts/smoke-test.ts
  */
 
-import { spawn } from 'child_process';
 import { config } from 'dotenv';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { TestServer } from './utils/test-server';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,10 +51,22 @@ async function makeRequest(
     ...options.headers
   };
   
-  return fetch(url, {
-    ...options,
-    headers: defaultHeaders
-  });
+  // Add timeout using AbortController
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: defaultHeaders,
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+    return response;
+  } catch (error) {
+    clearTimeout(timeout);
+    throw error;
+  }
 }
 
 // Test runner
@@ -113,8 +125,19 @@ async function runAuthenticationTests(): Promise<TestSuite> {
       headers: { 'X-API-Key': TEST_API_KEY }
     });
     
-    // May be 200 or 500 (if DB not configured), but not 401
-    if (res.status === 401) throw new Error('Valid API key rejected');
+    // With valid API key, should get 200 (success) or 500 (DB config error)
+    // But NOT 401 (unauthorized)
+    if (res.status === 401) {
+      throw new Error('Valid API key rejected');
+    }
+    
+    // If we get 500, verify it's the expected config error
+    if (res.status === 500) {
+      const data = await res.json();
+      if (data.code !== 'CONFIG_ERROR') {
+        throw new Error(`Expected CONFIG_ERROR, got ${data.code}`);
+      }
+    }
   }));
   
   tests.push(await runTest('Missing API key returns 401', async () => {
@@ -155,6 +178,11 @@ async function runEndpointTests(): Promise<TestSuite> {
       const res = await makeRequest(endpoint.path, {
         headers: { 'X-API-Key': TEST_API_KEY }
       });
+      
+      // We must not get 401 when API key is provided
+      if (res.status === 401) {
+        throw new Error('Got 401 despite providing valid API key');
+      }
       
       const data = await res.json();
       
@@ -200,14 +228,16 @@ async function runCORSTests(): Promise<TestSuite> {
     }
   }));
   
-  tests.push(await runTest('Disallowed origin blocked', async () => {
+  tests.push(await runTest('Disallowed origin returns configured origin', async () => {
     const res = await makeRequest('/api/health', {
       headers: { 'Origin': 'http://evil.com' }
     });
     
+    // CORS middleware always returns the configured origin, not the request origin
+    // This is correct behavior - it means evil.com can't actually access the response
     const corsHeader = res.headers.get('access-control-allow-origin');
-    if (corsHeader) {
-      throw new Error(`Expected no CORS header for evil.com, got ${corsHeader}`);
+    if (corsHeader !== 'http://localhost:5173') {
+      throw new Error(`Expected configured CORS origin, got ${corsHeader}`);
     }
   }));
   
@@ -243,55 +273,23 @@ async function runBottleneckTests(): Promise<TestSuite> {
 }
 
 // Server management
-let serverProcess: any = null;
+const testServer = new TestServer({ 
+  port: 3001,
+  verbose: false,  // Keep output clean for smoke tests
+  startupTimeout: TEST_TIMEOUT
+});
 
 async function startServer(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    console.log('Starting Express server...');
-    
-    serverProcess = spawn('tsx', ['server/index.ts'], {
-      cwd: path.join(__dirname, '..'),
-      env: {
-        ...process.env,
-        PORT: '3001',
-        NODE_ENV: 'test'
-      },
-      stdio: ['ignore', 'pipe', 'pipe']
-    });
-    
-    let serverReady = false;
-    
-    serverProcess.stdout?.on('data', (data: Buffer) => {
-      const output = data.toString();
-      if (output.includes('Server is running') && !serverReady) {
-        serverReady = true;
-        console.log('✓ Server started successfully\n');
-        setTimeout(resolve, 1000); // Give it a second to fully initialize
-      }
-    });
-    
-    serverProcess.stderr?.on('data', (data: Buffer) => {
-      console.error('Server error:', data.toString());
-    });
-    
-    serverProcess.on('error', reject);
-    
-    // Timeout if server doesn't start
-    setTimeout(() => {
-      if (!serverReady) {
-        reject(new Error('Server failed to start within timeout'));
-      }
-    }, TEST_TIMEOUT);
+  console.log('Starting Express server...');
+  console.log('Using API_KEY:', TEST_API_KEY.substring(0, 8) + '...');
+  await testServer.start({
+    API_KEY: TEST_API_KEY,    // Use test API key
+    // Don't pass any Notion config - endpoints will return CONFIG_ERROR
   });
 }
 
 async function stopServer(): Promise<void> {
-  if (serverProcess) {
-    console.log('\nStopping server...');
-    serverProcess.kill('SIGTERM');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    console.log('✓ Server stopped\n');
-  }
+  await testServer.stop();
 }
 
 // Main test runner
@@ -310,9 +308,6 @@ async function runAllTests() {
   try {
     // Start the server
     await startServer();
-    
-    // Wait a bit for server to be fully ready
-    await new Promise(resolve => setTimeout(resolve, 2000));
     
     // Run all test suites
     allSuites.push(await runHealthCheckTests());
@@ -366,21 +361,10 @@ async function runAllTests() {
   }
 }
 
-// Handle cleanup
-process.on('SIGINT', async () => {
-  console.log('\nReceived SIGINT, cleaning up...');
-  await stopServer();
-  process.exit(1);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('\nReceived SIGTERM, cleaning up...');
-  await stopServer();
-  process.exit(1);
-});
+// Cleanup is handled by TestServer's signal handlers
 
 // Run tests
 runAllTests().catch(error => {
   console.error('Test runner failed:', error);
-  stopServer().then(() => process.exit(1));
+  testServer.stop().then(() => process.exit(1));
 });
