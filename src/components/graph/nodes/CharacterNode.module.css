@@ -1,0 +1,170 @@
+.characterNode {
+  background: white;
+  border-radius: 16px;
+  padding: 12px;
+  min-width: 150px;
+  max-width: 300px;
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.characterNode:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.characterNode.selected {
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Tier styles */
+.tier-core {
+  border: 3px solid #dc2626;
+  background: rgba(220, 38, 38, 0.05);
+}
+
+.tier-secondary {
+  border: 2px solid #2563eb;
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.tier-tertiary {
+  border: 2px solid #16a34a;
+  background: rgba(22, 163, 74, 0.05);
+}
+
+.tier-unknown {
+  border: 2px solid #6b7280;
+  background: rgba(107, 114, 128, 0.05);
+}
+
+/* Type styles */
+.type-npc {
+  border-style: dashed;
+}
+
+.type-player {
+  border-style: solid;
+}
+
+/* Size variants */
+.size-small {
+  min-width: 150px;
+  font-size: 13px;
+}
+
+.size-medium {
+  min-width: 180px;
+  font-size: 14px;
+}
+
+.size-large {
+  min-width: 220px;
+  font-size: 15px;
+}
+
+/* Error state */
+.error {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+/* Content layout */
+.content {
+  text-align: center;
+}
+
+.tierBadge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: currentColor;
+  color: white;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.tier-core .tierBadge {
+  background: #dc2626;
+}
+
+.tier-secondary .tierBadge {
+  background: #2563eb;
+}
+
+.tier-tertiary .tierBadge {
+  background: #16a34a;
+}
+
+.typeIndicator {
+  display: inline-block;
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.name {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #111827;
+}
+
+.logline {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 4px 0;
+  font-style: italic;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stat {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Handles */
+.handle {
+  width: 8px;
+  height: 8px;
+  background: #3b82f6;
+  border: 2px solid white;
+}
+
+.handle:hover {
+  background: #2563eb;
+}
+
+/* Error indicator */
+.errorIndicator {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  cursor: help;
+}

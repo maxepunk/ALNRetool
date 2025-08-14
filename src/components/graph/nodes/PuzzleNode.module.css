@@ -1,0 +1,173 @@
+.puzzleNode {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 12px;
+  min-width: 160px;
+  max-width: 240px;
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+}
+
+.puzzleNode:hover {
+  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+  transform: translateY(-2px);
+}
+
+.puzzleNode.selected {
+  box-shadow: 0 0 0 3px #f59e0b;
+}
+
+/* Complexity levels */
+.complexity-small {
+  min-width: 140px;
+  font-size: 12px;
+  padding: 10px;
+}
+
+.complexity-medium {
+  min-width: 160px;
+  font-size: 13px;
+  padding: 12px;
+}
+
+.complexity-large {
+  min-width: 200px;
+  font-size: 14px;
+  padding: 14px;
+  border-width: 3px;
+  background: linear-gradient(135deg, #fed7aa 0%, #fb923c 100%);
+}
+
+/* Chained puzzle */
+.chained {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  border-color: #6366f1;
+}
+
+.chained:hover {
+  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+}
+
+.chainBadge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #6366f1;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+/* Error state */
+.error {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+/* Content layout */
+.content {
+  text-align: center;
+  position: relative;
+}
+
+.icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
+.name {
+  font-weight: 600;
+  color: #78350f;
+  margin-bottom: 6px;
+  word-break: break-word;
+}
+
+.chained .name {
+  color: #312e81;
+}
+
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.requirement {
+  font-size: 11px;
+  color: #dc2626;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.reward {
+  font-size: 11px;
+  color: #16a34a;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.owner {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+/* Handles */
+.handleRequires {
+  width: 8px;
+  height: 8px;
+  background: #dc2626;
+  border: 2px solid white;
+}
+
+.handleRewards {
+  width: 8px;
+  height: 8px;
+  background: #16a34a;
+  border: 2px solid white;
+}
+
+.handleChain {
+  width: 8px;
+  height: 8px;
+  background: #6366f1;
+  border: 2px solid white;
+}
+
+.handleRequires:hover,
+.handleRewards:hover,
+.handleChain:hover {
+  transform: scale(1.2);
+}
+
+/* Error indicator */
+.errorIndicator {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 20px;
+  height: 20px;
+  background: #dc2626;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: help;
+  z-index: 10;
+}

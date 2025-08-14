@@ -1,0 +1,55 @@
+/* ConnectionStatus styles */
+
+.container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s infinite;
+}
+
+.online .indicator {
+  background: var(--color-success);
+}
+
+.offline .indicator {
+  background: var(--color-error);
+  animation: none;
+}
+
+.text {
+  color: var(--color-text-secondary);
+}
+
+.online .text {
+  color: var(--color-success);
+}
+
+.offline .text {
+  color: var(--color-error);
+}
+
+.syncTime {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  margin-left: 0.5rem;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
