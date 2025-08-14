@@ -1,0 +1,214 @@
+name: CI
+
+# Run CI on pushes to main branches and all PRs
+on:
+  push:
+    branches: 
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+    branches: 
+      - main
+      - develop
+
+# Cancel in-progress runs when a new run is triggered
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Main test job that runs all checks
+  test:
+    name: Test, Lint, and Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Setup Node.js with caching for faster installs
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      # Install dependencies using ci for faster, reproducible installs
+      - name: Install dependencies
+        run: npm ci
+      
+      # Run ESLint to check code quality
+      - name: Run ESLint
+        run: npm run lint
+        
+      # Run TypeScript type checking for both client and server
+      - name: Run TypeScript type check
+        run: npm run typecheck
+      
+      # Run unit tests with Vitest
+      - name: Run tests
+        run: npm run test:run
+      
+      # Build the application to ensure it compiles
+      - name: Build application
+        run: npm run build
+      
+      # Upload build artifacts for potential deployment
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            dist/
+            server/dist/
+          retention-days: 7
+      
+      # Check bundle size to prevent bloat
+      - name: Check bundle size
+        run: |
+          echo "Checking client bundle size..."
+          MAX_SIZE=2000000  # 2MB limit for client bundle
+          SIZE=$(du -sb dist | cut -f1)
+          echo "Client bundle size: $SIZE bytes"
+          if [ $SIZE -gt $MAX_SIZE ]; then
+            echo "❌ Client bundle too large: $SIZE bytes (max: $MAX_SIZE)"
+            exit 1
+          fi
+          echo "✅ Client bundle size OK"
+
+  # Separate job for integration tests (only runs if test job passes)
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test  # Only run after main tests pass
+    
+    # Only run integration tests if we have secrets available
+    # This prevents failures in forks that don't have secrets
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      # Run integration tests with Notion API
+      # Secrets are only available in the main repository, not forks
+      - name: Run integration tests
+        env:
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_CHARACTERS_DB: ${{ secrets.NOTION_CHARACTERS_DB }}
+          NOTION_ELEMENTS_DB: ${{ secrets.NOTION_ELEMENTS_DB }}
+          NOTION_PUZZLES_DB: ${{ secrets.NOTION_PUZZLES_DB }}
+          NOTION_TIMELINE_DB: ${{ secrets.NOTION_TIMELINE_DB }}
+        run: |
+          if [ -z "$NOTION_API_KEY" ]; then
+            echo "⚠️ Skipping integration tests - no Notion API key available"
+            echo "This is expected for pull requests from forks"
+            exit 0
+          fi
+          npm run test:integration
+
+  # Code quality metrics job
+  quality:
+    name: Code Quality Metrics
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      # Count TypeScript coverage
+      - name: Check TypeScript coverage
+        run: |
+          echo "📊 TypeScript Coverage Report"
+          echo "=============================="
+          TOTAL_FILES=$(find src -name "*.ts" -o -name "*.tsx" | wc -l)
+          TEST_FILES=$(find src -name "*.test.ts" -o -name "*.test.tsx" | wc -l)
+          COVERAGE=$((TEST_FILES * 100 / TOTAL_FILES))
+          echo "Total TypeScript files: $TOTAL_FILES"
+          echo "Test files: $TEST_FILES"
+          echo "Test file coverage: $COVERAGE%"
+          
+      # Check for console.log statements
+      - name: Check for console.log statements
+        run: |
+          echo "🔍 Checking for console.log statements..."
+          CONSOLE_LOGS=$(grep -r "console.log" src --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx" | wc -l)
+          if [ $CONSOLE_LOGS -gt 0 ]; then
+            echo "⚠️ Found $CONSOLE_LOGS console.log statements in production code"
+            grep -r "console.log" src --include="*.ts" --include="*.tsx" --exclude="*.test.ts" --exclude="*.test.tsx"
+          else
+            echo "✅ No console.log statements found"
+          fi
+      
+      # Check for TODO comments
+      - name: Check for TODO comments
+        run: |
+          echo "📝 Checking for TODO comments..."
+          TODOS=$(grep -r "TODO\|FIXME\|HACK" src --include="*.ts" --include="*.tsx" | wc -l)
+          if [ $TODOS -gt 0 ]; then
+            echo "Found $TODOS TODO/FIXME/HACK comments:"
+            grep -r "TODO\|FIXME\|HACK" src --include="*.ts" --include="*.tsx"
+          else
+            echo "✅ No TODO comments found"
+          fi
+
+  # Summary job that runs after all others
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [test, integration, quality]
+    if: always()  # Run even if previous jobs failed
+    
+    steps:
+      - name: Summary
+        run: |
+          echo "## 📊 CI Summary"
+          echo ""
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            echo "✅ Tests, Lint, and Type Check: Passed"
+          else
+            echo "❌ Tests, Lint, and Type Check: Failed"
+          fi
+          
+          if [ "${{ needs.integration.result }}" == "success" ]; then
+            echo "✅ Integration Tests: Passed"
+          elif [ "${{ needs.integration.result }}" == "skipped" ]; then
+            echo "⏭️ Integration Tests: Skipped (no secrets available)"
+          else
+            echo "❌ Integration Tests: Failed"
+          fi
+          
+          if [ "${{ needs.quality.result }}" == "success" ]; then
+            echo "✅ Code Quality: Passed"
+          else
+            echo "❌ Code Quality: Failed"
+          fi
+          
+          echo ""
+          echo "---"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run: ${{ github.run_number }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Actor: ${{ github.actor }}"
