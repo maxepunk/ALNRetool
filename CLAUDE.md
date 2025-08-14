@@ -72,6 +72,13 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 - Loading states and error boundaries implemented
 - Ready for React Flow integration
 
+**CI/CD Pipeline (Implemented)**:
+- GitHub Actions workflow on all pushes and PRs
+- 4-stage pipeline: Test → Integration → Quality → Summary
+- Automated ESLint, TypeScript, and test checks
+- Bundle size monitoring (2MB limit)
+- Build artifact generation and storage
+
 ## Key Architecture
 
 ### Tech Stack
@@ -203,7 +210,15 @@ The project uses Commitizen for standardized commits. Use `npx cz` to create pro
   refactor(scope): improve code
   test(scope): add tests
   docs(scope): update documentation
+  ci(scope): CI/CD changes
 ```
+
+### Pre-commit Hooks
+The project has automated pre-commit hooks that run:
+- ESLint for code quality
+- TypeScript type checking
+- Located in `.git/hooks/pre-commit`
+- Use `--no-verify` to bypass in emergencies
 ## Development Commands
 
 ```bash
@@ -226,7 +241,9 @@ npm run lint         # ESLint with TypeScript
 npm run typecheck    # TypeScript type checking for both client and server
 
 # Testing
-npm run test:integration  # Full integration test suite (requires .env)
+npm test                 # Quick smoke test with mock data
+npm run test:run         # Vitest unit tests (212 tests)
+npm run test:integration # Full integration test suite (requires .env)
 npm run test:quick       # Quick smoke test with test API key
 
 # Other
@@ -372,17 +389,26 @@ Run integration tests: `npm run test:integration`
 
 ### Current Test Infrastructure ✅ IMPLEMENTED
 
-**Integration Tests**: Comprehensive test suite covering all API endpoints
-- **Location**: `scripts/integration-test.ts`
-- **Coverage**: All 4 Notion API endpoints (characters, elements, puzzles, timeline)
-- **Features**: Authentication testing, rate limiting validation, CORS verification, error handling
-- **Run**: `npm run test:integration`
+**Multiple Test Layers**:
+1. **Smoke Tests** (`npm test`): Quick health checks with mock data
+2. **Unit Tests** (`npm run test:run`): Vitest tests for React Query (212 tests)
+3. **Integration Tests** (`npm run test:integration`): Full Notion API validation (23 tests)
+4. **CI/CD Pipeline**: Automated testing on every push via GitHub Actions
+
+**GitHub Actions CI**:
+- Runs on all pushes to main/develop/feature branches
+- Runs on all pull requests
+- 4-stage pipeline with parallel jobs
+- Secrets management for Notion API keys
+- Build artifacts stored for 7 days
+- View status at: https://github.com/maxepunk/ALNRetool/actions
 
 **Test Strategy**:
-- Real Notion API integration (no mocks)
+- Real Notion API integration (no mocks for integration tests)
 - Permissive parsing for unknown data schemas (future-proof)
 - Server stability validation (prevents crashes during load)
 - 100% pass rate required before any commits
+- Pre-commit hooks enforce quality locally
 
 ### Future Test Implementation:
 - Unit tests for utility functions and hooks

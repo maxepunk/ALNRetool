@@ -116,11 +116,13 @@ npx cz  # Interactive commit helper
 | `npm test` | Run smoke test suite |
 | `npm run test:integration` | Run integration test suite |
 
-### Integration Testing
+### Testing
 
-We maintain two test suites:
+We maintain multiple test suites:
 - **Smoke Tests** (`npm test`): Quick health checks using mock data
-- **Integration Tests** (`npm run test:integration`): Full Notion API validation
+- **Unit Tests** (`npm run test:run`): Vitest tests for React Query hooks and components (212 tests)
+- **Integration Tests** (`npm run test:integration`): Full Notion API validation (23 tests)
+- **CI/CD Pipeline**: Automated GitHub Actions workflow on every push
 
 #### Running Integration Tests
 ```bash
@@ -147,6 +149,56 @@ SF_ValueRating: [3]
 SF_MemoryType: [Personal]
 SF_Group: [Test Items]
 ```
+
+## CI/CD Pipeline
+
+### GitHub Actions Workflow
+
+The project uses GitHub Actions for continuous integration, running on every push and pull request.
+
+#### Workflow Jobs
+
+1. **Test Job** - Main validation suite
+   - ESLint code quality checks
+   - TypeScript type checking (client & server)
+   - Vitest unit tests (212 tests)
+   - Production build verification
+   - Bundle size monitoring (2MB limit)
+   - Build artifact uploads (7-day retention)
+
+2. **Integration Job** - Notion API testing
+   - Runs after main tests pass
+   - Uses GitHub Secrets for API keys
+   - Gracefully skips on forks without secrets
+   - Validates all 4 Notion endpoints
+
+3. **Quality Job** - Code metrics
+   - TypeScript test coverage reporting
+   - Console.log detection in production code
+   - TODO/FIXME/HACK comment tracking
+
+4. **Summary Job** - Final status report
+
+#### Setting Up GitHub Secrets
+
+For integration tests to run in CI, add these secrets to your repository:
+
+1. Go to Settings → Secrets and variables → Actions
+2. Add the following secrets:
+   - `NOTION_API_KEY`: Your Notion integration token
+   - `NOTION_CHARACTERS_DB`: Characters database ID
+   - `NOTION_ELEMENTS_DB`: Elements database ID
+   - `NOTION_PUZZLES_DB`: Puzzles database ID
+   - `NOTION_TIMELINE_DB`: Timeline database ID
+
+#### CI Status
+
+View CI runs at: https://github.com/maxepunk/ALNRetool/actions
+
+The workflow runs on:
+- Push to `main`, `develop`, or `feature/**` branches
+- All pull requests to `main` or `develop`
+- Concurrent runs are automatically cancelled
 
 ## Code Organization
 
