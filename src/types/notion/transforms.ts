@@ -85,7 +85,7 @@ export function getRelationIds(prop: NotionProperty | undefined): string[] {
   return prop.relation.map(r => r.id);
 }
 
-export function getRollupArray(prop: NotionProperty | undefined): any[] {
+export function getRollupArray(prop: NotionProperty | undefined): NotionProperty[] {
   if (!prop || prop.type !== 'rollup') return [];
   if (prop.rollup.type === 'array') {
     return prop.rollup.array;
@@ -110,7 +110,7 @@ export function getDate(prop: NotionProperty | undefined): string | null {
   return prop.date?.start || null;
 }
 
-export function getFormula(prop: NotionProperty | undefined): any {
+export function getFormula(prop: NotionProperty | undefined): string | number | boolean | null {
   if (!prop || prop.type !== 'formula') return null;
   const formula = prop.formula;
   if (formula.type === 'boolean') return formula.boolean;

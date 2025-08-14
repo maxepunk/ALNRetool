@@ -339,6 +339,101 @@ curl -X GET http://localhost:3001/api/notion/characters \
 # Edit scripts/smoke-test.ts to focus on one suite
 ```
 
+## React Query Development Patterns
+
+### Data Fetching Layer Architecture
+
+Our frontend uses TanStack Query for all data fetching with a well-defined architecture:
+
+#### Query Client Configuration
+```typescript
+// Pre-configured in src/lib/queryClient.ts
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,  // 5 minutes - data stays fresh
+      gcTime: 10 * 60 * 1000,    // 10 minutes - memory cleanup
+      retry: 3,                   // Automatic retries
+      refetchOnWindowFocus: false,
+    },
+  },
+});
+```
+
+#### Using Data Hooks
+```typescript
+// All hooks support both paginated and listAll methods
+import { useCharacters } from '@/hooks/useCharacters';
+
+function CharacterList() {
+  // Get all characters at once
+  const { data, isLoading, error } = useCharacters.listAll();
+  
+  // Or use paginated approach
+  const paginated = useCharacters.paginated({ limit: 20 });
+  
+  if (isLoading) return <CharacterSkeleton />;
+  if (error) throw error; // Caught by QueryErrorBoundary
+  
+  return <div>{/* render characters */}</div>;
+}
+```
+
+#### Error Boundary Pattern
+```typescript
+// Always wrap data-fetching components
+import { QueryErrorBoundary } from '@/components/QueryErrorBoundary';
+
+<QueryErrorBoundary>
+  <CharacterList />
+</QueryErrorBoundary>
+```
+
+#### Available Hooks
+- `useCharacters.listAll()` / `useCharacters.paginated(params)`
+- `useElements.listAll()` / `useElements.paginated(params)`
+- `usePuzzles.listAll()` / `usePuzzles.paginated(params)`
+- `useTimeline.listAll()` / `useTimeline.paginated(params)`
+
+#### Query Key Patterns
+```typescript
+// Centralized in src/lib/queryKeys.ts
+const queryKeys = {
+  characters: {
+    all: ['characters'] as const,
+    lists: () => [...queryKeys.characters.all, 'list'] as const,
+    list: (params: CharacterListParams) => 
+      [...queryKeys.characters.lists(), params] as const,
+  },
+};
+
+// Usage in hooks
+useQuery({
+  queryKey: queryKeys.characters.list({ limit: 20 }),
+  queryFn: () => api.characters.list({ limit: 20 }),
+});
+```
+
+#### Testing with MSW
+```typescript
+// Mock Service Worker set up in src/mocks/
+// Tests use real component rendering with mocked API calls
+import { render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
+render(
+  <QueryClientProvider client={queryClient}>
+    <CharacterList />
+  </QueryClientProvider>
+);
+
+expect(screen.getByText('Loading...')).toBeInTheDocument();
+```
+
 ## Best Practices
 
 ### Code Style

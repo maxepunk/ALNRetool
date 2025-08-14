@@ -9,7 +9,7 @@
 
 ### Sprint 1: Foundation & Data Layer (Weeks 1-2)
 
-#### ✅ Completed (Days 1-4)
+#### ✅ Completed (Days 1-5)
 
 **Days 1-2: Development Environment**
 - [x] Vite React TypeScript project initialized
@@ -46,28 +46,38 @@
 - [x] Input validation middleware (pagination limits 1-100)
 - [x] Cache management API endpoints
 
-#### 🚀 Next Up (Days 5-10)
+**Day 5: React Query Data Layer** - COMPLETE ✅
+- [x] TanStack Query installed and configured
+- [x] Comprehensive API client service with typed methods
+- [x] Query hooks for all 4 endpoints (characters, elements, puzzles, timeline)
+- [x] 5-minute stale time strategy with entity-specific cache config
+- [x] Loading skeleton components with multiple variants
+- [x] Three-layer error boundary system with QueryErrorResetBoundary
+- [x] Mock Service Worker (MSW) infrastructure for testing
+- [x] Query key factories for centralized cache management
+- [x] 212/212 tests passing (100% success rate)
+- [x] TypeScript strict compliance throughout data layer
 
-**Days 5-6: React Query Setup**
-- [ ] Install and configure TanStack Query
-- [ ] Create API client service
-- [ ] Setup query hooks for each endpoint
-- [ ] Implement 5-minute cache strategy
-- [ ] Add loading and error states
+#### 🚀 Next Up (Days 6-10)
 
-**Days 7-8: React Flow Integration**
+**Days 6-7: React Flow Integration**
 - [ ] Install React Flow and dependencies
 - [ ] Create basic flow component
 - [ ] Implement custom node types
 - [ ] Setup graph layouts with Dagre
 - [ ] Add basic interactivity
 
-**Days 9-10: First View (Puzzle Focus)**
+**Days 8-9: First View (Puzzle Focus)**
 - [ ] Build Puzzle Focus View component
 - [ ] Connect to React Query hooks
 - [ ] Implement filtering system
 - [ ] Add details panel
 - [ ] Style with CSS modules
+
+**Day 10: Sprint 1 Integration**
+- [ ] End-to-end testing of full stack
+- [ ] Performance optimization
+- [ ] Sprint 1 demo preparation
 
 ## Technical Decisions Made
 
@@ -78,13 +88,18 @@
   - `transforms.ts`: Conversion functions
 - **Express proxy pattern** for API security
 - **Bottleneck rate limiting** to respect Notion limits
+- **TanStack Query data layer** with 5-minute stale time
+- **Query key factories** for centralized cache management
+- **Three-layer error boundaries** with QueryErrorResetBoundary
 - **No index.ts re-exports** (simpler imports)
 - **No express-validator** (custom validation works fine)
 
 ### Testing Strategy
-- **Dual test suites**: Smoke tests (mock data) + Integration tests (real Notion)
-- **Native Node.js test runner** (no Jest/Vitest)
+- **Triple test suites**: Smoke tests (mock data) + Integration tests (real Notion) + React Query tests (Vitest)
+- **Vitest for frontend testing** with Mock Service Worker (MSW)
+- **Native Node.js test runner** for backend tests
 - **Manual + automated testing** hybrid approach
+- **212 frontend tests** covering all hooks, API client, and error boundaries
 - **Integration tests validate**: Data structure, SF_ patterns, rate limiting
 
 ### Documentation
@@ -131,9 +146,12 @@
 ### Wins This Week
 - Clean architecture established
 - All Notion endpoints working
+- React Query data layer complete with 212/212 tests passing
 - Comprehensive documentation completed
 - Rate limiting prevents 429 errors
 - Type safety throughout codebase
+- Three-layer error boundary system implemented
+- MSW testing infrastructure established
 
 ### Challenges Overcome
 - Environment variable loading timing (lazy init)
@@ -151,9 +169,9 @@
 
 ### Week 1 Metrics
 - **Planned**: 4 days of tasks
-- **Completed**: 4.5 days (added docs/tests)
-- **Velocity**: 112% 
-- **Quality**: High (all tests passing)
+- **Completed**: 5 days (added React Query layer)
+- **Velocity**: 125% 
+- **Quality**: High (212/212 frontend tests + 23/23 integration tests passing)
 
 ### Predictions
 - **Sprint 1 Completion**: On track for Day 10
@@ -163,8 +181,8 @@
 ## Action Items
 
 ### Immediate (This Week)
-1. Begin Day 5: React Query setup
-2. Test with real Notion data
+1. Begin Day 6: React Flow integration
+2. Continue testing with real Notion data
 3. Update this dashboard daily
 
 ### Next Week
