@@ -34,7 +34,7 @@ export const queryKeys = {
 
 // Helper function to invalidate all queries for a specific entity type
 export const invalidateEntityQueries = (
-  queryClient: { invalidateQueries: (options: { queryKey: string[] }) => void },
+  queryClient: { invalidateQueries: (options: { queryKey: readonly string[] }) => void },
   entityType: 'characters' | 'elements' | 'puzzles' | 'timeline'
 ) => {
   const keyMap = {

@@ -92,7 +92,7 @@ async function fetcher<T>(
 /**
  * Build query string from parameters
  */
-function buildQueryString(params?: Record<string, string | number | boolean | undefined>): string {
+function buildQueryString<T extends Record<string, unknown>>(params?: T): string {
   if (!params) return '';
   
   const searchParams = new URLSearchParams();
@@ -122,7 +122,7 @@ export const charactersApi = {
    * Fetch paginated list of characters
    */
   list: async (params?: PaginationParams): Promise<APIResponse<Character>> => {
-    const queryString = buildQueryString(params);
+    const queryString = buildQueryString(params as Record<string, unknown>);
     return fetcher<APIResponse<Character>>(`/notion/characters${queryString}`);
   },
 
@@ -153,7 +153,7 @@ export const elementsApi = {
    * Fetch paginated list of elements
    */
   list: async (params?: PaginationParams): Promise<APIResponse<Element>> => {
-    const queryString = buildQueryString(params);
+    const queryString = buildQueryString(params as Record<string, unknown>);
     return fetcher<APIResponse<Element>>(`/notion/elements${queryString}`);
   },
 
@@ -184,7 +184,7 @@ export const puzzlesApi = {
    * Fetch paginated list of puzzles
    */
   list: async (params?: PaginationParams): Promise<APIResponse<Puzzle>> => {
-    const queryString = buildQueryString(params);
+    const queryString = buildQueryString(params as Record<string, unknown>);
     return fetcher<APIResponse<Puzzle>>(`/notion/puzzles${queryString}`);
   },
 
@@ -215,7 +215,7 @@ export const timelineApi = {
    * Fetch paginated list of timeline events
    */
   list: async (params?: PaginationParams): Promise<APIResponse<TimelineEvent>> => {
-    const queryString = buildQueryString(params);
+    const queryString = buildQueryString(params as Record<string, unknown>);
     return fetcher<APIResponse<TimelineEvent>>(`/notion/timeline${queryString}`);
   },
 
