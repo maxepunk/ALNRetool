@@ -3,7 +3,7 @@
  * Catches JavaScript errors in child components and displays fallback UI
  */
 
-import { Component, ReactNode } from 'react'
+import { Component, type ReactNode } from 'react'
 import styles from './ErrorBoundary.module.css'
 
 interface Props {

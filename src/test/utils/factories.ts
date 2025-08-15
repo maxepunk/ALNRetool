@@ -16,10 +16,10 @@ export function createMockCharacter(overrides?: Partial<Character>): Character {
     name: `Character ${id}`,
     type: 'Player',
     tier: 'Core',
-    ownedElements: [],
-    associatedElements: [],
-    characterPuzzles: [],
-    events: [],
+    ownedElementIds: [],
+    associatedElementIds: [],
+    characterPuzzleIds: [],
+    eventIds: [],
     connections: [],
     primaryAction: 'Test action',
     characterLogline: 'Test logline',
@@ -37,23 +37,25 @@ export function createMockElement(overrides?: Partial<Element>): Element {
   return {
     id,
     name: `Element ${id}`,
-    description: 'Test element description',
+    descriptionText: 'Test element description',
+    sfPatterns: {}, // Empty object for required field
     basicType: 'Prop',
-    owner: null,
-    container: null,
-    contents: [],
-    timelineEvent: null,
+    ownerId: undefined,
+    containerId: undefined,
+    contentIds: [],
+    timelineEventId: undefined,
     status: 'Idea/Placeholder',
     firstAvailable: null,
-    requiredFor: [],
-    rewardedBy: [],
-    containerPuzzle: null,
+    requiredForPuzzleIds: [],
+    rewardedByPuzzleIds: [],
+    containerPuzzleId: undefined,
     narrativeThreads: [],
-    associatedCharacters: [],
+    associatedCharacterIds: [],
     puzzleChain: [],
-    notes: '',
+    productionNotes: '',
+    filesMedia: [],
+    contentLink: undefined,
     isContainer: false,
-    sfPattern: null,
     ...overrides,
   }
 }
@@ -66,17 +68,17 @@ export function createMockPuzzle(overrides?: Partial<Puzzle>): Puzzle {
   return {
     id,
     name: `Puzzle ${id}`,
-    description: 'Test puzzle description',
-    elements: [],
-    lockedItem: null,
-    owner: [],
-    rewards: [],
-    parentItem: null,
-    subPuzzles: [],
+    descriptionSolution: 'Test puzzle description',
+    puzzleElementIds: [],
+    lockedItemId: undefined,
+    ownerId: undefined,
+    rewardIds: [],
+    parentItemId: undefined,
+    subPuzzleIds: [],
     storyReveals: [],
     timing: [],
     narrativeThreads: [],
-    assetLink: null,
+    assetLink: undefined,
     ...overrides,
   }
 }
@@ -86,13 +88,15 @@ export function createMockPuzzle(overrides?: Partial<Puzzle>): Puzzle {
  */
 export function createMockTimelineEvent(overrides?: Partial<TimelineEvent>): TimelineEvent {
   const id = `timeline-${idCounter++}`
+  const description = `Timeline Event ${id}`
   return {
     id,
-    description: `Timeline Event ${id}`,
+    name: description, // name is same as description for consistency
+    description,
     date: new Date().toISOString(),
-    charactersInvolved: [],
-    memory: [],
-    memType: [],
+    charactersInvolvedIds: [],
+    memoryEvidenceIds: [],
+    memTypes: [],
     notes: '',
     lastEditedTime: new Date().toISOString(),
     ...overrides,
@@ -119,7 +123,7 @@ export function createMockPuzzleScenario() {
     id: 'keycard',
     name: 'Keycard',
     basicType: 'Prop',
-    owner: 'sofia',
+    ownerId: 'sofia',
   })
 
   const element2 = createMockElement({
@@ -131,17 +135,18 @@ export function createMockPuzzleScenario() {
   const puzzle = createMockPuzzle({
     id: 'hidden-safe',
     name: 'Hidden Safe',
-    description: 'A combination lock puzzle',
-    elements: ['keycard'],
-    rewards: ['safe-contents'],
-    owner: ['sofia'],
+    descriptionSolution: 'A combination lock puzzle',
+    puzzleElementIds: ['keycard'],
+    rewardIds: ['safe-contents'],
+    ownerId: 'sofia',
   })
 
   const timelineEvent = createMockTimelineEvent({
     id: 'ceo-meeting',
+    name: 'Secret CEO Meeting',
     description: 'Secret CEO Meeting',
-    charactersInvolved: ['sofia', 'victoria'],
-    memory: ['safe-contents'],
+    charactersInvolvedIds: ['sofia', 'victoria'],
+    memoryEvidenceIds: ['safe-contents'],
   })
 
   return {

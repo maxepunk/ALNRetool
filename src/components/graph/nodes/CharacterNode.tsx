@@ -14,9 +14,9 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
   const hasError = metadata.errorState !== undefined;
   
   // Determine visual style based on tier and type
-  const tierClass = `tier-${entity.tier?.toLowerCase() || 'unknown'}`;
-  const typeClass = `type-${entity.type?.toLowerCase() || 'unknown'}`;
-  const sizeClass = `size-${metadata.visualHints?.size || 'medium'}`;
+  const tierClass = `tier-${entity.tier?.toLowerCase() ?? 'unknown'}`;
+  const typeClass = `type-${entity.type?.toLowerCase() ?? 'unknown'}`;
+  const sizeClass = `size-${metadata.visualHints?.size ?? 'medium'}`;
   
   return (
     <div 
@@ -35,10 +35,10 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
           <div className={styles.logline}>{entity.characterLogline}</div>
         )}
         <div className={styles.stats}>
-          {entity.ownedElementIds.length > 0 && (
+          {entity.ownedElementIds && entity.ownedElementIds.length > 0 && (
             <span className={styles.stat}>📦 {entity.ownedElementIds.length}</span>
           )}
-          {entity.characterPuzzleIds.length > 0 && (
+          {entity.characterPuzzleIds && entity.characterPuzzleIds.length > 0 && (
             <span className={styles.stat}>🧩 {entity.characterPuzzleIds.length}</span>
           )}
         </div>

@@ -26,16 +26,15 @@ describe('Puzzle Transformer', () => {
     name: 'Test Puzzle',
     descriptionSolution: 'Solve by doing X',
     puzzleElementIds: [],
-    lockedItemId: null,
-    ownerId: null,
+    lockedItemId: undefined,
+    ownerId: undefined,
     rewardIds: [],
-    parentItemId: null,
+    parentItemId: undefined,
     subPuzzleIds: [],
-    storyRevealIds: [],
-    timing: null,
-    narrativeThreads: null,
-    assetLink: null,
-    lastEditedTime: '2024-01-01T00:00:00Z',
+    storyReveals: [],
+    timing: [],
+    narrativeThreads: [],
+    assetLink: undefined,
     ...overrides,
   });
 
@@ -79,7 +78,7 @@ describe('Puzzle Transformer', () => {
     });
 
     it('should handle timing colors', () => {
-      const timings = [
+      const timings: { timing: ('Act 0' | 'Act 1' | 'Act 2' | null)[], color: string }[] = [
         { timing: ['Act 0'], color: '#6b7280' }, // Gray
         { timing: ['Act 1'], color: '#3b82f6' }, // Blue
         { timing: ['Act 2'], color: '#f59e0b' }, // Amber
@@ -147,7 +146,7 @@ describe('Puzzle Transformer', () => {
       // Rewards without solution warning
       const noSolution = createMockPuzzle({
         rewardIds: ['elem-1'],
-        descriptionSolution: null,
+        descriptionSolution: undefined,
       });
       transformPuzzle(noSolution, 0);
       expect(consoleSpy).toHaveBeenCalledWith(
@@ -189,9 +188,9 @@ describe('Puzzle Transformer', () => {
       const nodes = transformPuzzles(puzzles);
 
       // Should be sorted by importance score
-      expect(nodes[0].id).toBe('puzzle-3'); // Act 0 + root = highest
-      expect(nodes[1].id).toBe('puzzle-2'); // Has sub-puzzles
-      expect(nodes[2].id).toBe('puzzle-1'); // Sub-puzzle = lowest
+      expect(nodes[0]?.id).toBe('puzzle-3'); // Act 0 + root = highest
+      expect(nodes[1]?.id).toBe('puzzle-2'); // Has sub-puzzles
+      expect(nodes[2]?.id).toBe('puzzle-1'); // Sub-puzzle = lowest
     });
   });
 
@@ -265,7 +264,7 @@ describe('Puzzle Transformer', () => {
       expect(tree.get('root-1')?.map(p => p.id)).toEqual(['child-1', 'child-2']);
 
       expect(tree.get('child-1')).toHaveLength(1);
-      expect(tree.get('child-1')?.[0].id).toBe('grandchild-1');
+      expect(tree.get('child-1')?.[0]?.id).toBe('grandchild-1');
 
       expect(puzzleMap.size).toBe(5);
     });
@@ -284,7 +283,7 @@ describe('Puzzle Transformer', () => {
       const groups = groupPuzzlesByTiming(puzzles);
 
       expect(groups.act0).toHaveLength(1);
-      expect(groups.act0[0].id).toBe('p1');
+      expect(groups.act0[0]?.id).toBe('p1');
 
       expect(groups.act1).toHaveLength(2); // p2 and p4
       expect(groups.act1.map(p => p.id)).toContain('p2');
@@ -295,7 +294,7 @@ describe('Puzzle Transformer', () => {
       expect(groups.act2.map(p => p.id)).toContain('p4');
 
       expect(groups.unknown).toHaveLength(1);
-      expect(groups.unknown[0].id).toBe('p5');
+      expect(groups.unknown[0]?.id).toBe('p5');
     });
   });
 
@@ -310,8 +309,8 @@ describe('Puzzle Transformer', () => {
       ];
 
       // Need to set up sub-puzzle relationships for chain finding
-      puzzles[0].subPuzzleIds = ['child-1', 'child-2'];
-      puzzles[1].subPuzzleIds = ['grandchild'];
+      puzzles[0]!.subPuzzleIds = ['child-1', 'child-2'];
+      puzzles[1]!.subPuzzleIds = ['grandchild'];
 
       const chains = findPuzzleChains(puzzles);
 

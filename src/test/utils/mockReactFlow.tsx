@@ -18,7 +18,7 @@ export const mockReactFlow = () => {
               data-testid={`node-${node.id}`}
               onClick={(e) => onNodeClick?.(e, node)}
             >
-              {node.data.label || node.id}
+              {(node.data as any)?.label || node.id}
             </div>
           ))}
           {edges?.map((edge: Edge) => (
@@ -61,8 +61,8 @@ export const mockReactFlow = () => {
       return [edges, setEdges, onEdgesChange]
     }),
     addEdge: vi.fn((params, edges) => [...edges, params]),
-    applyNodeChanges: vi.fn((changes, nodes) => nodes),
-    applyEdgeChanges: vi.fn((changes, edges) => edges),
+    applyNodeChanges: vi.fn((_changes, nodes) => nodes),
+    applyEdgeChanges: vi.fn((_changes, edges) => edges),
   }))
 }
 
@@ -87,12 +87,16 @@ export function createMockNodes(count: number = 3): Node[] {
 export function createMockEdges(nodes: Node[]): Edge[] {
   const edges: Edge[] = []
   for (let i = 0; i < nodes.length - 1; i++) {
-    edges.push({
-      id: `edge-${i}`,
-      source: nodes[i].id,
-      target: nodes[i + 1].id,
-      type: 'default',
-    })
+    const sourceNode = nodes[i]
+    const targetNode = nodes[i + 1]
+    if (sourceNode && targetNode) {
+      edges.push({
+        id: `edge-${i}`,
+        source: sourceNode.id,
+        target: targetNode.id,
+        type: 'default',
+      })
+    }
   }
   return edges
 }

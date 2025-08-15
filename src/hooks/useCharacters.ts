@@ -44,9 +44,9 @@ export function useCharacters(options: UseCharactersOptions = {}) {
 
   // Extract pagination metadata from the response
   const response = query.data
-  const characters = response?.data || undefined
-  const nextCursor = response?.nextCursor || undefined
-  const hasMore = response?.hasMore || false
+  const characters = response?.data ?? undefined
+  const nextCursor = response?.nextCursor ?? undefined
+  const hasMore = response?.hasMore ?? false
 
   return {
     // Data

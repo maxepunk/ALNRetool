@@ -3,11 +3,12 @@
  * Provides custom render functions with Router and React Query support
  */
 
-import { type ReactElement, type ReactNode } from 'react'
+import { type ReactElement, type ReactNode, type PropsWithChildren } from 'react'
 import { render, type RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route, type MemoryRouterProps } from 'react-router-dom'
 import { vi } from 'vitest'
+import { QueryErrorBoundary } from '@/components/QueryErrorBoundary'
 
 // Create a new QueryClient for each test to ensure isolation
 const createTestQueryClient = () =>
@@ -22,18 +23,13 @@ const createTestQueryClient = () =>
         retry: false,
       },
     },
-    // Silence query errors in tests
-    logger: {
-      log: console.log,
-      warn: console.warn,
-      error: () => {},
-    },
   })
 
 interface AllTheProvidersProps {
   children: ReactNode
   initialEntries?: MemoryRouterProps['initialEntries']
   queryClient?: QueryClient
+  includeErrorBoundary?: boolean
 }
 
 /**
@@ -42,12 +38,19 @@ interface AllTheProvidersProps {
 function AllTheProviders({ 
   children, 
   initialEntries = ['/'],
-  queryClient = createTestQueryClient()
+  queryClient = createTestQueryClient(),
+  includeErrorBoundary = false
 }: AllTheProvidersProps) {
+  const content = includeErrorBoundary ? (
+    <QueryErrorBoundary>
+      {children}
+    </QueryErrorBoundary>
+  ) : children
+
   return (
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={initialEntries}>
-        {children}
+        {content}
       </MemoryRouter>
     </QueryClientProvider>
   )
@@ -56,6 +59,7 @@ function AllTheProviders({
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   initialEntries?: MemoryRouterProps['initialEntries']
   queryClient?: QueryClient
+  includeErrorBoundary?: boolean
 }
 
 /**
@@ -65,7 +69,12 @@ export function renderWithProviders(
   ui: ReactElement,
   options?: CustomRenderOptions
 ) {
-  const { initialEntries = ['/'], queryClient, ...renderOptions } = options || {}
+  const { 
+    initialEntries = ['/'], 
+    queryClient, 
+    includeErrorBoundary = false,
+    ...renderOptions 
+  } = options || {}
 
   const testQueryClient = queryClient || createTestQueryClient()
 
@@ -75,6 +84,7 @@ export function renderWithProviders(
         <AllTheProviders 
           initialEntries={initialEntries}
           queryClient={testQueryClient}
+          includeErrorBoundary={includeErrorBoundary}
         >
           {children}
         </AllTheProviders>
@@ -91,8 +101,7 @@ export function renderWithProviders(
 export function renderWithRouter(
   ui: ReactElement,
   { 
-    initialEntries = ['/'], 
-    routerOptions = {},
+    initialEntries = ['/'],
     ...renderOptions 
   }: CustomRenderOptions = {}
 ) {

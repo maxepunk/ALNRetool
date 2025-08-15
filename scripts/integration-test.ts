@@ -25,7 +25,7 @@ config({ path: path.join(__dirname, '..', '.env') });
 
 // Test configuration
 const BASE_URL = 'http://localhost:3001';
-const TEST_API_KEY = process.env.API_KEY || 'test-api-key-12345';
+const TEST_API_KEY = process.env.API_KEY ?? 'test-api-key-12345';
 const TEST_TIMEOUT = 30000; // 30 seconds
 
 interface TestResult {
@@ -504,7 +504,7 @@ async function runTransformTests(): Promise<TestSuite> {
     
     // Find element with SF_ patterns
     const elementWithPatterns = data.data.find((el: any) => 
-      el.descriptionText && el.descriptionText.includes('SF_')
+      el.descriptionText?.includes('SF_')
     );
     
     if (elementWithPatterns) {
@@ -520,7 +520,7 @@ async function runTransformTests(): Promise<TestSuite> {
       if (elementWithPatterns.descriptionText.includes('SF_RFID:')) {
         // Check if it's a template placeholder or actual value
         const rfidMatch = elementWithPatterns.descriptionText.match(/SF_RFID:\s*\[([^\]]+)\]/);
-        if (rfidMatch && rfidMatch[1]) {
+        if (rfidMatch?.[1]) {
           const value = rfidMatch[1].trim();
           // If it's a template placeholder, expect no extraction
           const isTemplate = value.match(/^(unique identifier|TBD|TODO)$/i);
@@ -551,7 +551,7 @@ async function runTransformTests(): Promise<TestSuite> {
       if (elementWithPatterns.descriptionText.includes('SF_MemoryType:')) {
         // Check if it's a template (with options) or actual value
         const memoryTypeMatch = elementWithPatterns.descriptionText.match(/SF_MemoryType:\s*\[([^\]]+)\]/);
-        if (memoryTypeMatch && memoryTypeMatch[1]) {
+        if (memoryTypeMatch?.[1]) {
           const value = memoryTypeMatch[1];
           // If it contains | or parentheses, it's a template showing options
           const isTemplate = value.includes('|') || value.includes('(');
@@ -567,7 +567,7 @@ async function runTransformTests(): Promise<TestSuite> {
       if (elementWithPatterns.descriptionText.includes('SF_Group:')) {
         // Group can be a template like "{Group Name} (x2-10)" or actual value
         const groupMatch = elementWithPatterns.descriptionText.match(/SF_Group:\s*\[([^\]]+)\]/);
-        if (groupMatch && groupMatch[1]) {
+        if (groupMatch?.[1]) {
           const value = groupMatch[1].trim();
           const isTemplate = value.includes('{') && value.includes('}');
           

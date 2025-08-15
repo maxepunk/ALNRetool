@@ -120,7 +120,7 @@ npx cz  # Interactive commit helper
 
 We maintain multiple test suites:
 - **Smoke Tests** (`npm test`): Quick health checks using mock data
-- **Unit Tests** (`npm run test:run`): Vitest tests for React Query hooks and components (212 tests)
+- **Unit Tests** (`npm run test:run`): Vitest tests for React Query hooks and components (504 passing, 5 skipped)
 - **Integration Tests** (`npm run test:integration`): Full Notion API validation (23 tests)
 - **CI/CD Pipeline**: Automated GitHub Actions workflow on every push
 
@@ -507,10 +507,55 @@ expect(screen.getByText('Loading...')).toBeInTheDocument();
 - Use TypeScript for type safety
 
 ### Testing
-- Run smoke tests before pushing
-- Test with empty Notion databases
-- Verify error states display correctly
-- Check responsive design at 1024px+
+
+#### Test Suite Overview (As of Jan 15, 2025)
+- **Total Tests**: 509 (504 passing, 5 skipped)
+- **Success Rate**: 99.0%
+- **Test Coverage**: ~90% for critical paths
+
+#### Test Structure
+```bash
+# Unit Tests (Vitest)
+npm run test:run      # 504/509 passing
+
+# Integration Tests (Real Notion API)  
+npm run test:integration  # 23/23 passing (100%)
+
+# Quick Smoke Test
+npm test             # Basic health check
+```
+
+#### Skipped Tests
+- 5 AppLayout tests for navigation features planned for Sprint 2
+- These tests are correctly deferred and not blocking MVP
+
+#### Testing Best Practices
+- Run tests before committing: `npm run test:run`
+- Verify integration after backend changes: `npm run test:integration`
+- Test with real Notion data when possible
+- Always test error states and loading states
+- Mock external dependencies with MSW
+- Use test utilities from `src/test/utils/`
+
+#### Writing New Tests
+```typescript
+// Use centralized test utilities
+import { renderWithProviders } from '@/test/utils/test-utils'
+import { mockCharacters } from '@/test/mocks/data/characters'
+
+// Test component with all providers
+const { container } = renderWithProviders(
+  <YourComponent />,
+  { initialEntries: ['/path'] }
+)
+```
+
+#### Pre-commit Testing
+The project has automated pre-commit hooks that run:
+- ESLint checks
+- TypeScript type checking  
+- Located in `.git/hooks/pre-commit`
+- Use `--no-verify` to bypass in emergencies
 
 ## Getting Help
 

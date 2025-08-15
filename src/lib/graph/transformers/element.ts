@@ -5,7 +5,7 @@
  */
 
 import type { Element } from '@/types/notion/app';
-import type { GraphNode, EntityTransformer, NodeMetadata } from '../types';
+import type { GraphNode, EntityTransformer, NodeMetadata, SFMetadata } from '../types';
 import { extractSFMetadata, hasSFPatterns } from '../patterns';
 
 /**
@@ -33,12 +33,11 @@ const STATUS_COLORS: Record<string, string> = {
 const TYPE_ICONS: Record<string, string> = {
   'Set Dressing': 'home',
   'Prop': 'box',
-  'Memory Token': 'disc',
+  'Memory Token (Audio)': 'disc',
+  'Memory Token (Video)': 'volume-2',
+  'Memory Token (Image)': 'image',
+  'Memory Token (Audio+Image)': 'film',
   'Document': 'file-text',
-  'Audio': 'volume-2',
-  'Video': 'video',
-  'Image': 'image',
-  'Audio+Image': 'film',
 };
 
 /**
@@ -66,9 +65,9 @@ function validateElement(element: Element): string[] {
 /**
  * Determine node size based on element importance
  */
-function determineNodeSize(element: Element, sfMetadata?: any): 'small' | 'medium' | 'large' {
+function determineNodeSize(element: Element, sfMetadata?: SFMetadata): 'small' | 'medium' | 'large' {
   // Elements with high value ratings are large
-  if (sfMetadata?.valueRating >= 4) {
+  if (sfMetadata?.valueRating !== undefined && sfMetadata.valueRating >= 4) {
     return 'large';
   }
   
@@ -90,10 +89,20 @@ function generateLabel(element: Element): string {
   
   // Add type indicator if it's a special type
   if (element.basicType && element.basicType !== 'Prop') {
-    const typeAbbrev = element.basicType
-      .split(' ')
-      .map(word => word[0])
-      .join('');
+    let typeAbbrev: string;
+    
+    // Handle Memory Token types specially
+    if (element.basicType.startsWith('Memory Token')) {
+      typeAbbrev = 'MT';
+    } else {
+      // For other types, use first letter of each word (excluding parentheses)
+      typeAbbrev = element.basicType
+        .split(' ')
+        .filter(word => !word.startsWith('('))
+        .map(word => word[0])
+        .join('');
+    }
+    
     label = `[${typeAbbrev}] ${label}`;
   }
   

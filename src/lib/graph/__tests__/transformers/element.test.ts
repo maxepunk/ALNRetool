@@ -10,7 +10,7 @@ import {
   isContainer,
   getSpecialElements 
 } from '../../transformers/element';
-import type { Element } from '@/types/notion/app';
+import type { Element, ElementBasicType, ElementStatus } from '@/types/notion/app';
 
 // Mock the patterns module
 vi.mock('../../patterns', () => ({
@@ -32,25 +32,25 @@ describe('Element Transformer', () => {
   const createMockElement = (overrides?: Partial<Element>): Element => ({
     id: 'elem-1',
     name: 'Test Element',
-    descriptionText: null,
+    descriptionText: '',
+    sfPatterns: { rfid: '', valueRating: 1, memoryType: 'Personal', group: { name: '', multiplier: '1' } },
     basicType: 'Prop',
-    ownerId: null,
-    containerId: null,
+    ownerId: undefined,
+    containerId: undefined,
     contentIds: [],
-    timelineEventId: null,
+    timelineEventId: undefined,
     status: 'Done',
     firstAvailable: null,
-    requiredForIds: [],
-    rewardedByIds: [],
-    containerPuzzleId: null,
+    requiredForPuzzleIds: [],
+    rewardedByPuzzleIds: [],
+    containerPuzzleId: undefined,
     narrativeThreads: [],
     associatedCharacterIds: [],
-    puzzleChainIds: [],
-    productionNotes: null,
+    puzzleChain: [],
+    productionNotes: '',
     filesMedia: [],
-    contentLink: null,
+    contentLink: undefined,
     isContainer: false,
-    lastEditedTime: '2024-01-01T00:00:00Z',
     ...overrides,
   });
 
@@ -100,7 +100,7 @@ describe('Element Transformer', () => {
     });
 
     it('should apply correct status colors', () => {
-      const statuses = [
+      const statuses: Array<{ status: ElementStatus, color: string }> = [
         { status: 'Done', color: '#10b981' },
         { status: 'In development', color: '#eab308' },
         { status: 'Idea/Placeholder', color: '#9ca3af' },
@@ -118,7 +118,7 @@ describe('Element Transformer', () => {
     it('should add type abbreviation to label for special types', () => {
       const memoryToken = createMockElement({
         name: 'CEO Memory',
-        basicType: 'Memory Token',
+        basicType: 'Memory Token (Audio)',
       });
       const node = transformElement(memoryToken, 0);
       expect(node?.data.label).toBe('[MT] CEO Memory');
@@ -138,12 +138,12 @@ describe('Element Transformer', () => {
     });
 
     it('should select correct icons by type', () => {
-      const types = [
+      const types: Array<{ basicType: ElementBasicType, icon: string }> = [
         { basicType: 'Set Dressing', icon: 'home' },
         { basicType: 'Prop', icon: 'box' },
-        { basicType: 'Memory Token', icon: 'disc' },
+        { basicType: 'Memory Token (Audio)', icon: 'disc' },
         { basicType: 'Document', icon: 'file-text' },
-        { basicType: 'Audio', icon: 'volume-2' },
+        { basicType: 'Memory Token (Video)', icon: 'volume-2' },
       ];
 
       types.forEach(({ basicType, icon }) => {
@@ -178,9 +178,9 @@ describe('Element Transformer', () => {
       const nodes = transformElements(elements);
 
       // Should be sorted: Idea/Placeholder -> In development -> Done
-      expect(nodes[0].data.entity.status).toBe('Idea/Placeholder');
-      expect(nodes[1].data.entity.status).toBe('In development');
-      expect(nodes[2].data.entity.status).toBe('Done');
+      expect(nodes[0]!.data.entity.status).toBe('Idea/Placeholder');
+      expect(nodes[1]!.data.entity.status).toBe('In development');
+      expect(nodes[2]!.data.entity.status).toBe('Done');
     });
 
     it('should handle empty array', () => {
@@ -273,13 +273,13 @@ describe('Element Transformer', () => {
       const special = getSpecialElements(elements);
 
       expect(special.containers).toHaveLength(1);
-      expect(special.containers[0].id).toBe('elem-1');
+      expect(special.containers[0]!.id).toBe('elem-1');
 
       expect(special.withSFPatterns).toHaveLength(1);
-      expect(special.withSFPatterns[0].id).toBe('elem-2');
+      expect(special.withSFPatterns[0]!.id).toBe('elem-2');
 
       expect(special.incomplete).toHaveLength(1);
-      expect(special.incomplete[0].id).toBe('elem-3');
+      expect(special.incomplete[0]!.id).toBe('elem-3');
     });
   });
 });

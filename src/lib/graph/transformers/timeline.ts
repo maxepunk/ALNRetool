@@ -55,7 +55,7 @@ function formatDate(date: string | null): string {
     const day = parsed.getUTCDate();
     const year = parsed.getUTCFullYear();
     return `${month} ${day}, ${year}`;
-  } catch (error) {
+  } catch {
     console.warn(`Invalid date format: ${date}`);
     return date; // Return as-is if parsing fails
   }

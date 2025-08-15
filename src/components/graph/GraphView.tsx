@@ -1,19 +1,16 @@
-import React, { useMemo, useCallback, useState } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import {
   ReactFlow,
-  useNodesState,
-  useEdgesState,
   Controls,
   MiniMap,
   Background,
   BackgroundVariant,
+  ReactFlowProvider,
 } from '@xyflow/react';
 import type {
   Node,
   NodeTypes,
   EdgeTypes,
-  Connection,
-  NodeMouseHandler,
   OnSelectionChangeParams,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -24,6 +21,8 @@ import PuzzleNode from './nodes/PuzzleNode';
 import TimelineNode from './nodes/TimelineNode';
 
 import { buildGraph } from '@/lib/graph';
+import { useGraphState } from '@/hooks/useGraphState';
+import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 import type { ViewType } from '@/lib/graph/types';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 
@@ -53,7 +52,7 @@ interface GraphViewProps {
 /**
  * Main graph visualization component using React Flow
  */
-const GraphView: React.FC<GraphViewProps> = ({
+const GraphViewInner: React.FC<GraphViewProps> = ({
   characters,
   elements,
   puzzles,
@@ -62,8 +61,6 @@ const GraphView: React.FC<GraphViewProps> = ({
   onNodeClick,
   onSelectionChange,
 }) => {
-  const [, setSelectedNodeId] = useState<string | null>(null);
-  
   // Build and layout the graph
   const graphData = useMemo(() => {
     console.time('Graph Building');
@@ -85,88 +82,29 @@ const GraphView: React.FC<GraphViewProps> = ({
     return graph;
   }, [characters, elements, puzzles, timeline, viewType]);
   
-  // Initialize React Flow state
-  const [nodes, setNodes, onNodesChange] = useNodesState(graphData.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(graphData.edges);
+  // Use our custom graph state hook
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    handleNodeClick,
+    handleNodeMouseEnter,
+    handleNodeMouseLeave,
+    handleConnect,
+  } = useGraphState({
+    initialGraphData: graphData,
+    onNodeClick,
+    onSelectionChange,
+  });
   
-  // Update nodes and edges when graph data changes
-  React.useEffect(() => {
-    setNodes(graphData.nodes);
-    setEdges(graphData.edges);
-  }, [graphData, setNodes, setEdges]);
-  
-  // Handle node click
-  const handleNodeClick: NodeMouseHandler = useCallback((_, node) => {
-    setSelectedNodeId(node.id);
-    onNodeClick?.(node);
-  }, [onNodeClick]);
-  
-  // Handle node hover for highlighting connections
-  const handleNodeMouseEnter: NodeMouseHandler = useCallback((_, node) => {
-    // Highlight connected edges
-    setEdges((eds) =>
-      eds.map((edge) => ({
-        ...edge,
-        animated: edge.source === node.id || edge.target === node.id,
-        style: {
-          ...edge.style,
-          strokeWidth: edge.source === node.id || edge.target === node.id ? 2 : 1,
-          opacity: edge.source === node.id || edge.target === node.id ? 1 : 0.3,
-        },
-      }))
-    );
-    
-    // Dim non-connected nodes
-    setNodes((nds) =>
-      nds.map((n) => {
-        const isConnected = edges.some(
-          (e) => (e.source === node.id || e.target === node.id) && 
-                 (e.source === n.id || e.target === n.id)
-        );
-        
-        return {
-          ...n,
-          style: {
-            ...n.style,
-            opacity: n.id === node.id || isConnected ? 1 : 0.3,
-          },
-        };
-      })
-    );
-  }, [edges, setEdges, setNodes]);
-  
-  // Handle node mouse leave
-  const handleNodeMouseLeave: NodeMouseHandler = useCallback(() => {
-    // Reset edge styles
-    setEdges((eds) =>
-      eds.map((edge) => ({
-        ...edge,
-        animated: false,
-        style: {
-          ...edge.style,
-          strokeWidth: 1,
-          opacity: 1,
-        },
-      }))
-    );
-    
-    // Reset node opacity
-    setNodes((nds) =>
-      nds.map((n) => ({
-        ...n,
-        style: {
-          ...n.style,
-          opacity: 1,
-        },
-      }))
-    );
-  }, [setEdges, setNodes]);
-  
-  // Handle connection creation (for future editing)
-  const onConnect = useCallback((params: Connection) => {
-    console.log('Connection attempt:', params);
-    // Future: Handle creating new relationships
-  }, []);
+  // Use graph interactions hook for additional features
+  const {
+    handleSelectionChange,
+  } = useGraphInteractions({
+    readOnly: true, // Sprint 1 is read-only
+    onSelectionChange,
+  });
   
   // MiniMap node color
   const nodeColor = useCallback((node: Node) => {
@@ -191,11 +129,11 @@ const GraphView: React.FC<GraphViewProps> = ({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnect={handleConnect}
         onNodeClick={handleNodeClick}
         onNodeMouseEnter={handleNodeMouseEnter}
         onNodeMouseLeave={handleNodeMouseLeave}
-        onSelectionChange={onSelectionChange}
+        onSelectionChange={handleSelectionChange}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
@@ -232,6 +170,18 @@ const GraphView: React.FC<GraphViewProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+/**
+ * GraphView component wrapped with ReactFlowProvider
+ * This is necessary for our custom hooks to work properly
+ */
+const GraphView: React.FC<GraphViewProps> = (props) => {
+  return (
+    <ReactFlowProvider>
+      <GraphViewInner {...props} />
+    </ReactFlowProvider>
   );
 };
 

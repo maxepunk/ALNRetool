@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 config({ path: path.join(__dirname, '..', '.env') });
 
 const BASE_URL = 'http://localhost:3001';
-const API_KEY = process.env.API_KEY || '';
+const API_KEY = process.env.API_KEY ?? '';
 
 async function testEndpoint(name: string, path: string) {
   console.log(`\n=== Testing ${name} ===`);

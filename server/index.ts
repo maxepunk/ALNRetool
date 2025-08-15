@@ -25,7 +25,7 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 const app = express();
-const port = process.env.PORT || 3001;
+const port = process.env.PORT ?? 3001;
 
 // Apply rate limiting to all /api requests (incoming protection)
 const apiLimiter = rateLimit({
@@ -40,7 +40,19 @@ const apiLimiter = rateLimit({
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL 
-    : 'http://localhost:5173',
+    : (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+        // Allow multiple localhost ports in development
+        const allowedPorts = ['5173', '5174', '5175'];
+        const isLocalhost = origin && allowedPorts.some(port => 
+          origin === `http://localhost:${port}`
+        );
+        if (!origin || isLocalhost) {
+          callback(null, true);
+        } else {
+          // Don't throw error, just don't set CORS headers for disallowed origins
+          callback(null, false);
+        }
+      },
   credentials: true
 };
 

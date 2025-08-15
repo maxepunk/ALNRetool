@@ -18,9 +18,9 @@ import {
   buildContentStatusGraph,
   getGraphStatistics,
   validateGraphData,
-  type NotionData,
-  type GraphData 
+  type NotionData
 } from '@/lib/graph';
+import type { GraphData } from '@/lib/graph/types';
 
 /**
  * Test component that loads data and builds graphs

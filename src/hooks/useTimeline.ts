@@ -44,9 +44,9 @@ export function useTimeline(options: UseTimelineOptions = {}) {
 
   // Extract pagination metadata from the response
   const response = query.data
-  const events = response?.data || undefined
-  const nextCursor = response?.nextCursor || null
-  const hasMore = response?.hasMore || false
+  const events = response?.data ?? undefined
+  const nextCursor = response?.nextCursor ?? null
+  const hasMore = response?.hasMore ?? false
 
   return {
     // Data

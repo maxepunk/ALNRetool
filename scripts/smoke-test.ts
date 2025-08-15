@@ -25,7 +25,7 @@ config({ path: path.join(__dirname, '..', '.env.test') });
 
 // Test configuration
 const BASE_URL = 'http://localhost:3001';
-const TEST_API_KEY = process.env.API_KEY || 'test-api-key-12345';
+const TEST_API_KEY = process.env.API_KEY ?? 'test-api-key-12345';
 const TEST_TIMEOUT = 30000; // 30 seconds
 
 interface TestResult {

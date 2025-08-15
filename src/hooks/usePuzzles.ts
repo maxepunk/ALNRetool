@@ -44,9 +44,9 @@ export function usePuzzles(options: UsePuzzlesOptions = {}) {
 
   // Extract pagination metadata from the response
   const response = query.data
-  const puzzles = response?.data || undefined
-  const nextCursor = response?.nextCursor || null
-  const hasMore = response?.hasMore || false
+  const puzzles = response?.data ?? undefined
+  const nextCursor = response?.nextCursor ?? null
+  const hasMore = response?.hasMore ?? false
 
   return {
     // Data

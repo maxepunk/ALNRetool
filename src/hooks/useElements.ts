@@ -44,9 +44,9 @@ export function useElements(options: UseElementsOptions = {}) {
 
   // Extract pagination metadata from the response
   const response = query.data
-  const elements = response?.data || undefined
-  const nextCursor = response?.nextCursor || null
-  const hasMore = response?.hasMore || false
+  const elements = response?.data ?? undefined
+  const nextCursor = response?.nextCursor ?? null
+  const hasMore = response?.hasMore ?? false
 
   return {
     // Data

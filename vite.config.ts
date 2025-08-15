@@ -6,6 +6,24 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tsconfigPaths()],
+  build: {
+    sourcemap: true,
+    rollupOptions: {
+      treeshake: {
+        preset: 'recommended',
+        propertyReadSideEffects: false,
+        tryCatchDeoptimization: false
+      },
+      onwarn(warning, warn) {
+        // Suppress circular dependency warnings
+        if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+        warn(warning);
+      }
+    }
+  },
+  optimizeDeps: {
+    exclude: ['@xyflow/react']
+  },
   server: {
     proxy: {
       '/api': {

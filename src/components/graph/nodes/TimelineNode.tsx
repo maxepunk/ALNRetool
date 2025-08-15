@@ -17,6 +17,10 @@ const TimelineNode = memo(({ data, selected }: NodeProps) => {
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return dateStr;
+      }
       return date.toLocaleDateString('en-US', { 
         month: 'short', 
         day: 'numeric', 
@@ -28,7 +32,7 @@ const TimelineNode = memo(({ data, selected }: NodeProps) => {
   };
   
   // Determine importance based on characters involved
-  const importance = entity.charactersInvolvedIds?.length || 0;
+  const importance = entity.charactersInvolvedIds?.length ?? 0;
   const importanceClass = importance > 3 ? 'important' : importance > 1 ? 'moderate' : 'minor';
   
   return (

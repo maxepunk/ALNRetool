@@ -23,13 +23,11 @@ describe('Character Transformer', () => {
     associatedElementIds: [],
     characterPuzzleIds: [],
     eventIds: [],
-    connectionIds: [],
-    primaryAction: null,
-    characterLogline: null,
-    overviewKeyRelationships: null,
-    emotionTowardsCEO: null,
-    emotionTowardsOthers: null,
-    lastEditedTime: '2024-01-01T00:00:00Z',
+    connections: [],
+    primaryAction: '',
+    characterLogline: '',
+    overview: '',
+    emotionTowardsCEO: '',
     ...overrides,
   });
 
@@ -110,7 +108,7 @@ describe('Character Transformer', () => {
     });
 
     it('should handle null tier gracefully', () => {
-      const character = createMockCharacter({ tier: null });
+      const character = createMockCharacter({ tier: undefined });
       const node = transformCharacter(character, 0);
 
       expect(node).toBeDefined();
@@ -130,9 +128,9 @@ describe('Character Transformer', () => {
       const nodes = transformCharacters(characters);
 
       expect(nodes).toHaveLength(3);
-      expect(nodes[0].id).toBe('char-1');
-      expect(nodes[1].id).toBe('char-2');
-      expect(nodes[2].id).toBe('char-3');
+      expect(nodes[0]!.id).toBe('char-1');
+      expect(nodes[1]!.id).toBe('char-2');
+      expect(nodes[2]!.id).toBe('char-3');
     });
 
     it('should sort characters by importance score', () => {
@@ -157,9 +155,9 @@ describe('Character Transformer', () => {
       const nodes = transformCharacters(characters);
 
       // Should be sorted by importance: Core > Secondary > Tertiary
-      expect(nodes[0].id).toBe('char-2'); // Core with highest score
-      expect(nodes[1].id).toBe('char-3'); // Secondary
-      expect(nodes[2].id).toBe('char-1'); // Tertiary with lowest score
+      expect(nodes[0]!.id).toBe('char-2'); // Core with highest score
+      expect(nodes[1]!.id).toBe('char-3'); // Secondary
+      expect(nodes[2]!.id).toBe('char-1'); // Tertiary with lowest score
     });
 
     it('should handle empty array', () => {

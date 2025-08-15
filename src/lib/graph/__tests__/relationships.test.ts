@@ -38,64 +38,62 @@ describe('Relationship Resolution', () => {
     associatedElementIds: [],
     characterPuzzleIds: [],
     eventIds: [],
-    connectionIds: [],
-    primaryAction: null,
-    characterLogline: null,
-    overviewKeyRelationships: null,
-    emotionTowardsCEO: null,
-    emotionTowardsOthers: null,
-    lastEditedTime: '2024-01-01T00:00:00Z',
+    connections: [],
+    primaryAction: '',
+    characterLogline: '',
+    overview: '',
+    emotionTowardsCEO: '',
   });
 
   const createMockElement = (id: string): Element => ({
     id,
     name: `Element ${id}`,
-    descriptionText: null,
+    descriptionText: '',
+    sfPatterns: {},
     basicType: 'Prop',
-    ownerId: null,
-    containerId: null,
+    ownerId: undefined,
+    containerId: undefined,
     contentIds: [],
-    timelineEventId: null,
+    timelineEventId: undefined,
     status: 'Done',
     firstAvailable: null,
-    requiredForIds: [],
-    rewardedByIds: [],
-    containerPuzzleId: null,
+    requiredForPuzzleIds: [],
+    rewardedByPuzzleIds: [],
+    containerPuzzleId: undefined,
     narrativeThreads: [],
     associatedCharacterIds: [],
-    puzzleChainIds: [],
-    productionNotes: null,
+    puzzleChain: [],
+    productionNotes: '',
     filesMedia: [],
-    contentLink: null,
+    contentLink: undefined,
     isContainer: false,
-    lastEditedTime: '2024-01-01T00:00:00Z',
   });
 
   const createMockPuzzle = (id: string): Puzzle => ({
     id,
     name: `Puzzle ${id}`,
-    descriptionSolution: null,
+    descriptionSolution: '',
     puzzleElementIds: [],
-    lockedItemId: null,
-    ownerId: null,
+    lockedItemId: undefined,
+    ownerId: undefined,
     rewardIds: [],
-    parentItemId: null,
+    parentItemId: undefined,
     subPuzzleIds: [],
-    storyRevealIds: [],
-    timing: null,
-    narrativeThreads: null,
-    assetLink: null,
-    lastEditedTime: '2024-01-01T00:00:00Z',
+    storyReveals: [],
+    timing: [],
+    narrativeThreads: [],
+    assetLink: undefined,
   });
 
   const createMockTimeline = (id: string): TimelineEvent => ({
     id,
+    name: `Event ${id}`,
     description: `Event ${id}`,
     date: '2024-01-01T00:00:00Z',
     charactersInvolvedIds: [],
     memoryEvidenceIds: [],
-    memoryType: null,
-    notes: null,
+    memTypes: [],
+    notes: '',
     lastEditedTime: '2024-01-01T00:00:00Z',
   });
 
@@ -133,11 +131,11 @@ describe('Relationship Resolution', () => {
       const edges = createOwnershipEdges(elements, lookupMaps);
 
       expect(edges).toHaveLength(2);
-      expect(edges[0].source).toBe('c1');
-      expect(edges[0].target).toBe('e1');
-      expect(edges[0].data?.relationshipType).toBe('ownership');
-      expect(edges[1].source).toBe('c1');
-      expect(edges[1].target).toBe('e2');
+      expect(edges[0]?.source).toBe('c1');
+      expect(edges[0]?.target).toBe('e1');
+      expect(edges[0]?.data?.relationshipType).toBe('ownership');
+      expect(edges[1]?.source).toBe('c1');
+      expect(edges[1]?.target).toBe('e2');
     });
 
     it('should warn about unknown owners', () => {
@@ -156,8 +154,8 @@ describe('Relationship Resolution', () => {
 
     it('should apply stronger weight for Core tier owners', () => {
       const characters = [
-        { ...createMockCharacter('c1'), tier: 'Core' },
-        { ...createMockCharacter('c2'), tier: 'Secondary' },
+        { ...createMockCharacter('c1'), tier: 'Core' as const },
+        { ...createMockCharacter('c2'), tier: 'Secondary' as const },
       ];
       const elements = [
         { ...createMockElement('e1'), ownerId: 'c1' },
@@ -167,8 +165,8 @@ describe('Relationship Resolution', () => {
       const lookupMaps = buildLookupMaps(characters, elements, [], []);
       const edges = createOwnershipEdges(elements, lookupMaps);
 
-      expect(edges[0].data?.strength).toBe(1); // Core tier
-      expect(edges[1].data?.strength).toBe(0.7); // Secondary tier
+      expect(edges[0]?.data?.strength).toBe(1); // Core tier
+      expect(edges[1]?.data?.strength).toBe(0.7); // Secondary tier
     });
   });
 
@@ -183,11 +181,11 @@ describe('Relationship Resolution', () => {
       const edges = createRequirementEdges(puzzles, lookupMaps);
 
       expect(edges).toHaveLength(2);
-      expect(edges[0].source).toBe('p1');
-      expect(edges[0].target).toBe('e1');
-      expect(edges[0].data?.relationshipType).toBe('requirement');
-      expect(edges[1].source).toBe('p1');
-      expect(edges[1].target).toBe('e2');
+      expect(edges[0]?.source).toBe('p1');
+      expect(edges[0]?.target).toBe('e1');
+      expect(edges[0]?.data?.relationshipType).toBe('requirement');
+      expect(edges[1]?.source).toBe('p1');
+      expect(edges[1]?.target).toBe('e2');
     });
 
     it('should warn about unknown required elements', () => {
@@ -216,11 +214,11 @@ describe('Relationship Resolution', () => {
       const edges = createRewardEdges(puzzles, lookupMaps);
 
       expect(edges).toHaveLength(2);
-      expect(edges[0].source).toBe('p1');
-      expect(edges[0].target).toBe('e1');
-      expect(edges[0].data?.relationshipType).toBe('reward');
-      expect(edges[0].data?.label).toBe('gives');
-      expect(edges[0].animated).toBe(true);
+      expect(edges[0]?.source).toBe('p1');
+      expect(edges[0]?.target).toBe('e1');
+      expect(edges[0]?.data?.relationshipType).toBe('reward');
+      expect(edges[0]?.data?.label).toBe('gives');
+      expect(edges[0]?.animated).toBe(true);
     });
   });
 
@@ -235,10 +233,10 @@ describe('Relationship Resolution', () => {
       const edges = createTimelineEdges(elements, lookupMaps);
 
       expect(edges).toHaveLength(1);
-      expect(edges[0].source).toBe('e1');
-      expect(edges[0].target).toBe('t1');
-      expect(edges[0].data?.relationshipType).toBe('timeline');
-      expect(edges[0].data?.label).toBe('reveals');
+      expect(edges[0]?.source).toBe('e1');
+      expect(edges[0]?.target).toBe('t1');
+      expect(edges[0]?.data?.relationshipType).toBe('timeline');
+      expect(edges[0]?.data?.label).toBe('reveals');
     });
   });
 
@@ -254,11 +252,11 @@ describe('Relationship Resolution', () => {
       const edges = createChainEdges(puzzles, lookupMaps);
 
       expect(edges).toHaveLength(2);
-      expect(edges[0].source).toBe('p1');
-      expect(edges[0].target).toBe('p2');
-      expect(edges[0].data?.relationshipType).toBe('chain');
-      expect(edges[1].source).toBe('p1');
-      expect(edges[1].target).toBe('p3');
+      expect(edges[0]?.source).toBe('p1');
+      expect(edges[0]?.target).toBe('p2');
+      expect(edges[0]?.data?.relationshipType).toBe('chain');
+      expect(edges[1]?.source).toBe('p1');
+      expect(edges[1]?.target).toBe('p3');
     });
 
     it('should warn about unknown sub-puzzles', () => {
@@ -288,11 +286,11 @@ describe('Relationship Resolution', () => {
       const edges = createContainerEdges(elements, lookupMaps);
 
       expect(edges).toHaveLength(2);
-      expect(edges[0].source).toBe('e1');
-      expect(edges[0].target).toBe('e2');
-      expect(edges[0].data?.relationshipType).toBe('container');
-      expect(edges[1].source).toBe('e1');
-      expect(edges[1].target).toBe('e3');
+      expect(edges[0]?.source).toBe('e1');
+      expect(edges[0]?.target).toBe('e2');
+      expect(edges[0]?.data?.relationshipType).toBe('container');
+      expect(edges[1]?.source).toBe('e1');
+      expect(edges[1]?.target).toBe('e3');
     });
   });
 

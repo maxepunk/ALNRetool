@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 config({ path: path.join(__dirname, '..', '.env') });
 
 const BASE_URL = 'http://localhost:3001';
-const API_KEY = process.env.API_KEY || 'test-api-key';
+const API_KEY = process.env.API_KEY ?? 'test-api-key';
 
 async function testTimelinePerformance() {
   console.log('Testing Timeline Endpoint Performance...\n');
@@ -45,7 +45,7 @@ async function testTimelinePerformance() {
     
     console.log(`✓ Response in ${duration}ms`);
     console.log(`  Status: ${response.status}`);
-    console.log(`  Items returned: ${data.data?.length || 0}`);
+    console.log(`  Items returned: ${data.data?.length ?? 0}`);
     console.log(`  Has more: ${data.hasMore}`);
     console.log(`  Next cursor: ${data.nextCursor ? 'Present' : 'None'}`);
     
@@ -61,7 +61,7 @@ async function testTimelinePerformance() {
     const data2 = await response2.json();
     
     console.log(`✓ Response in ${duration2}ms`);
-    console.log(`  Items returned: ${data2.data?.length || 0}`);
+    console.log(`  Items returned: ${data2.data?.length ?? 0}`);
     
     // Performance check
     if (duration < 2000) {

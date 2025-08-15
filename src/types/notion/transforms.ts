@@ -131,7 +131,7 @@ export function parseSFPatterns(text: string): SFPatterns {
   
   // Extract RFID - handle both template and actual values
   const rfidMatch = text.match(/SF_RFID:\s*\[([^\]]+)\]/);
-  if (rfidMatch && rfidMatch[1]) {
+  if (rfidMatch?.[1]) {
     // Skip template placeholders like "unique identifier" or "TBD"
     const value = rfidMatch[1].trim();
     if (value && !value.match(/^(unique identifier|TBD|TODO)$/i)) {
@@ -141,7 +141,7 @@ export function parseSFPatterns(text: string): SFPatterns {
   
   // Extract ValueRating - handle both number and placeholder
   const valueMatch = text.match(/SF_ValueRating:\s*\[([^\]]+)\]/);
-  if (valueMatch && valueMatch[1]) {
+  if (valueMatch?.[1]) {
     const value = valueMatch[1].trim();
     // Try to parse as number, skip if it's a range like "1-5"
     if (value.match(/^\d+$/)) {
@@ -151,7 +151,7 @@ export function parseSFPatterns(text: string): SFPatterns {
   
   // Extract MemoryType
   const memoryMatch = text.match(/SF_MemoryType:\s*\[([^\]]+)\]/);
-  if (memoryMatch && memoryMatch[1]) {
+  if (memoryMatch?.[1]) {
     const value = memoryMatch[1].trim();
     // Match actual memory types, ignoring multiplier syntax
     const typeMatch = value.match(/^(Personal|Business|Technical)/i);
@@ -162,13 +162,13 @@ export function parseSFPatterns(text: string): SFPatterns {
   
   // Extract Group - handle group name with multiplier
   const groupMatch = text.match(/SF_Group:\s*\[([^\]]+)\]/);
-  if (groupMatch && groupMatch[1]) {
+  if (groupMatch?.[1]) {
     const value = groupMatch[1].trim();
     // Skip template placeholders
     if (value && !value.match(/^\{.*\}$/)) {
       // Parse group name and multiplier
       const groupParseMatch = value.match(/^(.+?)\s*\(x(\d+(?:-\d+)?)\)$/);
-      if (groupParseMatch && groupParseMatch[1] && groupParseMatch[2]) {
+      if (groupParseMatch?.[1] && groupParseMatch[2]) {
         patterns.group = {
           name: groupParseMatch[1].trim(),
           multiplier: groupParseMatch[2]

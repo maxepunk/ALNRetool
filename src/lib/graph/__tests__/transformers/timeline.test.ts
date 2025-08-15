@@ -20,12 +20,13 @@ describe('Timeline Transformer', () => {
 
   const createMockTimeline = (overrides?: Partial<TimelineEvent>): TimelineEvent => ({
     id: 'timeline-1',
+    name: 'Test Event',
     description: 'Test Event',
     date: '2024-01-15T10:00:00Z',
     charactersInvolvedIds: [],
     memoryEvidenceIds: [],
-    memoryType: null,
-    notes: null,
+    memTypes: [],
+    notes: '',
     lastEditedTime: '2024-01-01T00:00:00Z',
     ...overrides,
   });
@@ -58,7 +59,7 @@ describe('Timeline Transformer', () => {
     });
 
     it('should handle missing date', () => {
-      const timeline = createMockTimeline({ date: null });
+      const timeline = createMockTimeline({ date: undefined });
       const node = transformTimeline(timeline, 0);
 
       expect(node?.data.label).toBe('Unknown Date');
@@ -105,8 +106,8 @@ describe('Timeline Transformer', () => {
 
       expect(node).toBeDefined();
       expect(node?.data.metadata.errorState).toBeDefined();
-      expect(node?.data.metadata.errorState?.message).toContain('Missing timeline ID');
-      expect(node?.data.metadata.errorState?.message).not.toContain('Missing timeline description');
+      expect(node?.data.metadata.errorState?.message || '').toContain('Missing timeline ID');
+      expect(node?.data.metadata.errorState?.message || '').not.toContain('Missing timeline description');
     });
   });
 
@@ -134,26 +135,26 @@ describe('Timeline Transformer', () => {
       const nodes = transformTimelineEvents(events);
 
       // Should be sorted chronologically
-      expect(nodes[0].id).toBe('t1');
-      expect(nodes[1].id).toBe('t2');
-      expect(nodes[2].id).toBe('t3');
+      expect(nodes[0]?.id).toBe('t1');
+      expect(nodes[1]?.id).toBe('t2');
+      expect(nodes[2]?.id).toBe('t3');
     });
 
     it('should handle mixed date availability', () => {
       const events = [
         createMockTimeline({ id: 't1', date: '2024-01-02T00:00:00Z' }),
-        createMockTimeline({ id: 't2', date: null }), // No date
+        createMockTimeline({ id: 't2', date: undefined }), // No date
         createMockTimeline({ id: 't3', date: '2024-01-01T00:00:00Z' }),
-        createMockTimeline({ id: 't4', date: null }), // No date
+        createMockTimeline({ id: 't4', date: undefined }), // No date
       ];
 
       const nodes = transformTimelineEvents(events);
 
       // Events with dates come first (sorted), then events without dates
-      expect(nodes[0].id).toBe('t3'); // Jan 1
-      expect(nodes[1].id).toBe('t1'); // Jan 2
-      expect(nodes[2].id).toBe('t2'); // No date
-      expect(nodes[3].id).toBe('t4'); // No date
+      expect(nodes[0]?.id).toBe('t3'); // Jan 1
+      expect(nodes[1]?.id).toBe('t1'); // Jan 2
+      expect(nodes[2]?.id).toBe('t2'); // No date
+      expect(nodes[3]?.id).toBe('t4'); // No date
     });
 
     it('should handle empty array', () => {

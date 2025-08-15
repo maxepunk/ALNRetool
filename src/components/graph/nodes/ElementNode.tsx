@@ -15,9 +15,9 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
   const hasSF = metadata.sfPatterns !== undefined;
   
   // Determine visual style based on status and type
-  const statusClass = `status-${entity.status?.toLowerCase().replace(/[\s\/]/g, '-') || 'unknown'}`;
-  const typeClass = `type-${entity.basicType?.toLowerCase().replace(/\s+/g, '-') || 'prop'}`;
-  const sizeClass = `size-${metadata.visualHints?.size || 'small'}`;
+  const statusClass = `status-${entity.status?.toLowerCase().replace(/[\s\/]/g, '-') ?? 'unknown'}`;
+  const typeClass = `type-${entity.basicType?.toLowerCase().replace(/\s+/g, '-') ?? 'prop'}`;
+  const sizeClass = `size-${metadata.visualHints?.size ?? 'small'}`;
   
   return (
     <div 
@@ -33,7 +33,7 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
       
       {/* Main content */}
       <div className={styles.content}>
-        <div className={styles.type}>{entity.basicType || 'Prop'}</div>
+        <div className={styles.type}>{entity.basicType ?? 'Prop'}</div>
         <div className={styles.name}>{entity.name}</div>
         
         {/* SF Pattern details */}

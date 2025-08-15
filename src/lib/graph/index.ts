@@ -15,7 +15,8 @@ import type {
   GraphEdge, 
   GraphData,
   LayoutConfig,
-  ViewType
+  ViewType,
+  RelationshipType
 } from './types';
 
 // Import transformers
@@ -35,11 +36,21 @@ import {
   LAYOUT_PRESETS 
 } from './layouts';
 
-// Re-export types and utilities for consumers
-export * from './types';
+// Explicit exports per architecture principle: "No index.ts re-exports"
+// Types are imported directly from './types' by consumers
+// Only export runtime utilities here
+
+// Pattern utilities
 export { extractSFMetadata, hasSFPatterns } from './patterns';
+
+// Layout utilities  
 export { LAYOUT_PRESETS, applyDagreLayout } from './layouts';
+
+// Relationship utilities
 export { filterEdgesByType, getConnectedEdges, calculateConnectivity } from './relationships';
+
+// Type guards (runtime functions)
+export { hasError, isEntityType } from './guards';
 
 // ============================================================================
 // Main Data Structure
@@ -170,7 +181,7 @@ export function buildGraphData(
   data: NotionData,
   options: {
     viewType?: ViewType;
-    filterRelationships?: string[];
+    filterRelationships?: RelationshipType[];
     includeOrphans?: boolean;
   } = {}
 ): GraphData {
@@ -207,7 +218,7 @@ export function buildGraphData(
   if (options.filterRelationships && options.filterRelationships.length > 0) {
     filteredEdges = filterEdgesByType(
       allEdges, 
-      options.filterRelationships as any
+      options.filterRelationships
     );
     console.log(`Filtered edges from ${allEdges.length} to ${filteredEdges.length}`);
   }
@@ -297,8 +308,7 @@ export function createEmptyGraph(): GraphData {
           height: 0,
           density: 0,
           overlap: 0,
-        },
-        warnings: [],
+        }
       },
       timestamp: new Date().toISOString(),
     },

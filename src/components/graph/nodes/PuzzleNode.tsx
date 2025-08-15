@@ -14,11 +14,11 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
   const hasError = metadata.errorState !== undefined;
   
   // Determine complexity level
-  const complexity = metadata.visualHints?.size || 'medium';
+  const complexity = metadata.visualHints?.size ?? 'medium';
   const complexityClass = `complexity-${complexity}`;
   
   // Check if it's part of a chain
-  const isChained = entity.parentItemId || (entity.subPuzzleIds && entity.subPuzzleIds.length > 0);
+  const isChained = entity.parentItemId ?? (entity.subPuzzleIds && entity.subPuzzleIds.length > 0);
   
   return (
     <div 

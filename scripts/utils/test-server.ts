@@ -31,9 +31,9 @@ export class TestServer {
   private cleanupInProgress = false;
 
   constructor(options: TestServerOptions = {}) {
-    this.port = options.port || 3001;
-    this.verbose = options.verbose || false;
-    this.startupTimeout = options.startupTimeout || 30000;
+    this.port = options.port ?? 3001;
+    this.verbose = options.verbose ?? false;
+    this.startupTimeout = options.startupTimeout ?? 30000;
     
     // Set up signal handlers for proper cleanup
     this.setupSignalHandlers();
@@ -111,7 +111,7 @@ export class TestServer {
    * Stop the test server gracefully
    */
   async stop(): Promise<void> {
-    if (!this.serverProcess || !this.serverProcess.pid) {
+    if (!this.serverProcess?.pid) {
       this.log('No server process to stop');
       return;
     }
@@ -163,7 +163,7 @@ export class TestServer {
    * Kill the server immediately
    */
   kill(): void {
-    if (!this.serverProcess || !this.serverProcess.pid) {
+    if (!this.serverProcess?.pid) {
       return;
     }
 
@@ -183,7 +183,7 @@ export class TestServer {
    * Check if server is running
    */
   isRunning(): boolean {
-    return this.serverProcess !== null && this.serverProcess.pid !== undefined;
+    return this.serverProcess?.pid !== undefined;
   }
 
   /**
@@ -211,7 +211,7 @@ export class TestServer {
       process.once(signal, () => {
         console.log(`\n[TestServer] Received ${signal}, cleaning up...`);
         
-        if (this.serverProcess && this.serverProcess.pid) {
+        if (this.serverProcess?.pid) {
           // Synchronous kill for immediate effect
           try {
             kill(this.serverProcess.pid, 'SIGKILL');

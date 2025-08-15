@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { render, screen, waitFor, userEvent } from '@/test/utils'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { QueryErrorBoundary } from './QueryErrorBoundary'
 
@@ -108,7 +107,7 @@ describe('QueryErrorBoundary', () => {
         })
       )
 
-      const [error] = onErrorSpy.mock.calls[0] || []
+      const [error] = onErrorSpy.mock.calls[0] ?? []
       expect(error.message).toBe('Callback test error')
     })
   })

@@ -18,7 +18,7 @@ Project Overview
                                       [3 View Components]
 
   ---
-  SPRINT 1: Foundation & Data Layer (Weeks 1-2)
+  SPRINT 1: Foundation & Data Layer (Weeks 1-2) ✅ COMPLETE
 
   Week 1: Project Setup & Notion Integration
 
@@ -230,12 +230,12 @@ Project Overview
   
   Week 2: Data Processing
 
-  Days 6-7: Graph Transformation
+  Days 6-7: Graph Transformation ✅ COMPLETED
   Tasks:
-  [ ] Build Notion -> React Flow transformers
-  [ ] Handle entity relationships
-  [ ] Create SF_ pattern parser stub
-  [ ] Test with real game data
+  [✅] Build Notion -> React Flow transformers
+  [✅] Handle entity relationships
+  [✅] Create SF_ pattern parser stub
+  [✅] Test with real game data
 
     Days 6-7: Graph Data Structures
 
@@ -274,12 +274,12 @@ Project Overview
   │       Measure performance (target: <1s for 200 nodes)
   └─ VERIFY: No crashes, all relationships resolve
   
-  Days 8-10: Foundation UI
+  Days 8-10: Foundation UI ✅ COMPLETED
   Tasks:
-  [ ] Set up React Router
-  [ ] Create basic layout components
-  [ ] Add navigation between views
-  [ ] Implement loading/error states
+  [✅] Set up React Router
+  [✅] Create basic layout components
+  [✅] Add navigation between views
+  [✅] Implement loading/error states
 
   Days 8-9: Basic UI Scaffold
 
@@ -523,6 +523,19 @@ Project Overview
 
   Week 4: First Editing Feature
 
+  ⚠️ PREREQUISITE: Build Mutation Infrastructure (2-3 days)
+  // Required before ANY editing features can work
+  
+  Mutation Infrastructure Tasks:
+  [ ] Add Express PUT endpoint: `/api/notion/:entity/:id`
+  [ ] Add Express PATCH endpoint for partial updates
+  [ ] Create useMutation hooks for each entity type
+  [ ] Setup optimistic update patterns
+  [ ] Implement rollback on error
+  [ ] Add toast notifications (react-hot-toast)
+  [ ] Create MSW handlers for mutation testing
+  [ ] Document mutation API patterns
+
   Days 16-17: Status Dropdown
   // Priority: Most-used field first
   interface StatusEditorProps {
@@ -590,6 +603,8 @@ Project Overview
 
   Days 18-19: 2-Way Sync Implementation
 
+  ⚠️ NOTE: This assumes mutation infrastructure from Days 16-17 is complete
+  
   WHY: This is the most complex part of the MVP. Get this right and everything else follows. Get it
    wrong and the app becomes unreliable.
 

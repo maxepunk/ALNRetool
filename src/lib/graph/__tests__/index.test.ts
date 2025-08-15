@@ -16,9 +16,6 @@ import type { NotionData } from '../index';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 
 // Mock console methods
-const consoleSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
-const consoleEndSpy = vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
-const consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
 describe('Graph Builder Integration', () => {
@@ -38,13 +35,11 @@ describe('Graph Builder Integration', () => {
         associatedElementIds: [],
         characterPuzzleIds: ['puzzle-1'],
         eventIds: ['timeline-1'],
-        connectionIds: [],
-        primaryAction: null,
-        characterLogline: null,
-        overviewKeyRelationships: null,
-        emotionTowardsCEO: null,
-        emotionTowardsOthers: null,
-        lastEditedTime: '2024-01-01T00:00:00Z',
+        connections: [],
+        primaryAction: '',
+        characterLogline: '',
+        overview: '',
+        emotionTowardsCEO: '',
       },
       {
         id: 'char-2',
@@ -55,13 +50,11 @@ describe('Graph Builder Integration', () => {
         associatedElementIds: [],
         characterPuzzleIds: [],
         eventIds: [],
-        connectionIds: [],
-        primaryAction: null,
-        characterLogline: null,
-        overviewKeyRelationships: null,
-        emotionTowardsCEO: null,
-        emotionTowardsOthers: null,
-        lastEditedTime: '2024-01-01T00:00:00Z',
+        connections: [],
+        primaryAction: '',
+        characterLogline: '',
+        overview: '',
+        emotionTowardsCEO: '',
       },
     ];
 
@@ -70,70 +63,70 @@ describe('Graph Builder Integration', () => {
         id: 'elem-1',
         name: 'Key Item',
         descriptionText: 'SF_RFID: [KEY-001] SF_ValueRating: [5]',
+        sfPatterns: { rfid: 'KEY-001', valueRating: 5 },
         basicType: 'Prop',
         ownerId: 'char-1',
-        containerId: null,
+        containerId: undefined,
         contentIds: [],
         timelineEventId: 'timeline-1',
         status: 'Done',
         firstAvailable: 'Act 1',
-        requiredForIds: ['puzzle-1'],
-        rewardedByIds: [],
-        containerPuzzleId: null,
+        requiredForPuzzleIds: ['puzzle-1'],
+        rewardedByPuzzleIds: [],
+        containerPuzzleId: undefined,
         narrativeThreads: [],
         associatedCharacterIds: [],
-        puzzleChainIds: [],
-        productionNotes: null,
+        puzzleChain: [],
+        productionNotes: '',
         filesMedia: [],
-        contentLink: null,
+        contentLink: undefined,
         isContainer: false,
-        lastEditedTime: '2024-01-01T00:00:00Z',
       },
       {
         id: 'elem-2',
         name: 'Container',
-        descriptionText: null,
+        descriptionText: '',
+        sfPatterns: {},
         basicType: 'Prop',
         ownerId: 'char-1',
-        containerId: null,
+        containerId: undefined,
         contentIds: ['elem-3'],
-        timelineEventId: null,
+        timelineEventId: undefined,
         status: 'In development',
         firstAvailable: 'Act 1',
-        requiredForIds: [],
-        rewardedByIds: ['puzzle-1'],
+        requiredForPuzzleIds: [],
+        rewardedByPuzzleIds: ['puzzle-1'],
         containerPuzzleId: 'puzzle-2',
         narrativeThreads: [],
         associatedCharacterIds: [],
-        puzzleChainIds: [],
-        productionNotes: null,
+        puzzleChain: [],
+        productionNotes: '',
         filesMedia: [],
-        contentLink: null,
+        contentLink: undefined,
         isContainer: true,
-        lastEditedTime: '2024-01-01T00:00:00Z',
       },
       {
         id: 'elem-3',
         name: 'Contained Item',
-        descriptionText: null,
+        descriptionText: '',
+        sfPatterns: {},
         basicType: 'Document',
         ownerId: 'char-2',
         containerId: 'elem-2',
         contentIds: [],
-        timelineEventId: null,
+        timelineEventId: undefined,
         status: 'Done',
         firstAvailable: 'Act 2',
-        requiredForIds: [],
-        rewardedByIds: [],
-        containerPuzzleId: null,
+        requiredForPuzzleIds: [],
+        rewardedByPuzzleIds: [],
+        containerPuzzleId: undefined,
         narrativeThreads: [],
         associatedCharacterIds: [],
-        puzzleChainIds: [],
-        productionNotes: null,
+        puzzleChain: [],
+        productionNotes: '',
         filesMedia: [],
-        contentLink: null,
+        contentLink: undefined,
         isContainer: false,
-        lastEditedTime: '2024-01-01T00:00:00Z',
       },
     ];
 
@@ -143,16 +136,15 @@ describe('Graph Builder Integration', () => {
         name: 'Main Puzzle',
         descriptionSolution: 'Use key to unlock',
         puzzleElementIds: ['elem-1'],
-        lockedItemId: null,
+        lockedItemId: undefined,
         ownerId: 'char-1',
         rewardIds: ['elem-2'],
-        parentItemId: null,
+        parentItemId: undefined,
         subPuzzleIds: ['puzzle-2'],
-        storyRevealIds: [],
+        storyReveals: [],
         timing: ['Act 1'],
-        narrativeThreads: null,
-        assetLink: null,
-        lastEditedTime: '2024-01-01T00:00:00Z',
+        narrativeThreads: [],
+        assetLink: undefined,
       },
       {
         id: 'puzzle-2',
@@ -164,23 +156,23 @@ describe('Graph Builder Integration', () => {
         rewardIds: [],
         parentItemId: 'puzzle-1',
         subPuzzleIds: [],
-        storyRevealIds: [],
+        storyReveals: [],
         timing: ['Act 2'],
-        narrativeThreads: null,
-        assetLink: null,
-        lastEditedTime: '2024-01-01T00:00:00Z',
+        narrativeThreads: [],
+        assetLink: undefined,
       },
     ];
 
     const timeline: TimelineEvent[] = [
       {
         id: 'timeline-1',
+        name: 'The key event',
         description: 'The key event',
         date: '2024-01-01T00:00:00Z',
         charactersInvolvedIds: ['char-1'],
         memoryEvidenceIds: ['elem-1'],
-        memoryType: null,
-        notes: null,
+        memTypes: [],
+        notes: '',
         lastEditedTime: '2024-01-01T00:00:00Z',
       },
     ];
@@ -204,9 +196,9 @@ describe('Graph Builder Integration', () => {
       expect(graph.edges.length).toBeGreaterThan(0);
 
       // Should have metrics
-      expect(graph.metadata.metrics.nodeCount).toBe(8);
-      expect(graph.metadata.metrics.edgeCount).toBeGreaterThan(0);
-      expect(graph.metadata.metrics.duration).toBeGreaterThan(0);
+      expect(graph.metadata?.metrics?.nodeCount).toBe(8);
+      expect(graph.metadata?.metrics?.edgeCount).toBeGreaterThan(0);
+      expect(graph.metadata?.metrics?.duration).toBeGreaterThan(0);
     });
 
     it('should filter edges by relationship type', () => {
@@ -233,13 +225,11 @@ describe('Graph Builder Integration', () => {
         associatedElementIds: [],
         characterPuzzleIds: [],
         eventIds: [],
-        connectionIds: [],
-        primaryAction: null,
-        characterLogline: null,
-        overviewKeyRelationships: null,
-        emotionTowardsCEO: null,
-        emotionTowardsOthers: null,
-        lastEditedTime: '2024-01-01T00:00:00Z',
+        connections: [],
+        primaryAction: '',
+        characterLogline: '',
+        overview: '',
+        emotionTowardsCEO: '',
       });
 
       const graphWithOrphans = buildGraphData(data, {
@@ -277,8 +267,8 @@ describe('Graph Builder Integration', () => {
 
       expect(graph.nodes).toEqual([]);
       expect(graph.edges).toEqual([]);
-      expect(graph.metadata.metrics.nodeCount).toBe(0);
-      expect(graph.metadata.metrics.edgeCount).toBe(0);
+      expect(graph.metadata?.metrics?.nodeCount).toBe(0);
+      expect(graph.metadata?.metrics?.edgeCount).toBe(0);
       expect(consoleWarnSpy).toHaveBeenCalledWith('No nodes created from input data');
     });
 
@@ -293,8 +283,8 @@ describe('Graph Builder Integration', () => {
         viewType: 'character-journey',
       });
 
-      expect(puzzleGraph.metadata.viewType).toBe('puzzle-focus');
-      expect(characterGraph.metadata.viewType).toBe('character-journey');
+      expect(puzzleGraph.metadata?.viewType).toBe('puzzle-focus');
+      expect(characterGraph.metadata?.viewType).toBe('character-journey');
 
       // Layouts might position nodes differently
       // This is hard to test without mocking the layout functions
@@ -307,10 +297,10 @@ describe('Graph Builder Integration', () => {
 
       expect(graph.nodes).toEqual([]);
       expect(graph.edges).toEqual([]);
-      expect(graph.metadata.metrics.nodeCount).toBe(0);
-      expect(graph.metadata.metrics.edgeCount).toBe(0);
-      expect(graph.metadata.metrics.duration).toBe(0);
-      expect(graph.metadata.timestamp).toBeDefined();
+      expect(graph.metadata?.metrics?.nodeCount).toBe(0);
+      expect(graph.metadata?.metrics?.edgeCount).toBe(0);
+      expect(graph.metadata?.metrics?.duration).toBe(0);
+      expect(graph.metadata?.timestamp).toBeDefined();
     });
   });
 
@@ -344,7 +334,7 @@ describe('Graph Builder Integration', () => {
       graph.nodes.push({
         id: 'node-1',
         type: 'character',
-        position: null as any,
+        position: undefined as any,
         data: {} as any,
       });
 
@@ -473,7 +463,7 @@ describe('Graph Builder Integration', () => {
       const data = createMockData();
       const graph = buildPuzzleFocusGraph(data);
 
-      expect(graph.metadata.viewType).toBe('puzzle-focus');
+      expect(graph.metadata?.viewType).toBe('puzzle-focus');
       
       // Should only have puzzle-related edges
       const edgeTypes = new Set(graph.edges.map(e => e.data?.relationshipType));
@@ -486,7 +476,7 @@ describe('Graph Builder Integration', () => {
       const data = createMockData();
       const graph = buildCharacterJourneyGraph(data);
 
-      expect(graph.metadata.viewType).toBe('character-journey');
+      expect(graph.metadata?.viewType).toBe('character-journey');
       
       // Should only have character-related edges
       const edgeTypes = new Set(graph.edges.map(e => e.data?.relationshipType));
@@ -498,7 +488,7 @@ describe('Graph Builder Integration', () => {
       const data = createMockData();
       const graph = buildContentStatusGraph(data);
 
-      expect(graph.metadata.viewType).toBe('content-status');
+      expect(graph.metadata?.viewType).toBe('content-status');
       
       // Should include all nodes that were successfully transformed
       // We have 2 characters + 3 elements + 2 puzzles + 1 timeline = 8 total entities
@@ -511,22 +501,30 @@ describe('Graph Builder Integration', () => {
       const data = createMockData();
       const graph = buildGraphData(data);
 
-      expect(graph.metadata.metrics.startTime).toBeGreaterThan(0);
-      expect(graph.metadata.metrics.endTime).toBeGreaterThan(graph.metadata.metrics.startTime);
-      expect(graph.metadata.metrics.duration).toBe(
-        graph.metadata.metrics.endTime - graph.metadata.metrics.startTime
-      );
+      expect(graph.metadata?.metrics?.startTime).toBeGreaterThan(0);
+      expect(graph.metadata?.metrics?.endTime).toBeGreaterThan(graph.metadata?.metrics?.startTime ?? 0);
+      
+      // Only calculate duration if both times exist
+      if (graph.metadata?.metrics?.endTime && graph.metadata?.metrics?.startTime) {
+        expect(graph.metadata?.metrics?.duration).toBe(
+          graph.metadata.metrics.endTime - graph.metadata.metrics.startTime
+        );
+      }
     });
 
     it('should calculate layout metrics', () => {
       const data = createMockData();
       const graph = buildGraphData(data);
 
-      const layoutMetrics = graph.metadata.metrics.layoutMetrics;
-      expect(layoutMetrics.width).toBeGreaterThan(0);
-      expect(layoutMetrics.height).toBeGreaterThan(0);
-      expect(layoutMetrics.density).toBeGreaterThan(0);
-      expect(typeof layoutMetrics.overlap).toBe('number');
+      const layoutMetrics = graph.metadata?.metrics?.layoutMetrics;
+      expect(layoutMetrics).toBeDefined();
+      
+      if (layoutMetrics) {
+        expect(layoutMetrics.width).toBeGreaterThan(0);
+        expect(layoutMetrics.height).toBeGreaterThan(0);
+        expect(layoutMetrics.density).toBeGreaterThan(0);
+        expect(typeof layoutMetrics.overlap).toBe('number');
+      }
     });
   });
 });

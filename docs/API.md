@@ -629,6 +629,81 @@ async function fetchWithRetry(endpoint, options, retries = 3) {
 4. **Data Freshness**: Cached data is served by default (5-minute TTL). Fresh data available via cache bypass header.
 5. **Performance**: Cached requests return in <50ms. Initial Notion requests may take 1-3 seconds depending on database size.
 
+## Missing Mutation Endpoints (Sprint 2 Requirement)
+
+⚠️ **IMPORTANT**: As of Sprint 1 completion (Jan 14, 2025), the API only supports READ operations. Sprint 2 requires full mutation support which is currently NOT implemented.
+
+### Required Mutation Endpoints
+
+The following endpoints need to be implemented for Sprint 2:
+
+#### Update Character
+```http
+PUT /api/notion/characters/:id
+Content-Type: application/json
+X-API-Key: your-api-key-here
+
+{
+  "name": "Updated Name",
+  "tier": "Core",
+  "type": "Player",
+  // ... other Character fields
+}
+```
+
+#### Update Element
+```http
+PUT /api/notion/elements/:id
+PATCH /api/notion/elements/:id  // For partial updates
+```
+
+#### Update Puzzle
+```http
+PUT /api/notion/puzzles/:id
+PATCH /api/notion/puzzles/:id
+```
+
+#### Update Timeline Event
+```http
+PUT /api/notion/timeline/:id
+PATCH /api/notion/timeline/:id
+```
+
+#### Delete Operations (if needed)
+```http
+DELETE /api/notion/{entity}/:id
+```
+
+### Required Frontend Infrastructure
+
+The following React Query mutations need implementation:
+
+```typescript
+// Example mutation hook structure needed
+const useUpdateCharacter = () => {
+  return useMutation({
+    mutationFn: async (data) => updateCharacter(data),
+    onMutate: async (newData) => {
+      // Optimistic update logic
+    },
+    onError: (error, variables, context) => {
+      // Rollback logic
+    },
+    onSuccess: () => {
+      // Cache invalidation
+      toast.success('Character updated')
+    }
+  })
+}
+```
+
+### Testing Infrastructure Needed
+
+- MSW handlers for all mutation endpoints
+- Integration tests for mutation operations
+- Optimistic update test coverage
+- Error recovery test scenarios
+
 ## Support
 
 For issues or questions:

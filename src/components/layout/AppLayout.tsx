@@ -15,7 +15,7 @@ import styles from './AppLayout.module.css'
 export default function AppLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [isNavigationPending, setIsNavigationPending] = useState(false)
+  const [isNavigationPending] = useState(false)
   const location = useLocation()
   const isOnline = useOnlineStatus()
   const lastSyncTime = useLastSyncTime()

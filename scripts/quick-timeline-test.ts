@@ -20,7 +20,7 @@ async function quickTest() {
     
     console.log(`Response in ${duration}ms`);
     console.log(`Status: ${response.status}`);
-    console.log(`Items: ${data.data?.length || 0}`);
+    console.log(`Items: ${data.data?.length ?? 0}`);
     console.log(`Has more: ${data.hasMore}`);
     
     if (duration < 2000) {

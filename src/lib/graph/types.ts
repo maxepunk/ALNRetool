@@ -165,6 +165,23 @@ export type ViewType = 'puzzle-focus' | 'character-journey' | 'content-status';
 // ============================================================================
 
 /**
+ * Graph transformation metrics
+ */
+export interface GraphMetrics {
+  nodeCount: number;
+  edgeCount: number;
+  startTime: number;
+  endTime: number;
+  duration: number;
+  layoutMetrics: {
+    width: number;
+    height: number;
+    density: number;
+    overlap: number;
+  };
+}
+
+/**
  * Complete graph data ready for React Flow
  */
 export interface GraphData {
@@ -173,7 +190,7 @@ export interface GraphData {
   
   /** Optional metadata about the graph itself */
   metadata?: {
-    metrics?: any;
+    metrics?: GraphMetrics;
     viewType?: ViewType;
     timestamp?: string;
     nodeCount?: number;
@@ -229,34 +246,8 @@ export interface EntityLookupMaps {
 // ============================================================================
 // Type Guards
 // ============================================================================
-
-/**
- * Type guard to check if a node has an error state
- */
-export function hasError(node: GraphNode): boolean {
-  return node.data.metadata.errorState !== undefined;
-}
-
-/**
- * Type guard to check entity type
- */
-export function isEntityType<T extends NotionEntity>(
-  entity: NotionEntity,
-  type: EntityType
-): entity is T {
-  switch (type) {
-    case 'character':
-      return 'tier' in entity;
-    case 'element':
-      return 'basicType' in entity;
-    case 'puzzle':
-      return 'puzzleElementIds' in entity;
-    case 'timeline':
-      return 'date' in entity;
-    default:
-      return false;
-  }
-}
+// Note: Runtime type guards moved to ./guards.ts per architecture principle:
+// "No index.ts re-exports" and clean separation of types from runtime code
 
 // ============================================================================
 // Utility Types
