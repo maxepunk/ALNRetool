@@ -2,7 +2,7 @@ services:
   - type: web
     name: alnretool
     runtime: node
-    buildCommand: npm ci && npm run build
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start
     envVars:
       - key: NODE_ENV
