@@ -22,7 +22,7 @@ Use these settings in the Render dashboard:
 - **Branch**: `main` or `feature/sprint-1-foundation`
 - **Root Directory**: Leave empty (uses repository root)
 - **Runtime**: Node
-- **Build Command**: `npm ci --include=dev && npm run build`
+- **Build Command**: `npm install && npm run build`
 - **Start Command**: `npm run start`
 - **Instance Type**: Free
 
