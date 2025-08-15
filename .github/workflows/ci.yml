@@ -70,8 +70,9 @@ jobs:
         run: |
           echo "Checking client bundle size..."
           MAX_SIZE=2000000  # 2MB limit for client bundle
-          SIZE=$(du -sb dist | cut -f1)
-          echo "Client bundle size: $SIZE bytes"
+          # Only count actual JS and CSS files, excluding source maps
+          SIZE=$(find dist -type f \( -name "*.js" -o -name "*.css" \) ! -name "*.map" -exec du -cb {} + | grep total$ | cut -f1)
+          echo "Client bundle size (excluding source maps): $SIZE bytes"
           if [ $SIZE -gt $MAX_SIZE ]; then
             echo "❌ Client bundle too large: $SIZE bytes (max: $MAX_SIZE)"
             exit 1
