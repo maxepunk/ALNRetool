@@ -25,7 +25,8 @@ config({ path: path.join(__dirname, '..', '.env') });
 
 // Test configuration
 const BASE_URL = 'http://localhost:3001';
-const TEST_API_KEY = process.env.API_KEY ?? 'test-api-key-12345';
+// In CI, the key is NOTION_API_KEY; locally it's API_KEY
+const TEST_API_KEY = process.env.API_KEY ?? process.env.NOTION_API_KEY ?? 'test-api-key-12345';
 const TEST_TIMEOUT = 30000; // 30 seconds
 
 interface TestResult {
