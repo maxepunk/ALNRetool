@@ -52,6 +52,13 @@ export class TestServer {
           ...process.env,
           PORT: String(this.port),
           NODE_ENV: 'test',
+          // Pass through API_KEY and all Notion env vars explicitly
+          API_KEY: process.env.API_KEY || process.env.NOTION_API_KEY,
+          NOTION_API_KEY: process.env.NOTION_API_KEY,
+          NOTION_CHARACTERS_DB: process.env.NOTION_CHARACTERS_DB,
+          NOTION_ELEMENTS_DB: process.env.NOTION_ELEMENTS_DB,
+          NOTION_PUZZLES_DB: process.env.NOTION_PUZZLES_DB,
+          NOTION_TIMELINE_DB: process.env.NOTION_TIMELINE_DB,
           ...env
         },
         stdio: ['ignore', 'pipe', 'pipe'],
