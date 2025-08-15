@@ -3,6 +3,7 @@ import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import { config } from 'dotenv';
 import { existsSync } from 'fs';
+import path from 'path';
 import notionRoutes from './routes/notion.js';
 import cacheRoutes from './routes/cache.js';
 import { apiKeyAuth } from './middleware/auth.js';
@@ -45,7 +46,7 @@ const apiLimiter = rateLimit({
 // Configure CORS - restrict to frontend origin only
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL 
+    ? process.env.FRONTEND_URL || false // In production, same-origin if no FRONTEND_URL
     : (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
         // Allow multiple localhost ports in development
         const allowedPorts = ['5173', '5174', '5175'];
@@ -66,9 +67,22 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/api', apiLimiter);
 
+// Serve static files in production
+// __dirname in compiled output will be dist/server/server/
+// So we need to go up two levels to dist/ then into client/
+if (process.env.NODE_ENV === 'production') {
+  const staticDir = path.join(__dirname, '../../client');
+  app.use(express.static(staticDir));
+}
+
 // Health check endpoint (no auth required)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Production health check for Render
+app.get('/healthz', (req, res) => {
+  res.status(200).send('OK');
 });
 
 // Notion API routes (protected with API key and validated)
@@ -76,6 +90,14 @@ app.use('/api/notion', validatePagination, apiKeyAuth, notionRoutes);
 
 // Cache management routes (protected with API key)
 app.use('/api/cache', apiKeyAuth, cacheRoutes);
+
+// SPA fallback - must be after all API routes
+if (process.env.NODE_ENV === 'production') {
+  app.get('*', (req, res) => {
+    const staticDir = path.join(__dirname, '../../client');
+    res.sendFile(path.join(staticDir, 'index.html'));
+  });
+}
 
 // Global error handler (must be last)
 app.use(errorHandler);

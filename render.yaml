@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: alnretool
+    runtime: node
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_KEY
+        sync: false # Set in Render dashboard
+      - key: NOTION_API_KEY
+        sync: false # Set in Render dashboard
+      - key: NOTION_CHARACTERS_DB
+        sync: false # Set in Render dashboard
+      - key: NOTION_ELEMENTS_DB
+        sync: false # Set in Render dashboard
+      - key: NOTION_PUZZLES_DB
+        sync: false # Set in Render dashboard
+      - key: NOTION_TIMELINE_DB
+        sync: false # Set in Render dashboard
+      - key: FRONTEND_URL
+        sync: false # Optional - only if deploying frontend separately
+    healthCheckPath: /healthz
+    autoDeploy: false # Set to true after testing
