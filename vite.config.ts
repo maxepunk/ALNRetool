@@ -18,6 +18,14 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: './src/test/setup.ts',
+    css: {
+      modules: {
+        classNameStrategy: 'non-scoped'
+      }
+    },
+    moduleNameMapper: {
+      '\\.module\\.css$': '/src/test/mocks/cssModules.ts'
+    },
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: [
