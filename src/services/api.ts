@@ -20,8 +20,9 @@ import type {
   TimelineEvent,
 } from '@/types/notion/app';
 
-// Get API base URL from environment or default to localhost
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+// Get API base URL from environment or use relative path in production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (window.location.hostname === 'localhost' ? 'http://localhost:3001/api' : '/api');
 
 /**
  * Custom error class for API errors
@@ -51,17 +52,30 @@ async function fetcher<T>(
 ): Promise<T> {
   const apiKey = import.meta.env.VITE_NOTION_API_KEY || localStorage.getItem('notionApiKey');
   
-  if (!apiKey) {
-    throw new ApiError(401, 'MISSING_API_KEY', 'No API key configured');
+  // In production, the backend handles API key authentication
+  // Only require API key in development
+  const isLocalDev = window.location.hostname === 'localhost';
+  if (isLocalDev && !apiKey) {
+    throw new ApiError(401, 'MISSING_API_KEY', 'No API key configured for local development');
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  // Only send API key header if we have one (for local dev)
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+  
+  // Merge any additional headers from options
+  if (options?.headers) {
+    Object.assign(headers, options.headers);
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': apiKey,
-      ...options?.headers,
-    },
+    headers,
   });
 
   // Handle non-JSON responses

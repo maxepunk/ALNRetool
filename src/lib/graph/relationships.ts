@@ -14,8 +14,11 @@ import type {
   GraphEdge, 
   EntityLookupMaps, 
   RelationshipType,
-  EdgeMetadata 
+  EdgeMetadata,
+  EntityType,
+  PlaceholderNodeData 
 } from './types';
+import type { Node } from '@xyflow/react';
 
 // ============================================================================
 // Edge Style Configuration
@@ -63,6 +66,21 @@ const EDGE_STYLES: Record<RelationshipType, Partial<GraphEdge>> = {
   },
 };
 
+/**
+ * Visual style for broken edges (missing entities)
+ */
+const BROKEN_EDGE_STYLE: Partial<GraphEdge> = {
+  type: 'default',
+  style: { 
+    stroke: '#dc2626', // Red color for broken relationships
+    strokeWidth: 2, 
+    strokeDasharray: '3 3', // Dashed line
+    opacity: 0.7 
+  },
+  animated: false,
+  className: 'edge-broken',
+};
+
 // ============================================================================
 // Lookup Map Builders
 // ============================================================================
@@ -85,6 +103,49 @@ export function buildLookupMaps(
 }
 
 // ============================================================================
+// Placeholder Node Creation
+// ============================================================================
+
+/**
+ * Create a placeholder node for missing entities
+ * These nodes help visualize broken relationships in the data
+ */
+export function createPlaceholderNode(
+  id: string, 
+  entityType: EntityType,
+  referencedBy?: string
+): Node<PlaceholderNodeData> {
+  return {
+    id,
+    type: 'placeholder',
+    position: { x: 0, y: 0 }, // Will be positioned by layout
+    data: {
+      entity: null, // No actual entity data
+      label: `Missing ${entityType}: ${id.slice(0, 8)}...`,
+      metadata: {
+        entityType,
+        errorState: {
+          type: 'missing_entity',
+          message: `Referenced ${entityType} not found in Notion`,
+          referencedBy: referencedBy || 'unknown',
+        },
+        visualHints: {
+          color: '#dc2626', // Red for missing
+          size: 'small',
+          shape: 'circle',
+        },
+      },
+    },
+    style: {
+      background: '#fee2e2', // Light red background
+      border: '2px dashed #dc2626',
+      opacity: 0.8,
+    },
+    className: 'node-placeholder',
+  };
+}
+
+// ============================================================================
 // Edge Creation Functions
 // ============================================================================
 
@@ -101,12 +162,13 @@ function createEdgeId(
 
 /**
  * Create an edge with metadata
+ * Now includes support for marking broken relationships
  */
 function createEdge(
   source: string,
   target: string,
   relationshipType: RelationshipType,
-  metadata?: Partial<EdgeMetadata>
+  metadata?: Partial<EdgeMetadata> & { isBroken?: boolean }
 ): GraphEdge | null {
   // Validate source and target exist
   if (!source || !target) {
@@ -120,7 +182,13 @@ function createEdge(
     return null;
   }
   
-  const edgeStyle = EDGE_STYLES[relationshipType];
+  // Use broken style if edge references missing entities
+  const isBroken = metadata?.isBroken || false;
+  const baseStyle = isBroken ? BROKEN_EDGE_STYLE : EDGE_STYLES[relationshipType];
+  const edgeStyle = {
+    ...EDGE_STYLES[relationshipType],
+    ...baseStyle,
+  };
   
   const edge: GraphEdge = {
     id: createEdgeId(source, target, relationshipType),
@@ -130,8 +198,9 @@ function createEdge(
     data: {
       relationshipType,
       strength: metadata?.strength || 1,
-      label: metadata?.label || (edgeStyle.label as string),
+      label: metadata?.label || (EDGE_STYLES[relationshipType].label as string),
       bidirectional: metadata?.bidirectional || false,
+      isBroken,
     },
   };
   
@@ -402,7 +471,18 @@ export function createContainerEdges(
 // ============================================================================
 
 /**
+ * Data integrity report for missing entities
+ */
+export interface DataIntegrityReport {
+  missingEntities: Map<string, { type: EntityType; referencedBy: string[] }>;
+  brokenRelationships: number;
+  totalRelationships: number;
+  integrityScore: number; // 0-100 percentage
+}
+
+/**
  * Resolve all relationships and create edges
+ * Original version - kept for backward compatibility
  */
 export function resolveAllRelationships(
   characters: Character[],
@@ -435,6 +515,137 @@ export function resolveAllRelationships(
   });
   
   return Array.from(uniqueEdges.values());
+}
+
+/**
+ * Enhanced relationship resolution with placeholder nodes for missing entities
+ * Returns edges, placeholder nodes, and data integrity report
+ */
+export function resolveRelationshipsWithIntegrity(
+  characters: Character[],
+  elements: Element[],
+  puzzles: Puzzle[],
+  timeline: TimelineEvent[]
+): {
+  edges: GraphEdge[];
+  placeholderNodes: Node<PlaceholderNodeData>[];
+  report: DataIntegrityReport;
+} {
+  // Build lookup maps for efficient resolution
+  const lookupMaps = buildLookupMaps(characters, elements, puzzles, timeline);
+  
+  // Track missing entities
+  const missingEntities = new Map<string, { type: EntityType; referencedBy: string[] }>();
+  const placeholderNodes: Node<PlaceholderNodeData>[] = [];
+  let brokenRelationships = 0;
+  let totalRelationships = 0;
+  
+  console.group('Resolving relationships with integrity checking');
+  
+  // Helper to track missing entity
+  const trackMissingEntity = (id: string, type: EntityType, referencedBy: string) => {
+    const existing = missingEntities.get(id);
+    if (existing) {
+      existing.referencedBy.push(referencedBy);
+    } else {
+      missingEntities.set(id, { type, referencedBy: [referencedBy] });
+    }
+  };
+  
+  // Create all edge types with missing entity tracking
+  const allEdges: GraphEdge[] = [];
+  
+  // First, scan all entities for references to missing entities
+  // This is more comprehensive than just looking at created edges
+  
+  // Check Elements for missing owners
+  elements.forEach(element => {
+    if (element.ownerId && !lookupMaps.characters.has(element.ownerId)) {
+      trackMissingEntity(element.ownerId, 'character', `Element: ${element.name}`);
+    }
+    if (element.timelineEventId && !lookupMaps.timeline.has(element.timelineEventId)) {
+      trackMissingEntity(element.timelineEventId, 'timeline', `Element: ${element.name}`);
+    }
+    // Check container relationships
+    element.contentIds?.forEach(contentId => {
+      if (!lookupMaps.elements.has(contentId)) {
+        trackMissingEntity(contentId, 'element', `Container: ${element.name}`);
+      }
+    });
+  });
+  
+  // Check Puzzles for missing elements and sub-puzzles
+  puzzles.forEach(puzzle => {
+    puzzle.puzzleElementIds?.forEach(elementId => {
+      if (!lookupMaps.elements.has(elementId)) {
+        trackMissingEntity(elementId, 'element', `Puzzle requirement: ${puzzle.name}`);
+      }
+    });
+    puzzle.rewardIds?.forEach(elementId => {
+      if (!lookupMaps.elements.has(elementId)) {
+        trackMissingEntity(elementId, 'element', `Puzzle reward: ${puzzle.name}`);
+      }
+    });
+    puzzle.subPuzzleIds?.forEach(subPuzzleId => {
+      if (!lookupMaps.puzzles.has(subPuzzleId)) {
+        trackMissingEntity(subPuzzleId, 'puzzle', `Parent puzzle: ${puzzle.name}`);
+      }
+    });
+  });
+  
+  // Create edges (these won't include edges to missing entities due to the checks in creation functions)
+  const standardEdges = [
+    ...createOwnershipEdges(elements, lookupMaps),
+    ...createRequirementEdges(puzzles, lookupMaps),
+    ...createRewardEdges(puzzles, lookupMaps),
+    ...createTimelineEdges(elements, lookupMaps),
+    ...createChainEdges(puzzles, lookupMaps),
+    ...createContainerEdges(elements, lookupMaps),
+  ];
+  
+  // Count relationships (including broken ones we couldn't create)
+  totalRelationships = standardEdges.length + missingEntities.size;
+  brokenRelationships = missingEntities.size;
+  
+  // Add the created edges
+  allEdges.push(...standardEdges);
+  
+  // Create placeholder nodes for missing entities
+  missingEntities.forEach((info, id) => {
+    const placeholder = createPlaceholderNode(
+      id, 
+      info.type,
+      info.referencedBy.join(', ')
+    );
+    placeholderNodes.push(placeholder);
+  });
+  
+  // Calculate integrity score
+  const integrityScore = totalRelationships > 0
+    ? Math.round(((totalRelationships - brokenRelationships) / totalRelationships) * 100)
+    : 100;
+  
+  console.log(`Data integrity: ${integrityScore}%`);
+  console.log(`Missing entities: ${missingEntities.size}`);
+  console.log(`Broken relationships: ${brokenRelationships}/${totalRelationships}`);
+  console.groupEnd();
+  
+  // Remove duplicates
+  const uniqueEdges = new Map<string, GraphEdge>();
+  allEdges.forEach(edge => {
+    uniqueEdges.set(edge.id, edge);
+  });
+  
+  return {
+    edges: Array.from(uniqueEdges.values()),
+    placeholderNodes,
+    report: {
+      missingEntities,
+      brokenRelationships,
+      totalRelationships,
+      integrityScore,
+    },
+  };
 }
 
 // ============================================================================

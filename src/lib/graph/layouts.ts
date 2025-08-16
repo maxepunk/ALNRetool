@@ -139,6 +139,16 @@ export function applyDagreLayout(
   // Create Dagre graph
   const dagreGraph = createDagreGraph(config);
   
+  
+  // Early return if no nodes
+  if (nodes.length === 0) {
+    console.warn('No nodes provided to dagre layout');
+    return [];
+  }
+  
+  // Create a set of valid node IDs for quick lookup
+  const validNodeIds = new Set(nodes.map(node => node.id));
+  
   // Add nodes to Dagre
   nodes.forEach(node => {
     const dimensions = getNodeDimensions(node);
@@ -150,16 +160,37 @@ export function applyDagreLayout(
     });
   });
   
-  // Add edges to Dagre
+  // Add edges to Dagre - only if both source and target exist
+  let invalidEdgeCount = 0;
   edges.forEach(edge => {
+    if (!validNodeIds.has(edge.source)) {
+      console.warn(`Edge source not found in nodes: ${edge.source}`);
+      invalidEdgeCount++;
+      return;
+    }
+    if (!validNodeIds.has(edge.target)) {
+      console.warn(`Edge target not found in nodes: ${edge.target}`);
+      invalidEdgeCount++;
+      return;
+    }
+    
     dagreGraph.setEdge(edge.source, edge.target, {
       // Weight affects edge routing
       weight: edge.data?.strength || 1,
     });
   });
   
+  if (invalidEdgeCount > 0) {
+    console.warn(`Skipped ${invalidEdgeCount} invalid edges in dagre layout`);
+  }
+  
   // Run layout algorithm
   try {
+    // Add safety check before layout
+    if (dagreGraph.nodeCount() === 0) {
+      console.warn('No nodes in graph, skipping dagre layout');
+      return applyFallbackLayout(nodes);
+    }
     dagre.layout(dagreGraph);
   } catch (error) {
     console.error('Dagre layout failed:', error);
@@ -279,7 +310,12 @@ export function applyHierarchicalLayout(
   // Create Dagre graph with rank constraints
   const dagreGraph = createDagreGraph(config);
   
+  
+  // Create a set of valid node IDs for quick lookup
+  const validNodeIds = new Set(nodes.map(node => node.id));
+  
   // Add nodes with rank constraints
+  let nodesAdded = 0;
   layerOrder.forEach((type, layerIndex) => {
     const layerNodes = groups.get(type) || [];
     layerNodes.forEach(node => {
@@ -290,21 +326,57 @@ export function applyHierarchicalLayout(
         // Rank determines the layer
         rank: layerIndex,
       });
+      nodesAdded++;
     });
   });
   
-  // Add edges
+  console.log(`Added ${nodesAdded} nodes to dagre graph`);
+  
+  // Add edges - only if both source and target exist
+  let invalidEdgeCount = 0;
   edges.forEach(edge => {
+    if (!validNodeIds.has(edge.source)) {
+      console.warn(`Hierarchical edge source not found: ${edge.source}`);
+      invalidEdgeCount++;
+      return;
+    }
+    if (!validNodeIds.has(edge.target)) {
+      console.warn(`Hierarchical edge target not found: ${edge.target}`);
+      invalidEdgeCount++;
+      return;
+    }
+    
     dagreGraph.setEdge(edge.source, edge.target, {
       weight: edge.data?.strength || 1,
     });
   });
   
+  if (invalidEdgeCount > 0) {
+    console.warn(`Skipped ${invalidEdgeCount} invalid edges in hierarchical layout`);
+  }
+  
+  // Check if we have any nodes before running layout
+  if (nodesAdded === 0) {
+    console.warn('No nodes added to dagre graph, returning empty layout');
+    return nodes;
+  }
+  
   // Run layout
   try {
+    // Add safety check before layout
+    if (dagreGraph.nodeCount() === 0) {
+      console.warn('No nodes in hierarchical graph, skipping dagre layout');
+      return applyFallbackLayout(nodes);
+    }
     dagre.layout(dagreGraph);
   } catch (error) {
     console.error('Hierarchical layout failed:', error);
+    console.error('Graph state:', {
+      nodeCount: dagreGraph.nodeCount(),
+      edgeCount: dagreGraph.edgeCount(),
+      nodes: dagreGraph.nodes(),
+      edges: dagreGraph.edges()
+    });
     return applyDagreLayout(nodes, edges, config); // Fall back to standard layout
   }
   

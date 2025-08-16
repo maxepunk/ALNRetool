@@ -53,9 +53,10 @@ export interface SFMetadata {
  * Error state for nodes with data issues
  */
 export interface NodeError {
-  type: 'missing_data' | 'invalid_relation' | 'parse_error';
+  type: 'missing_data' | 'invalid_relation' | 'parse_error' | 'missing_entity';
   message: string;
   field?: string;
+  referencedBy?: string;
 }
 
 /**
@@ -86,6 +87,7 @@ export interface NodeMetadata {
     color?: string;
     icon?: string;
     size?: 'small' | 'medium' | 'large';
+    shape?: string;
   };
 }
 
@@ -100,6 +102,20 @@ export interface NodeMetadata {
 export interface GraphNodeData<T extends NotionEntity = NotionEntity> extends Record<string, unknown> {
   /** Original entity data from Notion */
   entity: T;
+  
+  /** Display label for the node */
+  label: string;
+  
+  /** Additional metadata for rendering and behavior */
+  metadata: NodeMetadata;
+}
+
+/**
+ * Special data structure for placeholder nodes (missing entities)
+ */
+export interface PlaceholderNodeData extends Record<string, unknown> {
+  /** No entity data for placeholders */
+  entity: null;
   
   /** Display label for the node */
   label: string;
@@ -144,6 +160,9 @@ export interface EdgeMetadata extends Record<string, unknown> {
   
   /** Whether this is a bidirectional relationship */
   bidirectional?: boolean;
+  
+  /** Whether this edge references missing entities */
+  isBroken?: boolean;
 }
 
 /**

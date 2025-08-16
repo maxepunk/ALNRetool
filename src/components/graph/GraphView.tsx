@@ -20,7 +20,12 @@ import ElementNode from './nodes/ElementNode';
 import PuzzleNode from './nodes/PuzzleNode';
 import TimelineNode from './nodes/TimelineNode';
 
-import { buildGraph } from '@/lib/graph';
+import { 
+  buildGraph,
+  buildPuzzleFocusGraph,
+  buildCharacterJourneyGraph,
+  buildContentStatusGraph 
+} from '@/lib/graph';
 import { useGraphState } from '@/hooks/useGraphState';
 import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 import type { ViewType } from '@/lib/graph/types';
@@ -65,16 +70,25 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   const graphData = useMemo(() => {
     console.time('Graph Building');
     
-    // Build the graph from entities
-    const graph = buildGraph({
-      characters,
-      elements,
-      puzzles,
-      timeline,
-    }, {
-      viewType,
-      includeOrphans: true,
-    });
+    // Build the graph from entities using the appropriate function for each view type
+    const notionData = { characters, elements, puzzles, timeline };
+    
+    let graph;
+    switch (viewType) {
+      case 'puzzle-focus':
+        graph = buildPuzzleFocusGraph(notionData);
+        break;
+      case 'character-journey':
+        graph = buildCharacterJourneyGraph(notionData);
+        break;
+      case 'content-status':
+        graph = buildContentStatusGraph(notionData);
+        break;
+      default:
+        // Fallback to generic build with sensible defaults
+        graph = buildGraph(notionData, { viewType });
+        break;
+    }
     
     console.timeEnd('Graph Building');
     console.log(`Graph built with ${graph.nodes.length} nodes and ${graph.edges.length} edges`);
@@ -138,6 +152,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
         edgeTypes={edgeTypes}
         fitView
         attributionPosition="bottom-left"
+        disableKeyboardA11y={true}
       >
         <Background 
           variant={BackgroundVariant.Dots} 

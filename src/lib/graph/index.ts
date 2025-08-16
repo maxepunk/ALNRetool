@@ -16,8 +16,10 @@ import type {
   GraphData,
   LayoutConfig,
   ViewType,
-  RelationshipType
+  RelationshipType,
+  PlaceholderNodeData
 } from './types';
+import type { Node } from '@xyflow/react';
 
 // Import transformers
 import { transformCharacters } from './transformers/character';
@@ -26,7 +28,12 @@ import { transformPuzzles } from './transformers/puzzle';
 import { transformTimelineEvents } from './transformers/timeline';
 
 // Import relationship resolver
-import { resolveAllRelationships, filterEdgesByType } from './relationships';
+import { 
+  resolveAllRelationships, 
+  resolveRelationshipsWithIntegrity,
+  filterEdgesByType,
+  type DataIntegrityReport 
+} from './relationships';
 
 // Import layout functions
 import { 
@@ -183,8 +190,9 @@ export function buildGraphData(
     viewType?: ViewType;
     filterRelationships?: RelationshipType[];
     includeOrphans?: boolean;
+    enableIntegrityChecking?: boolean; // New option for robust mode
   } = {}
-): GraphData {
+): GraphData & { integrityReport?: DataIntegrityReport } {
   const startTime = performance.now();
   const warnings: string[] = [];
   
@@ -205,50 +213,105 @@ export function buildGraphData(
     warnings.push('No nodes created from input data');
   }
   
-  // Step 2: Resolve relationships to edges
-  const allEdges = resolveAllRelationships(
-    data.characters,
-    data.elements,
-    data.puzzles,
-    data.timeline
-  );
+  // Step 2: Resolve relationships to edges (with integrity checking if enabled)
+  let allEdges: GraphEdge[];
+  let placeholderNodes: Node<PlaceholderNodeData>[] = [];
+  let integrityReport: DataIntegrityReport | undefined;
   
-  // Step 3: Filter edges if requested
-  let filteredEdges = allEdges;
+  if (options.enableIntegrityChecking !== false) { // Default to true for robustness
+    const integrityResult = resolveRelationshipsWithIntegrity(
+      data.characters,
+      data.elements,
+      data.puzzles,
+      data.timeline
+    );
+    allEdges = integrityResult.edges;
+    placeholderNodes = integrityResult.placeholderNodes;
+    integrityReport = integrityResult.report;
+    
+    // Add warnings for missing entities
+    if (integrityResult.report.missingEntities.size > 0) {
+      warnings.push(`Found ${integrityResult.report.missingEntities.size} missing entities`);
+    }
+    if (integrityResult.report.brokenRelationships > 0) {
+      warnings.push(`Found ${integrityResult.report.brokenRelationships} broken relationships`);
+    }
+  } else {
+    // Use original resolution for backward compatibility
+    allEdges = resolveAllRelationships(
+      data.characters,
+      data.elements,
+      data.puzzles,
+      data.timeline
+    );
+  }
+  
+  // Step 3: Filter edges by relationship type if requested
+  let filteredByTypeEdges = allEdges;
   if (options.filterRelationships && options.filterRelationships.length > 0) {
-    filteredEdges = filterEdgesByType(
+    filteredByTypeEdges = filterEdgesByType(
       allEdges, 
       options.filterRelationships
     );
-    console.log(`Filtered edges from ${allEdges.length} to ${filteredEdges.length}`);
+    console.log(`Filtered edges by type from ${allEdges.length} to ${filteredByTypeEdges.length}`);
   }
   
-  // Step 4: Filter orphan nodes if requested
-  let filteredNodes = allNodes;
+  // Step 4: Combine regular nodes with placeholder nodes
+  // Cast placeholder nodes to GraphNode since they follow the same Node interface
+  const combinedNodes: (GraphNode | Node<PlaceholderNodeData>)[] = [...allNodes, ...placeholderNodes];
+  
+  // Step 5: Determine which nodes to keep based on orphan filtering
+  let nodesToKeep: (GraphNode | Node<PlaceholderNodeData>)[] = combinedNodes;
   if (!options.includeOrphans) {
+    // Find nodes that are connected by edges
     const connectedNodeIds = new Set<string>();
-    filteredEdges.forEach(edge => {
-      connectedNodeIds.add(edge.source);
-      connectedNodeIds.add(edge.target);
+    filteredByTypeEdges.forEach(edge => {
+      // Check if source and target nodes exist before marking as connected
+      if (combinedNodes.some(n => n.id === edge.source)) {
+        connectedNodeIds.add(edge.source);
+      }
+      if (combinedNodes.some(n => n.id === edge.target)) {
+        connectedNodeIds.add(edge.target);
+      }
     });
     
-    const orphanCount = filteredNodes.length;
-    filteredNodes = filteredNodes.filter(node => connectedNodeIds.has(node.id));
-    const removedCount = orphanCount - filteredNodes.length;
+    const orphanCount = nodesToKeep.length;
+    nodesToKeep = nodesToKeep.filter(node => connectedNodeIds.has(node.id));
+    const removedCount = orphanCount - nodesToKeep.length;
     
     if (removedCount > 0) {
-      console.log(`Removed ${removedCount} orphan nodes`);
+      console.log(`Removed ${removedCount} orphan nodes (including placeholders)`);
     }
   }
   
-  // Step 5: Apply layout
+  // Step 6: Filter edges to only include those between kept nodes
+  const keptNodeIds = new Set(nodesToKeep.map(n => n.id));
+  const finalEdges = filteredByTypeEdges.filter(edge => {
+    const sourceExists = keptNodeIds.has(edge.source);
+    const targetExists = keptNodeIds.has(edge.target);
+    
+    if (!sourceExists || !targetExists) {
+      // This is expected when orphan nodes are filtered out
+      return false;
+    }
+    
+    return true;
+  });
+  
+  if (finalEdges.length < filteredByTypeEdges.length) {
+    const droppedCount = filteredByTypeEdges.length - finalEdges.length;
+    console.log(`Dropped ${droppedCount} edges due to node filtering`);
+  }
+  
+  // Step 7: Apply layout
+  // Cast to GraphNode[] for layout (they all follow Node interface)
   const positionedNodes = applyLayout(
-    filteredNodes,
-    filteredEdges,
+    nodesToKeep as GraphNode[],
+    finalEdges,
     options.viewType
   );
   
-  // Step 6: Calculate metrics
+  // Step 8: Calculate metrics
   const endTime = performance.now();
   const layoutMetrics = calculateLayoutMetrics(positionedNodes);
   
@@ -257,7 +320,7 @@ export function buildGraphData(
     endTime,
     duration: endTime - startTime,
     nodeCount: positionedNodes.length,
-    edgeCount: filteredEdges.length,
+    edgeCount: finalEdges.length,
     layoutMetrics,
     warnings,
   };
@@ -267,19 +330,27 @@ export function buildGraphData(
     nodes: metrics.nodeCount,
     edges: metrics.edgeCount,
     layout: metrics.layoutMetrics,
+    placeholders: placeholderNodes.length,
+    integrityScore: integrityReport?.integrityScore,
   });
   console.groupEnd();
   
-  // Return complete graph data
-  return {
+  // Return complete graph data with integrity report
+  const result: GraphData & { integrityReport?: DataIntegrityReport } = {
     nodes: positionedNodes,
-    edges: filteredEdges,
+    edges: finalEdges,
     metadata: {
       metrics,
       viewType: options.viewType,
       timestamp: new Date().toISOString(),
     },
   };
+  
+  if (integrityReport) {
+    result.integrityReport = integrityReport;
+  }
+  
+  return result;
 }
 
 // Export buildGraph as an alias for buildGraphData for backwards compatibility
