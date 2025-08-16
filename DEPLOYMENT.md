@@ -7,6 +7,15 @@
 2. Notion API key and database IDs
 3. Render.com account (free tier works)
 
+### Critical Environment Variable Configuration
+
+**⚠️ IMPORTANT**: The application follows 12-factor app principles. In production:
+- Environment variables MUST be set through the platform (Render dashboard)
+- The application will NOT load .env files in production (NODE_ENV=production)
+- Missing required variables will cause the server to fail fast and exit
+
+This prevents accidental override of production secrets by development .env files.
+
 ### Step 1: Connect Repository
 1. Log in to [Render Dashboard](https://dashboard.render.com)
 2. Click "New +" → "Web Service"
@@ -31,16 +40,21 @@ Add these environment variables in Render dashboard:
 
 ```
 NODE_ENV=production
-API_KEY=your_notion_api_key_here
 NOTION_API_KEY=your_notion_api_key_here
 FRONTEND_URL=https://alnretool.onrender.com
 
-# Database IDs (from Notion)
-NOTION_CHARACTER_DB_ID=18c2f33d-583f-8060-a6ab-de32ff06bca2
-NOTION_ELEMENT_DB_ID=18c2f33d-583f-8020-91bc-d84c7dd94306
-NOTION_PUZZLE_DB_ID=1b62f33d-583f-80cc-87cf-d7d6c4b0b265
-NOTION_TIMELINE_DB_ID=1b52f33d-583f-80de-ae5a-d20020c120dd
+# Database IDs (from Notion) - CRITICAL: Use exact field names
+NOTION_CHARACTERS_DB=18c2f33d-583f-8060-a6ab-de32ff06bca2
+NOTION_ELEMENTS_DB=18c2f33d-583f-8020-91bc-d84c7dd94306
+NOTION_PUZZLES_DB=1b62f33d-583f-80cc-87cf-d7d6c4b0b265
+NOTION_TIMELINE_DB=1b52f33d-583f-80de-ae5a-d20020c120dd
 ```
+
+**⚠️ CRITICAL**: The database ID environment variables must match exactly what the code expects:
+- Use `NOTION_CHARACTERS_DB` not `NOTION_CHARACTER_DB_ID`
+- Use `NOTION_ELEMENTS_DB` not `NOTION_ELEMENT_DB_ID`
+- Use `NOTION_PUZZLES_DB` not `NOTION_PUZZLE_DB_ID`
+- Use `NOTION_TIMELINE_DB` not `NOTION_TIMELINE_DB_ID`
 
 ### Step 4: Deploy
 1. Click "Create Web Service"
@@ -67,18 +81,34 @@ NOTION_TIMELINE_DB_ID=1b52f33d-583f-80de-ae5a-d20020c120dd
 - Check build logs for specific errors
 
 #### 2. App Crashes on Start
-- Verify all environment variables are set
+- Verify all environment variables are set correctly (see Critical Environment Variables section)
 - Check if PORT is being overridden (Render sets this automatically)
 - Look for TypeScript compilation errors in logs
 
-#### 3. API Errors
-- Verify NOTION_API_KEY is correct
-- Check database IDs match your Notion workspace
-- Ensure Notion integration has access to all databases
+#### 3. API Returns 500 Errors
+**Root Cause**: dotenv loading .env files in production and overriding platform variables
 
-#### 4. CORS Issues
+**Solution**: The application now prevents dotenv from loading in production mode. Ensure:
+- `NODE_ENV=production` is set in Render environment variables
+- Never commit .env files to the repository (they should be in .gitignore)
+- All required environment variables are set in Render dashboard
+
+**Verification**: Check server logs for:
+- ✅ Good: `[Server] Production mode - Using platform environment variables (dotenv not loaded)`
+- ❌ Bad: `[dotenv@17.2.0] injecting env (11) from .env`
+
+#### 4. Missing Environment Variables
+The server now validates required variables at startup and will fail fast in production if any are missing:
+- `NOTION_API_KEY`
+- `NOTION_CHARACTERS_DB`
+- `NOTION_ELEMENTS_DB`
+- `NOTION_PUZZLES_DB`
+- `NOTION_TIMELINE_DB`
+
+#### 5. CORS Issues
 - Update FRONTEND_URL to match your Render URL
 - For custom domains, update FRONTEND_URL accordingly
+- In production, same-origin requests are allowed without API key
 
 ## Automatic Deployments
 
@@ -137,10 +167,49 @@ If deployment issues occur:
 2. Set up monitoring for `/healthz` endpoint
 3. Alert on response time > 5 seconds or status != 200
 
+## Troubleshooting Production Issues
+
+### Debugging Steps
+1. **Check Server Logs First**
+   - Navigate to Render dashboard → Your Service → Logs
+   - Look for startup messages confirming environment configuration
+   - Check for any error messages or stack traces
+
+2. **Verify Environment Variables**
+   - In Render dashboard → Settings → Environment
+   - Confirm all 5 required variables are set
+   - Use exact variable names (e.g., `NOTION_CHARACTERS_DB` not `NOTION_CHARACTER_DB`)
+
+3. **Test API Endpoints**
+   ```bash
+   # Health check (should always work)
+   curl https://your-app.onrender.com/api/health
+   
+   # Test Notion endpoints (from same origin)
+   curl https://your-app.onrender.com/api/notion/characters?limit=1
+   ```
+
+4. **Check Browser Console**
+   - Open Developer Tools → Console
+   - Look for CORS errors or 500 responses
+   - Check Network tab for failed requests
+
+### Known Issues and Fixes
+- **Issue**: All API endpoints return 500 errors
+  - **Fix**: Ensure NODE_ENV=production and all NOTION_* variables are set in Render
+  
+- **Issue**: "Missing required environment variables" in logs
+  - **Fix**: Add missing variables in Render dashboard, redeploy
+
+- **Issue**: "[dotenv@...] injecting env" appears in production logs
+  - **Fix**: Update to latest code that prevents dotenv loading in production
+
 ## Deployment Verification Checklist
 
 After deployment, verify:
 
+- [ ] Server logs show: "Production mode - Using platform environment variables"
+- [ ] Server logs show: "All required environment variables are configured ✓"
 - [ ] Homepage loads without errors
 - [ ] API health check returns OK
 - [ ] Can fetch character data

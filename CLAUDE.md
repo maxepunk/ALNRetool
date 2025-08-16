@@ -2,466 +2,313 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Project Context
 
 ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 player murder mystery game. It enables puzzle and narrative designers to visualize and edit game content stored in Notion databases through interactive graph interfaces.
 
-## Current Project Status - Sprint 1 Foundation (100% Complete)
+## Essential Planning Documents - Navigation Guide
 
-### ✅ COMPLETED: Days 1-5 Implementation
+### Product Requirements Document (alnretool-prd.md)
+**Size**: ~25K lines | **When to read**: Understanding features, user requirements, or design decisions
 
-**Days 1-2: Development Environment** - COMPLETE
-- Vite React TypeScript project with dual-server architecture
-- All core dependencies installed and configured
-- TypeScript strict mode with path aliases (`@/*` → `src/*`)
-- ESLint + Prettier integration for code quality
-- Git repository with conventional commit standards
+**Quick Navigation by Section:**
+- **Lines 1-50**: Executive summary and project overview
+- **Lines 100-300**: User personas and their needs (Critical for UI/UX decisions)
+- **Lines 400-800**: Core feature specifications for each view
+  - Puzzle Focus View: ~Line 450
+  - Character Journey View: ~Line 550  
+  - Content Status View: ~Line 650
+- **Lines 900-1200**: Technical requirements and constraints
+- **Lines 1300-1600**: Notion database schema (Critical for data work)
+- **Lines 1700-2000**: SF_ pattern specifications
+- **Lines 2100-2400**: Success metrics and MVP definition
 
-**Days 3-4: Notion Integration** - COMPLETE
-- **Full TypeScript Type System**: 3-file architecture (`raw.ts`, `app.ts`, `transforms.ts`)
-- **All 4 API Endpoints**: `/api/notion/{characters,elements,puzzles,timeline}`
-- **Security Layer**: API key authentication, CORS restrictions, rate limiting
-- **Error Handling**: AsyncHandler pattern prevents server crashes
-- **Integration Testing**: 23/23 tests passing (100% success rate)
-- **Performance**: Cached responses <50ms, Notion calls <1s, 340ms rate limiting
-- **Server-Side Caching**: 5-minute TTL, reduces API calls by 70-80%
-- **Input Validation**: Pagination limits (1-100), consistent error codes
+**When to reference PRD:**
+- Implementing new features → Check feature specifications section
+- Working with Notion data → Review database schema section
+- Making UI decisions → Consult user personas section
+- Determining scope → Check MVP definition section
 
-**Day 5: React Query Data Layer** - COMPLETE
-- **TanStack Query Infrastructure**: QueryClient configured with 5-minute stale time
-- **Comprehensive API Client**: All 4 endpoints with typed methods and error handling
-- **Query Hooks**: useCharacters, useElements, usePuzzles, useTimeline with pagination
-- **Three-Layer Error Boundaries**: QueryErrorResetBoundary integration
-- **Loading Skeleton Components**: Multiple variants for different UI states
-- **Mock Service Worker**: Complete testing infrastructure for frontend
-- **Query Key Factories**: Centralized cache management system
-- **All Tests Passing**: 100% success rate for all data fetching patterns
+### Development Action Plan (alnretool-action-plan.md)
+**Size**: ~46K lines | **When to read**: Understanding timeline, sprint goals, or implementation order
 
-**Current Capabilities**:
-- Complete Notion database access through secure Express proxy
-- Type-safe data transformations with SF_ pattern parsing
-- Robust error handling and server stability
-- Production-ready authentication and security measures
-- Server-side caching with cache management endpoints
-- Input validation middleware preventing invalid requests
-- Client-side data fetching with React Query caching
-- Comprehensive error boundaries and loading states
-- Full test coverage for data layer
+**Quick Navigation by Sprint:**
+- **Sprint 1 (Weeks 1-2)**: Lines 100-500 - Foundation & data layer
+- **Sprint 2 (Weeks 3-4)**: Lines 600-1000 - Puzzle Focus View  
+- **Sprint 3 (Weeks 5-6)**: Lines 1100-1500 - Character & Status Views
+- **Sprint 4 (Weeks 7-8)**: Lines 1600-2000 - Production polish
 
-### ✅ Sprint 1 Status: 100% COMPLETE
+**Key Implementation Details:**
+- **Daily Task Breakdowns**: Each sprint has day-by-day tasks
+- **Technical Decisions**: Lines 2100-2500 - Architecture choices explained
+- **Risk Mitigation**: Lines 2600-2800 - Common pitfalls and solutions
+- **Testing Strategy**: Lines 2900-3200 - What to test and when
 
-**Test Suite Status**: 504/509 passing (99.0%)
-- Unit tests: 504 passing, 5 skipped (Sprint 2 features) ✅
-- Integration tests: 23/23 (100%) ✅
-- React Query tests: All passing (100%) ✅  
-- Graph transformation: 123/123 (100%) ✅
-- Component tests: All passing (CSS module issues fixed) ✅
+**When to reference Action Plan:**
+- Starting new sprint work → Read that sprint's section
+- Estimating tasks → Check daily breakdowns
+- Making architecture decisions → Review technical decisions section
+- Planning tests → Consult testing strategy
 
-**Sprint 2 Requirements**: Mutation infrastructure needed
-- NEED: Express PUT/PATCH endpoints for all 4 entities
-- NEED: useMutation hooks with optimistic updates
-- NEED: Error recovery and rollback mechanisms
-- NEED: Toast notification system (React Hot Toast)
-- NEED: MSW mutation handlers for testing
-- NEED: Conflict resolution for concurrent edits
-- NEED: Validation before Notion API calls
+### Reading Strategy for AI Assistants
 
-### 📊 Architecture Status
+**For Quick Tasks**: Don't read entire files. Use specific line ranges above.
 
-**Backend (100% Complete)**:
-- Express server with TypeScript
-- Notion API integration with rate limiting
-- Security middleware and error handling
-- Comprehensive integration test suite (23/23 passing)
-- Server-side caching layer (node-cache)
-- Input validation middleware
+**For Feature Implementation**: 
+1. Read relevant sprint section in action-plan
+2. Read corresponding feature spec in PRD
+3. Check current progress in docs/PROJECT_STATUS.md
 
-**Frontend (Data Layer Complete)**:
-- Vite development environment configured
-- TypeScript strict mode enabled
-- React Query data layer implemented (all tests passing)
-- API client with comprehensive error handling
-- Loading states and error boundaries implemented
-- Ready for React Flow integration
+**For Bug Fixes**: Usually not needed unless understanding original intent
 
-**CI/CD Pipeline (Implemented)**:
-- GitHub Actions workflow on all pushes and PRs
-- 4-stage pipeline: Test → Integration → Quality → Summary
-- Automated ESLint, TypeScript, and test checks
-- Bundle size monitoring (2MB limit)
-- Build artifact generation and storage
+**For Architecture Changes**: 
+1. Read technical requirements in PRD (lines 900-1200)
+2. Review technical decisions in action-plan (lines 2100-2500)
+3. Check current implementation in code
 
-## Key Architecture
+## Key Technical Context
 
-### Tech Stack
-- **Frontend**: React 18 with TypeScript
-- **Graph Visualization**: React Flow (for interactive node/edge diagrams)
-- **Data Storage**: Notion API (all game data lives in Notion databases)
-- **State Management**: TanStack Query (for data fetching, caching, and mutations)
-- **Graph Layouts**: Dagre (for automatic graph positioning)
-- **Notifications**: React Hot Toast
-- **Backend**: Express (API proxy for Notion authentication)
+### Architecture Overview
+- **Frontend**: React 18 + TypeScript + Vite + TanStack Query + React Flow
+- **Backend**: Express.js proxy server for Notion API authentication
+- **Data Flow**: Frontend → Express API → Notion API → Transform → Cache → Response
 
-### Core Views (MVP)
-1. **Puzzle Focus View**: Interactive puzzle network showing dependencies
-2. **Character Journey View**: Character timeline with element connections
-3. **Content Status View**: Status dashboard for tracking content completion
+### High-Level Code Architecture
 
-### Notion Database Schema
+#### State Management Pattern
+- **React Query**: All server state managed via TanStack Query hooks in `src/hooks/`
+- **Local State**: Component-level state for UI interactions
+- **Graph State**: React Flow manages node/edge state internally with Zustand
+- **No Global Store**: Intentionally avoiding Redux/Context for simplicity
 
-#### Characters Database (`18c2f33d-583f-8060-a6ab-de32ff06bca2`)
-
-| Field | Type | Purpose | Design Implications |
-|-------|------|---------|-------------------|
-| **Name** | Title | Character identifier | Display name in graphs |
-| **Type** | Select (NPC/Player) | Playable vs non-playable | Filter option, visual distinction |
-| **Tier** | Select (Core/Secondary/Tertiary) | Narrative importance; Core=5 minimum players | Node importance/size, filter priority |
-| **Owned Elements** | Relation (synced with Elements.Owner) | Items character starts with or POV memories | Primary puzzle access paths |
-| **Associated Elements** | Relation | Narratively connected items | Secondary connections |
-| **Character Puzzles** | Relation | Puzzles this character can access | Direct puzzle connections |
-| **Events** | Relation (synced with Timeline.Characters Involved) | Backstory moments involving character | Narrative depth |
-| **Connections** | Rollup (Events → Characters, function: unique) | Shared timeline events with others | Social interaction potential |
-| **Primary Action** | Rich Text | Core character behavior | Future: personality modeling |
-| **Character Logline** | Rich Text | One-line description | Tooltip/summary display |
-| **Overview & Key Relationships** | Rich Text | Detailed background | Future: relationship mapping |
-| **Emotion towards CEO & others** | Rich Text | Relationship dynamics | Future: emotion network |
-
-**Design Intent**: Ownership is probabilistic - "most likely to possess first." Core tier includes both Players and NPCs critical to the narrative (e.g., Detective).
-
-#### Elements Database (`18c2f33d-583f-8020-91bc-d84c7dd94306`)
-
-| Field | Type | Purpose | Design Implications |
-|-------|------|---------|-------------------|
-| **Name** | Title | Element identifier | Node labels |
-| **Description/Text** | Rich Text | Content + SF_ patterns | Parse for memory values, display content |
-| **Basic Type** | Select | Physical manifestation | Icon/color coding |
-| | | Options: Set Dressing, Prop, Memory Token (Audio/Video/Image/Audio+Image), Document | Memory tokens are RFID scannable |
-| **Owner** | Relation (synced with Characters.Owned Elements) | Who likely possesses first | Access path visualization |
-| **Container** | Relation (synced with Elements.Contents) | Physical containment | Nesting visualization |
-| **Contents** | Relation (synced with Elements.Container) | What's inside containers | Unlock flow display |
-| **Timeline Event** | Relation (synced with Timeline.Memory/Evidence) | What backstory this reveals | Narrative discovery paths |
-| **Status** | Status (8 options, 3 groups) | Production readiness | Filter by completion |
-| | | **To-do**: Idea/Placeholder | Not started |
-| | | **In progress**: in space playtest ready, In development, Writing Complete, Design Complete, Source Prop/print, Ready for Playtest | Active work |
-| | | **Complete**: Done | Finished |
-| **First Available** | Select (Act 0/1/2/null) | When physically accessible | Temporal filtering |
-| **Required For** | Relation (synced with Puzzles.Puzzle Elements) | Puzzles needing this element | Dependency chains |
-| **Rewarded By** | Relation (synced with Puzzles.Rewards) | Puzzles that unlock this | Reward paths |
-| **Container Puzzle** | Relation (synced with Puzzles.Locked Item) | Puzzle that opens this container | Unlock mechanics |
-| **Narrative Threads** | Multi-select (26 options) | Story categories | Future: thread following |
-| **Associated Characters** | Rollup (Timeline Event → Characters) | Characters in related events | Connection discovery |
-| **Puzzle Chain** | Rollup (Container → Container Puzzle) | Puzzle dependencies | Chain visualization |
-| **Production/Puzzle Notes** | Rich Text | Design/fabrication notes | Context for status |
-| **Files & media** | Files | Digital assets | Production reference |
-| **Content Link** | URL | External resources | Asset management |
-| **Container?** | Formula | Whether element is a container | Container identification |
-| | | Formula: `not empty(Contents) OR not empty(Container Puzzle)` | True if has contents or is locked |
-
-**SF_ Pattern Structure** (embedded in Description/Text):
+#### Data Transformation Pipeline
 ```
-SF_RFID: [unique identifier]
-SF_ValueRating: [1-5] // Narrative importance AND monetary multiplier
-SF_MemoryType: [Personal(x1)|Business(x3)|Technical(x5)]
-SF_Group: [{Group Name} (x2-10)] // Collection bonuses
+1. Notion API Response (server/services/notion.ts)
+   ↓ Raw Notion blocks
+2. Backend Transform (server/services/transformers.ts)
+   ↓ Normalized entities
+3. API Response with Caching (5-minute TTL via node-cache)
+   ↓ JSON over HTTP
+4. Frontend React Query (src/hooks/useNotion*.ts)
+   ↓ Cached & deduplicated
+5. Graph Transformers (src/lib/graph/transformers/)
+   ↓ Nodes & edges
+6. Layout Engine (src/lib/graph/layouts.ts using Dagre)
+   ↓ Positioned nodes
+7. React Flow Rendering
 ```
 
-Currently all are templates marked "Template (Needs to be filled out)"
+#### Key Architectural Decisions
 
-#### Puzzles Database (`1b62f33d-583f-80cc-87cf-d7d6c4b0b265`)
+**Why Express Proxy?**
+- Notion API requires server-side auth (API key security)
+- Enables response caching to reduce API calls
+- Provides rate limiting and CORS control
+- Allows data pre-processing before client
 
-| Field | Type | Purpose | Design Implications |
-|-------|------|---------|-------------------|
-| **Puzzle** | Title | Puzzle identifier | Node labels |
-| **Description/Solution** | Rich Text | How to solve | Mechanic documentation |
-| **Puzzle Elements** | Relation (synced with Elements.Required For) | Required elements | Dependency visualization |
-| **Locked Item** | Relation (synced with Elements.Container Puzzle) | Container this opens | Ownership derivation |
-| **Owner** | Rollup (Locked Item → Owner, function: show_unique) | Character who "owns" puzzle | Access paths |
-| **Rewards** | Relation (synced with Elements.Rewarded By) | Elements gained | Outcome flows |
-| **Parent item** | Relation (synced with Puzzles.Sub-Puzzles) | Parent in puzzle chain | Hierarchy display |
-| **Sub-Puzzles** | Relation (synced with Puzzles.Parent item) | Children in puzzle chain | Sub-puzzle navigation |
-| **Story Reveals** | Rollup (Rewards → Timeline Event, function: show_unique) | Timeline events uncovered | Narrative impact |
-| **Timing** | Rollup (Puzzle Elements → First Available, function: show_unique) | When solvable (Act availability) | Temporal constraints |
-| **Narrative Threads** | Rollup (Rewards → Narrative Threads, function: show_unique) | Story categories touched | Thread connections |
-| **Asset Link** | URL | External documentation | Design reference |
+**Why React Flow over D3?**
+- Built-in pan/zoom, node dragging, minimap
+- React-native integration (no imperative DOM)
+- Extensible with custom nodes/edges
+- Better performance for interactive graphs
 
-**Key Insight**: Puzzle "ownership" derives from who owns the locked container - creating natural starting points for puzzle chains. No difficulty field exists in the schema.
+**Why TanStack Query over RTK Query?**
+- Lighter weight (no Redux dependency)
+- Superior cache invalidation patterns
+- Built-in optimistic updates
+- Better TypeScript inference
 
-#### Timeline Database (`1b52f33d-583f-80de-ae5a-d20020c120dd`)
+**Testing Strategy Layers**
+1. **Unit Tests**: Component logic, transformers, utilities
+2. **Integration Tests**: API endpoints with real Notion
+3. **MSW Mocks**: Frontend tests with mocked API responses
+4. **Smoke Tests**: Quick validation without real API
 
-| Field | Type | Purpose | Design Implications |
-|-------|------|---------|-------------------|
-| **Description** | Title | Event summary | Event labels |
-| **Date** | Date | When it happened | Timeline ordering |
-| **Characters Involved** | Relation (synced with Characters.Events) | Who was present | Connection building |
-| **Memory/Evidence** | Relation (synced with Elements.Timeline Event) | How players learn this | Discovery paths |
-| **mem type** | Rollup (Memory/Evidence → Basic Type, function: show_unique) | Type of evidence | Discovery medium |
-| **Notes** | Rich Text | Design notes | Context |
-| **Last edited time** | Last Edited Time | Modification tracking | Version awareness |
+### Important Patterns
 
-**Design Intent**: Timeline events ARE the backstory. Players experience collective amnesia and rediscover these through elements. The murder is one thread among many mysteries.
+#### TypeScript Configuration
+- **Frontend**: `tsconfig.app.json` - ESNext modules, React JSX, path aliases
+- **Backend**: `tsconfig.server.json` - CommonJS output for Node.js
+- **Path Alias**: `@/*` maps to `src/*` (use in frontend imports)
+- **Strict Mode**: All strict checks enabled including `noUncheckedIndexedAccess`
 
-## Git Strategy & Development Workflow
+#### Vite Configuration
+- **Proxy**: `/api` routes proxy to `localhost:3001` in dev
+- **Build Output**: `dist/client/` for frontend, `dist/server/` for backend
+- **Test Environment**: `happy-dom` for fast unit tests
+- **Optimizations**: React Flow excluded from pre-bundling for compatibility
 
-### Branch Structure
-```
-  main (production)
-    |
-    +-- develop
-         |
-         +-- feature/sprint-1-foundation
-         +-- feature/sprint-2-puzzle-view
-         +-- feature/sprint-3-remaining-views
-         +-- feature/sprint-4-production
-```
-### Commit Standards
-The project uses Commitizen for standardized commits. Use `npx cz` to create properly formatted commits.
-
-```
-  feat(scope): add new feature
-  fix(scope): resolve bug
-  refactor(scope): improve code
-  test(scope): add tests
-  docs(scope): update documentation
-  ci(scope): CI/CD changes
-```
-
-### Pre-commit Hooks
-The project has automated pre-commit hooks that run:
-- ESLint for code quality
-- TypeScript type checking
-- Located in `.git/hooks/pre-commit`
-- Use `--no-verify` to bypass in emergencies
-## Development Commands
-
-```bash
-# Initial setup
-npm install
-
-# Development (runs both client and server concurrently)
-npm run dev          # Starts Vite dev server and Express backend
-npm run dev:client   # Start only Vite dev server
-npm run dev:server   # Start only Express server with hot reload
-
-# Production build
-npm run build        # Builds both client and server
-npm run build:client # Build only client (Vite)
-npm run build:server # Build only server (TypeScript)
-npm run start        # Start production server
-
-# Code quality
-npm run lint         # ESLint with TypeScript
-npm run typecheck    # TypeScript type checking for both client and server
-
-# Testing
-npm test                 # Quick smoke test with mock data
-npm run test:run         # Vitest unit tests (212 tests)
-npm run test:integration # Full integration test suite (requires .env)
-npm run test:quick       # Quick smoke test with test API key
-
-# Other
-npm run preview      # Preview production build locally
-```
-
-## Key Development Principles
-
-### React Flow Implementation
-- Use controlled flow with `nodes` and `edges` state
-- Implement custom node types for each entity (Character, Element, Puzzle)
-- Handle node updates via `onNodesChange` callback
-- Use `@xyflow/react` for the core React Flow components
-
-### Notion API Integration
-- All data mutations go through TanStack Query's `useMutation`
-- Implement optimistic updates for better UX
-- Handle rate limits gracefully (3 requests/second)
-- Cache data aggressively with 5-minute stale time
-- Always validate Notion responses against expected schema
-
-### 2-Way Sync Architecture
-```typescript
-// Example mutation pattern
-const updatePuzzle = useMutation({
-  mutationFn: async (data) => {
-    // 1. Optimistic update
-    // 2. Call Notion API
-    // 3. Handle success/failure
-    // 4. Update local cache
-  },
-  onError: () => {
-    // Rollback optimistic update
-    // Show error toast
-  }
-});
-```
-
-### UI/UX Guidelines
-- Inline editing: Double-click to edit, click outside to save
-- Visual feedback: Highlight nodes on hover, show loading states
-- Fail gracefully: Never lose user edits, queue failed updates
-- Keyboard shortcuts: Cmd/Ctrl+S to save, Esc to cancel
-- Responsive design: Support 1024px minimum width
-
-### Performance Considerations
-- Virtualize large graphs (100+ nodes) with React Flow's built-in support
-- Debounce search/filter operations by 300ms
-- Lazy load character artwork and full text content
-- Use React.memo for node components
-- Implement pagination for Notion queries (max 100 items)
-
-### Security & Error Handling
-- Never expose Notion API token in frontend code
-- Route all Notion requests through Express backend
-- Validate all user inputs before sending to Notion
-- Implement retry logic for failed Notion requests
-- Log errors with context for debugging
-
-## Backend Development Patterns
-
-### Caching Architecture
-
-**Server-Side Caching**: Implemented with node-cache to reduce Notion API load
-- **5-minute TTL**: Matches React Query frontend cache duration
-- **Cache-first pattern**: Check cache → Return if hit → Fetch from Notion on miss
-- **Cache key format**: `{endpoint}:{limit}:{cursor}` (e.g., `characters:20:null`)
-- **Bypass mechanism**: `X-Cache-Bypass: true` header forces fresh data
-- **Response headers**: `X-Cache-Hit: true/false` indicates cache status
-- **Management endpoints**: `/api/cache/stats`, `/api/cache/clear`, `/api/cache/clear/:endpoint`
-
-**Performance Impact**:
-- Cached responses: <50ms (vs 200-3000ms for Notion API)
-- Notion API calls reduced by 70-80% for repeated requests
-- Rate limiting preserved for actual Notion calls only
-
-### Input Validation
-
-**Pagination Validation**: Applied to all Notion endpoints
-- **Limit**: Must be between 1-100 (400 error if invalid)
-- **Cursor**: Must be string type if provided
-- **Applied via middleware**: Runs before authentication to fail fast
-- **Error codes**: `INVALID_LIMIT`, `INVALID_CURSOR`
-
-### Explicit Typing Pattern for API Endpoints
-
-**CRITICAL**: All new Notion API endpoints must follow this exact pattern to prevent runtime errors and ensure type safety.
+#### Environment Variables
+- **Production**: NEVER load dotenv - use platform environment variables only
+- **Development**: Load from .env file
+- **Test**: Load from .env.test if exists, otherwise .env
 
 ```typescript
-// 1. AsyncHandler Pattern with Explicit Types
-import { asyncHandler } from '../utils/asyncHandler.js';
-import { Request, Response } from 'express';
+// Correct pattern in server/index.ts
+if (process.env.NODE_ENV !== 'production') {
+  config(); // Only load dotenv in dev/test
+}
+```
 
+#### API Response Structure
+```typescript
+interface APIResponse<T> {
+  data: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+```
+
+#### Error Handling
+Always use `asyncHandler` wrapper for Express routes:
+```typescript
 router.get('/endpoint', asyncHandler(async (req: Request, res: Response) => {
-  // Explicit Request, Response types prevent TypeScript inference issues
-  // asyncHandler prevents server crashes from unhandled promise rejections
+  // Implementation
 }));
-
-// 2. Generic API Response Typing
-import type { APIResponse, EntityType } from '../../src/types/notion/app.js';
-
-const response: APIResponse<EntityType> = {
-  data: transformedEntities,
-  nextCursor: null,
-  hasMore: false
-};
-// Use explicit APIResponse<T> generic - never use typeof inference
-
-// 3. Separation of Raw vs App Types
-import type { NotionPage, NotionProperty } from '../../src/types/notion/raw.js';
-import type { Character, Element } from '../../src/types/notion/app.js';
-// Keep raw Notion types separate from clean app types
 ```
 
-**Why This Pattern?**
-- **Server Stability**: AsyncHandler catches unhandled promise rejections that crash Express servers
-- **Type Safety**: Explicit typing prevents silent field loss during JSON serialization
-- **Maintainability**: Clean separation between Notion's complex types and our domain models
+### Notion Database IDs
+- Characters: `18c2f33d-583f-8060-a6ab-de32ff06bca2`
+- Elements: `18c2f33d-583f-8020-91bc-d84c7dd94306`
+- Puzzles: `1b62f33d-583f-80cc-87cf-d7d6c4b0b265`
+- Timeline: `1b52f33d-583f-80de-ae5a-d20020c120dd`
 
-**Lessons Learned - Server Stability:**
-- Unhandled async errors in Express routes cause silent server crashes during integration tests
-- TypeScript `typeof` inference can strip fields from API responses
-- Process-level error handlers provide final safety net but should not be relied upon
-- Always wrap async route handlers with `asyncHandler` utility
+## Common Development Commands
 
-### Integration Testing Strategy
-
-**Current Status**: Full integration test suite implemented (`scripts/integration-test.ts`)
-- **100% test coverage** (23/23 tests passing) covering:
-  - All 4 Notion API endpoints (characters, elements, puzzles, timeline)
-  - Authentication (API key validation)
-  - CORS configuration
-  - Rate limiting (Bottleneck and Express)
-  - **Cache behavior** (hit/miss, bypass, key generation)
-  - **Input validation** (limit ranges, cursor format)
-  - SF_ pattern parsing from real data
-- **Permissive parsing** for unknown data schemas (future-proof)
-- **Server stability testing** with rate limiting and CORS validation
-
-Run integration tests: `npm run test:integration`
-
-## Testing Approach
-
-### Current Test Infrastructure ✅ IMPLEMENTED
-
-**Multiple Test Layers**:
-1. **Smoke Tests** (`npm test`): Quick health checks with mock data
-2. **Unit Tests** (`npm run test:run`): Vitest tests for React Query (212 tests)
-3. **Integration Tests** (`npm run test:integration`): Full Notion API validation (23 tests)
-4. **CI/CD Pipeline**: Automated testing on every push via GitHub Actions
-
-**GitHub Actions CI**:
-- Runs on all pushes to main/develop/feature branches
-- Runs on all pull requests
-- 4-stage pipeline with parallel jobs
-- Secrets management for Notion API keys
-- Build artifacts stored for 7 days
-- View status at: https://github.com/maxepunk/ALNRetool/actions
-
-**Test Strategy**:
-- Real Notion API integration (no mocks for integration tests)
-- Permissive parsing for unknown data schemas (future-proof)
-- Server stability validation (prevents crashes during load)
-- 100% pass rate required before any commits
-- Pre-commit hooks enforce quality locally
-
-### Future Test Implementation:
-- Unit tests for utility functions and hooks
-- Component tests for React Flow custom nodes
-- E2E tests for critical user flows (create, edit, delete)
-- Mock Notion API responses for faster development testing
-
-## File Organization
-```
-src/
-  components/         # React components
-    nodes/           # Custom React Flow nodes
-    views/           # Main view components
-  hooks/             # Custom React hooks
-  services/          # API and data services
-  types/             # TypeScript type definitions
-  utils/             # Helper functions
-  styles/            # CSS modules
-server/              # Express backend
-  routes/            # API routes
-  middleware/        # Auth, error handling
+### Core Development
+```bash
+npm run dev              # Start both frontend (5173) and backend (3001)
+npm run dev:client       # Frontend only (Vite on port 5173)
+npm run dev:server       # Backend only (Express on port 3001)
+npm run build           # Build for production
+npm start               # Start production server
 ```
 
-## Common Tasks
+### Testing Commands
+```bash
+npm test                # Run tests in watch mode
+npm run test:run        # Run all unit tests once
+npm run test:ui         # Open Vitest UI
+npm run test:coverage   # Generate coverage report
+npm run test:integration # Integration tests (requires .env)
+npm run test:smoke      # Quick smoke test
+npm run test:quick      # Fast test without real API key
+npm run typecheck       # TypeScript validation
+npm run lint            # ESLint validation
+```
 
-### Adding a New Node Type
-1. Create component in `src/components/nodes/`
-2. Define TypeScript interface in `src/types/`
-3. Register in React Flow's `nodeTypes`
-4. Add styling in component's CSS module
+### Running Single Tests
+```bash
+# Run specific test file
+npx vitest run src/components/graph/GraphView.test.tsx
 
-### Implementing a Notion Mutation
-1. Create mutation function in `src/services/notion.ts`
-2. Define React Query mutation in relevant hook
-3. Add optimistic update logic
-4. Handle errors with toast notifications
-5. Update TypeScript types if needed
+# Run tests matching pattern
+npx vitest run -t "should handle node selection"
 
-### Debugging React Flow Issues
-- Check `useNodesState` and `useEdgesState` hooks
-- Verify node IDs are unique
-- Ensure `nodeTypes` are registered before render
-- Use React DevTools to inspect flow state
-- Check browser console for React Flow warnings
+# Debug a specific test
+npx vitest --inspect-brk src/lib/graph/transformers.test.ts
+```
+
+### Commit Convention
+```bash
+npx cz                  # Interactive commit with conventional format
+```
+
+## Development Workflow
+
+### Making Changes
+1. **Check existing patterns**: Look at neighboring files before implementing
+2. **Follow conventions**: Use existing libraries, don't introduce new ones without need
+3. **Test your changes**: Run `npm test` and `npm run typecheck`
+4. **Use conventional commits**: `npx cz` for commit messages
+
+### Common Tasks
+
+#### Adding a New API Endpoint
+1. Add route handler in `server/routes/notion.ts`
+2. Use `asyncHandler` wrapper
+3. Add TypeScript types in `src/types/notion/`
+4. Add React Query hook in `src/hooks/`
+5. Add MSW handler in `src/test/mocks/handlers.ts`
+
+#### Working with React Flow
+1. Custom nodes go in `src/components/nodes/`
+2. Graph transformations in `src/lib/graph/transformers/`
+3. Layout logic in `src/lib/graph/layouts.ts`
+
+**React Flow Node Types**:
+- `puzzleNode`: Blue nodes for puzzles with dependency indicators
+- `characterNode`: Green nodes for characters with role badges
+- `elementNode`: Purple nodes for story elements
+- `timelineNode`: Orange nodes for timeline events
+
+**Edge Types**:
+- `dependency`: Solid arrow for puzzle dependencies
+- `reward`: Dashed arrow for puzzle rewards
+- `relation`: Dotted line for character relationships
+
+**Layout Algorithm**: Dagre hierarchical layout with:
+- Direction: Top-to-bottom (`TB`)
+- Node spacing: 100px horizontal, 150px vertical
+- Rank separation: 200px between hierarchy levels
+
+#### Debugging Production Issues
+1. Check environment variables are set in platform (not .env file)
+2. Verify CORS configuration matches deployment URL
+3. Check server logs for startup validation messages
+4. Test health endpoint: `/api/health`
+
+## Debugging Utilities
+
+### Debug Scripts (in scripts/)
+```bash
+tsx scripts/debug-notion-data.ts      # Inspect raw Notion API responses
+tsx scripts/debug-missing-fields.ts   # Check for missing entity references
+tsx scripts/test-single-endpoint.ts   # Test individual API endpoints
+tsx scripts/analyze-process-tree.ts   # Debug process management issues
+tsx scripts/inspect-notion-data.ts    # Detailed entity inspection
+```
+
+### Performance Testing
+```bash
+tsx scripts/test-timeline-performance.ts  # Timeline endpoint benchmarking
+npm run test:coverage                    # Generate coverage reports
+```
+
+## Deployment Notes
+
+### Render.com Deployment
+- Environment variables set in Render dashboard (not .env files)
+- Build command: `npm install && npm run build`
+- Start command: `npm start`
+- Health check: `/healthz`
+
+### Critical Production Settings
+1. NODE_ENV must be "production"
+2. All NOTION_* environment variables must be set
+3. FRONTEND_URL should match deployment domain
+4. dotenv must NOT load in production
+
+## Common Pitfalls to Avoid
+
+1. **Don't load dotenv in production** - causes environment variable override issues
+2. **Don't expose Notion API key to frontend** - always proxy through Express
+3. **Don't skip asyncHandler** - unhandled promise rejections crash the server
+4. **Don't use relative imports** - use path aliases (`@/*` for src)
+5. **Don't commit .env files** - they're gitignored for a reason
+
+## Current Development Status
+
+- **Sprint 1**: ✅ Complete - Foundation, API integration, data layer
+- **Sprint 2**: 🚧 In Progress - React Flow visualization
+- **Sprint 3**: 📋 Planned - Character journey view
+- **Sprint 4**: 📋 Planned - Production polish
+
+See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for detailed status.
+
+## Getting Help
+
+- Main documentation: [README.md](./README.md)
+- API reference: [docs/API.md](./docs/API.md)
+- Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md)
+- Test strategy: [docs/TESTING_STRATEGY.md](./docs/TESTING_STRATEGY.md)

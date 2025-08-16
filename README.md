@@ -17,129 +17,167 @@
 
 - **Frontend**: React 18, TypeScript, Vite, TanStack Query, React Flow
 - **Backend**: Express.js, TypeScript, Notion API SDK
-- **Testing**: Vitest, Mock Service Worker, Testing Library
+- **Graph Visualization**: React Flow with Dagre layout engine
+- **Testing**: Vitest (500+ tests), Mock Service Worker, Testing Library
 - **Styling**: CSS Modules
-- **Development**: ESLint, Prettier, Commitizen
+- **Development**: ESLint, Prettier, Commitizen, GitHub Actions CI/CD
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js v18+
-- npm
+- Node.js v18+ and npm
 - Git
-- Access to Notion workspace (request from team lead)
+- Notion API key and database IDs (request from team lead)
 
-### Installation & Setup
+### Installation
 
-1. **Clone the repository:**
 ```bash
+# Clone the repository
 git clone https://github.com/maxepunk/ALNRetool.git
 cd ALNRetool
-```
 
-2. **Install dependencies:**
-```bash
+# Install dependencies
 npm install
-```
 
-3. **Set up environment variables:**
-```bash
+# Set up environment variables
 cp .env.example .env
+# Edit .env with your Notion credentials
 ```
-*Edit `.env` with your Notion API keys and database IDs (get from team lead)*
 
-4. **Run the development servers:**
+### Environment Variables
+
+Edit `.env` with the following required values:
+
+```env
+# Notion API Configuration (get from team lead)
+NOTION_API_KEY="your-notion-integration-token"
+NOTION_CHARACTERS_DB="18c2f33d-583f-8060-a6ab-de32ff06bca2"
+NOTION_ELEMENTS_DB="18c2f33d-583f-8020-91bc-d84c7dd94306"
+NOTION_PUZZLES_DB="1b62f33d-583f-80cc-87cf-d7d6c4b0b265"
+NOTION_TIMELINE_DB="1b52f33d-583f-80de-ae5a-d20020c120dd"
+
+# Server Configuration
+PORT=3001
+NODE_ENV=development
+```
+
+### Development
+
 ```bash
+# Start both frontend and backend
 npm run dev
-```
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:3001`
 
-## 📊 Project Status
+# Frontend only (Vite on port 5173)
+npm run dev:client
 
-**Sprint 1 (Foundation & Data Layer)**: ✅ **100% COMPLETE**
-
-- 504/509 tests passing (99.0% success rate)
-- 23/23 integration tests passing (100%)
-- All 4 Notion API endpoints operational
-- Graph visualization foundation complete
-- CI/CD pipeline configured with GitHub Actions
-
-**Sprint 2 (Coming Next)**: Focus on mutation capabilities (editing data)
-
-## 🧪 Testing
-
-```bash
-npm test                 # Quick smoke test
-npm run test:run         # Full unit test suite (504 tests)
-npm run test:integration # Integration tests with real Notion API (23 tests)
-npm run test:coverage    # Generate coverage report
+# Backend only (Express on port 3001)
+npm run dev:server
 ```
 
-## 📝 Development Commands
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start both frontend and backend servers |
-| `npm run dev:client` | Start only frontend (Vite) |
-| `npm run dev:server` | Start only backend (Express) |
-| `npm run build` | Build for production |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Check TypeScript types |
-| `npx cz` | Create conventional commit |
+Visit http://localhost:5173 to see the application.
 
 ## 📁 Project Structure
 
 ```
 ALNRetool/
-├── src/                 # React frontend source
-│   ├── components/      # React components
-│   ├── hooks/          # Custom React hooks
-│   ├── lib/            # Core libraries (graph, query)
-│   ├── services/       # API client
-│   └── views/          # Main view components
-├── server/             # Express backend
-│   ├── routes/         # API routes
-│   ├── middleware/     # Auth, error handling
-│   └── services/       # Notion integration
-├── scripts/            # Development & testing scripts
-└── docs/              # Documentation
+├── src/                    # Frontend React application
+│   ├── components/         # React components
+│   ├── hooks/             # Custom React hooks
+│   ├── services/          # API client services
+│   ├── lib/graph/         # Graph transformation logic
+│   └── types/             # TypeScript type definitions
+├── server/                # Backend Express server
+│   ├── routes/            # API route handlers
+│   ├── services/          # Notion API integration
+│   └── middleware/        # Auth, validation, error handling
+├── docs/                  # Additional documentation
+└── scripts/               # Utility and testing scripts
 ```
 
-## 🔒 Security Features
+## 🧪 Testing
 
-- API key authentication for all Notion endpoints
-- CORS configured for localhost development
-- Express rate limiting (100 req/min per IP)
-- Bottleneck rate limiting for Notion API (3 req/sec)
-- Environment variable protection
-- Input validation middleware
+```bash
+# Run all tests
+npm test
+
+# Unit tests only (500+ tests)
+npm run test:run
+
+# Integration tests (requires .env)
+npm run test:integration
+
+# Type checking
+npm run typecheck
+
+# Linting
+npm run lint
+```
+
+## 🚢 Deployment
+
+The application is deployed on [Render.com](https://render.com). See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+
+### Production Build
+
+```bash
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
 
 ## 📚 Documentation
 
-- [API Documentation](docs/API.md) - Complete API reference
-- [Developer Guide](docs/DEVELOPER_GUIDE.md) - Onboarding and development workflow
-- [Project Status](docs/PROJECT_STATUS.md) - Sprint tracking and metrics
-- [Sprint 1 Verification](SPRINT_1_VERIFICATION.md) - Detailed completion report
+### Planning Documents
+- [Product Requirements](./alnretool-prd.md) - Complete product vision and feature specifications
+- [Development Roadmap](./alnretool-action-plan.md) - 8-week sprint plan and timeline
+
+### Technical Documentation
+- [Developer Handbook](./docs/DEVELOPER_HANDBOOK.md) - Architecture decisions and development patterns
+- [API Documentation](./docs/API.md) - Backend API endpoints reference
+- [Testing Strategy](./docs/TESTING_STRATEGY.md) - Testing approach and coverage
+- [Deployment Guide](./DEPLOYMENT.md) - Production deployment instructions
+- [Project Status](./docs/PROJECT_STATUS.md) - Current sprint progress and metrics
 
 ## 🤝 Contributing
 
-1. Check [PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for current sprint goals
-2. Create a feature branch from `develop`
-3. Follow conventional commits (`npx cz`)
-4. Ensure tests pass (`npm run test:run`)
-5. Submit PR with description of changes
+This project uses conventional commits with Commitizen. To make a commit:
+
+```bash
+npx cz
+```
+
+Pre-commit hooks automatically run:
+- ESLint for code quality
+- TypeScript type checking
+- Located in `.git/hooks/pre-commit`
+
+## 📊 Current Status
+
+**Sprint 1: Foundation (Complete)**
+- ✅ Development environment setup
+- ✅ Notion API integration with all 4 databases
+- ✅ React Query data layer implementation
+- ✅ Server-side caching with cache management
+- ✅ Comprehensive test coverage (99% passing)
+- ✅ Production deployment on Render
+
+**Sprint 2: Puzzle Focus View (Next)**
+- 🔄 React Flow graph visualization
+- 🔄 Interactive puzzle dependency network
+- 🔄 Mutation support for editing
 
 ## 📄 License
 
-Private project - All rights reserved
+Private repository - All rights reserved
 
 ## 👥 Team
 
-- Project Lead: Max (@maxepunk)
-- [Add team members as appropriate]
+- Game Design: About Last Night team
+- Development: ALNRetool contributors
 
 ---
 
-Built with ❤️ for the About Last Night murder mystery game
+For AI assistant instructions, see [CLAUDE.md](./CLAUDE.md)

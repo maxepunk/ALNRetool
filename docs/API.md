@@ -27,11 +27,16 @@ The ALNRetool API provides a secure proxy layer between the React frontend and N
 
 ## Authentication
 
-All Notion API endpoints require authentication via the `X-API-Key` header.
+### Development Mode
+All Notion API endpoints require authentication via the `X-API-Key` header:
 
 ```http
 X-API-Key: your-api-key-here
 ```
+
+### Production Mode
+- **Same-origin requests**: Allowed without API key
+- **Cross-origin requests**: Require `X-API-Key` header
 
 ### Authentication Errors
 
@@ -554,13 +559,12 @@ Required environment variables:
 # Server Configuration
 PORT=3001                    # Server port (default: 3001)
 NODE_ENV=development         # Environment mode
-API_KEY=your-api-key-here   # API authentication key
 
-# Notion Configuration
+# Notion Configuration (CRITICAL: Use exact variable names)
 NOTION_API_KEY=secret_xxx    # Notion integration token
-NOTION_CHARACTERS_DB=xxx     # Characters database ID
-NOTION_ELEMENTS_DB=xxx       # Elements database ID
-NOTION_PUZZLES_DB=xxx        # Puzzles database ID
+NOTION_CHARACTERS_DB=xxx     # Characters database ID (NOT NOTION_CHARACTER_DB_ID)
+NOTION_ELEMENTS_DB=xxx       # Elements database ID (NOT NOTION_ELEMENT_DB_ID)
+NOTION_PUZZLES_DB=xxx        # Puzzles database ID (NOT NOTION_PUZZLE_DB_ID)
 NOTION_TIMELINE_DB=xxx       # Timeline database ID
 
 # Cache Configuration (optional)
