@@ -68,10 +68,10 @@ app.use(express.json());
 app.use('/api', apiLimiter);
 
 // Serve static files in production
-// __dirname in compiled output will be dist/server/server/
-// So we need to go up two levels to dist/ then into client/
+// __dirname in compiled output will be dist/server/
+// So we need to go up one level to dist/ then into client/
 if (process.env.NODE_ENV === 'production') {
-  const staticDir = path.join(__dirname, '../../client');
+  const staticDir = path.join(__dirname, '../client');
   app.use(express.static(staticDir));
 }
 
@@ -94,7 +94,7 @@ app.use('/api/cache', apiKeyAuth, cacheRoutes);
 // SPA fallback - must be after all API routes
 if (process.env.NODE_ENV === 'production') {
   app.get(/.*/, (req, res) => {
-    const staticDir = path.join(__dirname, '../../client');
+    const staticDir = path.join(__dirname, '../client');
     res.sendFile(path.join(staticDir, 'index.html'));
   });
 }
