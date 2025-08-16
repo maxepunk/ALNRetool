@@ -36,6 +36,19 @@
   filter: drop-shadow(0 0 0 3px #f59e0b) drop-shadow(0 4px 8px rgba(245, 158, 11, 0.3));
 }
 
+/* Hierarchy-based sizing - parent/child relationships */
+.puzzleNodeContainer.complexity-parent {
+  width: 240px;
+  height: 240px;
+  z-index: 10;
+}
+
+.puzzleNodeContainer.complexity-child {
+  width: 140px;
+  height: 140px;
+  z-index: 5;
+}
+
 /* Complexity levels - adjust container size */
 .puzzleNodeContainer.complexity-small {
   width: 140px;
@@ -107,6 +120,33 @@
   justify-content: center;
   font-size: 10px;
   z-index: 1;
+}
+
+/* Status-based styling */
+.draft {
+  border-style: dashed !important;
+  opacity: 0.8;
+}
+
+.ready {
+  border-style: solid !important;
+  border-width: 2px;
+}
+
+/* Pulsing animation for critical path */
+.pulsing {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.2));
+  }
+  50% {
+    opacity: 0.8;
+    filter: drop-shadow(0 4px 8px rgba(245, 158, 11, 0.4));
+  }
 }
 
 /* Error state */
@@ -224,4 +264,122 @@
   font-size: 11px;
   cursor: help;
   z-index: 10;
+}
+
+/* Flow indicators for dependencies */
+.flowIndicators {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.flowTop {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 16px;
+  transform: translate(-50%, -100%);
+  background: linear-gradient(to top, #f59e0b, transparent);
+  opacity: 0.3;
+}
+
+.flowBottom {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  height: 16px;
+  transform: translate(-50%, 100%);
+  background: linear-gradient(to bottom, #f59e0b, transparent);
+  opacity: 0.3;
+}
+
+/* Chain flow indicators */
+.chainFlowIndicators {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.flowLeft {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  height: 2px;
+  width: 16px;
+  transform: translate(-100%, -50%);
+  background: linear-gradient(to left, #6366f1, transparent);
+  opacity: 0.3;
+}
+
+.flowRight {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  width: 16px;
+  transform: translate(100%, -50%);
+  background: linear-gradient(to right, #6366f1, transparent);
+  opacity: 0.3;
+}
+
+/* Multi-zoom optimization */
+@media (max-width: 768px), (max-height: 600px) {
+  .puzzleNodeContainer.complexity-parent {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .puzzleNodeContainer.complexity-child {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .puzzleNodeContainer.complexity-small {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .puzzleNodeContainer.complexity-medium {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .puzzleNodeContainer.complexity-large {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .stats {
+    display: none;
+  }
+  
+  .owner {
+    display: none;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .puzzleNode {
+    border-width: 1.5px;
+  }
+  
+  .ready {
+    border-width: 2.5px;
+  }
+}
+
+/* Hover state enhancements */
+.puzzleNode:hover .flowTop,
+.puzzleNode:hover .flowBottom {
+  opacity: 0.6;
+  height: 24px;
+}
+
+.puzzleNode:hover .flowLeft,
+.puzzleNode:hover .flowRight {
+  opacity: 0.6;
+  width: 24px;
 }

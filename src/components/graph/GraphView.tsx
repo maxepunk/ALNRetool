@@ -19,6 +19,7 @@ import CharacterNode from './nodes/CharacterNode';
 import ElementNode from './nodes/ElementNode';
 import PuzzleNode from './nodes/PuzzleNode';
 import TimelineNode from './nodes/TimelineNode';
+import GroupNode from './nodes/GroupNode';
 
 import { 
   buildGraph,
@@ -39,6 +40,7 @@ const nodeTypes: NodeTypes = {
   element: ElementNode,
   puzzle: PuzzleNode,
   timeline: TimelineNode,
+  group: GroupNode,
 };
 
 // Define custom edge types (using default for now)

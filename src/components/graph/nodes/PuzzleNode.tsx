@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import type { GraphNodeData } from '@/lib/graph/types';
@@ -7,27 +7,57 @@ import styles from './PuzzleNode.module.css';
 
 /**
  * Custom React Flow node component for Puzzle entities with diamond shape
+ * Implements visual hierarchy, status-based styling, and multi-zoom optimization
  */
 const PuzzleNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as GraphNodeData<Puzzle>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
   
+  // Determine depth level for visual hierarchy
+  const isParent = entity.subPuzzleIds && entity.subPuzzleIds.length > 0;
+  const isChild = entity.parentItemId !== undefined;
+  
   // Determine complexity level
   const complexity = metadata.visualHints?.size ?? 'medium';
-  const complexityClass = `complexity-${complexity}`;
   
   // Check if it's part of a chain
-  const isChained = entity.parentItemId ?? (entity.subPuzzleIds && entity.subPuzzleIds.length > 0);
+  const isChained = isParent || isChild;
   
   // Check if puzzle is locked (from visual hints)
   const isLocked = metadata.visualHints?.icon === 'lock';
   
+  // Determine status for styling based on whether it has elements
+  const hasElements = entity.puzzleElementIds && entity.puzzleElementIds.length > 0;
+  const isDraft = !hasElements;
+  const isReady = hasElements;
+  
+  // Calculate size class based on hierarchy
+  const getSizeClass = () => {
+    if (isParent) return 'parent';
+    if (isChild) return 'child';
+    return complexity;
+  };
+  
+  // Pulse animation for critical path (check if it's a parent puzzle with many dependencies)
+  const isCritical = isParent && entity.subPuzzleIds.length > 2;
+  const [isPulsing, setIsPulsing] = useState(isCritical);
+  
+  useEffect(() => {
+    setIsPulsing(isCritical);
+  }, [isCritical]);
+  
+  // Calculate opacity based on hierarchy position
+  const depthOpacity = isParent ? 1 : isChild ? 0.7 : 0.85;
+  
   return (
-    <div className={`${styles.puzzleNodeContainer} ${styles[complexityClass]}`}>
-      {/* Diamond shape container */}
+    <div 
+      className={`${styles.puzzleNodeContainer} ${styles[`complexity-${getSizeClass()}`]}`}
+      style={{ opacity: depthOpacity }}
+    >
+      {/* Diamond shape container with status-based styling */}
       <div 
-        className={`${styles.puzzleNode} ${isChained ? styles.chained : ''} ${hasError ? styles.error : ''} ${selected ? styles.selected : ''}`}
+        className={`${styles.puzzleNode} ${isChained ? styles.chained : ''} ${hasError ? styles.error : ''} ${selected ? styles.selected : ''} ${isDraft ? styles.draft : ''} ${isReady ? styles.ready : ''} ${isPulsing ? styles.pulsing : ''}`}
       >
       {/* Chain indicator */}
       {isChained && (
@@ -101,6 +131,22 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
         className={styles.handleChain}
         style={{ right: '0', top: '50%', transform: 'translate(50%, -50%)' }}
       />
+      
+      {/* Flow indicators for dependencies */}
+      {(entity.puzzleElementIds?.length > 0 || entity.rewardIds?.length > 0) && (
+        <div className={styles.flowIndicators}>
+          <div className={styles.flowTop} />
+          <div className={styles.flowBottom} />
+        </div>
+      )}
+      
+      {/* Chain flow indicators */}
+      {isChained && (
+        <div className={styles.chainFlowIndicators}>
+          <div className={styles.flowLeft} />
+          <div className={styles.flowRight} />
+        </div>
+      )}
     </div>
   );
 });

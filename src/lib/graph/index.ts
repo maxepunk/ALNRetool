@@ -265,9 +265,44 @@ export function buildGraphData(
     console.log(`Filtered edges by type from ${allEdges.length} to ${filteredByTypeEdges.length}`);
   }
   
-  // Step 4: Combine regular nodes with placeholder nodes
+  // Step 3.5: Create group nodes for puzzle chains (only in puzzle-focus view)
+  const groupNodes: GraphNode[] = [];
+  if (options.viewType === 'puzzle-focus') {
+    // Find parent puzzles that have sub-puzzles
+    const parentPuzzles = data.puzzles.filter(p => p.subPuzzleIds && p.subPuzzleIds.length > 0);
+    
+    parentPuzzles.forEach(parent => {
+      // Create a group node for each puzzle chain
+      const groupNode: GraphNode = {
+        id: `group-${parent.id}`,
+        type: 'group',
+        position: { x: 0, y: 0 }, // Will be positioned by layout
+        data: {
+          entity: parent, // Pass the parent puzzle as entity
+          metadata: {
+            entityType: 'puzzle',
+            visualHints: {
+              size: 'large',
+            },
+          },
+          label: `${parent.name} Chain`,
+          chainStatus: parent.puzzleElementIds && parent.puzzleElementIds.length > 0 ? 'ready' : 'draft',
+          childCount: parent.subPuzzleIds.length,
+          width: 400,
+          height: 300,
+        } as any,
+      };
+      groupNodes.push(groupNode);
+    });
+    
+    if (groupNodes.length > 0) {
+      console.log(`Created ${groupNodes.length} group nodes for puzzle chains`);
+    }
+  }
+  
+  // Step 4: Combine regular nodes with placeholder and group nodes
   // Cast placeholder nodes to GraphNode since they follow the same Node interface
-  const combinedNodes: (GraphNode | Node<PlaceholderNodeData>)[] = [...allNodes, ...placeholderNodes];
+  const combinedNodes: (GraphNode | Node<PlaceholderNodeData>)[] = [...allNodes, ...placeholderNodes, ...groupNodes];
   
   // Step 5: Determine which nodes to keep based on orphan filtering
   let nodesToKeep: (GraphNode | Node<PlaceholderNodeData>)[] = combinedNodes;
