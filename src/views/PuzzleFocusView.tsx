@@ -9,10 +9,10 @@ import { useParams } from 'react-router-dom';
 import type { Node, OnSelectionChangeParams } from '@xyflow/react';
 
 // Data hooks
-import { useCharacters } from '@/hooks/useCharacters';
-import { useElements } from '@/hooks/useElements';
-import { usePuzzles } from '@/hooks/usePuzzles';
-import { useTimeline } from '@/hooks/useTimeline';
+import { useAllCharacters } from '@/hooks/useCharacters';
+import { useAllElements } from '@/hooks/useElements';
+import { useAllPuzzles } from '@/hooks/usePuzzles';
+import { useAllTimeline } from '@/hooks/useTimeline';
 
 // Components
 import GraphView from '@/components/graph/GraphView';
@@ -30,11 +30,11 @@ export default function PuzzleFocusView() {
   const { puzzleId } = useParams();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   
-  // Fetch data from Notion via React Query
-  const { data: characters = [], isLoading: loadingCharacters } = useCharacters();
-  const { data: elements = [], isLoading: loadingElements } = useElements();
-  const { data: puzzles = [], isLoading: loadingPuzzles } = usePuzzles();
-  const { data: timeline = [], isLoading: loadingTimeline } = useTimeline();
+  // Fetch data from Notion via React Query - fetching ALL data to avoid pagination issues
+  const { data: characters = [], isLoading: loadingCharacters } = useAllCharacters();
+  const { data: elements = [], isLoading: loadingElements } = useAllElements();
+  const { data: puzzles = [], isLoading: loadingPuzzles } = useAllPuzzles();
+  const { data: timeline = [], isLoading: loadingTimeline } = useAllTimeline();
   
   // Combined loading state
   const isLoading = loadingCharacters || loadingElements || loadingPuzzles || loadingTimeline;

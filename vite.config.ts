@@ -23,7 +23,8 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    exclude: ['@xyflow/react']
+    exclude: ['@xyflow/react'],
+    include: ['use-sync-external-store/shim/with-selector']
   },
   server: {
     proxy: {
