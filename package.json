@@ -18,7 +18,7 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:smoke": "tsx scripts/smoke-test.ts",
-    "test:quick": "API_KEY=test-api-key-12345 tsx scripts/smoke-test.ts",
+    "test:quick": "NOTION_API_KEY=test-api-key-12345 tsx scripts/smoke-test.ts",
     "test:integration": "tsx scripts/integration-test.ts"
   },
   "dependencies": {

@@ -15,11 +15,11 @@ export const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
   }
   
   // For non-same-origin requests and development, require API key
-  const API_KEY = process.env.API_KEY;
+  const API_KEY = process.env.NOTION_API_KEY;
   const providedKey = req.header('X-API-Key');
   
   if (!API_KEY) {
-    console.error('API_KEY is not set in the environment.');
+    console.error('NOTION_API_KEY is not set in the environment.');
     return res.status(500).json({ 
       statusCode: 500,
       code: 'CONFIG_ERROR',

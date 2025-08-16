@@ -11,16 +11,11 @@ import { validatePagination } from './middleware/validation.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 // Load environment variables
-// Use NOTION_API_KEY from CI or API_KEY from local env
-if (!process.env.API_KEY && process.env.NOTION_API_KEY) {
-  process.env.API_KEY = process.env.NOTION_API_KEY;
-}
-
-// Only load .env files if API_KEY is not already set (allows test override)
+// Only load .env files if NOTION_API_KEY is not already set (allows test override)
 if (process.env.NODE_ENV === 'test') {
-  console.log('[Server] Test mode - API_KEY before dotenv:', process.env.API_KEY?.substring(0, 8) + '...');
+  console.log('[Server] Test mode - NOTION_API_KEY before dotenv:', process.env.NOTION_API_KEY?.substring(0, 8) + '...');
 }
-if (!process.env.API_KEY) {
+if (!process.env.NOTION_API_KEY) {
   if (process.env.NODE_ENV === 'test' && existsSync('.env.test')) {
     config({ path: '.env.test' });
   } else {
@@ -28,7 +23,7 @@ if (!process.env.API_KEY) {
   }
 }
 if (process.env.NODE_ENV === 'test') {
-  console.log('[Server] Test mode - API_KEY after dotenv:', process.env.API_KEY?.substring(0, 8) + '...');
+  console.log('[Server] Test mode - NOTION_API_KEY after dotenv:', process.env.NOTION_API_KEY?.substring(0, 8) + '...');
 }
 
 const app = express();
