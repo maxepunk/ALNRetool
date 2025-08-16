@@ -3,6 +3,7 @@ import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import type { GraphNodeData } from '@/lib/graph/types';
 import type { Element } from '@/types/notion/app';
+import OwnerBadge from './OwnerBadge';
 import styles from './ElementNode.module.css';
 
 /**
@@ -26,6 +27,15 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
       {/* SF Pattern badge */}
       {hasSF && (
         <div className={styles.sfBadge}>SF</div>
+      )}
+      
+      {/* Owner badge */}
+      {metadata.ownerName && (
+        <OwnerBadge
+          characterName={metadata.ownerName}
+          tier={metadata.ownerTier}
+          position="top-right"
+        />
       )}
       
       {/* Status indicator */}

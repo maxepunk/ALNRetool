@@ -89,6 +89,29 @@ export interface NodeMetadata {
     size?: 'small' | 'medium' | 'large';
     shape?: string;
   };
+  
+  /** Owner information for elements (enriched from character lookup) */
+  ownerName?: string;
+  ownerTier?: 'Tier 1' | 'Tier 2' | 'Tier 3';
+  
+  /** Enriched relational data for details panel */
+  enrichedData?: {
+    /** Names of related entities for display */
+    containerName?: string;
+    parentPuzzleName?: string;
+    rewardNames?: string[];
+    requirementNames?: string[];
+    timelineEventName?: string;
+    /** Character connections for puzzles */
+    characterNames?: string[];
+    /** Element details for puzzles */
+    elementDetails?: Array<{
+      id: string;
+      name: string;
+      type: string;
+      status?: string;
+    }>;
+  };
 }
 
 // ============================================================================

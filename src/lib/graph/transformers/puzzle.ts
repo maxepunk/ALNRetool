@@ -5,7 +5,7 @@
  */
 
 import type { Puzzle } from '@/types/notion/app';
-import type { GraphNode, EntityTransformer, NodeMetadata } from '../types';
+import type { GraphNode, NodeMetadata, EntityLookupMaps } from '../types';
 
 /**
  * Default position for puzzle nodes (will be overridden by layout)
@@ -161,11 +161,12 @@ function calculateImportance(puzzle: Puzzle): number {
 }
 
 /**
- * Transform a Puzzle entity into a GraphNode
+ * Transform a Puzzle entity into a GraphNode with enriched relational data
  */
-export const transformPuzzle: EntityTransformer<Puzzle> = (
+export const transformPuzzle = (
   puzzle: Puzzle,
-  _index: number
+  _index: number,
+  lookupMaps?: EntityLookupMaps
 ): GraphNode<Puzzle> | null => {
   // Validate required fields
   const errors = validatePuzzle(puzzle);
@@ -187,6 +188,52 @@ export const transformPuzzle: EntityTransformer<Puzzle> = (
       size: complexityConfig.size,
     },
   };
+  
+  // Add enriched data for details panel if lookup maps are available
+  if (lookupMaps) {
+    metadata.enrichedData = {};
+    
+    // Add parent puzzle name if this is a sub-puzzle
+    if (puzzle.parentItemId) {
+      const parentPuzzle = lookupMaps.puzzles.get(puzzle.parentItemId);
+      if (parentPuzzle) {
+        metadata.enrichedData.parentPuzzleName = parentPuzzle.name;
+      }
+    }
+    
+    // Add requirement element names
+    if (puzzle.puzzleElementIds?.length > 0) {
+      metadata.enrichedData.requirementNames = puzzle.puzzleElementIds
+        .map((id: string) => lookupMaps.elements.get(id)?.name)
+        .filter(Boolean) as string[];
+    }
+    
+    // Add reward element names
+    if (puzzle.rewardIds?.length > 0) {
+      metadata.enrichedData.rewardNames = puzzle.rewardIds
+        .map(id => lookupMaps.elements.get(id)?.name)
+        .filter(Boolean) as string[];
+    }
+    
+    // Add element details for puzzles with requirements or rewards
+    const elementIds = [...(puzzle.puzzleElementIds || []), ...(puzzle.rewardIds || [])];
+    if (elementIds.length > 0) {
+      metadata.enrichedData.elementDetails = elementIds
+        .map(id => {
+          const element = lookupMaps.elements.get(id);
+          if (element) {
+            return {
+              id: element.id,
+              name: element.name,
+              type: element.basicType || 'Prop',
+              status: element.status,
+            };
+          }
+          return null;
+        })
+        .filter(Boolean) as Array<{ id: string; name: string; type: string; status?: string }>;
+    }
+  }
   
   // Add error state if validation failed
   if (errors.length > 0) {
@@ -213,15 +260,16 @@ export const transformPuzzle: EntityTransformer<Puzzle> = (
 }
 
 /**
- * Transform multiple puzzles
+ * Transform multiple puzzles with optional enrichment from lookup maps
  */
 export function transformPuzzles(
-  puzzles: Puzzle[]
+  puzzles: Puzzle[],
+  lookupMaps?: EntityLookupMaps
 ): GraphNode<Puzzle>[] {
   const nodes: GraphNode<Puzzle>[] = [];
   
   puzzles.forEach((puzzle, index) => {
-    const node = transformPuzzle(puzzle, index);
+    const node = transformPuzzle(puzzle, index, lookupMaps);
     if (node) {
       nodes.push(node);
     } else {
@@ -277,20 +325,8 @@ export function getPuzzleNodeStyle(node: GraphNode<Puzzle>) {
     minWidth: size.width,
     maxWidth: '250px',
     textAlign: 'center' as const,
-    // Counter-rotate text
-    '& > *': {
-      transform: 'rotate(-45deg)',
-    },
-    // Add lock badge for locked puzzles
-    ...(isLocked && {
-      '&::after': {
-        content: '"🔒"',
-        position: 'absolute',
-        top: '-5px',
-        right: '-5px',
-        fontSize: '16px',
-      },
-    }),
+    // Note: Counter-rotation and lock badge should be handled in the React component
+    // via CSS modules, not inline styles which don't support pseudo-selectors
   };
 }
 

@@ -32,7 +32,8 @@ import {
   resolveAllRelationships, 
   resolveRelationshipsWithIntegrity,
   filterEdgesByType,
-  type DataIntegrityReport 
+  buildLookupMaps,
+  type DataIntegrityReport
 } from './relationships';
 
 // Import layout functions
@@ -103,10 +104,18 @@ function transformEntitiesToNodes(data: NotionData): {
 } {
   console.group('Transforming entities to nodes');
   
-  // Transform each entity type
+  // Build lookup maps for enriching nodes with relational data
+  const lookupMaps = buildLookupMaps(
+    data.characters,
+    data.elements,
+    data.puzzles,
+    data.timeline
+  );
+  
+  // Transform each entity type (passing lookup maps for enrichment)
   const characterNodes = transformCharacters(data.characters);
-  const elementNodes = transformElements(data.elements);
-  const puzzleNodes = transformPuzzles(data.puzzles);
+  const elementNodes = transformElements(data.elements, lookupMaps);
+  const puzzleNodes = transformPuzzles(data.puzzles, lookupMaps);
   const timelineNodes = transformTimelineEvents(data.timeline);
   
   // Combine all nodes

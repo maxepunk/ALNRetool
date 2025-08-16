@@ -1,41 +1,68 @@
+/* Container for positioning */
+.puzzleNodeContainer {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Diamond shape */
 .puzzleNode {
+  width: 100%;
+  height: 100%;
   background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
   border: 2px solid #f59e0b;
-  border-radius: 12px;
-  padding: 12px;
-  min-width: 160px;
-  max-width: 240px;
+  /* Diamond shape using clip-path */
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
   position: relative;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+  /* Use filter for shadows instead of box-shadow with clip-path */
+  filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.2));
+  /* Center content in diamond */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
 }
 
 .puzzleNode:hover {
-  box-shadow: 0 4px 8px rgba(245, 158, 11, 0.3);
+  filter: drop-shadow(0 4px 8px rgba(245, 158, 11, 0.3));
   transform: translateY(-2px);
 }
 
 .puzzleNode.selected {
-  box-shadow: 0 0 0 3px #f59e0b;
+  filter: drop-shadow(0 0 0 3px #f59e0b) drop-shadow(0 4px 8px rgba(245, 158, 11, 0.3));
 }
 
-/* Complexity levels */
-.complexity-small {
-  min-width: 140px;
+/* Complexity levels - adjust container size */
+.puzzleNodeContainer.complexity-small {
+  width: 140px;
+  height: 140px;
+}
+
+.puzzleNodeContainer.complexity-medium {
+  width: 180px;
+  height: 180px;
+}
+
+.puzzleNodeContainer.complexity-large {
+  width: 220px;
+  height: 220px;
+}
+
+/* Complexity-specific adjustments */
+.complexity-small .puzzleNode {
   font-size: 12px;
-  padding: 10px;
 }
 
-.complexity-medium {
-  min-width: 160px;
+.complexity-medium .puzzleNode {
   font-size: 13px;
-  padding: 12px;
 }
 
-.complexity-large {
-  min-width: 200px;
+.complexity-large .puzzleNode {
   font-size: 14px;
-  padding: 14px;
   border-width: 3px;
   background: linear-gradient(135deg, #fed7aa 0%, #fb923c 100%);
 }
@@ -47,13 +74,13 @@
 }
 
 .chained:hover {
-  box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+  filter: drop-shadow(0 4px 8px rgba(99, 102, 241, 0.3));
 }
 
 .chainBadge {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: 15%;
+  right: 15%;
   background: #6366f1;
   color: white;
   width: 20px;
@@ -63,22 +90,45 @@
   align-items: center;
   justify-content: center;
   font-size: 10px;
+  z-index: 1;
+}
+
+.lockBadge {
+  position: absolute;
+  top: 15%;
+  left: 15%;
+  background: #f59e0b;
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  z-index: 1;
 }
 
 /* Error state */
 .error {
-  background: #fee2e2;
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
   border-color: #dc2626;
 }
 
-/* Content layout */
+/* Content layout - centered in diamond */
 .content {
   text-align: center;
   position: relative;
+  padding: 20px;
+  max-width: 70%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .icon {
-  font-size: 20px;
+  font-size: 24px;
   margin-bottom: 4px;
 }
 
@@ -87,6 +137,8 @@
   color: #78350f;
   margin-bottom: 6px;
   word-break: break-word;
+  line-height: 1.2;
+  max-width: 100%;
 }
 
 .chained .name {
@@ -120,45 +172,47 @@
 
 .owner {
   position: absolute;
-  bottom: 4px;
-  right: 4px;
+  bottom: 20%;
+  right: 50%;
+  transform: translateX(50%);
   font-size: 12px;
   opacity: 0.6;
 }
 
-/* Handles */
-.handleRequires {
-  width: 8px;
-  height: 8px;
-  background: #dc2626;
+/* Handles - positioned at diamond corners */
+.handleRequires,
+.handleRewards,
+.handleChain {
+  width: 10px;
+  height: 10px;
   border: 2px solid white;
+  z-index: 10;
+}
+
+.handleRequires {
+  background: #dc2626;
 }
 
 .handleRewards {
-  width: 8px;
-  height: 8px;
   background: #16a34a;
-  border: 2px solid white;
 }
 
 .handleChain {
-  width: 8px;
-  height: 8px;
   background: #6366f1;
-  border: 2px solid white;
 }
 
 .handleRequires:hover,
 .handleRewards:hover,
 .handleChain:hover {
-  transform: scale(1.2);
+  transform: scale(1.3);
+  transition: transform 0.2s;
 }
 
 /* Error indicator */
 .errorIndicator {
   position: absolute;
-  top: -8px;
-  left: -8px;
+  bottom: 15%;
+  left: 15%;
   width: 20px;
   height: 20px;
   background: #dc2626;

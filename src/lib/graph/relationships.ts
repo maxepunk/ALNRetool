@@ -86,6 +86,11 @@ const BROKEN_EDGE_STYLE: Partial<GraphEdge> = {
 // ============================================================================
 
 /**
+ * Entity lookup maps for efficient ID resolution (defined in types.ts)
+ */
+export type { EntityLookupMaps } from './types';
+
+/**
  * Build lookup maps for efficient ID resolution
  */
 export function buildLookupMaps(

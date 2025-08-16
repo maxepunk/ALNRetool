@@ -363,26 +363,68 @@ Project Overview
   - All development tools configured
   - No technical debt accumulated
   ---
-  SPRINT 2: First View + Basic Editing (Weeks 3-4)
+  SPRINT 2: First View + Basic Editing (Weeks 3-4) 🚧 IN PROGRESS
 
-  Week 3: Puzzle Focus View
+  ## Sprint 2 Current Status Assessment: ~35% Complete
+  
+  ### ✅ What's Implemented (Foundation Working):
+  - React Flow integration with @xyflow/react installed and configured
+  - Basic custom node components (PuzzleNode, ElementNode, CharacterNode, TimelineNode)
+  - Dagre layout engine (451 lines) with horizontal/vertical layouts
+  - Data transformation pipeline (Notion → Nodes/Edges → React Flow)
+  - Basic PuzzleFocusView component with node rendering
+  - React Query hooks connecting to data layer
+  
+  ### ❌ What's Missing (Per PRD Requirements):
+  - **Visual**: Diamond shape for puzzle nodes (PRD Line 411)
+  - **Visual**: Owner portrait badges on elements (PRD Line 236)
+  - **Visual**: Status-based borders: dashed/solid (PRD Line 232)
+  - **Functional**: Details panel with editing (PRD Line 241-243)
+  - **Functional**: Search/filter functionality (PRD Line 241)
+  - **Functional**: Act filter for game phases (PRD Line 242)
+  - **Functional**: Puzzle selector dropdown
+  - **Infrastructure**: 2-way sync mutation endpoints
 
-  Days 11-12: React Flow Setup
-  File Structure:
-  src/
-    components/
-      nodes/
-        PuzzleNode.tsx
-        ElementNode.tsx
-        CharacterBadge.tsx
-      views/
-        PuzzleFocusView.tsx
+  ## 🎯 REVISED SPRINT 2 COMPLETION PLAN (Prioritizing Visual Completeness)
 
-  Tasks:
-  [ ] Install React Flow dependencies
-  [ ] Create custom node components
-  [ ] Implement horizontal dagre layout
-  [ ] Style nodes by entity type
+  ### Phase 1: Visual Enhancements (Days 11-13) - MCP ACCELERATED ⬆️
+  
+  WHY: Game designers need to instantly distinguish between different entity types and their states
+  at a glance. With 100+ nodes on screen, visual hierarchy determines usability. Clear visual
+  language reduces cognitive load and prevents mistakes during content planning.
+
+  HOW:
+  Distinguish puzzle nodes from other entities
+  ├─ WHY: Puzzles are the core game mechanics - must stand out from elements/characters
+  ├─ HOW: Create unique visual shape that can't be confused with rectangles
+  │       Use MCP component_refiner to transform existing PuzzleNode
+  │       Ensure shape works with React Flow connection handles
+  │       Test visibility at different zoom levels (50% to 200%)
+  └─ VERIFY: Designer can identify all puzzles in 2 seconds at any zoom
+  
+  Show element ownership at a glance
+  ├─ WHY: Designers need to know who owns what without clicking each node
+  ├─ HOW: Add visual indicator showing owning character on element nodes
+  │       Use MCP component_builder for reusable ownership badge
+  │       Support both character portraits and text fallbacks
+  │       Ensure readable at standard zoom (100%)
+  └─ VERIFY: Can identify owner of any element without opening details
+  
+  Communicate content status visually
+  ├─ WHY: Writers need to identify incomplete content quickly to prioritize work
+  ├─ HOW: Visual styling that shows placeholder vs ready vs in-progress
+  │       Different visual treatments (borders, colors, patterns)
+  │       Consistent across all entity types
+  │       Accessible to colorblind users (not just color)
+  └─ VERIFY: Writer can identify all placeholder content in 5 seconds
+  
+  Show game flow progression
+  ├─ WHY: Understanding the sequence of gameplay events prevents narrative conflicts
+  ├─ HOW: Visual emphasis on left-to-right flow (requirements → puzzle → rewards)
+  │       Edge styling to show dependency direction
+  │       Visual grouping of related nodes
+  │       Clear visual hierarchy between primary and secondary paths
+  └─ VERIFY: New team member understands game flow without explanation
 
   Days 11-12: React Flow Setup & Custom Nodes
 
@@ -424,276 +466,206 @@ Project Overview
   │       Animate status changes with transition
   └─ VERIFY: Nodes visually distinct by status
 
-  Days 13-15: View Interactions
-  Puzzle Focus Layout:
-  [Elements] --> [PUZZLE] --> [Rewards] --> [Timeline]
-     |                           |              |
-  [Owners]                  [Elements]      [Events]
-
-  Tasks:
-  [ ] Connect data to React Flow
-  [ ] Add node selection handlers
-  [ ] Create details panel (slide-in)
-  [ ] Implement search/filter
-
-  Days 13-14: View Logic & Interactions
-
-  WHY: Static graphs are useless. Users need to explore relationships, filter noise, and access
-  details to make design decisions.
+  ### Phase 2: Details Panel & Interactions (Days 14-16) ⬇️
+  
+  WHY: Nodes can't display all information needed for decision-making. Designers need quick access
+  to full entity details without leaving the graph context. The panel becomes the editing interface.
 
   HOW:
-  Connect React Query data to React Flow
-  ├─ WHY: Transform fetched data into renderable graph
-  ├─ HOW: useMemo to transform when data changes:
-  │       const { nodes, edges } = useMemo(() =>
-  │         buildPuzzleGraph(puzzles, elements, characters),
-  │         [puzzles, elements, characters]
-  │       );
-  │       Handle loading and error states
-  └─ VERIFY: Graph updates when data changes
-
-  Implement node selection → details panel
-  ├─ WHY: Can't fit all info on nodes, need details on demand
-  ├─ HOW: onNodeClick handler:
-  │       Set selectedNodeId in state
-  │       Panel slides in from right (300px wide)
-  │       Show all properties for selected entity
-  │       Click outside or X to close
-  └─ VERIFY: Can select and view any node
-
-  Add search/filter functionality
-  ├─ WHY: 100+ nodes overwhelming without filtering
-  ├─ HOW: Controlled input in header:
-  │       Filter nodes by name (fuzzy match)
-  │       Hide non-matching nodes
-  │       Highlight search matches
-  │       Debounce by 300ms
-  └─ VERIFY: Search narrows visible nodes
-
-  Create puzzle selector dropdown
-  ├─ WHY: Users often focus on one puzzle at a time
-  ├─ HOW: Dropdown lists all puzzles:
-  │       "All Puzzles" option shows everything
-  │       Single puzzle shows its subgraph only
-  │       Remember selection in sessionStorage
-  └─ VERIFY: Can isolate single puzzle view
+  Create non-disruptive details view
+  ├─ WHY: Designers need to see details while maintaining graph context
+  ├─ HOW: Sliding panel that preserves graph visibility
+  │       Click node to open, multiple ways to close
+  │       Display all Notion properties in organized groups
+  │       Remember open/closed state between page refreshes
+  └─ VERIFY: Can view details without losing place in graph
   
-  Day 15: Details Panel (Read-Only)
+  Make data human-readable
+  ├─ WHY: Raw database fields are confusing and error-prone
+  ├─ HOW: Transform technical fields into friendly labels
+  │       Format dates, handle empty values gracefully
+  │       Show relationships as navigable links
+  │       Group related information logically
+  └─ VERIFY: Non-technical user understands all fields
+  
+  Enable keyboard workflows
+  ├─ WHY: Power users need speed, accessibility users need alternatives
+  ├─ HOW: Full keyboard navigation (Tab, Enter, Escape)
+  │       Consistent shortcuts across all interactions
+  │       Focus management for screen readers
+  └─ VERIFY: Can operate entirely without mouse
 
-  WHY: Before adding editing, we need a place to show all entity data. This panel becomes the
-  editing interface in Week 4.
+  ### Phase 3: Mutation Infrastructure (Days 17-18) ⬇️
+  
+  WHY: The tool's value is in 2-way sync. Designers must trust that changes save reliably to Notion.
+  Without editing, it's just a read-only viewer. Status is the most-changed field, perfect for MVP.
 
   HOW:
-  Sliding panel from right side
-  ├─ WHY: Preserves graph visibility while showing details
-  ├─ HOW: CSS transform: translateX()
-  │       300px wide, full height
-  │       Smooth transition (200ms)
-  │       Semi-transparent backdrop
-  │       Z-index above graph
-  └─ VERIFY: Smooth slide animation
-
-  Display all entity properties
-  ├─ WHY: Users need to see everything Notion stores
-  ├─ HOW: Dynamic property renderer:
-  │       Text fields: Simple <p>
-  │       Rich text: Render with line breaks
-  │       Relations: Clickable links to entities
-  │       Status: Colored badge
-  │       Dates: Formatted nicely
-  └─ VERIFY: All field types display correctly
-
-  Format data for readability
-  ├─ WHY: Raw Notion data is ugly and confusing
-  ├─ HOW: Field transformations:
-  │       Group related fields (metadata, content, relations)
-  │       Human-readable labels not DB field names
-  │       Empty fields show "Not set" in gray
-  │       Long text truncated with "Show more"
-  └─ VERIFY: Non-technical user can understand
-
-  Add close/minimize interactions
-  ├─ WHY: Users need to return to graph easily
-  ├─ HOW: Multiple close methods:
-  │       X button in top right
-  │       Click backdrop
-  │       Escape key
-  │       Swipe right on mobile
-  └─ VERIFY: All close methods work
-
-  Week 4: First Editing Feature
-
-  ⚠️ PREREQUISITE: Build Mutation Infrastructure (2-3 days)
-  // Required before ANY editing features can work
+  Build reliable save pipeline
+  ├─ WHY: Data loss destroys user trust immediately
+  ├─ HOW: Express endpoints that validate and forward to Notion
+  │       Handle all error cases with clear messages
+  │       Implement retry logic for transient failures
+  │       Log all mutations for debugging
+  └─ VERIFY: Changes persist across page refreshes
   
-  Mutation Infrastructure Tasks:
-  [ ] Add Express PUT endpoint: `/api/notion/:entity/:id`
-  [ ] Add Express PATCH endpoint for partial updates
-  [ ] Create useMutation hooks for each entity type
-  [ ] Setup optimistic update patterns
-  [ ] Implement rollback on error
-  [ ] Add toast notifications (react-hot-toast)
-  [ ] Create MSW handlers for mutation testing
-  [ ] Document mutation API patterns
+  Provide instant feedback
+  ├─ WHY: Users expect immediate response to actions
+  ├─ HOW: Optimistic updates show changes before server confirms
+  │       Loading states during network requests
+  │       Success/error notifications
+  │       Rollback UI on failures
+  └─ VERIFY: Status changes feel instant
+  
+  Start with highest-value field
+  ├─ WHY: Status field changes most frequently in daily workflow
+  ├─ HOW: Replace read-only status badge with editable dropdown
+  │       All status options from Notion schema
+  │       Save on selection, not separate button
+  │       Clear error recovery options
+  └─ VERIFY: Can update status in under 3 clicks
 
-  Days 16-17: Status Dropdown
-  // Priority: Most-used field first
-  interface StatusEditorProps {
-    entity: Element;
-    currentValue: Status;
-    onUpdate: (newValue: Status) => void;
+  ### Phase 4: Search & Filtering (Days 19-20)
+  
+  WHY: 100+ nodes create visual overload. Designers need to focus on specific subsets of content
+  relevant to their current task. Different work modes require different filtering strategies.
+
+  HOW:
+  Enable quick content discovery
+  ├─ WHY: Finding specific items in large graphs wastes time
+  ├─ HOW: Search box that filters nodes as you type
+  │       Fuzzy matching for typo tolerance
+  │       Visual highlighting of matches
+  │       Option to hide or dim non-matches
+  └─ VERIFY: Can find any node in under 5 seconds
+  
+  Support different work modes
+  ├─ WHY: Writers focus on incomplete content, designers on specific acts
+  ├─ HOW: Contextual filters for common workflows
+  │       Act filter for game phase work
+  │       Status filter for content completion
+  │       Entity type filter for focused editing
+  └─ VERIFY: Can show only "Act 1 incomplete elements" in 2 clicks
+  
+  Enable deep focus
+  ├─ WHY: Complex puzzles need isolation to understand dependencies
+  ├─ HOW: Puzzle selector that shows only relevant subgraph
+  │       Include all dependencies and rewards
+  │       Maintain visual context
+  │       Easy return to full view
+  └─ VERIFY: Can isolate and understand any puzzle in 10 seconds
+  
+  ## Implementation Details & Technical Guidance
+
+  ### MCP Tool Usage Strategy
+
+  1. **Component Refinement** (for existing nodes):
+     ```
+     mcp__magic__21st_magic_component_refiner
+     - Input: Current PuzzleNode.tsx
+     - Context: "Add diamond shape with clip-path, maintain React Flow handles"
+     - Output: Enhanced component with PRD visuals
+     ```
+
+  2. **Component Generation** (for new features):
+     ```
+     mcp__magic__21st_magic_component_builder
+     - Request: "Owner badge overlay component with portrait and initials fallback"
+     - Context: React Flow node overlay, absolute positioning
+     - Output: New OwnerBadge.tsx component
+     ```
+
+  3. **Component Inspiration** (for patterns):
+     ```
+     mcp__magic__21st_magic_component_inspiration
+     - Search: "status indicators", "node badges", "graph overlays"
+     - Apply: Best patterns to our use case
+     ```
+
+  ### Critical Visual Implementation Notes
+
+  **Diamond Shape CSS (from expert analysis):**
+  ```css
+  .puzzleNode {
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+    /* CRITICAL: Use filter for shadow, not box-shadow */
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
   }
+  ```
 
-  Tasks:
-  [ ] Build status dropdown component
-  [ ] Add to details panel
-  [ ] Style for inline editing
-  [ ] Handle loading states
+  **Owner Badge with Fallback:**
+  ```tsx
+  const OwnerBadge = ({ owner }) => {
+    const [hasError, setHasError] = useState(false);
+    const showImage = owner.portraitUrl && !hasError;
+    
+    return showImage ? (
+      <img src={owner.portraitUrl} onError={() => setHasError(true)} />
+    ) : (
+      <div className="initials">{getInitials(owner.name)}</div>
+    );
+  };
+  ```
 
-  Days 16-17: Status Dropdown Component
+  **Status-Based Borders:**
+  ```css
+  .status-placeholder { border: 2px dashed #999; }
+  .status-ready { border: 2px solid #4CAF50; }
+  .status-in-progress { border: 2px solid #FFC107; }
+  ```
 
-  WHY: Status is the most frequently updated field. Starting here proves the 2-way sync concept
-  with minimal complexity.
+  ## Sprint 2 Verification Checklist
 
-  HOW:
-  Build StatusEditor component
-  ├─ WHY: Reusable across all entity types
-  ├─ HOW: Component structure:
-  │       Display mode: Colored badge with text
-  │       Edit mode: Dropdown on click
-  │       Options from Notion schema
-  │       Cancel on Escape
-  │       Save on select
-  └─ VERIFY: Can toggle between modes
+  ### Visual Enhancements Complete:
+  [ ] Diamond-shaped puzzle nodes render correctly
+  [ ] Owner badges show portraits with initials fallback
+  [ ] Status borders (dashed/solid) working
+  [ ] Left-to-right flow is clear
+  [ ] All nodes have proper visual hierarchy
 
-  Implement optimistic update UI
-  ├─ WHY: Instant feedback makes app feel fast
-  ├─ HOW: Update local state immediately:
-  │       Show new status right away
-  │       Add loading spinner overlay
-  │       Success: Remove spinner
-  │       Error: Revert to old value
-  │       Animate all transitions
-  └─ VERIFY: Status changes instantly
+  ### Details Panel Working:
+  [ ] Panel slides in smoothly on node click
+  [ ] All entity properties display correctly
+  [ ] Close interactions (X, backdrop, Escape) work
+  [ ] Property formatting is readable
+  [ ] Panel state persists in sessionStorage
 
-  Handle loading/error states
-  ├─ WHY: Network requests can fail, users need clarity
-  ├─ HOW: Three states:
-  │       Saving: Spinner + disabled dropdown
-  │       Error: Red border + error message
-  │       Success: Green checkmark (1s then fade)
-  │       Retry button on error
-  └─ VERIFY: Disconnect network, see error
+  ### Mutation Infrastructure:
+  [ ] Express PUT/PATCH endpoints functional
+  [ ] React Query mutations handle optimistic updates
+  [ ] Error rollback restores previous state
+  [ ] Toast notifications appear for all states
+  [ ] Status editor saves to Notion successfully
 
-  Add to details panel
-  ├─ WHY: Consistent editing experience
-  ├─ HOW: Replace read-only status display:
-  │       Same position in layout
-  │       Hover shows edit cursor
-  │       Click activates dropdown
-  │       Tab navigation works
-  └─ VERIFY: Feels natural to edit
+  ### Search & Filtering:
+  [ ] Search box filters nodes by name
+  [ ] Act filter shows/hides by game phase
+  [ ] Puzzle selector isolates single puzzles
+  [ ] Filter preferences saved in sessionStorage
+  [ ] Performance acceptable with 100+ nodes
 
-  Days 18-20: 2-Way Sync
-  Tasks:
-  [ ] Create mutation hooks
-  [ ] Implement optimistic updates
-  [ ] Add error rollback logic
-  [ ] Test with real Notion API
+  ## Sprint 2 Success Metrics
 
-  Days 18-19: 2-Way Sync Implementation
+  **Performance Targets:**
+  - Graph renders 100+ nodes at 30+ fps
+  - Node interactions respond in <100ms
+  - Status updates complete in <2 seconds
+  - Search filtering responds in <300ms
 
-  ⚠️ NOTE: This assumes mutation infrastructure from Days 16-17 is complete
+  **User Experience:**
+  - Diamond puzzle nodes immediately recognizable
+  - Owner badges provide clear character context
+  - Status borders communicate state at a glance
+  - Details panel feels native and responsive
+  - Editing status feels instant with optimistic updates
+
+  ## Sprint 2 Deliverable Summary
+  ✅ Phase 1: Visual enhancements matching PRD specifications
+  ✅ Phase 2: Details panel for viewing all entity properties
+  ✅ Phase 3: 2-way sync with Notion for status editing
+  ✅ Phase 4: Search and filtering for large graphs
   
-  WHY: This is the most complex part of the MVP. Get this right and everything else follows. Get it
-   wrong and the app becomes unreliable.
-
-  HOW:
-  Create mutation functions with React Query
-  ├─ WHY: React Query handles caching invalidation automatically
-  ├─ HOW: useMutation structure:
-  │       mutationFn: (data) => updateNotionProperty(data)
-  │       onMutate: () => optimisticUpdate()
-  │       onError: (err, vars, context) => rollback()
-  │       onSuccess: () => invalidateQueries()
-  │       onSettled: () => queryClient.invalidateQueries()
-  └─ VERIFY: Mutation triggers correctly
-
-  Implement optimistic updates
-  ├─ WHY: Users expect instant feedback
-  ├─ HOW: onMutate phase:
-  │       Cancel outgoing queries
-  │       Snapshot current data
-  │       Update query cache immediately
-  │       Return snapshot for rollback
-  │       Update UI reflects change instantly
-  └─ VERIFY: Change appears before network request
-
-  Add rollback on error
-  ├─ WHY: Failed updates must restore previous state
-  ├─ HOW: onError phase:
-  │       Restore snapshot from onMutate
-  │       queryClient.setQueryData(key, previousData)
-  │       Show toast with error message
-  │       Log error for debugging
-  │       Allow user to retry
-  └─ VERIFY: Disconnect network, change reverts
-
-  Show success/error toasts
-  ├─ WHY: Users need confirmation of save status
-  ├─ HOW: Toast messages:
-  │       Success: "Status updated" (auto-dismiss 2s)
-  │       Error: "Update failed" + retry button
-  │       Loading: Progress indicator
-  │       Position: Top right, non-blocking
-  └─ VERIFY: Messages appear for each case
-
-  Day 20: Sprint 2 Verification
-
-  WHY: First user-facing feature must work perfectly. This proves our core value proposition.
-
-  HOW:
-  Can view puzzle dependency graph
-  ├─ TEST: Load puzzle view with real data
-  ├─ EXPECT: See nodes connected by edges
-  │         Readable labels and icons
-  │         Reasonable layout
-  └─ FIX: Layout or rendering issues
-
-  Click node shows details
-  ├─ TEST: Click various node types
-  ├─ EXPECT: Panel slides in smoothly
-  │         Shows all entity properties
-  │         Properties formatted nicely
-  └─ FIX: Panel or data display bugs
-
-  Can edit element status
-  ├─ TEST: Click status in details panel
-  ├─ EXPECT: Dropdown opens instantly
-  │         All statuses available
-  │         Can select new value
-  └─ FIX: Editing interaction issues
-
-  Changes persist to Notion
-  ├─ TEST: Edit status, refresh browser
-  ├─ EXPECT: New status still shows
-  │         Notion database updated
-  │         No data loss
-  └─ FIX: Sync or persistence bugs
-
-  Errors show clear messages
-  ├─ TEST: Disconnect wifi, try editing
-  ├─ EXPECT: Friendly error message
-  │         Retry button works
-  │         Previous state restored
-  └─ FIX: Error handling issues
-
-  Sprint 2 Deliverable: Proven 2-way sync with status editing
-  - Users can visualize puzzle dependencies
-  - Can edit the most common field (status)
-  - Changes sync reliably to Notion
-  - Error handling provides clear recovery
-  - Foundation ready for more field types
+  **Result**: A visually complete, functional puzzle dependency viewer with basic editing capabilities, ready for expansion to additional field types and views in Sprint 3.
 
   ---
   SPRINT 3: Remaining Views + Full Editing (Weeks 5-6)

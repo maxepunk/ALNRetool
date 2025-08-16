@@ -5,7 +5,7 @@
  */
 
 import type { Element } from '@/types/notion/app';
-import type { GraphNode, EntityTransformer, NodeMetadata, SFMetadata } from '../types';
+import type { GraphNode, NodeMetadata, SFMetadata, EntityLookupMaps } from '../types';
 import { extractSFMetadata, hasSFPatterns } from '../patterns';
 
 /**
@@ -110,11 +110,12 @@ function generateLabel(element: Element): string {
 }
 
 /**
- * Transform an Element entity into a GraphNode
+ * Transform an Element entity into a GraphNode with enriched owner data
  */
-export const transformElement: EntityTransformer<Element> = (
+export const transformElement = (
   element: Element,
-  _index: number
+  _index: number,
+  lookupMaps?: EntityLookupMaps
 ): GraphNode<Element> | null => {
   // Validate required fields
   const errors = validateElement(element);
@@ -132,6 +133,44 @@ export const transformElement: EntityTransformer<Element> = (
       size: determineNodeSize(element, sfResult.metadata),
     },
   };
+  
+  // Enrich with owner data if lookup maps are available
+  if (lookupMaps && element.ownerId) {
+    const owner = lookupMaps.characters.get(element.ownerId);
+    if (owner) {
+      metadata.ownerName = owner.name;
+      // Map character tier to the expected format with default fallback
+      if (owner.tier === 'Core') {
+        metadata.ownerTier = 'Tier 1';
+      } else if (owner.tier === 'Secondary') {
+        metadata.ownerTier = 'Tier 2';
+      } else {
+        // Default to Tier 3 for 'Tertiary' or any unexpected value
+        metadata.ownerTier = 'Tier 3';
+      }
+    }
+  }
+  
+  // Add enriched data for details panel
+  if (lookupMaps) {
+    metadata.enrichedData = {};
+    
+    // Add container name if element is in a container
+    if (element.containerId) {
+      const container = lookupMaps.elements.get(element.containerId);
+      if (container) {
+        metadata.enrichedData.containerName = container.name;
+      }
+    }
+    
+    // Add parent puzzle name if element is from a puzzle container
+    if (element.containerPuzzleId) {
+      const puzzle = lookupMaps.puzzles.get(element.containerPuzzleId);
+      if (puzzle) {
+        metadata.enrichedData.parentPuzzleName = puzzle.name;
+      }
+    }
+  }
   
   // Add SF_ patterns if found
   if (sfResult.patternsFound.length > 0) {
@@ -168,15 +207,16 @@ export const transformElement: EntityTransformer<Element> = (
 }
 
 /**
- * Transform multiple elements
+ * Transform multiple elements with optional enrichment from lookup maps
  */
 export function transformElements(
-  elements: Element[]
+  elements: Element[],
+  lookupMaps?: EntityLookupMaps
 ): GraphNode<Element>[] {
   const nodes: GraphNode<Element>[] = [];
   
   elements.forEach((element, index) => {
-    const node = transformElement(element, index);
+    const node = transformElement(element, index, lookupMaps);
     if (node) {
       nodes.push(node);
     } else {
@@ -221,21 +261,8 @@ export function getElementNodeStyle(node: GraphNode<Element>) {
     fontWeight: hasSF ? '600' : '500',
     minWidth: '140px',
     maxWidth: '250px',
-    // Add badge for SF patterns
-    ...(hasSF && {
-      '&::after': {
-        content: '"SF"',
-        position: 'absolute',
-        top: '-8px',
-        right: '-8px',
-        background: '#8b5cf6',
-        color: 'white',
-        borderRadius: '10px',
-        padding: '2px 6px',
-        fontSize: '10px',
-        fontWeight: 'bold',
-      },
-    }),
+    // Note: SF badge should be rendered as a React element in the component,
+    // not via pseudo-selector which doesn't work with inline styles
   };
 }
 

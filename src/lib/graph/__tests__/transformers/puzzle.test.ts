@@ -202,7 +202,7 @@ describe('Puzzle Transformer', () => {
       if (node) {
         const style = getPuzzleNodeStyle(node);
         expect(style.transform).toBe('rotate(45deg)');
-        expect(style['& > *'].transform).toBe('rotate(-45deg)');
+        // Counter-rotation is now handled in CSS modules, not inline styles
       }
     });
 
@@ -215,7 +215,7 @@ describe('Puzzle Transformer', () => {
       if (node) {
         const style = getPuzzleNodeStyle(node);
         expect(style.background).toBe('#fef3c7'); // Yellow tint
-        expect(style['&::after']).toBeDefined(); // Lock badge
+        // Lock badge is now rendered as a React element in the component
       }
     });
 
