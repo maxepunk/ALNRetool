@@ -11,19 +11,48 @@ import { validatePagination } from './middleware/validation.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 // Load environment variables
-// Only load .env files if NOTION_API_KEY is not already set (allows test override)
-if (process.env.NODE_ENV === 'test') {
-  console.log('[Server] Test mode - NOTION_API_KEY before dotenv:', process.env.NOTION_API_KEY?.substring(0, 8) + '...');
-}
-if (!process.env.NOTION_API_KEY) {
-  if (process.env.NODE_ENV === 'test' && existsSync('.env.test')) {
-    config({ path: '.env.test' });
+// CRITICAL: Never load dotenv in production - use platform environment variables
+// This follows 12-factor app principles where production config comes from the environment
+if (process.env.NODE_ENV !== 'production') {
+  // Only load .env files in development and test environments
+  if (process.env.NODE_ENV === 'test') {
+    console.log('[Server] Test mode - NOTION_API_KEY before dotenv:', process.env.NOTION_API_KEY?.substring(0, 8) + '...');
+    if (existsSync('.env.test')) {
+      config({ path: '.env.test' });
+    } else {
+      config();
+    }
+    console.log('[Server] Test mode - NOTION_API_KEY after dotenv:', process.env.NOTION_API_KEY?.substring(0, 8) + '...');
   } else {
+    // Development mode
     config();
+    console.log('[Server] Development mode - Environment variables loaded from .env');
   }
+} else {
+  console.log('[Server] Production mode - Using platform environment variables (dotenv not loaded)');
 }
-if (process.env.NODE_ENV === 'test') {
-  console.log('[Server] Test mode - NOTION_API_KEY after dotenv:', process.env.NOTION_API_KEY?.substring(0, 8) + '...');
+
+// Validate required environment variables at startup
+const requiredEnvVars = [
+  'NOTION_API_KEY',
+  'NOTION_CHARACTERS_DB',
+  'NOTION_ELEMENTS_DB',
+  'NOTION_PUZZLES_DB',
+  'NOTION_TIMELINE_DB'
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('[Server] ERROR: Missing required environment variables:', missingVars);
+  if (process.env.NODE_ENV === 'production') {
+    console.error('[Server] Cannot start in production without required configuration. Exiting...');
+    process.exit(1);
+  } else {
+    console.warn('[Server] WARNING: Running with missing configuration. Some features may not work.');
+  }
+} else {
+  console.log('[Server] All required environment variables are configured ✓');
 }
 
 const app = express();
