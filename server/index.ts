@@ -93,7 +93,7 @@ app.use('/api/cache', apiKeyAuth, cacheRoutes);
 
 // SPA fallback - must be after all API routes
 if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
+  app.get(/.*/, (req, res) => {
     const staticDir = path.join(__dirname, '../../client');
     res.sendFile(path.join(staticDir, 'index.html'));
   });
