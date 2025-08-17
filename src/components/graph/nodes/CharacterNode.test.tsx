@@ -245,7 +245,7 @@ describe('CharacterNode', () => {
       const character = createMockCharacter();
       const metadata: Partial<NodeMetadata> = {
         errorState: { 
-          type: 'missing_data',
+          hasError: true,
           message: 'Invalid character data' 
         }
       };
@@ -258,7 +258,7 @@ describe('CharacterNode', () => {
       const character = createMockCharacter();
       const metadata: Partial<NodeMetadata> = {
         errorState: { 
-          type: 'missing_data',
+          hasError: true,
           message: 'Invalid character data' 
         }
       };
@@ -272,7 +272,7 @@ describe('CharacterNode', () => {
       const character = createMockCharacter();
       const metadata: Partial<NodeMetadata> = {
         errorState: { 
-          type: 'missing_data',
+          hasError: true,
           message: 'Invalid character data' 
         }
       };

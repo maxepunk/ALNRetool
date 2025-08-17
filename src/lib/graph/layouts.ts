@@ -127,8 +127,8 @@ function createDagreGraph(config: LayoutConfig): dagre.graphlib.Graph {
   // Set graph options with optimized layout parameters
   g.setGraph({
     rankdir: config.direction,
-    ranksep: config.rankSeparation,
-    nodesep: config.nodeSeparation,
+    ranksep: config.rankSeparation as number,
+    nodesep: config.nodeSeparation as number,
     marginx: 100,  // Increased from 50 for better edge spacing
     marginy: 100,  // Increased from 50 for better edge spacing
     // Use safer options - network-simplex causes issues

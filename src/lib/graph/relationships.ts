@@ -64,6 +64,18 @@ const EDGE_STYLES: Record<RelationshipType, Partial<GraphEdge>> = {
     animated: false,
     label: 'contains',
   },
+  collaboration: {
+    type: 'default',
+    style: { stroke: '#ec4899', strokeWidth: 2, strokeDasharray: '4 2' },
+    animated: false,
+    label: 'collaborates',
+  },
+  owner: {
+    type: 'default',
+    style: { stroke: '#3b82f6', strokeWidth: 2 },
+    animated: false,
+    label: 'owned by',
+  },
 };
 
 /**
@@ -125,20 +137,17 @@ export function createPlaceholderNode(
     type: 'placeholder',
     position: { x: 0, y: 0 }, // Will be positioned by layout
     data: {
-      entity: null, // No actual entity data
       label: `Missing ${entityType}: ${id.slice(0, 8)}...`,
       metadata: {
         entityType,
-        errorState: {
-          type: 'missing_entity',
-          message: `Referenced ${entityType} not found in Notion`,
-          referencedBy: referencedBy || 'unknown',
-        },
-        visualHints: {
-          color: '#dc2626', // Red for missing
-          size: 'small',
-          shape: 'circle',
-        },
+        entityId: id,
+        isPlaceholder: true,
+        missingReason: `Referenced ${entityType} not found in Notion (referenced by: ${referencedBy || 'unknown'})`,
+      },
+      visualHints: {
+        color: '#dc2626', // Red for missing
+        size: 'small',
+        shape: 'circle',
       },
     },
     style: {
@@ -204,8 +213,10 @@ function createEdge(
       relationshipType,
       strength: metadata?.strength || 1,
       label: metadata?.label || (EDGE_STYLES[relationshipType].label as string),
-      bidirectional: metadata?.bidirectional || false,
-      isBroken,
+      metadata: {
+        ...metadata?.metadata,
+        isBroken,
+      },
     },
   };
   

@@ -68,10 +68,12 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 
 ## Key Technical Context
 
-### Architecture Overview
+### Architecture Overview (Updated January 17, 2025)
 - **Frontend**: React 18 + TypeScript + Vite + TanStack Query + React Flow
 - **Backend**: Express.js proxy server for Notion API authentication
 - **Data Flow**: Frontend → Express API → Notion API → Transform → Cache → Response
+- **Graph System**: Modular architecture with BaseTransformer pattern (refactored from monolithic)
+- **Layout Engine**: Pure Dagre with semantic edge-based positioning
 
 ### High-Level Code Architecture
 
@@ -125,6 +127,44 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 4. **Smoke Tests**: Quick validation without real API
 
 ### Important Patterns
+
+#### Modular Graph Architecture (January 17, 2025 Refactor)
+- **From Monolithic to Modular**: 722-line `index.ts` decomposed into 12 focused modules
+- **Module Structure**: 
+  ```
+  src/lib/graph/
+  ├── index.ts                    # Public API facade (90 lines)
+  ├── modules/
+  │   ├── BaseTransformer.ts      # Abstract base for all transformers
+  │   ├── CharacterTransformer.ts # Character-specific
+  │   ├── ElementTransformer.ts   # Element-specific
+  │   ├── PuzzleTransformer.ts    # Puzzle-specific
+  │   ├── TimelineTransformer.ts  # Timeline-specific
+  │   ├── GraphBuilder.ts         # Node/edge assembly
+  │   ├── EdgeBuilder.ts          # Edge creation
+  │   ├── ErrorHandler.ts         # Error management
+  │   └── LayoutOrchestrator.ts   # Layout coordination
+  ```
+
+#### BaseTransformer Pattern (Code Duplication Solution)
+- **Purpose**: Eliminate 60%+ code duplication across entity transformers
+- **Implementation**: Abstract base class with template method pattern
+- **Benefits**:
+  - Shared validation logic (`validateEntity`)
+  - Common metadata creation (`createBaseMetadata`)
+  - Consistent error handling (`createErrorMetadata`)
+  - Batch transformation with error recovery (`transformMultiple`)
+- **Usage Example**:
+  ```typescript
+  class PuzzleTransformer extends BaseTransformer<Puzzle> {
+    protected entityType = 'puzzle' as const;
+    protected nodeType = 'puzzleNode';
+    
+    protected createMetadata(puzzle: Puzzle, errors: string[]): NodeMetadata {
+      // Puzzle-specific metadata only
+    }
+  }
+  ```
 
 #### Pure Dagre Layout (Sprint 2 Refactor - January 17, 2025)
 - **Replaced**: Complex hybrid `puzzleCentricLayout.ts` with simple `pureDagreLayout.ts`
@@ -333,6 +373,30 @@ npm run test:coverage                    # Generate coverage reports
 3. **Don't skip asyncHandler** - unhandled promise rejections crash the server
 4. **Don't use relative imports** - use path aliases (`@/*` for src)
 5. **Don't commit .env files** - they're gitignored for a reason
+6. **Don't use TypeScript enums** - use const objects for erasableSyntaxOnly compatibility
+7. **Don't create monolithic modules** - split into focused, single-responsibility files
+8. **Don't duplicate transformation logic** - extend BaseTransformer for new entity types
+
+## Refactoring Best Practices (Lessons from January 2025)
+
+### When Refactoring Large Files
+1. **Start with analysis**: Use tools to understand dependencies and coupling
+2. **Identify patterns**: Look for repeated code that can be abstracted
+3. **Create base classes**: Abstract common functionality (like BaseTransformer)
+4. **Use facade pattern**: Keep public API stable while changing internals
+5. **Test continuously**: Run tests after each extraction to catch breaks
+
+### TypeScript Strict Mode Tips
+1. **Fix direction type issues**: Reorder spread operators when mapping types
+2. **Handle null entities**: Add explicit null checks in transformers
+3. **Use const assertions**: Replace enums with `as const` objects
+4. **Type guard functions**: Create type predicates for runtime validation
+
+### Performance Optimization Patterns
+1. **React.memo everything**: Wrap all node components to prevent re-renders
+2. **useMemo for derived data**: Memoize expensive transformations
+3. **useCallback for handlers**: Prevent function recreation on each render
+4. **Batch API calls**: Use parallel requests when fetching independent data
 
 ## Current Development Status
 

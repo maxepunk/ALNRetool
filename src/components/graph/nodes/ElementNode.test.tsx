@@ -223,7 +223,7 @@ describe('ElementNode', () => {
         rfid: 'RFID-123',
         valueRating: 3,
         memoryType: 'Personal',
-        group: 'Evidence'
+        group: { name: 'Evidence', multiplier: '1' }
       });
       render(<ElementNode {...props} />);
       expect(screen.getByText('SF')).toBeInTheDocument();
@@ -264,10 +264,10 @@ describe('ElementNode', () => {
 
     it('shows memory type abbreviation', () => {
       const props = createMockNodeProps({}, {}, {
-        memoryType: 'Business'
+        memoryType: 'Public'
       });
       render(<ElementNode {...props} />);
-      expect(screen.getByText('B')).toBeInTheDocument();
+      expect(screen.getByText('P')).toBeInTheDocument();
     });
 
     it('shows P for Personal memory type', () => {
@@ -278,22 +278,22 @@ describe('ElementNode', () => {
       expect(screen.getByText('P')).toBeInTheDocument();
     });
 
-    it('shows T for Technical memory type', () => {
+    it('shows M for Mixed memory type', () => {
       const props = createMockNodeProps({}, {}, {
-        memoryType: 'Technical'
+        memoryType: 'Mixed'
       });
       render(<ElementNode {...props} />);
-      expect(screen.getByText('T')).toBeInTheDocument();
+      expect(screen.getByText('M')).toBeInTheDocument();
     });
 
     it('shows both rating and memory type', () => {
       const props = createMockNodeProps({}, {}, {
         valueRating: 5,
-        memoryType: 'Technical'
+        memoryType: 'Mixed'
       });
       render(<ElementNode {...props} />);
       expect(screen.getByText('★5')).toBeInTheDocument();
-      expect(screen.getByText('T')).toBeInTheDocument();
+      expect(screen.getByText('M')).toBeInTheDocument();
     });
 
     it('does not show SF details section when no patterns', () => {
@@ -495,13 +495,13 @@ describe('ElementNode', () => {
       }, {}, {
         rfid: 'RFID-123',
         valueRating: 5,
-        memoryType: 'Technical',
-        group: 'CEO Evidence'
+        memoryType: 'Mixed',
+        group: { name: 'CEO Evidence', multiplier: '1' }
       });
       render(<ElementNode {...props} />);
       expect(screen.getByText('SF')).toBeInTheDocument();
       expect(screen.getByText('★5')).toBeInTheDocument();
-      expect(screen.getByText('T')).toBeInTheDocument();
+      expect(screen.getByText('M')).toBeInTheDocument();  // Mixed shows 'M'
       expect(screen.getByText('📦')).toBeInTheDocument();
       expect(screen.getByText('Memory Token (Video)')).toBeInTheDocument();
     });

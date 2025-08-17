@@ -178,10 +178,10 @@ describe('Graph Transformer Integration', () => {
       );
       expect(ownershipEdge).toBeDefined();
       
-      // Check requirement edge (puzzle -> element)
+      // Check requirement edge (element -> puzzle as per the correct relationship direction)
       const requirementEdge = graph.edges.find(e => 
-        e.source === 'puzzle-1' && 
-        e.target === 'elem-1' && 
+        e.source === 'elem-1' && 
+        e.target === 'puzzle-1' && 
         e.data?.relationshipType === 'requirement'
       );
       expect(requirementEdge).toBeDefined();
