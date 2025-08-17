@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useEffect } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -6,6 +6,7 @@ import {
   Background,
   BackgroundVariant,
   ReactFlowProvider,
+  useReactFlow,
 } from '@xyflow/react';
 import type {
   Node,
@@ -31,6 +32,12 @@ import { useGraphState } from '@/hooks/useGraphState';
 import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 import type { ViewType } from '@/lib/graph/types';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
+import {
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  RotateCcw,
+} from 'lucide-react';
 
 import styles from './GraphView.module.css';
 
@@ -122,6 +129,34 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     onSelectionChange,
   });
   
+  // Get React Flow instance for viewport controls
+  const reactFlowInstance = useReactFlow();
+  const [isReady, setIsReady] = useState(false);
+  
+  // Mark as ready when React Flow is initialized
+  useEffect(() => {
+    if (reactFlowInstance) {
+      setIsReady(true);
+    }
+  }, [reactFlowInstance]);
+  
+  // Viewport control handlers
+  const handleZoomIn = useCallback(() => {
+    reactFlowInstance?.zoomIn({ duration: 200 });
+  }, [reactFlowInstance]);
+  
+  const handleZoomOut = useCallback(() => {
+    reactFlowInstance?.zoomOut({ duration: 200 });
+  }, [reactFlowInstance]);
+  
+  const handleZoomToFit = useCallback(() => {
+    reactFlowInstance?.fitView({ padding: 0.2, duration: 800 });
+  }, [reactFlowInstance]);
+  
+  const handleResetView = useCallback(() => {
+    reactFlowInstance?.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
+  }, [reactFlowInstance]);
+  
   // MiniMap node color
   const nodeColor = useCallback((node: Node) => {
     switch (node.type) {
@@ -140,6 +175,47 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   
   return (
     <div className={styles.graphContainer}>
+      {/* Floating Toolbar - only show when React Flow is ready */}
+      {isReady && (
+        <div className={styles.floatingToolbar}>
+          <button 
+            className={styles.toolbarButton} 
+            onClick={handleZoomIn}
+            title="Zoom In"
+            type="button"
+          >
+            <ZoomIn size={16} />
+          </button>
+          <button 
+            className={styles.toolbarButton} 
+            onClick={handleZoomOut}
+            title="Zoom Out"
+            type="button"
+          >
+            <ZoomOut size={16} />
+          </button>
+          
+          <div className={styles.toolbarSeparator} />
+          
+          <button 
+            className={styles.toolbarButton} 
+            onClick={handleZoomToFit}
+            title="Fit to View"
+            type="button"
+          >
+            <Maximize size={16} />
+          </button>
+          <button 
+            className={styles.toolbarButton} 
+            onClick={handleResetView}
+            title="Reset View"
+            type="button"
+          >
+            <RotateCcw size={16} />
+          </button>
+        </div>
+      )}
+      
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -155,6 +231,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
         fitView
         attributionPosition="bottom-left"
         disableKeyboardA11y={true}
+        style={{ width: '100%', height: '100%' }}
       >
         <Background 
           variant={BackgroundVariant.Dots} 

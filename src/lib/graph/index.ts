@@ -72,7 +72,8 @@ import { applyPureDagreLayout } from './pureDagreLayout';
 export { extractSFMetadata, hasSFPatterns } from './patterns';
 
 // Layout utilities  
-export { LAYOUT_PRESETS, applyDagreLayout } from './layouts';
+export { LAYOUT_PRESETS, applyDagreLayout, applyHierarchicalLayout } from './layouts';
+export { applyPureDagreLayout } from './pureDagreLayout';
 
 // Relationship utilities
 export { filterEdgesByType, getConnectedEdges, calculateConnectivity } from './relationships';

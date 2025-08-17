@@ -141,6 +141,21 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 - **Path Alias**: `@/*` maps to `src/*` (use in frontend imports)
 - **Strict Mode**: All strict checks enabled including `noUncheckedIndexedAccess`
 
+#### CSS Architecture (Hybrid Approach - January 17, 2025)
+- **Tailwind CSS v4**: Installed for utility-first styling and shadcn/ui component integration
+- **CSS Modules**: Retained for existing complex components (GraphView, nodes, etc.)
+- **shadcn/ui Components**: Using Button, Tooltip, Separator, and other primitives for UI consistency
+- **PostCSS**: Configured with `@tailwindcss/postcss` (Tailwind v4 requirement) and autoprefixer
+- **Strategy**: 
+  - New components use Tailwind utilities + shadcn/ui
+  - Complex existing components keep CSS Modules for encapsulation
+  - Gradual migration path from CSS Modules to Tailwind as needed
+- **Configuration Files**:
+  - `tailwind.config.js`: Extends shadcn/ui theme, includes custom colors
+  - `postcss.config.js`: Uses `@tailwindcss/postcss` plugin (not `tailwindcss`)
+  - `components.json`: shadcn/ui configuration with component paths
+- **Import Pattern**: shadcn/ui components from `@/components/ui/*` (lowercase)
+
 #### Vite Configuration
 - **Proxy**: `/api` routes proxy to `localhost:3001` in dev
 - **Build Output**: `dist/client/` for frontend, `dist/server/` for backend
