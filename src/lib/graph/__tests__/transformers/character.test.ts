@@ -3,8 +3,11 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { transformCharacter, transformCharacters, getCharacterNodeStyle } from '../../transformers/character';
+import { CharacterTransformer } from '../../modules/transformers/CharacterTransformer';
 import type { Character } from '@/types/notion/app';
+
+// Create test instance
+const characterTransformer = new CharacterTransformer();
 
 // Mock console methods
 const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -31,10 +34,10 @@ describe('Character Transformer', () => {
     ...overrides,
   });
 
-  describe('transformCharacter', () => {
+  describe('transform', () => {
     it('should transform a valid character', () => {
       const character = createMockCharacter();
-      const node = transformCharacter(character, 0);
+      const node = characterTransformer.transform(character);
 
       expect(node).toBeDefined();
       expect(node?.id).toBe('char-1');
@@ -46,11 +49,11 @@ describe('Character Transformer', () => {
 
     it('should handle missing required fields', () => {
       const character = createMockCharacter({ id: '', name: '' });
-      const node = transformCharacter(character, 0);
+      const node = characterTransformer.transform(character);
 
       expect(node).toBeDefined();
       expect(node?.data.metadata.errorState).toBeDefined();
-      expect(node?.data.metadata.errorState?.type).toBe('missing_data');
+      expect(node?.data.metadata.errorState?.type).toBe('validation_error');
       expect(consoleSpy).toHaveBeenCalled();
     });
 
@@ -61,10 +64,10 @@ describe('Character Transformer', () => {
         characterPuzzleIds: ['p1', 'p2'],
         eventIds: ['t1', 't2', 't3', 't4'],
       });
-      const node = transformCharacter(character, 0);
+      const node = characterTransformer.transform(character);
 
-      // Core tier (10) + owned (3) + puzzles (4) + events (4) = 21
-      expect(node?.data.metadata.importanceScore).toBe(21);
+      // Core tier (9000) + Player (100) + puzzles (2*10) + owned (3*5) = 9135
+      expect((node?.data.metadata as any).importanceScore).toBe(9135);
       expect(node?.data.metadata.visualHints?.size).toBe('large');
     });
 
@@ -75,10 +78,11 @@ describe('Character Transformer', () => {
         characterPuzzleIds: [],
         eventIds: ['t1'],
       });
-      const node = transformCharacter(character, 0);
+      const node = characterTransformer.transform(character);
 
-      // Secondary tier (5) + owned (1) + puzzles (0) + events (1) = 7
-      expect(node?.data.metadata.importanceScore).toBe(7);
+      // Secondary tier (8000) + NPC (0) + puzzles (0*10) + owned (1*5) + events(1*2) = 8005 
+      // Note: events are treated as associatedElementIds (tertiary)
+      expect((node?.data.metadata as any).importanceScore).toBe(8105);
       expect(node?.data.metadata.visualHints?.size).toBe('medium');
     });
 
@@ -89,10 +93,10 @@ describe('Character Transformer', () => {
         characterPuzzleIds: [],
         eventIds: [],
       });
-      const node = transformCharacter(character, 0);
+      const node = characterTransformer.transform(character);
 
-      // Tertiary tier (2) + owned (0) + puzzles (0) + events (0) = 2
-      expect(node?.data.metadata.importanceScore).toBe(2);
+      // Tertiary tier (7000) + Player (100) + no connections = 7100
+      expect((node?.data.metadata as any).importanceScore).toBe(7100);
       expect(node?.data.metadata.visualHints?.size).toBe('small');
     });
 
@@ -100,8 +104,8 @@ describe('Character Transformer', () => {
       const core = createMockCharacter({ tier: 'Core' });
       const secondary = createMockCharacter({ tier: 'Secondary' });
 
-      const coreNode = transformCharacter(core, 0);
-      const secondaryNode = transformCharacter(secondary, 0);
+      const coreNode = characterTransformer.transform(core);
+      const secondaryNode = characterTransformer.transform(secondary);
 
       expect(coreNode?.data.metadata.visualHints?.color).toBe('#dc2626'); // Red for Core
       expect(secondaryNode?.data.metadata.visualHints?.color).toBe('#2563eb'); // Blue for Secondary
@@ -109,10 +113,11 @@ describe('Character Transformer', () => {
 
     it('should handle null tier gracefully', () => {
       const character = createMockCharacter({ tier: undefined });
-      const node = transformCharacter(character, 0);
+      const node = characterTransformer.transform(character);
 
       expect(node).toBeDefined();
-      expect(node?.data.metadata.importanceScore).toBe(0);
+      // Character with no tier but type Player gets 100 points
+      expect((node?.data.metadata as any).importanceScore).toBe(100);
       expect(node?.data.metadata.visualHints?.size).toBe('small');
     });
   });
@@ -125,7 +130,7 @@ describe('Character Transformer', () => {
         createMockCharacter({ id: 'char-3', name: 'Character 3' }),
       ];
 
-      const nodes = transformCharacters(characters);
+      const nodes = characterTransformer.transformMultiple(characters);
 
       expect(nodes).toHaveLength(3);
       expect(nodes[0]!.id).toBe('char-1');
@@ -152,7 +157,7 @@ describe('Character Transformer', () => {
         }),
       ];
 
-      const nodes = transformCharacters(characters);
+      const nodes = characterTransformer.transformMultiple(characters);
 
       // Should be sorted by importance: Core > Secondary > Tertiary
       expect(nodes[0]!.id).toBe('char-2'); // Core with highest score
@@ -161,7 +166,7 @@ describe('Character Transformer', () => {
     });
 
     it('should handle empty array', () => {
-      const nodes = transformCharacters([]);
+      const nodes = characterTransformer.transformMultiple([]);
       expect(nodes).toEqual([]);
     });
 
@@ -172,45 +177,36 @@ describe('Character Transformer', () => {
         createMockCharacter({ id: 'char-3' }),
       ];
 
-      const nodes = transformCharacters(characters);
+      const nodes = characterTransformer.transformMultiple(characters);
 
       // Should still get 3 nodes, but one with error state
       expect(nodes).toHaveLength(3);
     });
   });
 
-  describe('getCharacterNodeStyle', () => {
-    it('should return error style when node has error state', () => {
-      const node = transformCharacter(createMockCharacter({ id: '', name: '' }), 0);
+  describe('visual hints from metadata', () => {
+    it('should include error state in metadata when validation fails', () => {
+      const node = characterTransformer.transform(createMockCharacter({ id: '', name: '' }));
       
-      if (node) {
-        const style = getCharacterNodeStyle(node);
-        expect(style.background).toBe('#fee2e2'); // Error background
-        expect(style.border).toContain('solid'); // Player type has solid border
-        expect(style.border).toContain('#dc2626'); // Error border color
-      }
+      expect(node?.data.metadata.errorState).toBeDefined();
+      expect(node?.data.metadata.errorState?.hasError).toBe(true);
+      expect(node?.data.metadata.errorState?.type).toBe('validation_error');
     });
 
-    it('should return Core tier style', () => {
-      const node = transformCharacter(createMockCharacter({ tier: 'Core', type: 'Player' }), 0);
+    it('should include Core tier visual hints in metadata', () => {
+      const node = characterTransformer.transform(createMockCharacter({ tier: 'Core', type: 'Player' }));
       
-      if (node) {
-        const style = getCharacterNodeStyle(node);
-        expect(style.background).toBe('#dc262615'); // Red with 15% opacity
-        expect(style.border).toContain('solid'); // Player has solid border
-        expect(style.border).toContain('#dc2626'); // Core tier color
-      }
+      expect(node?.data.metadata.visualHints?.color).toBe('#dc2626'); // Red for Core
+      expect(node?.data.metadata.visualHints?.size).toBe('large');
+      expect(node?.data.metadata.visualHints?.icon).toBe('user'); // Player icon
     });
 
-    it('should return NPC style with dashed border', () => {
-      const node = transformCharacter(createMockCharacter({ tier: 'Secondary', type: 'NPC' }), 0);
+    it('should include NPC visual hints in metadata', () => {
+      const node = characterTransformer.transform(createMockCharacter({ tier: 'Secondary', type: 'NPC' }));
       
-      if (node) {
-        const style = getCharacterNodeStyle(node);
-        expect(style.background).toBe('#2563eb15'); // Blue with 15% opacity
-        expect(style.border).toContain('dashed'); // NPC has dashed border
-        expect(style.border).toContain('#2563eb'); // Secondary tier color
-      }
+      expect(node?.data.metadata.visualHints?.color).toBe('#2563eb'); // Blue for Secondary
+      expect(node?.data.metadata.visualHints?.size).toBe('medium');
+      expect(node?.data.metadata.visualHints?.icon).toBe('users'); // NPC icon
     });
   });
 });

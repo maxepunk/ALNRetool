@@ -33,7 +33,7 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
       {metadata.ownerName && (
         <OwnerBadge
           characterName={metadata.ownerName}
-          tier={metadata.ownerTier}
+          tier={metadata.ownerTier as 'Tier 1' | 'Tier 2' | 'Tier 3' | undefined}
           position="top-right"
         />
       )}

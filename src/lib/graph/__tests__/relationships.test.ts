@@ -181,11 +181,11 @@ describe('Relationship Resolution', () => {
       const edges = createRequirementEdges(puzzles, lookupMaps);
 
       expect(edges).toHaveLength(2);
-      expect(edges[0]?.source).toBe('p1');
-      expect(edges[0]?.target).toBe('e1');
+      expect(edges[0]?.source).toBe('e1');  // Element flows INTO puzzle
+      expect(edges[0]?.target).toBe('p1');  // Puzzle receives the element
       expect(edges[0]?.data?.relationshipType).toBe('requirement');
-      expect(edges[1]?.source).toBe('p1');
-      expect(edges[1]?.target).toBe('e2');
+      expect(edges[1]?.source).toBe('e2');
+      expect(edges[1]?.target).toBe('p1');
     });
 
     it('should warn about unknown required elements', () => {

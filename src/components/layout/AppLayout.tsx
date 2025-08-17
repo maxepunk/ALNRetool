@@ -97,9 +97,9 @@ export default function AppLayout() {
   }, [location, isMobile])
 
   const navItems = [
-    { path: '/puzzles', label: 'Puzzles', icon: Puzzle },
-    { path: '/characters', label: 'Characters', icon: Users },
-    { path: '/status', label: 'Status', icon: BarChart3 },
+    { path: '/puzzles', label: 'Puzzles', icon: Puzzle, testId: 'puzzle-icon' },
+    { path: '/characters', label: 'Characters', icon: Users, testId: 'character-icon' },
+    { path: '/status', label: 'Status', icon: BarChart3, testId: 'status-icon' },
   ]
 
   const toggleDarkMode = () => {
@@ -129,6 +129,7 @@ export default function AppLayout() {
                 size="icon"
                 onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
                 aria-label={leftSidebarOpen ? "Close menu" : "Open menu"}
+                aria-expanded={leftSidebarOpen}
               >
                 {leftSidebarOpen ? <X size={20} /> : <Menu size={20} />}
               </Button>
@@ -195,19 +196,19 @@ export default function AppLayout() {
             <div className="p-4">              <div className="mb-6">
                 <h2 className="text-sm font-semibold text-muted-foreground mb-2">NAVIGATION</h2>
                 <ul className="space-y-1">
-                  {navItems.map(({ path, label, icon: Icon }) => (
+                  {navItems.map(({ path, label, icon: Icon, testId }) => (
                     <li key={path}>
                       <NavLink
                         to={path}
                         className={({ isActive }) =>
                           `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
                             isActive 
-                              ? 'bg-primary/10 text-primary font-medium' 
+                              ? 'bg-primary/10 text-primary font-medium active' 
                               : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground'
                           }`
                         }
                       >
-                        <Icon size={18} />
+                        <Icon size={18} data-testid={testId} />
                         <span>{label}</span>
                       </NavLink>
                     </li>

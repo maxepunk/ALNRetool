@@ -246,6 +246,9 @@ describe('Timeline Node Filtering', () => {
           node.data.metadata.enrichedData?.timelineInfo
       );
 
+      // Verify that we found timeline-connected elements
+      expect(elementsWithTimeline.length).toBeGreaterThan(0);
+      
       // Verify that at least one element has timeline info
       expect(elementsWithTimeline.length).toBeGreaterThan(0);
 
@@ -257,7 +260,7 @@ describe('Timeline Node Filtering', () => {
 
       if (memoryDoc && (memoryDoc.data.entity as any).timelineEventId) {
         expect(memoryDoc.data.metadata.enrichedData?.timelineInfo).toBeDefined();
-        expect(memoryDoc.data.metadata.enrichedData?.timelineInfo?.events).toHaveLength(1);
+        expect((memoryDoc.data.metadata.enrichedData?.timelineInfo as any)?.events).toHaveLength(1);
       }
     });
 
@@ -279,9 +282,11 @@ describe('Timeline Node Filtering', () => {
       // If there are elements from different characters in the same puzzle,
       // they should have collaboration metadata
       if (elementsWithCollaboration.length > 0) {
-        const firstCollab = elementsWithCollaboration[0]!;
-        expect(firstCollab.data.metadata.enrichedData?.collaborators).toBeDefined();
-        expect(firstCollab.data.metadata.enrichedData?.collaborators?.length).toBeGreaterThan(0);
+        const firstCollab = elementsWithCollaboration[0];
+        if (firstCollab) {
+          expect(firstCollab.data.metadata.enrichedData?.collaborators).toBeDefined();
+          expect((firstCollab.data.metadata.enrichedData?.collaborators as any)?.length).toBeGreaterThan(0);
+        }
       }
     });
   });

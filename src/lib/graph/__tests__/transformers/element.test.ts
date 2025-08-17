@@ -3,14 +3,11 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { 
-  transformElement, 
-  transformElements, 
-  getElementNodeStyle,
-  isContainer,
-  getSpecialElements 
-} from '../../transformers/element';
-import type { Element, ElementBasicType, ElementStatus } from '@/types/notion/app';
+import { ElementTransformer } from '../../modules/transformers/ElementTransformer';
+import type { Element, ElementStatus } from '@/types/notion/app';
+
+// Create test instance
+const elementTransformer = new ElementTransformer();
 
 // Mock the patterns module
 vi.mock('../../patterns', () => ({
@@ -54,10 +51,10 @@ describe('Element Transformer', () => {
     ...overrides,
   });
 
-  describe('transformElement', () => {
+  describe('transform', () => {
     it('should transform a valid element', () => {
       const element = createMockElement();
-      const node = transformElement(element, 0);
+      const node = elementTransformer.transform(element);
 
       expect(node).toBeDefined();
       expect(node?.id).toBe('elem-1');
@@ -71,7 +68,7 @@ describe('Element Transformer', () => {
       const element = createMockElement({
         descriptionText: 'SF_RFID: [TEST-001] SF_ValueRating: [4]',
       });
-      const node = transformElement(element, 0);
+      const node = elementTransformer.transform(element);
 
       expect(node?.data.metadata.sfPatterns).toBeDefined();
       expect(node?.data.metadata.sfPatterns?.rfid).toBe('TEST-001');
@@ -83,19 +80,19 @@ describe('Element Transformer', () => {
       const container = createMockElement({
         contentIds: ['elem-2', 'elem-3'],
       });
-      const containerNode = transformElement(container, 0);
+      const containerNode = elementTransformer.transform(container);
       expect(containerNode?.data.metadata.visualHints?.size).toBe('medium');
 
       // Locked container
       const locked = createMockElement({
         containerPuzzleId: 'puzzle-1',
       });
-      const lockedNode = transformElement(locked, 0);
+      const lockedNode = elementTransformer.transform(locked);
       expect(lockedNode?.data.metadata.visualHints?.size).toBe('medium');
 
       // Regular element
       const regular = createMockElement();
-      const regularNode = transformElement(regular, 0);
+      const regularNode = elementTransformer.transform(regular);
       expect(regularNode?.data.metadata.visualHints?.size).toBe('small');
     });
 
@@ -110,7 +107,7 @@ describe('Element Transformer', () => {
 
       statuses.forEach(({ status, color }) => {
         const element = createMockElement({ status });
-        const node = transformElement(element, 0);
+        const node = elementTransformer.transform(element);
         expect(node?.data.metadata.visualHints?.color).toBe(color);
       });
     });
@@ -120,7 +117,7 @@ describe('Element Transformer', () => {
         name: 'CEO Memory',
         basicType: 'Memory Token (Audio)',
       });
-      const node = transformElement(memoryToken, 0);
+      const node = elementTransformer.transform(memoryToken);
       expect(node?.data.label).toBe('[MT] CEO Memory');
     });
 
@@ -129,32 +126,25 @@ describe('Element Transformer', () => {
         id: '',
         name: '',
       });
-      const node = transformElement(invalid, 0);
+      const node = elementTransformer.transform(invalid);
 
       expect(node?.data.metadata.errorState).toBeDefined();
-      expect(node?.data.metadata.errorState?.type).toBe('missing_data');
-      expect(node?.data.metadata.errorState?.message).toContain('Missing element ID');
-      expect(node?.data.metadata.errorState?.message).toContain('Missing element name');
+      expect(node?.data.metadata.errorState?.type).toBe('validation_error');
+      expect(node?.data.metadata.errorState?.message).toContain('Missing entity ID');
+      expect(node?.data.metadata.errorState?.message).toContain('Missing entity name');
     });
 
-    it('should select correct icons by type', () => {
-      const types: Array<{ basicType: ElementBasicType, icon: string }> = [
-        { basicType: 'Set Dressing', icon: 'home' },
-        { basicType: 'Prop', icon: 'box' },
-        { basicType: 'Memory Token (Audio)', icon: 'disc' },
-        { basicType: 'Document', icon: 'file-text' },
-        { basicType: 'Memory Token (Video)', icon: 'volume-2' },
-      ];
-
-      types.forEach(({ basicType, icon }) => {
-        const element = createMockElement({ basicType });
-        const node = transformElement(element, 0);
-        expect(node?.data.metadata.visualHints?.icon).toBe(icon);
-      });
+    it('should have correct visual hints shape', () => {
+      const element = createMockElement({ basicType: 'Prop' });
+      const node = elementTransformer.transform(element);
+      
+      // ElementTransformer uses rectangle shape for all elements, no icons
+      expect(node?.data.metadata.visualHints?.shape).toBe('rectangle');
+      expect(node?.data.metadata.visualHints?.icon).toBeUndefined();
     });
   });
 
-  describe('transformElements', () => {
+  describe('transformMultiple', () => {
     it('should transform multiple elements', () => {
       const elements = [
         createMockElement({ id: 'elem-1', name: 'Element 1' }),
@@ -162,10 +152,10 @@ describe('Element Transformer', () => {
         createMockElement({ id: 'elem-3', name: 'Element 3' }),
       ];
 
-      const nodes = transformElements(elements);
+      const nodes = elementTransformer.transformMultiple(elements);
 
       expect(nodes).toHaveLength(3);
-      expect(nodes.map(n => n.id)).toEqual(['elem-1', 'elem-2', 'elem-3']);
+      expect(nodes.map((n: any) => n.id)).toEqual(['elem-1', 'elem-2', 'elem-3']);
     });
 
     it('should sort elements by status', () => {
@@ -175,111 +165,21 @@ describe('Element Transformer', () => {
         createMockElement({ id: 'elem-3', status: 'In development' }),
       ];
 
-      const nodes = transformElements(elements);
+      const nodes = elementTransformer.transformMultiple(elements);
 
-      // Should be sorted: Idea/Placeholder -> In development -> Done
-      expect(nodes[0]!.data.entity.status).toBe('Idea/Placeholder');
+      // Should be sorted: Done -> In development -> Idea/Placeholder (production-ready first)
+      expect(nodes[0]!.data.entity.status).toBe('Done');
       expect(nodes[1]!.data.entity.status).toBe('In development');
-      expect(nodes[2]!.data.entity.status).toBe('Done');
+      expect(nodes[2]!.data.entity.status).toBe('Idea/Placeholder');
     });
 
     it('should handle empty array', () => {
-      const nodes = transformElements([]);
+      const nodes = elementTransformer.transformMultiple([]);
       expect(nodes).toEqual([]);
     });
   });
 
-  describe('getElementNodeStyle', () => {
-    it('should return error style for nodes with errors', () => {
-      const element = createMockElement({ id: '', name: '' });
-      const node = transformElement(element, 0);
-      
-      if (node) {
-        const style = getElementNodeStyle(node);
-        expect(style.background).toBe('#fee2e2');
-        expect(style.color).toBe('#991b1b');
-        expect(style.border).toContain('dashed');
-        expect(style.border).toContain('#dc2626');
-      }
-    });
-
-    it('should apply SF pattern styling', () => {
-      const element = createMockElement({
-        descriptionText: 'SF_RFID: [TEST-001]',
-      });
-      const node = transformElement(element, 0);
-      
-      if (node) {
-        const style = getElementNodeStyle(node);
-        expect(style.borderRadius).toBe('12px'); // More rounded
-        expect(style.fontWeight).toBe('600'); // Bolder
-      }
-    });
-
-    it('should apply status-based coloring', () => {
-      const element = createMockElement({ status: 'Done' });
-      const node = transformElement(element, 0);
-      
-      if (node) {
-        const style = getElementNodeStyle(node);
-        expect(style.background).toContain('#10b981'); // Green with opacity
-        expect(style.color).toBe('#10b981');
-      }
-    });
-  });
-
-  describe('isContainer', () => {
-    it('should identify containers with contents', () => {
-      const container = createMockElement({
-        contentIds: ['elem-2'],
-      });
-      expect(isContainer(container)).toBe(true);
-    });
-
-    it('should identify locked containers', () => {
-      const locked = createMockElement({
-        containerPuzzleId: 'puzzle-1',
-      });
-      expect(isContainer(locked)).toBe(true);
-    });
-
-    it('should identify non-containers', () => {
-      const regular = createMockElement();
-      expect(isContainer(regular)).toBe(false);
-    });
-  });
-
-  describe('getSpecialElements', () => {
-    it('should categorize special elements', () => {
-      const elements = [
-        createMockElement({ 
-          id: 'elem-1',
-          contentIds: ['elem-2'],
-        }),
-        createMockElement({ 
-          id: 'elem-2',
-          descriptionText: 'SF_RFID: [TEST]',
-        }),
-        createMockElement({ 
-          id: 'elem-3',
-          status: 'Idea/Placeholder',
-        }),
-        createMockElement({ 
-          id: 'elem-4',
-          status: 'Done',
-        }),
-      ];
-
-      const special = getSpecialElements(elements);
-
-      expect(special.containers).toHaveLength(1);
-      expect(special.containers[0]!.id).toBe('elem-1');
-
-      expect(special.withSFPatterns).toHaveLength(1);
-      expect(special.withSFPatterns[0]!.id).toBe('elem-2');
-
-      expect(special.incomplete).toHaveLength(1);
-      expect(special.incomplete[0]!.id).toBe('elem-3');
-    });
-  });
+  // Note: getElementNodeStyle, isContainer, and getSpecialElements
+  // have been removed as styling is now handled in React components
+  // and helper functions are internal to the ElementTransformer class
 });

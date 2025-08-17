@@ -104,8 +104,8 @@ describe('PuzzleNode', () => {
     it('applies base CSS classes', () => {
       const props = createMockNodeProps();
       const { container } = render(<PuzzleNode {...props} />);
-      const node = container.firstChild as HTMLElement;
-      expect(node).toHaveClass('puzzleNode');
+      const node = container.querySelector('.puzzleNode');
+      expect(node).toBeInTheDocument();
     });
 
     it('has correct displayName for debugging', () => {
@@ -137,8 +137,8 @@ describe('PuzzleNode', () => {
     it('applies chained class when chained', () => {
       const props = createMockNodeProps({ parentItemId: 'parent-1' });
       const { container } = render(<PuzzleNode {...props} />);
-      const node = container.firstChild as HTMLElement;
-      expect(node).toHaveClass('chained');
+      const node = container.querySelector('.chained');
+      expect(node).toBeInTheDocument();
     });
 
     it('does not show chain badge when not chained', () => {
@@ -153,8 +153,8 @@ describe('PuzzleNode', () => {
     it('does not apply chained class when not chained', () => {
       const props = createMockNodeProps();
       const { container } = render(<PuzzleNode {...props} />);
-      const node = container.firstChild as HTMLElement;
-      expect(node).not.toHaveClass('chained');
+      const node = container.querySelector('.chained');
+      expect(node).not.toBeInTheDocument();
     });
   });
 
@@ -266,16 +266,16 @@ describe('PuzzleNode', () => {
       const props = createMockNodeProps();
       props.selected = true;
       const { container } = render(<PuzzleNode {...props} />);
-      const node = container.firstChild as HTMLElement;
-      expect(node).toHaveClass('selected');
+      const node = container.querySelector('.selected');
+      expect(node).toBeInTheDocument();
     });
 
     it('does not apply selected class when not selected', () => {
       const props = createMockNodeProps();
       props.selected = false;
       const { container } = render(<PuzzleNode {...props} />);
-      const node = container.firstChild as HTMLElement;
-      expect(node).not.toHaveClass('selected');
+      const node = container.querySelector('.selected');
+      expect(node).not.toBeInTheDocument();
     });
   });
 
@@ -311,8 +311,8 @@ describe('PuzzleNode', () => {
         } 
       });
       const { container } = render(<PuzzleNode {...props} />);
-      const node = container.firstChild as HTMLElement;
-      expect(node).toHaveClass('error');
+      const node = container.querySelector('.error');
+      expect(node).toBeInTheDocument();
     });
   });
 

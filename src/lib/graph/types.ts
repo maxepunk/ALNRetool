@@ -1,312 +1,252 @@
 /**
- * Graph transformation types for React Flow visualization
- * Extends React Flow's base types with our domain-specific data
+ * Central type definitions for the graph module
+ * These interfaces define contracts between graph submodules
  */
 
 import type { Node, Edge } from '@xyflow/react';
-import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
+import type { 
+  Character, 
+  Element, 
+  Puzzle, 
+  TimelineEvent
+} from '@/types/notion/app';
 
-// ============================================================================
-// Entity Types
-// ============================================================================
-
-/**
- * Union of all Notion entity types that can become nodes
- */
+// Type alias for union of entity types
 export type NotionEntity = Character | Element | Puzzle | TimelineEvent;
 
 /**
- * String literal type for entity identification
+ * NotionData type definition
  */
-export type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
-
-// ============================================================================
-// SF_ Pattern Metadata
-// ============================================================================
-
-/**
- * Extracted SF_ pattern data from element descriptions
- * These patterns encode gameplay mechanics in the text
- */
-export interface SFMetadata {
-  /** Unique RFID identifier for the element */
-  rfid?: string;
-  
-  /** Value rating from 1-5 (narrative importance & monetary multiplier) */
-  valueRating?: number;
-  
-  /** Memory type affects monetary value multiplier */
-  memoryType?: 'Personal' | 'Business' | 'Technical';
-  
-  /** Group name for collection bonuses */
-  group?: string;
-  
-  /** Calculated multiplier from type and group */
-  multiplier?: number;
-}
-
-// ============================================================================
-// Node Metadata
-// ============================================================================
-
-/**
- * Error state for nodes with data issues
- */
-export interface NodeError {
-  type: 'missing_data' | 'invalid_relation' | 'parse_error' | 'missing_entity';
-  message: string;
-  field?: string;
-  referencedBy?: string;
+export interface NotionData {
+  characters: Character[];
+  elements: Element[];
+  puzzles: Puzzle[];
+  timeline: TimelineEvent[];
 }
 
 /**
- * Enhanced metadata for all graph nodes
- * Provides additional context beyond the raw entity data
+ * Data integrity report type
  */
-export interface NodeMetadata {
-  /** Type of the entity this node represents */
-  entityType: EntityType;
-  
-  /** Status from Element or derived for other types */
-  status?: string;
-  
-  /** Character tier for importance visualization */
-  tier?: 'Core' | 'Secondary' | 'Tertiary';
-  
-  /** Calculated importance score for sorting/sizing */
-  importanceScore?: number;
-  
-  /** Parsed SF_ patterns from descriptions */
-  sfPatterns?: SFMetadata;
-  
-  /** Error state for data integrity issues */
-  errorState?: NodeError;
-  
-  /** Visual hints for the node renderer */
-  visualHints?: {
-    color?: string;
-    icon?: string;
-    size?: 'small' | 'medium' | 'large';
-    shape?: string;
+export interface DataIntegrityReport {
+  missingReferences: {
+    puzzles: string[];
+    elements: string[];
+    characters: string[];
+    timeline: string[];
   };
-  
-  /** Owner information for elements (enriched from character lookup) */
-  ownerName?: string;
-  ownerTier?: 'Tier 1' | 'Tier 2' | 'Tier 3';
-  
-  /** Enriched relational data for details panel */
-  enrichedData?: {
-    /** Names of related entities for display */
-    containerName?: string;
-    parentPuzzleName?: string;
-    rewardNames?: string[];
-    requirementNames?: string[];
-    timelineEventName?: string;
-    /** Character connections for puzzles */
-    characterNames?: string[];
-    /** Element details for puzzles */
-    elementDetails?: Array<{
-      id: string;
-      name: string;
-      type: string;
-      status?: string;
-    }>;
-    /** Collaborators for puzzle requirements */
-    collaborators?: Array<{
-      id: string;
-      name: string;
-      tier: string;
-    }>;
-    /** Whether this element requires collaboration */
-    requiresCollaboration?: boolean;
-    /** Timeline information for element discovery */
-    timelineInfo?: {
-      events: Array<{
-        id: string;
-        name: string;
-        date?: string;
-      }>;
-      earliestDiscovery?: string;
-    };
+  orphanedEntities: {
+    puzzles: string[];
+    elements: string[];
   };
-  
-  /** Lane information for swim lane layouts */
-  laneInfo?: {
-    laneType: string;
-    laneIndex: number;
-    laneBounds: {
-      minX: number;
-      maxX: number;
-      minY: number;
-      maxY: number;
-    };
-    laneColor: string;
-  };
+  brokenRelationships: Array<{
+    source: string;
+    target: string;
+    type: string;
+    reason: string;
+  }>;
 }
 
-// ============================================================================
-// Node Data Structure
-// ============================================================================
+// Re-export commonly used types for convenience
+export type { 
+  Node as ReactFlowNode, 
+  Edge as ReactFlowEdge 
+} from '@xyflow/react';
 
 /**
- * Complete data payload for a graph node
- * @template T - The specific entity type for type safety
- */
-export interface GraphNodeData<T extends NotionEntity = NotionEntity> extends Record<string, unknown> {
-  /** Original entity data from Notion */
-  entity: T;
-  
-  /** Display label for the node */
-  label: string;
-  
-  /** Additional metadata for rendering and behavior */
-  metadata: NodeMetadata;
-}
-
-/**
- * Special data structure for placeholder nodes (missing entities)
- */
-export interface PlaceholderNodeData extends Record<string, unknown> {
-  /** No entity data for placeholders */
-  entity: null;
-  
-  /** Display label for the node */
-  label: string;
-  
-  /** Additional metadata for rendering and behavior */
-  metadata: NodeMetadata;
-}
-
-/**
- * Custom node type extending React Flow's Node
- * @template T - The specific entity type for type safety
- */
-export type GraphNode<T extends NotionEntity = NotionEntity> = Node<GraphNodeData<T>>;
-
-// ============================================================================
-// Edge Types
-// ============================================================================
-
-/**
- * Types of relationships between entities
- */
-export type RelationshipType = 
-  | 'ownership'      // Character owns Element
-  | 'requirement'    // Puzzle requires Element
-  | 'reward'         // Puzzle rewards Element
-  | 'timeline'       // Element reveals Timeline event
-  | 'chain'          // Puzzle chains to another Puzzle
-  | 'container';     // Element contains other Elements
-
-/**
- * Metadata for graph edges
- */
-export interface EdgeMetadata extends Record<string, unknown> {
-  /** Type of relationship this edge represents */
-  relationshipType: RelationshipType;
-  
-  /** Visual weight/importance (0-1) */
-  strength?: number;
-  
-  /** Optional label for the edge */
-  label?: string;
-  
-  /** Whether this is a bidirectional relationship */
-  bidirectional?: boolean;
-  
-  /** Whether this edge references missing entities */
-  isBroken?: boolean;
-}
-
-/**
- * Custom edge type extending React Flow's Edge
- */
-export type GraphEdge = Edge<EdgeMetadata>;
-
-// ============================================================================
-// View Types
-// ============================================================================
-
-/**
- * Supported view types for different graph layouts
+ * Supported view types for graph visualization
  */
 export type ViewType = 'puzzle-focus' | 'character-journey' | 'content-status';
 
-// ============================================================================
-// Graph Data Structure
-// ============================================================================
+/**
+ * Entity types that can be represented as nodes
+ */
+export type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
 
 /**
- * Graph transformation metrics
+ * Relationship types between entities
  */
-export interface GraphMetrics {
-  nodeCount: number;
-  edgeCount: number;
-  startTime: number;
-  endTime: number;
-  duration: number;
-  layoutMetrics: {
-    width: number;
-    height: number;
-    density: number;
-    overlap: number;
+export type RelationshipType = 
+  | 'requirement'
+  | 'reward' 
+  | 'chain'
+  | 'collaboration'
+  | 'timeline'
+  | 'owner'
+  | 'ownership'
+  | 'container';
+
+/**
+ * Placeholder node data for missing entities
+ */
+export interface PlaceholderNodeData {
+  label: string;
+  metadata: {
+    entityType: EntityType;
+    entityId: string;
+    isPlaceholder: true;
+    missingReason?: string;
   };
+  [key: string]: unknown; // Index signature for Record<string, unknown> constraint
 }
 
 /**
- * Complete graph data ready for React Flow
+ * Visual hints for node rendering
+ */
+export interface VisualHints {
+  color?: string;
+  size?: 'small' | 'medium' | 'large';
+  shape?: 'rectangle' | 'diamond' | 'circle';
+  icon?: string;
+  badge?: string;
+}
+
+/**
+ * SF pattern metadata
+ */
+export interface SFMetadata {
+  rfid?: string;
+  valueRating?: number;
+  memoryType?: 'Personal' | 'Public' | 'Mixed' | 'Business' | 'Technical';
+  group?: string | {
+    name: string;
+    multiplier: string;
+  };
+  multiplier?: number; // For backward compatibility
+}
+
+/**
+ * Node metadata containing entity-specific information
+ */
+export interface NodeMetadata {
+  entityType: EntityType;
+  entityId?: string; // Optional for placeholder nodes
+  originalData?: Character | Element | Puzzle | TimelineEvent; // Optional for placeholder nodes
+  dependencies?: string[];
+  rewards?: string[];
+  subPuzzleIds?: string[];
+  isOrphan?: boolean;
+  isParent?: boolean;
+  isChild?: boolean;
+  parentId?: string;
+  timelineConnections?: string[];
+  collaborators?: string[];
+  visualHints?: VisualHints;
+  errorState?: {
+    hasError?: boolean; // Optional, defaults to true when message exists
+    message?: string;
+    missingEntities?: string[];
+    type?: string; // Support legacy test usage
+  };
+  enrichedData?: Record<string, unknown>;
+  sfPatterns?: SFMetadata;
+  status?: string; // Element status
+  ownerName?: string; // For elements owned by characters
+  ownerTier?: string; // Owner's tier (Core, Supporting, etc.)
+}
+
+/**
+ * Data structure for graph nodes
+ */
+export interface GraphNodeData<T = any> {
+  label: string;
+  metadata: NodeMetadata;
+  entity: T; // The original entity data (Character, Element, Puzzle, or TimelineEntry) - always required for non-placeholder nodes
+  [key: string]: unknown; // Allow view-specific data
+}
+
+/**
+ * Extended node type with our custom data
+ */
+export interface GraphNode<T = any> extends Omit<Node, 'data'> {
+  id: string;
+  position: { x: number; y: number };
+  data: GraphNodeData<T>;
+  type?: string;
+  parentNode?: string;
+  extent?: 'parent';
+  expandParent?: boolean;
+}
+
+/**
+ * Edge metadata type
+ */
+export type EdgeMetadata = {
+  relationshipType: RelationshipType;
+  weight?: number;
+  strength?: number;
+  label?: string;
+  metadata?: Record<string, unknown>;
+};
+
+/**
+ * Extended edge type with our custom data
+ */
+export interface GraphEdge extends Omit<Edge, 'data'> {
+  id: string;
+  source: string;
+  target: string;
+  data?: {
+    relationshipType: RelationshipType;
+    weight?: number;
+    strength?: number; // For collaboration edges
+    label?: string; // For edge labels
+    metadata?: Record<string, unknown>;
+  };
+  animated?: boolean;
+  style?: React.CSSProperties;
+}
+
+/**
+ * Complete graph data structure
  */
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
-  
-  /** Optional metadata about the graph itself */
+  integrityReport?: DataIntegrityReport;
   metadata?: {
-    metrics?: GraphMetrics;
+    metrics?: {
+      startTime: number;
+      endTime: number;
+      duration: number;
+      nodeCount: number;
+      edgeCount: number;
+      warnings?: string[];
+      layoutMetrics?: any;
+    };
     viewType?: ViewType;
     timestamp?: string;
-    nodeCount?: number;
-    edgeCount?: number;
-    generatedAt?: Date;
-    dataVersion?: string;
   };
 }
 
-// ============================================================================
-// Transformer Types
-// ============================================================================
-
 /**
- * Function signature for entity transformers
+ * Options for building graph data
  */
-export type EntityTransformer<T extends NotionEntity> = (
-  entity: T,
-  index: number
-) => GraphNode<T> | null;
-
-/**
- * Configuration for graph layout
- */
-export interface LayoutConfig {
-  /** Direction: 'LR' (left-right) or 'TB' (top-bottom) */
-  direction: 'LR' | 'TB';
-  
-  /** Space between ranks (horizontal or vertical groups) */
-  rankSeparation: number;
-  
-  /** Space between nodes in the same rank */
-  nodeSeparation: number;
-  
-  /** Whether to center the graph */
-  center?: boolean;
+export interface BuildGraphOptions {
+  viewType?: ViewType;
+  filterRelationships?: RelationshipType[];
+  includeOrphans?: boolean;
+  enableIntegrityChecking?: boolean;
+  excludeEntityTypes?: EntityType[];
+  layoutConfig?: LayoutConfig;
 }
 
-// ============================================================================
-// Lookup Maps for Relationship Resolution
-// ============================================================================
+/**
+ * Configuration for layout algorithms
+ */
+export interface LayoutConfig {
+  algorithm?: 'dagre' | 'pure-dagre' | 'elk' | 'custom';
+  direction?: 'TB' | 'BT' | 'LR' | 'RL';
+  spacing?: {
+    nodeSpacing?: number;
+    rankSpacing?: number;
+    edgePadding?: number;
+  };
+  alignment?: 'UL' | 'UR' | 'DL' | 'DR';
+  [key: string]: unknown; // Algorithm-specific options
+}
 
 /**
- * Maps for efficient ID-based lookups during relationship resolution
+ * Lookup maps for efficient entity access
  */
 export interface EntityLookupMaps {
   characters: Map<string, Character>;
@@ -315,34 +255,111 @@ export interface EntityLookupMaps {
   timeline: Map<string, TimelineEvent>;
 }
 
-// ============================================================================
-// Type Guards
-// ============================================================================
-// Note: Runtime type guards moved to ./guards.ts per architecture principle:
-// "No index.ts re-exports" and clean separation of types from runtime code
-
-// ============================================================================
-// Utility Types
-// ============================================================================
-
 /**
- * Extract entity type from GraphNode
+ * Metrics about the graph structure
  */
-export type NodeEntity<N> = N extends GraphNode<infer T> ? T : never;
-
-/**
- * Options for building the graph
- */
-export interface BuildGraphOptions {
-  /** Include nodes with errors */
-  includeErrors?: boolean;
-  
-  /** Filter by entity types */
-  entityTypes?: EntityType[];
-  
-  /** Filter by status */
-  statuses?: string[];
-  
-  /** Layout configuration */
-  layout?: LayoutConfig;
+export interface GraphMetrics {
+  nodeCount: number;
+  edgeCount: number;
+  orphanCount: number;
+  componentCount: number;
+  maxDepth: number;
+  avgDegree: number;
+  density: number;
+  entityCounts: Record<EntityType, number>;
+  relationshipCounts: Record<RelationshipType, number>;
 }
+
+/**
+ * Contract for entity transformation
+ */
+export interface EntityTransformer<T = any> {
+  transformCharacters(characters: Character[]): GraphNode<Character>[];
+  transformElements(elements: Element[]): GraphNode<Element>[];
+  transformPuzzles(puzzles: Puzzle[]): GraphNode<Puzzle>[];
+  transformTimeline(timeline: TimelineEvent[]): GraphNode<TimelineEvent>[];
+  transformEntities(data: NotionData, excludeTypes?: EntityType[]): GraphNode<T>[];
+}
+
+/**
+ * Contract for graph building
+ */
+export interface GraphBuilder {
+  buildGraphData(data: NotionData, options?: BuildGraphOptions): GraphData;
+  buildPuzzleFocusGraph(data: NotionData): GraphData;
+  buildCharacterJourneyGraph(data: NotionData): GraphData;
+  buildContentStatusGraph(data: NotionData): GraphData;
+}
+
+/**
+ * Contract for layout orchestration
+ */
+export interface LayoutOrchestrator {
+  applyLayout(graph: GraphData, config?: LayoutConfig): GraphData;
+  applyDagreLayout(graph: GraphData, config?: LayoutConfig): GraphData;
+  applyPureDagreLayout(graph: GraphData, config?: LayoutConfig): GraphData;
+  getLayoutForView(viewType: ViewType): LayoutConfig;
+}
+
+/**
+ * Contract for metrics calculation
+ */
+export interface MetricsCalculator {
+  calculateMetrics(graph: GraphData): GraphMetrics;
+  calculateNodeMetrics(nodes: GraphNode[]): Partial<GraphMetrics>;
+  calculateEdgeMetrics(edges: GraphEdge[]): Partial<GraphMetrics>;
+  calculateConnectivity(graph: GraphData): Partial<GraphMetrics>;
+}
+
+/**
+ * Contract for utility functions
+ */
+export interface GraphUtilities {
+  findNodeById(nodes: GraphNode[], id: string): GraphNode | undefined;
+  findEdgeById(edges: GraphEdge[], id: string): GraphEdge | undefined;
+  getConnectedNodes(node: GraphNode, graph: GraphData): GraphNode[];
+  getNodeDegree(node: GraphNode, edges: GraphEdge[]): number;
+  detectCycles(graph: GraphData): string[][];
+  topologicalSort(graph: GraphData): GraphNode[];
+  findOrphans(graph: GraphData): GraphNode[];
+  mergeGraphs(...graphs: GraphData[]): GraphData;
+}
+
+/**
+ * Type guards for runtime validation
+ */
+export const isGraphNode = (node: unknown): node is GraphNode => {
+  return (
+    typeof node === 'object' &&
+    node !== null &&
+    'id' in node &&
+    'data' in node &&
+    typeof (node as GraphNode).data === 'object' &&
+    'metadata' in (node as GraphNode).data &&
+    'entityType' in (node as GraphNode).data.metadata
+  );
+};
+
+export const isGraphEdge = (edge: unknown): edge is GraphEdge => {
+  return (
+    typeof edge === 'object' &&
+    edge !== null &&
+    'id' in edge &&
+    'source' in edge &&
+    'target' in edge
+  );
+};
+
+export const isEntityType = (type: unknown): type is EntityType => {
+  return (
+    typeof type === 'string' &&
+    ['character', 'element', 'puzzle', 'timeline'].includes(type)
+  );
+};
+
+export const isRelationshipType = (type: unknown): type is RelationshipType => {
+  return (
+    typeof type === 'string' &&
+    ['requirement', 'reward', 'chain', 'collaboration', 'timeline', 'owner'].includes(type)
+  );
+};

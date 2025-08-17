@@ -41,7 +41,7 @@ import {
 
 import styles from './GraphView.module.css';
 
-// Define custom node types
+// Define custom node types - memoized to prevent recreation
 const nodeTypes: NodeTypes = {
   character: CharacterNode,
   element: ElementNode,
@@ -75,13 +75,17 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   onNodeClick,
   onSelectionChange,
 }) => {
-  // Build and layout the graph
+  // Memoize the notion data object to prevent unnecessary recalculations
+  const notionData = useMemo(
+    () => ({ characters, elements, puzzles, timeline }),
+    [characters, elements, puzzles, timeline]
+  );
+  
+  // Build and layout the graph - memoized for performance
   const graphData = useMemo(() => {
     console.time('Graph Building');
     
     // Build the graph from entities using the appropriate function for each view type
-    const notionData = { characters, elements, puzzles, timeline };
-    
     let graph;
     switch (viewType) {
       case 'puzzle-focus':
@@ -103,7 +107,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     console.log(`Graph built with ${graph.nodes.length} nodes and ${graph.edges.length} edges`);
     
     return graph;
-  }, [characters, elements, puzzles, timeline, viewType]);
+  }, [notionData, viewType]); // Now depends on memoized notionData
   
   // Use our custom graph state hook
   const {
@@ -157,7 +161,11 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     reactFlowInstance?.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
   }, [reactFlowInstance]);
   
-  // MiniMap node color
+  // Memoize nodeTypes and edgeTypes to prevent React Flow re-initialization
+  const memoizedNodeTypes = useMemo(() => nodeTypes, []);
+  const memoizedEdgeTypes = useMemo(() => edgeTypes, []);
+  
+  // MiniMap node color - memoized for stability
   const nodeColor = useCallback((node: Node) => {
     switch (node.type) {
       case 'character':
@@ -226,8 +234,8 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
         onNodeMouseEnter={handleNodeMouseEnter}
         onNodeMouseLeave={handleNodeMouseLeave}
         onSelectionChange={handleSelectionChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
+        nodeTypes={memoizedNodeTypes}
+        edgeTypes={memoizedEdgeTypes}
         fitView
         attributionPosition="bottom-left"
         disableKeyboardA11y={true}
