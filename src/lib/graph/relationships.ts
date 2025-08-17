@@ -279,8 +279,8 @@ export function createRequirementEdges(
       }
       
       const edge = createEdge(
-        puzzle.id,
-        elementId,
+        elementId,  // Element is the source (flows into puzzle)
+        puzzle.id,  // Puzzle is the target (receives the element)
         'requirement',
         {
           label: 'needs',

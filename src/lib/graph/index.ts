@@ -1,7 +1,22 @@
 /**
- * Main Graph Builder
- * Orchestrates transformation of Notion data into React Flow graph
- * Combines entity transformers, relationship resolution, and layout
+ * @module graph/index
+ * @description Main Graph Builder Module
+ * 
+ * Orchestrates the transformation of Notion data into React Flow graphs.
+ * This module serves as the central hub for:
+ * - Entity transformation (characters, elements, puzzles, timeline)
+ * - Relationship resolution with integrity checking
+ * - Layout application using pure Dagre with semantic ranking
+ * 
+ * @architecture
+ * The graph building pipeline follows a multi-stage approach:
+ * 1. Transform Notion entities → Graph nodes
+ * 2. Resolve relationships → Graph edges with integrity checking
+ * 3. Apply layout algorithm → Positioned nodes using pure Dagre
+ * 4. Calculate metrics → Performance and quality measurements
+ * 
+ * @since Sprint 2 - Refactored to use pure Dagre layout
+ * @author ALNRetool Team
  */
 
 import type { 
@@ -43,6 +58,11 @@ import {
   calculateLayoutMetrics,
   LAYOUT_PRESETS 
 } from './layouts';
+
+// Import pure Dagre layout with semantic ranking
+import { applyPureDagreLayout } from './pureDagreLayout';
+
+// Parent-child resolver removed - handled by puzzle-centric layout
 
 // Explicit exports per architecture principle: "No index.ts re-exports"
 // Types are imported directly from './types' by consumers
@@ -92,7 +112,24 @@ export interface TransformationMetrics {
 // ============================================================================
 
 /**
- * Transform all entities to nodes
+ * Transform all Notion entities to graph nodes
+ * 
+ * @function transformEntitiesToNodes
+ * @description Converts raw Notion data into React Flow compatible nodes.
+ * Each entity type has its own transformer that handles specific metadata
+ * and enrichment with relational data from lookup maps.
+ * 
+ * @param {NotionData} data - Raw data from Notion API containing all entity types
+ * 
+ * @returns {Object} Transformation result
+ * @returns {GraphNode[]} nodes - Array of transformed graph nodes
+ * @returns {Object} metrics - Statistics about the transformation
+ * @returns {Record<string, number>} metrics.byType - Node count by entity type
+ * @returns {number} metrics.withErrors - Count of nodes with error states
+ * @returns {number} metrics.withSFPatterns - Count of nodes with SF_ patterns
+ * 
+ * @internal
+ * @complexity O(n) where n = total number of entities across all types
  */
 function transformEntitiesToNodes(data: NotionData): {
   nodes: GraphNode[];
@@ -167,7 +204,26 @@ function getLayoutForView(viewType?: ViewType): LayoutConfig {
 }
 
 /**
- * Apply appropriate layout based on view type and node count
+ * Apply appropriate layout algorithm based on view type
+ * 
+ * @function applyLayout
+ * @description Selects and applies the optimal layout algorithm for the current view.
+ * Uses pure Dagre with semantic ranking for puzzle-focus view to achieve the
+ * requirements→puzzles→rewards flow pattern. Falls back to standard layouts for other views.
+ * 
+ * @param {GraphNode[]} nodes - Nodes to position
+ * @param {GraphEdge[]} edges - Edges defining relationships
+ * @param {ViewType} [viewType] - Current view type determining layout strategy
+ * 
+ * @returns {GraphNode[]} Nodes with calculated positions
+ * 
+ * @layout-strategies
+ * - puzzle-focus: Pure Dagre with LR direction and semantic ranking
+ * - character-journey: Hierarchical layout with timeline emphasis
+ * - content-status: Standard Dagre with status-based clustering
+ * - default: Basic Dagre layout
+ * 
+ * @since Sprint 2 - Replaced hybrid layout with pure Dagre for puzzle-focus
  */
 function applyLayout(
   nodes: GraphNode[],
@@ -176,8 +232,29 @@ function applyLayout(
 ): GraphNode[] {
   const layoutConfig = getLayoutForView(viewType);
   
-  // Use hierarchical layout for puzzle focus view
+  console.log('Layout decision:', {
+    viewType,
+    nodeCount: nodes.length,
+    edgeCount: edges.length
+  });
+  
+  // Use pure Dagre layout for puzzle focus view
+  // This creates the natural left-to-right flow: requirements → puzzles → rewards
   if (viewType === 'puzzle-focus') {
+    console.log('[Layout] Using Pure Dagre with semantic ranking');
+    return applyPureDagreLayout(nodes, edges, {
+      direction: 'LR',
+      rankSeparation: 300,      // Horizontal spacing between columns
+      nodeSeparation: 100,      // Vertical spacing within columns
+      puzzleSpacing: 300,       // Extra spacing for puzzle chains
+      elementSpacing: 100,      // Standard element spacing
+      useFractionalRanks: true, // Enable for dual-role elements
+      optimizeEdgeCrossings: true, // Use network-simplex algorithm
+    });
+  }
+  
+  // Use hierarchical layout for character journey
+  if (viewType === 'character-journey') {
     return applyHierarchicalLayout(nodes, edges, layoutConfig);
   }
   
@@ -191,7 +268,42 @@ function applyLayout(
 
 /**
  * Build complete graph data from Notion entities
- * This is the main entry point for React components
+ * 
+ * @function buildGraphData
+ * @description Main entry point for React components to transform Notion data into
+ * a React Flow graph. Orchestrates the entire pipeline from entity transformation
+ * through relationship resolution to layout application.
+ * 
+ * @param {NotionData} data - Raw data from Notion API
+ * @param {Object} [options={}] - Configuration options
+ * @param {ViewType} [options.viewType] - View type determining layout strategy
+ * @param {RelationshipType[]} [options.filterRelationships] - Filter edges by type
+ * @param {boolean} [options.includeOrphans=false] - Include unconnected nodes
+ * @param {boolean} [options.enableIntegrityChecking=true] - Enable robust mode with placeholders
+ * @param {string[]} [options.excludeEntityTypes] - Entity types to exclude from graph
+ * 
+ * @returns {GraphData & {integrityReport?: DataIntegrityReport}} Complete graph with optional integrity report
+ * 
+ * @pipeline
+ * 1. Transform entities → nodes with metadata
+ * 2. Filter by entity type if specified
+ * 3. Resolve relationships → edges with integrity checking
+ * 4. Filter edges by relationship type
+ * 5. Create group nodes for puzzle chains (puzzle-focus only)
+ * 6. Filter orphan nodes if requested
+ * 7. Apply layout algorithm (pure Dagre for puzzle-focus)
+ * 8. Calculate metrics and return
+ * 
+ * @example
+ * ```typescript
+ * const graphData = buildGraphData(notionData, {
+ *   viewType: 'puzzle-focus',
+ *   filterRelationships: ['requirement', 'reward'],
+ *   includeOrphans: false
+ * });
+ * ```
+ * 
+ * @since Sprint 2 - Added pure Dagre layout support
  */
 export function buildGraphData(
   data: NotionData,
@@ -200,6 +312,7 @@ export function buildGraphData(
     filterRelationships?: RelationshipType[];
     includeOrphans?: boolean;
     enableIntegrityChecking?: boolean; // New option for robust mode
+    excludeEntityTypes?: string[]; // Filter out specific entity types
   } = {}
 ): GraphData & { integrityReport?: DataIntegrityReport } {
   const startTime = performance.now();
@@ -222,7 +335,23 @@ export function buildGraphData(
     warnings.push('No nodes created from input data');
   }
   
-  // Step 2: Resolve relationships to edges (with integrity checking if enabled)
+  // Step 1.5: Filter out excluded entity types if specified
+  let filteredNodes = allNodes;
+  if (options.excludeEntityTypes && options.excludeEntityTypes.length > 0) {
+    filteredNodes = allNodes.filter(node => 
+      !options.excludeEntityTypes!.includes(node.data.metadata.entityType)
+    );
+    const filteredCount = allNodes.length - filteredNodes.length;
+    if (filteredCount > 0) {
+      console.log(`Filtered out ${filteredCount} nodes by entity type:`, options.excludeEntityTypes);
+    }
+  }
+  
+  // Step 2: Skip parent-child relationships for puzzle-centric layout
+  // Puzzle-centric layout handles its own organization
+  const nodesWithParents = filteredNodes;
+  
+  // Step 3: Resolve relationships to edges (with integrity checking if enabled)
   let allEdges: GraphEdge[];
   let placeholderNodes: Node<PlaceholderNodeData>[] = [];
   let integrityReport: DataIntegrityReport | undefined;
@@ -302,7 +431,7 @@ export function buildGraphData(
   
   // Step 4: Combine regular nodes with placeholder and group nodes
   // Cast placeholder nodes to GraphNode since they follow the same Node interface
-  const combinedNodes: (GraphNode | Node<PlaceholderNodeData>)[] = [...allNodes, ...placeholderNodes, ...groupNodes];
+  const combinedNodes: (GraphNode | Node<PlaceholderNodeData>)[] = [...nodesWithParents, ...placeholderNodes, ...groupNodes];
   
   // Step 5: Determine which nodes to keep based on orphan filtering
   let nodesToKeep: (GraphNode | Node<PlaceholderNodeData>)[] = combinedNodes;
@@ -318,6 +447,42 @@ export function buildGraphData(
         connectedNodeIds.add(edge.target);
       }
     });
+    
+    // For puzzle-focus views, preserve entire parent-child chains
+    if (options.viewType === 'puzzle-focus') {
+      // Helper function to preserve parent-child chains
+      const preserveParentChildChain = (nodeId: string) => {
+        const node = combinedNodes.find(n => n.id === nodeId);
+        if (!node) return;
+        
+        connectedNodeIds.add(nodeId);
+        
+        // If node has a parent, preserve the parent too
+        const parentId = (node as any).parentId;
+        if (parentId && !connectedNodeIds.has(parentId)) {
+          preserveParentChildChain(parentId);
+        }
+        
+        // If node is a parent, preserve all its children
+        const children = combinedNodes.filter(n => (n as any).parentId === nodeId);
+        children.forEach(child => {
+          if (!connectedNodeIds.has(child.id)) {
+            connectedNodeIds.add(child.id);
+          }
+        });
+      };
+      
+      // Apply parent-child preservation to all nodes with parent relationships
+      combinedNodes.forEach(node => {
+        const parentId = (node as any).parentId;
+        const hasChildren = combinedNodes.some(n => (n as any).parentId === node.id);
+        
+        // If node is part of a parent-child relationship, preserve the chain
+        if (parentId || hasChildren) {
+          preserveParentChildChain(node.id);
+        }
+      });
+    }
     
     const orphanCount = nodesToKeep.length;
     nodesToKeep = nodesToKeep.filter(node => connectedNodeIds.has(node.id));
@@ -529,6 +694,7 @@ export function buildPuzzleFocusGraph(data: NotionData): GraphData {
   return buildGraphData(data, {
     viewType: 'puzzle-focus',
     filterRelationships: ['requirement', 'reward', 'chain'],
+    excludeEntityTypes: ['timeline'], // Filter out timeline nodes for cleaner visualization
     includeOrphans: false,
   });
 }

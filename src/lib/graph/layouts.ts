@@ -573,3 +573,6 @@ export function calculateLayoutMetrics(nodes: GraphNode[]) {
     overlap,
   };
 }
+
+// Import and re-export compound layout functions
+// Compound layout removed - replaced by puzzleCentricLayout

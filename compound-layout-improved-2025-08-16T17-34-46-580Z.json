@@ -1,0 +1,74 @@
+{
+  "nodes": [
+    {
+      "id": "puzzle-1",
+      "x": 0,
+      "y": 40,
+      "width": 450,
+      "height": 410,
+      "type": "puzzle"
+    },
+    {
+      "id": "element-1",
+      "x": 145,
+      "y": 600,
+      "width": 160,
+      "height": 60,
+      "parentId": "puzzle-1",
+      "type": "element"
+    },
+    {
+      "id": "element-2",
+      "x": 145,
+      "y": 810,
+      "width": 160,
+      "height": 60,
+      "parentId": "puzzle-1",
+      "type": "element"
+    },
+    {
+      "id": "puzzle-2",
+      "x": 850,
+      "y": 0,
+      "width": 450,
+      "height": 490,
+      "type": "puzzle"
+    },
+    {
+      "id": "element-3",
+      "x": 145,
+      "y": 1020,
+      "width": 160,
+      "height": 60,
+      "parentId": "puzzle-2",
+      "type": "element"
+    },
+    {
+      "id": "element-4",
+      "x": 145,
+      "y": 1230,
+      "width": 160,
+      "height": 60,
+      "parentId": "puzzle-2",
+      "type": "element"
+    },
+    {
+      "id": "element-5",
+      "x": 145,
+      "y": 1440,
+      "width": 160,
+      "height": 60,
+      "parentId": "puzzle-2",
+      "type": "element"
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-1",
+      "source": "puzzle-1",
+      "target": "puzzle-2",
+      "type": "dependency",
+      "animated": false
+    }
+  ]
+}

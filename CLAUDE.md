@@ -126,6 +126,15 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 
 ### Important Patterns
 
+#### Pure Dagre Layout (Sprint 2 Refactor - January 17, 2025)
+- **Replaced**: Complex hybrid `puzzleCentricLayout.ts` with simple `pureDagreLayout.ts`
+- **Strategy**: Natural edge flow creates semantic positioning
+  - Requirements flow INTO puzzles (element→puzzle edges)
+  - Rewards flow OUT OF puzzles (puzzle→element edges)
+  - This creates automatic left-to-right layout without manual positioning
+- **Algorithm**: Network-simplex for minimal edge crossings
+- **Configuration**: LR direction, 300px rank separation, fractional ranks enabled
+
 #### TypeScript Configuration
 - **Frontend**: `tsconfig.app.json` - ESNext modules, React JSX, path aliases
 - **Backend**: `tsconfig.server.json` - CommonJS output for Node.js
@@ -136,7 +145,10 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 - **Proxy**: `/api` routes proxy to `localhost:3001` in dev
 - **Build Output**: `dist/client/` for frontend, `dist/server/` for backend
 - **Test Environment**: `happy-dom` for fast unit tests
+- **Test Setup**: `src/test/setup.ts` for global test configuration
+- **Coverage Thresholds**: 80% for branches, functions, lines, statements
 - **Optimizations**: React Flow excluded from pre-bundling for compatibility
+- **Circular Dependencies**: Warnings suppressed in Rollup config
 
 #### Environment Variables
 - **Production**: NEVER load dotenv - use platform environment variables only
@@ -234,23 +246,33 @@ npx cz                  # Interactive commit with conventional format
 #### Working with React Flow
 1. Custom nodes go in `src/components/nodes/`
 2. Graph transformations in `src/lib/graph/transformers/`
-3. Layout logic in `src/lib/graph/layouts.ts`
+3. Layout logic in `src/lib/graph/pureDagreLayout.ts` (pure Dagre approach)
+4. Layout orchestration in `src/lib/graph/layouts.ts` (view-specific configurations)
 
 **React Flow Node Types**:
-- `puzzleNode`: Blue nodes for puzzles with dependency indicators
+- `puzzleNode`: Diamond-shaped nodes for puzzles with dependency indicators
 - `characterNode`: Green nodes for characters with role badges
 - `elementNode`: Purple nodes for story elements
 - `timelineNode`: Orange nodes for timeline events
+- `group`: Container nodes for puzzle chains (puzzle-focus view)
 
 **Edge Types**:
 - `dependency`: Solid arrow for puzzle dependencies
 - `reward`: Dashed arrow for puzzle rewards
 - `relation`: Dotted line for character relationships
+- `chain`: Extra-weighted edges for puzzle chains
 
-**Layout Algorithm**: Dagre hierarchical layout with:
-- Direction: Top-to-bottom (`TB`)
-- Node spacing: 100px horizontal, 150px vertical
-- Rank separation: 200px between hierarchy levels
+**Layout Algorithm (Pure Dagre)**: 
+- Direction: Left-to-right (`LR`) for puzzle-focus view
+- Natural edge flow creates semantic positioning
+- Requirements flow INTO puzzles, rewards flow OUT
+- Network-simplex algorithm for minimal edge crossings
+- Fractional ranks support dual-role elements
+- Configuration in `applyPureDagreLayout()`:
+  - rankSeparation: 300px (horizontal spacing between columns)
+  - nodeSeparation: 100px (vertical spacing within columns)
+  - puzzleSpacing: 300px (extra spacing for chains)
+  - optimizeEdgeCrossings: true (network-simplex)
 
 #### Debugging Production Issues
 1. Check environment variables are set in platform (not .env file)
@@ -300,7 +322,12 @@ npm run test:coverage                    # Generate coverage reports
 ## Current Development Status
 
 - **Sprint 1**: ✅ Complete - Foundation, API integration, data layer
-- **Sprint 2**: 🚧 In Progress - React Flow visualization
+- **Sprint 2**: 🚧 In Progress - React Flow visualization with pure Dagre layout
+  - ✅ Pure Dagre layout implementation (January 17, 2025)
+  - ✅ Natural edge flow for semantic positioning
+  - ✅ Requirements→Puzzles→Rewards horizontal flow
+  - 🚧 Details panel and mutations pending
+  - 🚧 Experimental compound layout work in scripts/
 - **Sprint 3**: 📋 Planned - Character journey view
 - **Sprint 4**: 📋 Planned - Production polish
 

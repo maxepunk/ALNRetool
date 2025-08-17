@@ -168,6 +168,47 @@ export const transformElement = (
       const puzzle = lookupMaps.puzzles.get(element.containerPuzzleId);
       if (puzzle) {
         metadata.enrichedData.parentPuzzleName = puzzle.name;
+        
+        // Find collaborators: other characters who own elements in the same puzzle
+        const collaborators = new Set<string>();
+        if (puzzle.puzzleElementIds) {
+          puzzle.puzzleElementIds.forEach(elemId => {
+            const otherElement = lookupMaps.elements.get(elemId);
+            if (otherElement && otherElement.ownerId && otherElement.ownerId !== element.ownerId) {
+              collaborators.add(otherElement.ownerId);
+            }
+          });
+        }
+        
+        // Add collaborator information if there are any
+        if (collaborators.size > 0) {
+          metadata.enrichedData.collaborators = Array.from(collaborators).map(charId => {
+            const character = lookupMaps.characters.get(charId);
+            return {
+              id: charId,
+              name: character?.name || 'Unknown',
+              tier: character?.tier || 'Unknown'
+            };
+          });
+          metadata.enrichedData.requiresCollaboration = true;
+        }
+      }
+    }
+    
+    // Add timeline information if element is associated with a timeline event
+    // Note: Timeline nodes may be filtered out in puzzle view, but we still
+    // track this metadata for display in node details and other views
+    if (element.timelineEventId) {
+      const timelineEvent = lookupMaps.timeline.get(element.timelineEventId);
+      if (timelineEvent) {
+        metadata.enrichedData.timelineInfo = {
+          events: [{
+            id: timelineEvent.id,
+            name: timelineEvent.name,
+            date: timelineEvent.date
+          }],
+          earliestDiscovery: timelineEvent.date
+        };
       }
     }
   }

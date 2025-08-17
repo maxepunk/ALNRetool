@@ -18,6 +18,63 @@ Instead of 8+ type files, we use a simplified architecture:
 - `app.ts`: Clean, UI-friendly types
 - `transforms.ts`: Functions to convert raw → app
 
+### Graph Layout System (Pure Dagre)
+**As of Sprint 2 (January 17, 2025)**, we use a pure Dagre layout approach:
+- **Single-phase algorithm** replacing complex hybrid layouts
+- **Natural edge flow** creates semantic positioning (requirements→puzzles→rewards)
+- **Network-simplex algorithm** for minimal edge crossings
+- **Fractional ranks** support dual-role elements (reward from one puzzle, requirement for another)
+
+Key files:
+- `src/lib/graph/pureDagreLayout.ts`: Core layout algorithm with semantic ranking
+- `src/lib/graph/index.ts`: Main graph builder orchestration
+- `src/lib/graph/transformers/`: Entity-specific transformers
+- `src/lib/graph/relationships.ts`: Edge resolution with integrity checking
+
+#### Usage Example
+```typescript
+import { buildGraphData } from '@/lib/graph';
+
+// Build a puzzle-focused graph with pure Dagre layout
+const graphData = buildGraphData(notionData, {
+  viewType: 'puzzle-focus',          // Triggers pure Dagre layout
+  filterRelationships: ['requirement', 'reward', 'chain'],
+  includeOrphans: false,
+  enableIntegrityChecking: true
+});
+```
+
+#### Layout Configuration
+```typescript
+// Pure Dagre configuration for puzzle-focus view
+{
+  direction: 'LR',              // Left-to-right flow
+  rankSeparation: 300,          // Horizontal spacing between columns
+  nodeSeparation: 100,          // Vertical spacing within columns
+  puzzleSpacing: 300,           // Extra spacing for puzzle chains
+  elementSpacing: 100,          // Standard element spacing
+  useFractionalRanks: true,     // Enable for dual-role elements
+  optimizeEdgeCrossings: true,  // Use network-simplex algorithm
+}
+```
+
+#### How It Works
+1. **Natural Edge Flow**: The layout leverages existing edge directions
+   - Requirement edges: `element → puzzle` (elements flow into puzzles)
+   - Reward edges: `puzzle → element` (puzzles flow to reward elements)
+   - Chain edges: `puzzle → puzzle` (sequential puzzle progression)
+
+2. **Semantic Ranking**: Dagre automatically positions nodes based on edge flow
+   - Requirements naturally appear left of puzzles
+   - Puzzles form the central column
+   - Rewards appear right of puzzles
+   - No manual positioning required
+
+3. **Edge Weight Optimization**: Different relationship types have different weights
+   - Chain edges: weight=100 (strongest, keeps puzzles aligned)
+   - Requirement/Reward edges: weight=10 (moderate strength)
+   - Other relationships: weight=1 (default)
+
 ### Express Proxy Pattern
 - Hides Notion API key from frontend
 - Handles rate limiting centrally (340ms between calls)
@@ -91,6 +148,37 @@ const nodeTypes = {
 ```
 
 3. **Style with CSS Module** in same directory
+
+### Working with Graph Layouts
+
+The graph system uses pure Dagre layout with semantic ranking:
+
+1. **Build a Graph** with specific view type:
+```typescript
+import { buildGraphData } from '@/lib/graph';
+
+const graphData = buildGraphData(notionData, {
+  viewType: 'puzzle-focus',  // Determines layout strategy
+  filterRelationships: ['requirement', 'reward'],
+  includeOrphans: false
+});
+```
+
+2. **Customize Layout Parameters**:
+```typescript
+// In src/lib/graph/index.ts applyLayout function
+return applyPureDagreLayout(nodes, edges, {
+  direction: 'LR',              // Left-to-right flow
+  rankSeparation: 300,          // Horizontal spacing
+  nodeSeparation: 100,          // Vertical spacing
+  optimizeEdgeCrossings: true,  // Use network-simplex
+});
+```
+
+3. **Natural Edge Flow Pattern**:
+- Requirements flow INTO puzzles (element→puzzle edges)
+- Rewards flow OUT OF puzzles (puzzle→element edges)
+- This creates: requirements (left) → puzzles (center) → rewards (right)
 
 ### Updating Notion Field Mappings
 

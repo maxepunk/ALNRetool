@@ -111,6 +111,36 @@ export interface NodeMetadata {
       type: string;
       status?: string;
     }>;
+    /** Collaborators for puzzle requirements */
+    collaborators?: Array<{
+      id: string;
+      name: string;
+      tier: string;
+    }>;
+    /** Whether this element requires collaboration */
+    requiresCollaboration?: boolean;
+    /** Timeline information for element discovery */
+    timelineInfo?: {
+      events: Array<{
+        id: string;
+        name: string;
+        date?: string;
+      }>;
+      earliestDiscovery?: string;
+    };
+  };
+  
+  /** Lane information for swim lane layouts */
+  laneInfo?: {
+    laneType: string;
+    laneIndex: number;
+    laneBounds: {
+      minX: number;
+      maxX: number;
+      minY: number;
+      maxY: number;
+    };
+    laneColor: string;
   };
 }
 
