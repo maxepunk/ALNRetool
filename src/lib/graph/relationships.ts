@@ -14,84 +14,12 @@ import type {
   GraphEdge, 
   EntityLookupMaps, 
   RelationshipType,
-  EdgeMetadata,
   EntityType,
-  PlaceholderNodeData 
+  PlaceholderNodeData,
+  GraphNode
 } from './types';
 import type { Node } from '@xyflow/react';
-
-// ============================================================================
-// Edge Style Configuration
-// ============================================================================
-
-/**
- * Visual styles for different relationship types
- */
-const EDGE_STYLES: Record<RelationshipType, Partial<GraphEdge>> = {
-  ownership: {
-    type: 'default',
-    style: { stroke: '#3b82f6', strokeWidth: 2 },
-    animated: false,
-    label: 'owns',
-  },
-  requirement: {
-    type: 'default',
-    style: { stroke: '#ef4444', strokeWidth: 2, strokeDasharray: '5 5' },
-    animated: false,
-    label: 'requires',
-  },
-  reward: {
-    type: 'default',
-    style: { stroke: '#10b981', strokeWidth: 2 },
-    animated: true,
-    label: 'rewards',
-  },
-  timeline: {
-    type: 'default',
-    style: { stroke: '#8b5cf6', strokeWidth: 1.5, strokeDasharray: '2 4' },
-    animated: false,
-    label: 'reveals',
-  },
-  chain: {
-    type: 'default',
-    style: { stroke: '#f59e0b', strokeWidth: 3 },
-    animated: false,
-    label: 'unlocks',
-  },
-  container: {
-    type: 'default',
-    style: { stroke: '#6b7280', strokeWidth: 1.5, strokeDasharray: '8 4' },
-    animated: false,
-    label: 'contains',
-  },
-  collaboration: {
-    type: 'default',
-    style: { stroke: '#ec4899', strokeWidth: 2, strokeDasharray: '4 2' },
-    animated: false,
-    label: 'collaborates',
-  },
-  owner: {
-    type: 'default',
-    style: { stroke: '#3b82f6', strokeWidth: 2 },
-    animated: false,
-    label: 'owned by',
-  },
-};
-
-/**
- * Visual style for broken edges (missing entities)
- */
-const BROKEN_EDGE_STYLE: Partial<GraphEdge> = {
-  type: 'default',
-  style: { 
-    stroke: '#dc2626', // Red color for broken relationships
-    strokeWidth: 2, 
-    strokeDasharray: '3 3', // Dashed line
-    opacity: 0.7 
-  },
-  animated: false,
-  className: 'edge-broken',
-};
+import { EdgeBuilder } from './modules/EdgeBuilder';
 
 // ============================================================================
 // Lookup Map Builders
@@ -163,65 +91,6 @@ export function createPlaceholderNode(
 // Edge Creation Functions
 // ============================================================================
 
-/**
- * Create a unique edge ID
- */
-function createEdgeId(
-  source: string, 
-  target: string, 
-  type: RelationshipType
-): string {
-  return `${source}-${type}-${target}`;
-}
-
-/**
- * Create an edge with metadata
- * Now includes support for marking broken relationships
- */
-function createEdge(
-  source: string,
-  target: string,
-  relationshipType: RelationshipType,
-  metadata?: Partial<EdgeMetadata> & { isBroken?: boolean }
-): GraphEdge | null {
-  // Validate source and target exist
-  if (!source || !target) {
-    console.warn(`Invalid edge: source=${source}, target=${target}, type=${relationshipType}`);
-    return null;
-  }
-  
-  // Don't create self-referential edges
-  if (source === target) {
-    console.warn(`Self-referential edge ignored: ${source} -> ${target}`);
-    return null;
-  }
-  
-  // Use broken style if edge references missing entities
-  const isBroken = metadata?.isBroken || false;
-  const baseStyle = isBroken ? BROKEN_EDGE_STYLE : EDGE_STYLES[relationshipType];
-  const edgeStyle = {
-    ...EDGE_STYLES[relationshipType],
-    ...baseStyle,
-  };
-  
-  const edge: GraphEdge = {
-    id: createEdgeId(source, target, relationshipType),
-    source,
-    target,
-    ...edgeStyle,
-    data: {
-      relationshipType,
-      strength: metadata?.strength || 1,
-      label: metadata?.label || (EDGE_STYLES[relationshipType].label as string),
-      metadata: {
-        ...metadata?.metadata,
-        isBroken,
-      },
-    },
-  };
-  
-  return edge;
-}
 
 // ============================================================================
 // Ownership Edges (Character -> Element)
@@ -234,35 +103,22 @@ export function createOwnershipEdges(
   elements: Element[],
   lookupMaps: EntityLookupMaps
 ): GraphEdge[] {
-  const edges: GraphEdge[] = [];
+  // Adapter: Use EdgeBuilder version for consistency
+  const edgeBuilder = new EdgeBuilder();
+  const edges = createOwnershipEdgesWithBuilder(elements, lookupMaps, edgeBuilder);
   
-  elements.forEach(element => {
-    if (!element.ownerId) return;
-    
-    // Check if owner exists in character map
-    const ownerCharacter = lookupMaps.characters.get(element.ownerId);
-    if (!ownerCharacter) {
-      console.warn(`Element ${element.name} has unknown owner: ${element.ownerId}`);
-      return;
+  // Transform edge data structure for backward compatibility
+  const transformedEdges = edges.map(edge => ({
+    ...edge,
+    data: {
+      relationshipType: edge.data?.relationshipType || 'ownership',
+      ...edge.data,
+      ...edge.data?.metadata, // Flatten metadata into data
     }
-    
-    const edge = createEdge(
-      ownerCharacter.id,
-      element.id,
-      'ownership',
-      {
-        label: `owns`,
-        strength: ownerCharacter.tier === 'Core' ? 1 : 0.7,
-      }
-    );
-    
-    if (edge) {
-      edges.push(edge);
-    }
-  });
+  })) as GraphEdge[];
   
-  console.info(`Created ${edges.length} ownership edges`);
-  return edges;
+  console.info(`Created ${transformedEdges.length} ownership edges`);
+  return transformedEdges;
 }
 
 // ============================================================================
@@ -275,6 +131,165 @@ export function createOwnershipEdges(
 export function createRequirementEdges(
   puzzles: Puzzle[],
   lookupMaps: EntityLookupMaps
+): GraphEdge[] {
+  // Adapter: Use EdgeBuilder version for consistency
+  const edgeBuilder = new EdgeBuilder();
+  const edges = createRequirementEdgesWithBuilder(puzzles, lookupMaps, edgeBuilder);
+  
+  // Transform edge data structure for backward compatibility
+  const transformedEdges = edges.map(edge => ({
+    ...edge,
+    data: {
+      relationshipType: edge.data?.relationshipType || 'requirement',
+      ...edge.data,
+      ...edge.data?.metadata, // Flatten metadata into data
+    }
+  })) as GraphEdge[];
+  
+  console.info(`Created ${transformedEdges.length} requirement edges`);
+  return transformedEdges;
+}
+
+// ============================================================================
+// Reward Edges (Puzzle -> Element)
+// ============================================================================
+
+/**
+ * Create reward edges between puzzles and reward elements
+ */
+export function createRewardEdges(
+  puzzles: Puzzle[],
+  lookupMaps: EntityLookupMaps
+): GraphEdge[] {
+  // Adapter: Use EdgeBuilder version for consistency
+  const edgeBuilder = new EdgeBuilder();
+  const edges = createRewardEdgesWithBuilder(puzzles, lookupMaps, edgeBuilder);
+  
+  // Transform edge data structure for backward compatibility
+  const transformedEdges = edges.map(edge => ({
+    ...edge,
+    data: {
+      relationshipType: edge.data?.relationshipType || 'reward',
+      ...edge.data,
+      ...edge.data?.metadata, // Flatten metadata into data
+    }
+  })) as GraphEdge[];
+  
+  console.info(`Created ${transformedEdges.length} reward edges`);
+  return transformedEdges;
+}
+
+// ============================================================================
+// Timeline Edges (Element -> Timeline)
+// ============================================================================
+
+/**
+ * Create timeline edges between elements and timeline events they reveal
+ */
+export function createTimelineEdges(
+  elements: Element[],
+  lookupMaps: EntityLookupMaps
+): GraphEdge[] {
+  // Adapter: Use EdgeBuilder version for consistency
+  const edgeBuilder = new EdgeBuilder();
+  const edges = createTimelineEdgesWithBuilder(elements, lookupMaps, edgeBuilder);
+  
+  // Transform edge data structure for backward compatibility
+  const transformedEdges = edges.map(edge => ({
+    ...edge,
+    data: {
+      relationshipType: edge.data?.relationshipType || 'timeline',
+      ...edge.data,
+      ...edge.data?.metadata, // Flatten metadata into data
+    }
+  })) as GraphEdge[];
+  
+  console.info(`Created ${transformedEdges.length} timeline edges`);
+  return transformedEdges;
+}
+
+
+
+// ============================================================================
+// Container Edges (Element -> Element)
+// ============================================================================
+
+/**
+ * Create container edges between elements and their contents
+ */
+export function createContainerEdges(
+  elements: Element[],
+  lookupMaps: EntityLookupMaps
+): GraphEdge[] {
+  // Adapter: Use EdgeBuilder version for consistency
+  const edgeBuilder = new EdgeBuilder();
+  const edges = createContainerEdgesWithBuilder(elements, lookupMaps, edgeBuilder);
+  
+  // Transform edge data structure for backward compatibility
+  const transformedEdges = edges.map(edge => ({
+    ...edge,
+    data: {
+      relationshipType: edge.data?.relationshipType || 'container',
+      ...edge.data,
+      ...edge.data?.metadata, // Flatten metadata into data
+    }
+  })) as GraphEdge[];
+  
+  console.info(`Created ${transformedEdges.length} container edges`);
+  return transformedEdges;
+}
+
+// ============================================================================
+// EdgeBuilder-based Edge Creation Functions (Phase 3: Smart Edge Weighting)
+// ============================================================================
+
+/**
+ * Create ownership edges using EdgeBuilder with smart weighting
+ */
+function createOwnershipEdgesWithBuilder(
+  elements: Element[],
+  lookupMaps: EntityLookupMaps,
+  edgeBuilder: EdgeBuilder
+): GraphEdge[] {
+  const edges: GraphEdge[] = [];
+  
+  elements.forEach(element => {
+    if (!element.ownerId) return;
+    
+    // Check if owner exists
+    const owner = lookupMaps.characters.get(element.ownerId);
+    if (!owner) {
+      console.warn(`Element ${element.name} has unknown owner: ${element.ownerId}`);
+      return;
+    }
+    
+    const edge = edgeBuilder.createEdge(
+      element.ownerId,  // Character is source
+      element.id,       // Element is target
+      'ownership',
+      {
+        metadata: {
+          label: 'owns',
+          strength: 0.9,
+        }
+      }
+    );
+    
+    if (edge) {
+      edges.push(edge);
+    }
+  });
+  
+  return edges;
+}
+
+/**
+ * Create requirement edges using EdgeBuilder with smart weighting
+ */
+function createRequirementEdgesWithBuilder(
+  puzzles: Puzzle[],
+  lookupMaps: EntityLookupMaps,
+  edgeBuilder: EdgeBuilder
 ): GraphEdge[] {
   const edges: GraphEdge[] = [];
   
@@ -289,13 +304,15 @@ export function createRequirementEdges(
         return;
       }
       
-      const edge = createEdge(
+      const edge = edgeBuilder.createEdge(
         elementId,  // Element is the source (flows into puzzle)
         puzzle.id,  // Puzzle is the target (receives the element)
         'requirement',
         {
-          label: 'needs',
-          strength: 0.8,
+          metadata: {
+            label: 'needs',
+            strength: 0.8,
+          }
         }
       );
       
@@ -305,20 +322,16 @@ export function createRequirementEdges(
     });
   });
   
-  console.info(`Created ${edges.length} requirement edges`);
   return edges;
 }
 
-// ============================================================================
-// Reward Edges (Puzzle -> Element)
-// ============================================================================
-
 /**
- * Create reward edges between puzzles and reward elements
+ * Create reward edges using EdgeBuilder with smart weighting
  */
-export function createRewardEdges(
+function createRewardEdgesWithBuilder(
   puzzles: Puzzle[],
-  lookupMaps: EntityLookupMaps
+  lookupMaps: EntityLookupMaps,
+  edgeBuilder: EdgeBuilder
 ): GraphEdge[] {
   const edges: GraphEdge[] = [];
   
@@ -333,13 +346,15 @@ export function createRewardEdges(
         return;
       }
       
-      const edge = createEdge(
-        puzzle.id,
-        elementId,
+      const edge = edgeBuilder.createEdge(
+        puzzle.id,   // Puzzle is the source (provides the reward)
+        elementId,   // Element is the target (receives as reward)
         'reward',
         {
-          label: 'gives',
-          strength: 1,
+          metadata: {
+            label: 'gives',
+            strength: 0.7,
+          }
         }
       );
       
@@ -349,20 +364,16 @@ export function createRewardEdges(
     });
   });
   
-  console.info(`Created ${edges.length} reward edges`);
   return edges;
 }
 
-// ============================================================================
-// Timeline Edges (Element -> Timeline)
-// ============================================================================
-
 /**
- * Create timeline edges between elements and timeline events they reveal
+ * Create timeline edges using EdgeBuilder with smart weighting
  */
-export function createTimelineEdges(
+function createTimelineEdgesWithBuilder(
   elements: Element[],
-  lookupMaps: EntityLookupMaps
+  lookupMaps: EntityLookupMaps,
+  edgeBuilder: EdgeBuilder
 ): GraphEdge[] {
   const edges: GraphEdge[] = [];
   
@@ -372,17 +383,19 @@ export function createTimelineEdges(
     // Check if timeline event exists
     const timelineEvent = lookupMaps.timeline.get(element.timelineEventId);
     if (!timelineEvent) {
-      console.warn(`Element ${element.name} reveals unknown timeline: ${element.timelineEventId}`);
+      console.warn(`Element ${element.name} references unknown timeline event: ${element.timelineEventId}`);
       return;
     }
     
-    const edge = createEdge(
+    const edge = edgeBuilder.createEdge(
       element.id,
-      timelineEvent.id,
+      element.timelineEventId,
       'timeline',
       {
-        label: 'reveals',
-        strength: 0.6,
+        metadata: {
+          label: 'appears in',
+          strength: 0.5,
+        }
       }
     );
     
@@ -391,64 +404,16 @@ export function createTimelineEdges(
     }
   });
   
-  console.info(`Created ${edges.length} timeline edges`);
   return edges;
 }
 
-// ============================================================================
-// Chain Edges (Puzzle -> Puzzle)
-// ============================================================================
-
 /**
- * Create chain edges between parent and child puzzles
+ * Create container edges using EdgeBuilder with smart weighting
  */
-export function createChainEdges(
-  puzzles: Puzzle[],
-  lookupMaps: EntityLookupMaps
-): GraphEdge[] {
-  const edges: GraphEdge[] = [];
-  
-  puzzles.forEach(puzzle => {
-    // Parent -> Child edges
-    if (puzzle.subPuzzleIds && puzzle.subPuzzleIds.length > 0) {
-      puzzle.subPuzzleIds.forEach(subPuzzleId => {
-        const subPuzzle = lookupMaps.puzzles.get(subPuzzleId);
-        if (!subPuzzle) {
-          console.warn(`Puzzle ${puzzle.name} has unknown sub-puzzle: ${subPuzzleId}`);
-          return;
-        }
-        
-        const edge = createEdge(
-          puzzle.id,
-          subPuzzleId,
-          'chain',
-          {
-            label: 'leads to',
-            strength: 1,
-          }
-        );
-        
-        if (edge) {
-          edges.push(edge);
-        }
-      });
-    }
-  });
-  
-  console.info(`Created ${edges.length} chain edges`);
-  return edges;
-}
-
-// ============================================================================
-// Container Edges (Element -> Element)
-// ============================================================================
-
-/**
- * Create container edges between elements and their contents
- */
-export function createContainerEdges(
+function createContainerEdgesWithBuilder(
   elements: Element[],
-  lookupMaps: EntityLookupMaps
+  lookupMaps: EntityLookupMaps,
+  edgeBuilder: EdgeBuilder
 ): GraphEdge[] {
   const edges: GraphEdge[] = [];
   
@@ -456,19 +421,28 @@ export function createContainerEdges(
     if (!element.contentIds || element.contentIds.length === 0) return;
     
     element.contentIds.forEach(contentId => {
+      // Skip self-referential edges
+      if (element.id === contentId) {
+        console.warn(`Self-referential edge ignored: Element ${element.name} cannot contain itself`);
+        return;
+      }
+      
+      // Check if content element exists
       const contentElement = lookupMaps.elements.get(contentId);
       if (!contentElement) {
         console.warn(`Element ${element.name} contains unknown element: ${contentId}`);
         return;
       }
       
-      const edge = createEdge(
-        element.id,
-        contentId,
+      const edge = edgeBuilder.createEdge(
+        element.id,   // Container is source
+        contentId,    // Content element is target
         'container',
         {
-          label: 'contains',
-          strength: 0.7,
+          metadata: {
+            label: 'contains',
+            strength: 0.7,
+          }
         }
       );
       
@@ -478,7 +452,6 @@ export function createContainerEdges(
     });
   });
   
-  console.info(`Created ${edges.length} container edges`);
   return edges;
 }
 
@@ -504,33 +477,43 @@ export function resolveAllRelationships(
   characters: Character[],
   elements: Element[],
   puzzles: Puzzle[],
-  timeline: TimelineEvent[]
+  timeline: TimelineEvent[],
+  nodes?: GraphNode[]
 ): GraphEdge[] {
   // Build lookup maps for efficient resolution
   const lookupMaps = buildLookupMaps(characters, elements, puzzles, timeline);
   
-  console.group('Resolving relationships');
+  console.group('Resolving relationships with smart edge weighting');
   
-  // Create all edge types
-  const allEdges: GraphEdge[] = [
-    ...createOwnershipEdges(elements, lookupMaps),
-    ...createRequirementEdges(puzzles, lookupMaps),
-    ...createRewardEdges(puzzles, lookupMaps),
-    ...createTimelineEdges(elements, lookupMaps),
-    ...createChainEdges(puzzles, lookupMaps),
-    ...createContainerEdges(elements, lookupMaps),
-  ];
+  // Phase 3: Use EdgeBuilder for smart edge weighting
+  // Create EdgeBuilder with nodes for affinity analysis
+  const edgeBuilder = new EdgeBuilder([], nodes);
   
-  console.info(`Total edges created: ${allEdges.length}`);
+  // Create all edge types using EdgeBuilder
+  createOwnershipEdgesWithBuilder(elements, lookupMaps, edgeBuilder);
+  createRequirementEdgesWithBuilder(puzzles, lookupMaps, edgeBuilder);
+  createRewardEdgesWithBuilder(puzzles, lookupMaps, edgeBuilder);
+  createTimelineEdgesWithBuilder(elements, lookupMaps, edgeBuilder);
+  createContainerEdgesWithBuilder(elements, lookupMaps, edgeBuilder);
+  // Note: Chain edges have been removed - replaced by dependency edges
+  
+  // Get statistics including affinity analysis
+  const stats = edgeBuilder.getStatistics();
+  
+  // Only analyze affinity if we have nodes
+  if (nodes && nodes.length > 0) {
+    const affinity = edgeBuilder.analyzeElementAffinity();
+    console.info(`Dual-role elements: ${affinity.dualRoleElements.length}`);
+    console.info(`Multi-puzzle elements: ${affinity.multiPuzzleElements.length}`);
+    console.info(`High affinity edges: ${affinity.highAffinityEdges.length}`);
+  }
+  
+  console.info(`Total edges created: ${stats.total}`);
+  console.info(`Average edge weight: ${stats.averageWeight.toFixed(2)}`);
+  console.info(`Weight distribution:`, stats.weightDistribution);
   console.groupEnd();
   
-  // Remove duplicates (shouldn't happen but just in case)
-  const uniqueEdges = new Map<string, GraphEdge>();
-  allEdges.forEach(edge => {
-    uniqueEdges.set(edge.id, edge);
-  });
-  
-  return Array.from(uniqueEdges.values());
+  return edgeBuilder.getEdges();
 }
 
 /**
@@ -615,7 +598,6 @@ export function resolveRelationshipsWithIntegrity(
     ...createRequirementEdges(puzzles, lookupMaps),
     ...createRewardEdges(puzzles, lookupMaps),
     ...createTimelineEdges(elements, lookupMaps),
-    ...createChainEdges(puzzles, lookupMaps),
     ...createContainerEdges(elements, lookupMaps),
   ];
   

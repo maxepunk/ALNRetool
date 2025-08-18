@@ -11,9 +11,10 @@ import type {
 } from '../types';
 
 import { 
-  applyDagreLayout as dagreLayout
+  applyDagreLayout as dagreLayout,
+  LAYOUT_PRESETS
 } from '../layouts';
-import { applyPureDagreLayout as pureDagreLayout } from '../pureDagreLayout';
+import { applyPureDagreLayout as pureDagreLayout } from '../layout/dagre';
 
 export class LayoutOrchestrator implements ILayoutOrchestrator {
   /**
@@ -80,20 +81,29 @@ export class LayoutOrchestrator implements ILayoutOrchestrator {
       graph.nodes,
       graph.edges,
       {
-        ...config, // Spread config first
+        ...config, // Spread config first (includes dynamic spacing properties)
         direction: layoutDirection, // Then override with mapped direction
-        rankSeparation: config?.spacing?.rankSpacing || 300,
-        nodeSeparation: config?.spacing?.nodeSpacing || 100,
-        puzzleSpacing: 300,
-        elementSpacing: 100,
-        useFractionalRanks: true,
-        optimizeEdgeCrossings: true
+        rankSeparation: config?.spacing?.rankSpacing || (config as any)?.rankSeparation || 300,
+        nodeSeparation: config?.spacing?.nodeSpacing || (config as any)?.nodeSeparation || 100,
+        puzzleSpacing: (config as any)?.puzzleSpacing || 300,
+        elementSpacing: (config as any)?.elementSpacing || 100,
+        useFractionalRanks: (config as any)?.useFractionalRanks ?? true,
+        optimizeEdgeCrossings: (config as any)?.optimizeEdgeCrossings ?? true,
+        // Pass through dynamic spacing properties from config
+        dynamicSpacing: (config as any)?.dynamicSpacing,
+        tightElementSpacing: (config as any)?.tightElementSpacing,
+        adaptiveRankSeparation: (config as any)?.adaptiveRankSeparation,
+        clusterElements: (config as any)?.clusterElements
       }
     );
+    
+    // Filter out virtual edges that were only used for layout
+    const displayEdges = graph.edges.filter(edge => !edge.data?.isVirtual);
 
     return {
       ...graph,
-      nodes: positionedNodes
+      nodes: positionedNodes,
+      edges: displayEdges
     };
   }
 
@@ -103,40 +113,41 @@ export class LayoutOrchestrator implements ILayoutOrchestrator {
   getLayoutForView(viewType: ViewType): LayoutConfig {
     switch (viewType) {
       case 'puzzle-focus':
+        // Use the preset from layouts.ts which includes dynamic spacing
         return {
+          ...LAYOUT_PRESETS.puzzleFocus,
           algorithm: 'pure-dagre',
-          direction: 'LR',
           spacing: {
-            rankSpacing: 300,
-            nodeSpacing: 100,
+            rankSpacing: LAYOUT_PRESETS.puzzleFocus.rankSeparation,
+            nodeSpacing: LAYOUT_PRESETS.puzzleFocus.nodeSeparation,
             edgePadding: 10
           },
           alignment: 'DL'
-        };
+        } as LayoutConfig;
       
       case 'character-journey':
         return {
+          ...LAYOUT_PRESETS.characterJourney,
           algorithm: 'dagre',
-          direction: 'TB',
           spacing: {
-            rankSpacing: 150,
-            nodeSpacing: 80,
+            rankSpacing: LAYOUT_PRESETS.characterJourney.rankSeparation,
+            nodeSpacing: LAYOUT_PRESETS.characterJourney.nodeSeparation,
             edgePadding: 10
           },
           alignment: 'UL'
-        };
+        } as LayoutConfig;
       
       case 'content-status':
         return {
+          ...LAYOUT_PRESETS.contentStatus,
           algorithm: 'dagre',
-          direction: 'LR',
           spacing: {
-            rankSpacing: 200,
-            nodeSpacing: 100,
+            rankSpacing: LAYOUT_PRESETS.contentStatus.rankSeparation,
+            nodeSpacing: LAYOUT_PRESETS.contentStatus.nodeSeparation,
             edgePadding: 10
           },
           alignment: 'UL'
-        };
+        } as LayoutConfig;
       
       default:
         return this.getDefaultConfig();

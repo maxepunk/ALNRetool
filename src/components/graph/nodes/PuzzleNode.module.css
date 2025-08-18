@@ -266,37 +266,8 @@
   z-index: 10;
 }
 
-/* Flow indicators for dependencies */
+/* Flow indicators for dependencies - horizontal for LR layout */
 .flowIndicators {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.flowTop {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 2px;
-  height: 16px;
-  transform: translate(-50%, -100%);
-  background: linear-gradient(to top, #f59e0b, transparent);
-  opacity: 0.3;
-}
-
-.flowBottom {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 2px;
-  height: 16px;
-  transform: translate(-50%, 100%);
-  background: linear-gradient(to bottom, #f59e0b, transparent);
-  opacity: 0.3;
-}
-
-/* Chain flow indicators */
-.chainFlowIndicators {
   position: absolute;
   inset: 0;
   pointer-events: none;
@@ -309,7 +280,7 @@
   height: 2px;
   width: 16px;
   transform: translate(-100%, -50%);
-  background: linear-gradient(to left, #6366f1, transparent);
+  background: linear-gradient(to left, #f59e0b, transparent);
   opacity: 0.3;
 }
 
@@ -320,9 +291,10 @@
   height: 2px;
   width: 16px;
   transform: translate(100%, -50%);
-  background: linear-gradient(to right, #6366f1, transparent);
+  background: linear-gradient(to right, #f59e0b, transparent);
   opacity: 0.3;
 }
+
 
 /* Multi-zoom optimization */
 @media (max-width: 768px), (max-height: 600px) {
@@ -372,12 +344,6 @@
 }
 
 /* Hover state enhancements */
-.puzzleNode:hover .flowTop,
-.puzzleNode:hover .flowBottom {
-  opacity: 0.6;
-  height: 24px;
-}
-
 .puzzleNode:hover .flowLeft,
 .puzzleNode:hover .flowRight {
   opacity: 0.6;

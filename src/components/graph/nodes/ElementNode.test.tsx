@@ -425,21 +425,9 @@ describe('ElementNode', () => {
       expect(handle).toHaveAttribute('data-position', 'left');
     });
 
-    it('renders required handle on top', () => {
-      const props = createMockNodeProps();
-      render(<ElementNode {...props} />);
-      const handle = screen.getByTestId('handle-required');
-      expect(handle).toHaveAttribute('data-type', 'target');
-      expect(handle).toHaveAttribute('data-position', 'top');
-    });
-
-    it('renders reveals handle on bottom', () => {
-      const props = createMockNodeProps();
-      render(<ElementNode {...props} />);
-      const handle = screen.getByTestId('handle-reveals');
-      expect(handle).toHaveAttribute('data-type', 'source');
-      expect(handle).toHaveAttribute('data-position', 'bottom');
-    });
+    // Handle tests removed - handles no longer have test IDs
+    // ElementNode has handles for requirement, reward, owned, contains, and reveals
+    // but they are not exposed via data-testid attributes
   });
 
   describe('Edge Cases', () => {

@@ -28,11 +28,6 @@ const EDGE_STYLES: Record<RelationshipType, {
     animated: true,
     label: 'rewards',
   },
-  chain: {
-    stroke: '#8b5cf6', // Purple
-    strokeWidth: 3,
-    label: 'chain',
-  },
   collaboration: {
     stroke: '#06b6d4', // Cyan
     strokeWidth: 2,
@@ -60,6 +55,16 @@ const EDGE_STYLES: Record<RelationshipType, {
     strokeWidth: 2,
     strokeDasharray: 'none',
     label: 'contains',
+  },
+  'virtual-dependency': {
+    stroke: 'transparent', // Invisible - for layout only
+    strokeWidth: 0,
+    label: '', // No label needed for virtual edges
+  },
+  'puzzle-grouping': {
+    stroke: '#6b7280', // Gray - for puzzle chain grouping
+    strokeWidth: 3,
+    label: 'group',
   },
 };
 
@@ -131,6 +136,9 @@ export class EdgeBuilder {
     // Create edge ID
     const id = `${relationshipType}-${source}-${target}`;
 
+    // Calculate smart edge weight based on element affinity
+    const weight = this.calculateSmartWeight(source, target, relationshipType, options?.weight);
+
     // Build edge style
     const style: React.CSSProperties = {
       stroke: options?.isBroken ? '#ef4444' : styleConfig.stroke,
@@ -150,7 +158,7 @@ export class EdgeBuilder {
       style,
       data: {
         relationshipType,
-        weight: options?.weight || 1,
+        weight,
         metadata: {
           ...options?.metadata,
           isBroken: options?.isBroken || false,
@@ -194,54 +202,6 @@ export class EdgeBuilder {
     return newEdges;
   }
 
-  /**
-   * Create bidirectional edges
-   */
-  public createBidirectionalEdge(
-    nodeA: string,
-    nodeB: string,
-    relationshipType: RelationshipType,
-    options?: Parameters<EdgeBuilder['createEdge']>[3]
-  ): GraphEdge[] {
-    const edges: GraphEdge[] = [];
-
-    const edge1 = this.createEdge(nodeA, nodeB, relationshipType, options);
-    if (edge1) edges.push(edge1);
-
-    const edge2 = this.createEdge(nodeB, nodeA, relationshipType, options);
-    if (edge2) edges.push(edge2);
-
-    return edges;
-  }
-
-  /**
-   * Create chain edges between sequential nodes
-   */
-  public createChainEdges(
-    nodeIds: string[],
-    relationshipType: RelationshipType = 'chain',
-    options?: Parameters<EdgeBuilder['createEdge']>[3]
-  ): GraphEdge[] {
-    const edges: GraphEdge[] = [];
-
-    for (let i = 0; i < nodeIds.length - 1; i++) {
-      const sourceId = nodeIds[i];
-      const targetId = nodeIds[i + 1];
-      if (!sourceId || !targetId) continue;
-      
-      const edge = this.createEdge(
-        sourceId,
-        targetId,
-        relationshipType,
-        options
-      );
-      if (edge) {
-        edges.push(edge);
-      }
-    }
-
-    return edges;
-  }
 
   /**
    * Create edges from one source to multiple targets
@@ -299,12 +259,18 @@ export class EdgeBuilder {
     total: number;
     byType: Record<RelationshipType, number>;
     broken: number;
+    averageWeight: number;
+    weightDistribution: Record<string, number>;
   } {
     const stats = {
       total: this.edges.length,
       byType: {} as Record<RelationshipType, number>,
       broken: 0,
+      averageWeight: 0,
+      weightDistribution: {} as Record<string, number>,
     };
+
+    let totalWeight = 0;
 
     this.edges.forEach(edge => {
       const type = edge.data?.relationshipType;
@@ -314,9 +280,75 @@ export class EdgeBuilder {
       if (edge.data?.metadata?.isBroken) {
         stats.broken++;
       }
+      
+      // Track weight statistics
+      const weight = edge.data?.weight || 1;
+      totalWeight += weight;
+      
+      // Categorize weights
+      const weightCategory = 
+        weight >= 5 ? 'very-high' :
+        weight >= 3 ? 'high' :
+        weight >= 2 ? 'medium' :
+        weight > 1 ? 'low-boost' :
+        'standard';
+      
+      stats.weightDistribution[weightCategory] = 
+        (stats.weightDistribution[weightCategory] || 0) + 1;
     });
 
+    stats.averageWeight = stats.total > 0 ? totalWeight / stats.total : 0;
+
     return stats;
+  }
+
+  /**
+   * Analyze element affinity in the graph
+   * Returns information about dual-role elements and their connections
+   */
+  public analyzeElementAffinity(): {
+    dualRoleElements: string[];
+    multiPuzzleElements: string[];
+    highAffinityEdges: GraphEdge[];
+  } {
+    const dualRoleElements: Set<string> = new Set();
+    const multiPuzzleElements: Set<string> = new Set();
+    const highAffinityEdges: GraphEdge[] = [];
+
+    // Check all nodes for dual-role and multi-puzzle elements
+    this.nodeMap.forEach((node) => {
+      if (node.data.metadata.entityType === 'element') {
+        const element = node.data.entity as any;
+        
+        // Check for dual-role elements
+        if (element.requiredForPuzzleIds?.length > 0 && 
+            element.rewardedByPuzzleIds?.length > 0) {
+          dualRoleElements.add(node.id);
+        }
+        
+        // Check for multi-puzzle elements
+        const totalPuzzleConnections = 
+          (element.requiredForPuzzleIds?.length || 0) + 
+          (element.rewardedByPuzzleIds?.length || 0);
+        
+        if (totalPuzzleConnections > 1) {
+          multiPuzzleElements.add(node.id);
+        }
+      }
+    });
+
+    // Find high affinity edges (weight >= 2)
+    this.edges.forEach(edge => {
+      if ((edge.data?.weight || 1) >= 2) {
+        highAffinityEdges.push(edge);
+      }
+    });
+
+    return {
+      dualRoleElements: Array.from(dualRoleElements),
+      multiPuzzleElements: Array.from(multiPuzzleElements),
+      highAffinityEdges,
+    };
   }
 
   /**
@@ -325,6 +357,106 @@ export class EdgeBuilder {
   public clear(): void {
     this.edges = [];
     this.edgeSet.clear();
+  }
+
+  /**
+   * Calculate smart edge weight based on element affinity
+   * Analyzes element relationships to assign higher weights for stronger connections
+   */
+  private calculateSmartWeight(
+    source: string,
+    target: string,
+    relationshipType: RelationshipType,
+    baseWeight?: number
+  ): number {
+    // Start with base weight or default
+    let weight = baseWeight || 1;
+
+    // Get nodes if available
+    const sourceNode = this.nodeMap.get(source);
+    const targetNode = this.nodeMap.get(target);
+
+    if (!sourceNode || !targetNode) {
+      return weight;
+    }
+
+    // Phase 3: Smart edge weighting for element affinity
+    // Elements that serve multiple purposes should have stronger connections
+    
+    // Check if this is an element-to-puzzle edge
+    if (sourceNode.data.metadata.entityType === 'element' && 
+        targetNode.data.metadata.entityType === 'puzzle') {
+      
+      const element = sourceNode.data.entity as any;
+      
+      // Dual-role elements (both requirement and reward) get higher weight
+      if (element.requiredForPuzzleIds?.length > 0 && 
+          element.rewardedByPuzzleIds?.length > 0) {
+        weight *= 3; // Triple weight for dual-role elements
+      }
+      
+      // Elements required by multiple puzzles get higher weight
+      else if (element.requiredForPuzzleIds?.length > 1) {
+        weight *= 2; // Double weight for multi-puzzle requirements
+      }
+      
+      // Elements with SF patterns get slightly higher weight
+      if (element.sfPatterns && Object.keys(element.sfPatterns).length > 0) {
+        weight *= 1.5; // 50% boost for SF pattern elements
+      }
+    }
+    
+    // Check if this is a puzzle-to-element edge
+    else if (sourceNode.data.metadata.entityType === 'puzzle' && 
+             targetNode.data.metadata.entityType === 'element') {
+      
+      const element = targetNode.data.entity as any;
+      
+      // Elements that are rewards and also requirements get higher weight
+      if (element.requiredForPuzzleIds?.length > 0 && 
+          element.rewardedByPuzzleIds?.length > 0) {
+        weight *= 3; // Triple weight for dual-role elements
+      }
+      
+      // Elements rewarded by multiple puzzles get higher weight
+      else if (element.rewardedByPuzzleIds?.length > 1) {
+        weight *= 2; // Double weight for multi-puzzle rewards
+      }
+    }
+    
+    // Check for puzzle-to-puzzle connections (dependencies)
+    else if (sourceNode.data.metadata.entityType === 'puzzle' && 
+             targetNode.data.metadata.entityType === 'puzzle') {
+      
+      const sourcePuzzle = sourceNode.data.entity as any;
+      const targetPuzzle = targetNode.data.entity as any;
+      
+      // Parent-child puzzle relationships get highest weight
+      if (sourcePuzzle.subPuzzleIds?.includes(target) || 
+          targetPuzzle.parentItemId === source) {
+        weight *= 5; // Very high weight for parent-child
+      }
+      
+      // Puzzles in the same narrative thread get higher weight
+      const commonThreads = sourcePuzzle.narrativeThreads?.filter((thread: string) =>
+        targetPuzzle.narrativeThreads?.includes(thread)
+      );
+      if (commonThreads?.length > 0) {
+        weight *= 2; // Double weight for narrative connections
+      }
+    }
+    
+    // Ownership edges get moderate weight boost
+    if (relationshipType === 'ownership' || relationshipType === 'owner') {
+      weight *= 1.5;
+    }
+    
+    // Timeline edges get lower weight (they're less structurally important)
+    if (relationshipType === 'timeline') {
+      weight *= 0.7;
+    }
+
+    return weight;
   }
 
   /**

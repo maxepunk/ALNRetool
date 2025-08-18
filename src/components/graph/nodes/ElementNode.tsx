@@ -64,30 +64,41 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
         )}
       </div>
       
-      {/* Connection handles */}
+      {/* Connection handles - aligned with LR layout */}
       <Handle
         type="source"
         position={Position.Right}
-        id="contains"
+        id="requirement"
         className={styles.handle}
+        title="Flows as requirement into puzzles"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="reward"
+        className={styles.handle}
+        title="Receives rewards from puzzles"
       />
       <Handle
         type="target"
         position={Position.Left}
         id="owned"
         className={styles.handle}
+        title="Owned by character"
       />
       <Handle
-        type="target"
-        position={Position.Top}
-        id="required"
-        className={styles.handleTop}
+        type="source"
+        position={Position.Right}
+        id="contains"
+        className={styles.handle}
+        title="Contains other elements"
       />
       <Handle
         type="source"
         position={Position.Bottom}
         id="reveals"
         className={styles.handleBottom}
+        title="Reveals timeline events"
       />
       
       {/* Error indicator */}

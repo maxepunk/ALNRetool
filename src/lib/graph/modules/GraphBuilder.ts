@@ -50,7 +50,7 @@ export class GraphBuilder implements IGraphBuilder {
       warnings.push('No nodes created from input data');
     }
     
-    // Step 2: Resolve relationships to edges
+    // Step 2: Resolve relationships to edges with smart weighting
     let allEdges: GraphEdge[];
     let placeholderNodes: Node<PlaceholderNodeData>[] = [];
     let integrityReport: RelationshipIntegrityReport | undefined;
@@ -77,7 +77,8 @@ export class GraphBuilder implements IGraphBuilder {
         data.characters,
         data.elements,
         data.puzzles,
-        data.timeline
+        data.timeline,
+        allNodes  // Pass nodes for smart edge weighting
       );
     }
     
@@ -88,13 +89,10 @@ export class GraphBuilder implements IGraphBuilder {
       console.log(`Filtered edges from ${allEdges.length} to ${filteredEdges.length}`);
     }
     
-    // Step 4: Create group nodes for puzzle chains (puzzle-focus view only)
-    const groupNodes = this.createGroupNodes(data, options.viewType);
+    // Step 4: Combine all nodes (removed group nodes - using edge-based layout instead)
+    const combinedNodes: GraphNode[] = [...allNodes, ...placeholderNodes as any];
     
-    // Step 5: Combine all nodes
-    const combinedNodes: GraphNode[] = [...allNodes, ...placeholderNodes as any, ...groupNodes];
-    
-    // Step 6: Filter orphans if requested
+    // Step 5: Filter orphans if requested
     let nodesToKeep = combinedNodes;
     if (!options.includeOrphans) {
       nodesToKeep = this.filterOrphans(combinedNodes, filteredEdges, options.viewType);
@@ -201,7 +199,7 @@ export class GraphBuilder implements IGraphBuilder {
   buildPuzzleFocusGraph(data: NotionData): GraphData {
     return this.buildGraphData(data, {
       viewType: 'puzzle-focus',
-      filterRelationships: ['requirement', 'reward', 'chain'],
+      filterRelationships: ['requirement', 'reward'],
       excludeEntityTypes: ['timeline'],
       includeOrphans: false,
     });
@@ -226,47 +224,6 @@ export class GraphBuilder implements IGraphBuilder {
       viewType: 'content-status',
       includeOrphans: true,
     });
-  }
-
-  /**
-   * Create group nodes for puzzle chains
-   */
-  private createGroupNodes(data: NotionData, viewType?: ViewType): GraphNode[] {
-    const groupNodes: GraphNode[] = [];
-    
-    if (viewType === 'puzzle-focus') {
-      const parentPuzzles = data.puzzles.filter(p => p.subPuzzleIds && p.subPuzzleIds.length > 0);
-      
-      parentPuzzles.forEach(parent => {
-        const groupNode: GraphNode = {
-          id: `group-${parent.id}`,
-          type: 'group',
-          position: { x: 0, y: 0 },
-          data: {
-            label: `${parent.name} Chain`,
-            entity: parent, // Add the required entity property
-            metadata: {
-              entityType: 'puzzle',
-              entityId: parent.id,
-              originalData: parent,
-              subPuzzleIds: parent.subPuzzleIds,
-              isParent: true,
-            },
-            chainStatus: parent.puzzleElementIds && parent.puzzleElementIds.length > 0 ? 'ready' : 'draft',
-            childCount: parent.subPuzzleIds.length,
-            width: 400,
-            height: 300,
-          },
-        };
-        groupNodes.push(groupNode);
-      });
-      
-      if (groupNodes.length > 0) {
-        console.log(`Created ${groupNodes.length} group nodes for puzzle chains`);
-      }
-    }
-    
-    return groupNodes;
   }
 
   /**

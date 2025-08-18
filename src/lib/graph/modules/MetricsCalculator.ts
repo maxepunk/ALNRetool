@@ -63,12 +63,13 @@ export class MetricsCalculator implements IMetricsCalculator {
     const relationshipCounts: Record<RelationshipType, number> = {
       requirement: 0,
       reward: 0,
-      chain: 0,
       collaboration: 0,
       timeline: 0,
       owner: 0,
       ownership: 0,
       container: 0,
+      'virtual-dependency': 0,
+      'puzzle-grouping': 0,
     };
     
     edges.forEach(edge => {

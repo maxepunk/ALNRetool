@@ -317,37 +317,24 @@ describe('PuzzleNode', () => {
   });
 
   describe('Handle Components', () => {
-    it('renders requires handle on top', () => {
+    it('renders requires handle on left', () => {
       const props = createMockNodeProps();
       render(<PuzzleNode {...props} />);
       const handle = screen.getByTestId('handle-requires');
       expect(handle).toHaveAttribute('data-type', 'target');
-      expect(handle).toHaveAttribute('data-position', 'top');
+      expect(handle).toHaveAttribute('data-position', 'left');
     });
 
-    it('renders rewards handle on bottom', () => {
+    it('renders rewards handle on right', () => {
       const props = createMockNodeProps();
       render(<PuzzleNode {...props} />);
       const handle = screen.getByTestId('handle-rewards');
       expect(handle).toHaveAttribute('data-type', 'source');
-      expect(handle).toHaveAttribute('data-position', 'bottom');
-    });
-
-    it('renders parent handle on left', () => {
-      const props = createMockNodeProps();
-      render(<PuzzleNode {...props} />);
-      const handle = screen.getByTestId('handle-parent');
-      expect(handle).toHaveAttribute('data-type', 'target');
-      expect(handle).toHaveAttribute('data-position', 'left');
-    });
-
-    it('renders child handle on right', () => {
-      const props = createMockNodeProps();
-      render(<PuzzleNode {...props} />);
-      const handle = screen.getByTestId('handle-child');
-      expect(handle).toHaveAttribute('data-type', 'source');
       expect(handle).toHaveAttribute('data-position', 'right');
     });
+
+    // Parent/child handles have been removed in favor of requires/rewards handles
+    // These are now rendered without test IDs
   });
 
   describe('Edge Cases', () => {

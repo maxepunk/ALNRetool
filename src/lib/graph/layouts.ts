@@ -20,13 +20,18 @@ export const LAYOUT_PRESETS = {
    * Puzzle Focus View - Horizontal flow showing puzzle chains
    * Elements -> Puzzles -> Rewards -> Timeline
    * Increased spacing for visual hierarchy
+   * Dynamic spacing to group elements near puzzles
    */
   puzzleFocus: {
     direction: 'LR' as const,
     rankSeparation: 300,  // Increased from 200 for better layer separation
-    nodeSeparation: 100,  // Increased from 50 to prevent overlapping
+    nodeSeparation: 100,  // Default separation (will be overridden by dynamic spacing)
     center: true,
-  },
+    // Enable dynamic spacing features for better element grouping
+    dynamicSpacing: true,       // Use tighter spacing for elements
+    tightElementSpacing: 40,    // Tight vertical spacing between elements
+    clusterElements: true,      // Apply post-layout clustering
+  } as any,  // Cast to any to include extended options
   
   /**
    * Character Journey View - Vertical tree showing ownership
@@ -132,10 +137,7 @@ function createDagreGraph(config: LayoutConfig): dagre.graphlib.Graph {
     marginx: 100,  // Increased from 50 for better edge spacing
     marginy: 100,  // Increased from 50 for better edge spacing
     // Use safer options - network-simplex causes issues
-    // ranker: 'longest-path',  // Safer than network-simplex
-    // acyclicer: 'greedy',  // Helps handle cycles
     edgesep: 20,  // Add edge separation
-    // compound: false,  // Disable compound for now to avoid issues
   });
   
   // Default edge label (required by Dagre)
@@ -573,6 +575,3 @@ export function calculateLayoutMetrics(nodes: GraphNode[]) {
     overlap,
   };
 }
-
-// Import and re-export compound layout functions
-// Compound layout removed - replaced by puzzleCentricLayout

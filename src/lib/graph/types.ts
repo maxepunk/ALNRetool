@@ -68,12 +68,13 @@ export type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
 export type RelationshipType = 
   | 'requirement'
   | 'reward' 
-  | 'chain'
   | 'collaboration'
   | 'timeline'
   | 'owner'
   | 'ownership'
-  | 'container';
+  | 'container'
+  | 'puzzle-grouping' // For puzzle chain grouping
+  | 'virtual-dependency'; // For dual-role element layout
 
 /**
  * Placeholder node data for missing entities
@@ -191,6 +192,7 @@ export interface GraphEdge extends Omit<Edge, 'data'> {
     strength?: number; // For collaboration edges
     label?: string; // For edge labels
     metadata?: Record<string, unknown>;
+    isVirtual?: boolean; // For layout-only edges (not rendered)
   };
   animated?: boolean;
   style?: React.CSSProperties;
@@ -360,6 +362,6 @@ export const isEntityType = (type: unknown): type is EntityType => {
 export const isRelationshipType = (type: unknown): type is RelationshipType => {
   return (
     typeof type === 'string' &&
-    ['requirement', 'reward', 'chain', 'collaboration', 'timeline', 'owner'].includes(type)
+    ['requirement', 'reward', 'chain', 'collaboration', 'timeline', 'owner', 'ownership', 'container', 'virtual-dependency'].includes(type)
   );
 };

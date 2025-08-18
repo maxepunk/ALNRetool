@@ -189,14 +189,15 @@ describe('Graph Builder Integration', () => {
       expect(graph.edges).toBeDefined();
       expect(graph.metadata).toBeDefined();
 
-      // Should have nodes for all entities
-      expect(graph.nodes.length).toBe(8); // 2 chars + 3 elems + 2 puzzles + 1 timeline
+      // Should have nodes for all entities (minus orphans)
+      // Note: puzzle-2 is orphaned since chain edges are removed and it has no requirements/rewards
+      expect(graph.nodes.length).toBe(7); // 2 chars + 3 elems + 1 puzzle (puzzle-2 orphaned) + 1 timeline
 
       // Should have various edge types
       expect(graph.edges.length).toBeGreaterThan(0);
 
       // Should have metrics
-      expect(graph.metadata?.metrics?.nodeCount).toBe(8);
+      expect(graph.metadata?.metrics?.nodeCount).toBe(7);
       expect(graph.metadata?.metrics?.edgeCount).toBeGreaterThan(0);
       expect(graph.metadata?.metrics?.duration).toBeGreaterThan(0);
     });
@@ -419,7 +420,7 @@ describe('Graph Builder Integration', () => {
 
       expect(stats.nodesByType.character).toBe(2);
       expect(stats.nodesByType.element).toBe(3);
-      expect(stats.nodesByType.puzzle).toBe(2);
+      expect(stats.nodesByType.puzzle).toBe(1); // puzzle-2 is orphaned and removed
       expect(stats.nodesByType.timeline).toBe(1);
     });
 
@@ -469,7 +470,8 @@ describe('Graph Builder Integration', () => {
       const edgeTypes = new Set(graph.edges.map(e => e.data?.relationshipType));
       expect(edgeTypes.has('requirement')).toBe(true);
       expect(edgeTypes.has('reward')).toBe(true);
-      expect(edgeTypes.has('chain')).toBe(true);
+      // Chain edges have been removed - verify they don't exist
+      expect(Array.from(edgeTypes)).not.toContain('chain');
     });
 
     it('should build character journey graph', () => {

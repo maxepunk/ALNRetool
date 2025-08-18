@@ -102,47 +102,25 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
         )}
       </div>
       
-      {/* Connection handles positioned at diamond corners */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        id="requires"
-        className={styles.handleRequires}
-        style={{ top: '0', left: '50%', transform: 'translate(-50%, -50%)' }}
-      />
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="rewards"
-        className={styles.handleRewards}
-        style={{ bottom: '0', left: '50%', transform: 'translate(-50%, 50%)' }}
-      />
+      {/* Connection handles positioned for LR layout */}
       <Handle
         type="target"
         position={Position.Left}
-        id="parent"
-        className={styles.handleChain}
+        id="requires"
+        className={styles.handleRequires}
         style={{ left: '0', top: '50%', transform: 'translate(-50%, -50%)' }}
       />
       <Handle
         type="source"
         position={Position.Right}
-        id="child"
-        className={styles.handleChain}
+        id="rewards"
+        className={styles.handleRewards}
         style={{ right: '0', top: '50%', transform: 'translate(50%, -50%)' }}
       />
       
-      {/* Flow indicators for dependencies */}
+      {/* Flow indicators for dependencies - horizontal for LR layout */}
       {(entity.puzzleElementIds?.length > 0 || entity.rewardIds?.length > 0) && (
         <div className={styles.flowIndicators}>
-          <div className={styles.flowTop} />
-          <div className={styles.flowBottom} />
-        </div>
-      )}
-      
-      {/* Chain flow indicators */}
-      {isChained && (
-        <div className={styles.chainFlowIndicators}>
           <div className={styles.flowLeft} />
           <div className={styles.flowRight} />
         </div>

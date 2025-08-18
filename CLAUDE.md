@@ -128,22 +128,27 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 
 ### Important Patterns
 
-#### Modular Graph Architecture (January 17, 2025 Refactor)
-- **From Monolithic to Modular**: 722-line `index.ts` decomposed into 12 focused modules
+#### Modular Graph Architecture (January 17-18, 2025 Refactor)
+- **From Monolithic to Modular**: 722-line `index.ts` decomposed into 12+ focused modules
 - **Module Structure**: 
   ```
   src/lib/graph/
-  ├── index.ts                    # Public API facade (90 lines)
+  ├── index.ts                      # Public API facade (90 lines)
+  ├── layout/
+  │   └── dagre.ts                  # Pure Dagre layout (598 lines, was pureDagreLayout.ts)
   ├── modules/
-  │   ├── BaseTransformer.ts      # Abstract base for all transformers
-  │   ├── CharacterTransformer.ts # Character-specific
-  │   ├── ElementTransformer.ts   # Element-specific
-  │   ├── PuzzleTransformer.ts    # Puzzle-specific
-  │   ├── TimelineTransformer.ts  # Timeline-specific
-  │   ├── GraphBuilder.ts         # Node/edge assembly
-  │   ├── EdgeBuilder.ts          # Edge creation
-  │   ├── ErrorHandler.ts         # Error management
-  │   └── LayoutOrchestrator.ts   # Layout coordination
+  │   ├── BaseTransformer.ts        # Abstract base for all transformers
+  │   ├── CharacterTransformer.ts   # Character-specific
+  │   ├── ElementTransformer.ts     # Element-specific
+  │   ├── PuzzleTransformer.ts      # Puzzle-specific
+  │   ├── TimelineTransformer.ts    # Timeline-specific
+  │   ├── GraphBuilder.ts           # Node/edge assembly
+  │   ├── EdgeBuilder.ts            # Smart edge creation with weighting
+  │   ├── ErrorHandler.ts           # Error management
+  │   ├── LayoutOrchestrator.ts     # Layout coordination
+  │   ├── LayoutQualityMetrics.ts   # Layout quality measurement (235 lines)
+  │   ├── VirtualEdgeInjector.ts    # Virtual edge handling (337 lines)
+  │   └── ElementClusterer.ts       # Post-layout clustering (296 lines)
   ```
 
 #### BaseTransformer Pattern (Code Duplication Solution)
@@ -166,14 +171,21 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
   }
   ```
 
-#### Pure Dagre Layout (Sprint 2 Refactor - January 17, 2025)
-- **Replaced**: Complex hybrid `puzzleCentricLayout.ts` with simple `pureDagreLayout.ts`
+#### Pure Dagre Layout (Sprint 2 Refactor - January 17-18, 2025)
+- **Location**: `src/lib/graph/layout/dagre.ts` (renamed from pureDagreLayout.ts)
+- **Size**: Reduced from 1290 to 598 lines (53.6% reduction)
 - **Strategy**: Natural edge flow creates semantic positioning
   - Requirements flow INTO puzzles (element→puzzle edges)
   - Rewards flow OUT OF puzzles (puzzle→element edges)
   - This creates automatic left-to-right layout without manual positioning
+- **Key Features**:
+  - Virtual edge injection for dual-role elements (VirtualEdgeInjector module)
+  - Element clustering with collision detection (ElementClusterer module)
+  - Layout quality metrics and reporting (LayoutQualityMetrics module)
+  - Adaptive spacing based on node density
+  - Smart edge weighting via EdgeBuilder pattern
 - **Algorithm**: Network-simplex for minimal edge crossings
-- **Configuration**: LR direction, 300px rank separation, fractional ranks enabled
+- **Configuration**: LR direction, adaptive rank separation (300-400px), fractional ranks enabled
 
 #### TypeScript Configuration
 - **Frontend**: `tsconfig.app.json` - ESNext modules, React JSX, path aliases
@@ -401,12 +413,16 @@ npm run test:coverage                    # Generate coverage reports
 ## Current Development Status
 
 - **Sprint 1**: ✅ Complete - Foundation, API integration, data layer
-- **Sprint 2**: 🚧 In Progress - React Flow visualization with pure Dagre layout
-  - ✅ Pure Dagre layout implementation (January 17, 2025)
-  - ✅ Natural edge flow for semantic positioning
-  - ✅ Requirements→Puzzles→Rewards horizontal flow
+- **Sprint 2**: 🚧 In Progress - React Flow visualization with modular graph system
+  - ✅ Complete graph module refactoring (January 17-18, 2025)
+  - ✅ Pure Dagre layout with 53.6% code reduction
+  - ✅ 12+ focused modules extracted from monolithic code
+  - ✅ Virtual edge injection for dual-role elements
+  - ✅ Element clustering with collision detection
+  - ✅ Layout quality metrics and reporting
+  - ✅ TypeScript strict mode compliance (all 126 errors fixed)
   - 🚧 Details panel and mutations pending
-  - 🚧 Experimental compound layout work in scripts/
+  - 🚧 Visual flow indicators and styling pending
 - **Sprint 3**: 📋 Planned - Character journey view
 - **Sprint 4**: 📋 Planned - Production polish
 
