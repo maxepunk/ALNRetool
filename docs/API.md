@@ -18,6 +18,8 @@ The ALNRetool API provides a secure proxy layer between the React frontend and N
    - [Elements](#elements)
    - [Puzzles](#puzzles)
    - [Timeline](#timeline)
+   - [Synthesized Data](#synthesized-data)
+   - [Mutations](#mutations)
    - [Cache Management](#cache-management)
 5. [Caching](#caching)
 6. [Input Validation](#input-validation)
@@ -386,6 +388,104 @@ Fetch all timeline events (game backstory).
 | notes | string | Design notes |
 | lastEditedTime | string | Last modification timestamp |
 
+### Synthesized Data
+
+Fetch all entities with bidirectional relationships synthesized for complete graph visualization.
+
+**Endpoint**: `GET /api/notion/synthesized`  
+**Authentication**: Required (X-API-Key)  
+**Rate Limit**: Both Express and Bottleneck apply  
+**Headers**: `X-Cache-Bypass: true` (optional) to force fresh fetch
+
+#### Success Response (200 OK)
+```json
+{
+  "data": {
+    "elements": [...],  // Array of elements with synthesized relationships
+    "puzzles": [...],   // Array of puzzles with synthesized relationships
+    "timestamp": "2025-01-19T12:34:56.789Z"
+  }
+}
+```
+
+#### Synthesized Relationships
+This endpoint automatically resolves bidirectional relationships that may be missing in Notion:
+- If element A lists puzzle B as requirement, puzzle B will list element A as required
+- If puzzle A lists element B as reward, element B will list puzzle A as rewarding
+- Eliminates data inconsistencies for graph visualization
+
+### Mutations
+
+Update entity properties in Notion databases.
+
+#### Update Character
+
+**Endpoint**: `PUT /api/notion/characters/:id`  
+**Authentication**: Required (X-API-Key)  
+**Rate Limit**: Both Express and Bottleneck apply
+
+##### Request Body
+```json
+{
+  "name": "Updated Character Name",
+  "type": "Player",
+  "tier": "Core",
+  // ... other character fields
+}
+```
+
+##### Response (200 OK)
+Returns the updated character object with invalidated cache.
+
+#### Update Element
+
+**Endpoint**: `PUT /api/notion/elements/:id`  
+**Authentication**: Required (X-API-Key)  
+**Rate Limit**: Both Express and Bottleneck apply
+
+##### Request Body
+```json
+{
+  "name": "Updated Element Name",
+  "descriptionText": "Updated description",
+  "status": "Writing Complete",
+  // ... other element fields
+}
+```
+
+##### Response (200 OK)
+Returns the updated element object with invalidated cache.
+
+#### Update Puzzle
+
+**Endpoint**: `PUT /api/notion/puzzles/:id`  
+**Authentication**: Required (X-API-Key)  
+**Rate Limit**: Both Express and Bottleneck apply
+
+##### Request Body
+```json
+{
+  "name": "Updated Puzzle Name",
+  "description": "Updated puzzle description",
+  "puzzleType": "Logic",
+  // ... other puzzle fields
+}
+```
+
+##### Response (200 OK)
+Returns the updated puzzle object with invalidated cache.
+
+#### Get Single Entity
+
+Each entity type also supports fetching by ID:
+
+- `GET /api/notion/characters/:id` - Get single character
+- `GET /api/notion/elements/:id` - Get single element
+- `GET /api/notion/puzzles/:id` - Get single puzzle
+- `GET /api/notion/timeline/:id` - Get single timeline event
+
+These endpoints use the same authentication and rate limiting as their list counterparts.
+
 ### Cache Management
 
 Manage the server-side cache for optimal performance.
@@ -633,80 +733,7 @@ async function fetchWithRetry(endpoint, options, retries = 3) {
 4. **Data Freshness**: Cached data is served by default (5-minute TTL). Fresh data available via cache bypass header.
 5. **Performance**: Cached requests return in <50ms. Initial Notion requests may take 1-3 seconds depending on database size.
 
-## Missing Mutation Endpoints (Sprint 2 Requirement)
 
-⚠️ **IMPORTANT**: As of Sprint 1 completion (Jan 14, 2025), the API only supports READ operations. Sprint 2 requires full mutation support which is currently NOT implemented.
-
-### Required Mutation Endpoints
-
-The following endpoints need to be implemented for Sprint 2:
-
-#### Update Character
-```http
-PUT /api/notion/characters/:id
-Content-Type: application/json
-X-API-Key: your-api-key-here
-
-{
-  "name": "Updated Name",
-  "tier": "Core",
-  "type": "Player",
-  // ... other Character fields
-}
-```
-
-#### Update Element
-```http
-PUT /api/notion/elements/:id
-PATCH /api/notion/elements/:id  // For partial updates
-```
-
-#### Update Puzzle
-```http
-PUT /api/notion/puzzles/:id
-PATCH /api/notion/puzzles/:id
-```
-
-#### Update Timeline Event
-```http
-PUT /api/notion/timeline/:id
-PATCH /api/notion/timeline/:id
-```
-
-#### Delete Operations (if needed)
-```http
-DELETE /api/notion/{entity}/:id
-```
-
-### Required Frontend Infrastructure
-
-The following React Query mutations need implementation:
-
-```typescript
-// Example mutation hook structure needed
-const useUpdateCharacter = () => {
-  return useMutation({
-    mutationFn: async (data) => updateCharacter(data),
-    onMutate: async (newData) => {
-      // Optimistic update logic
-    },
-    onError: (error, variables, context) => {
-      // Rollback logic
-    },
-    onSuccess: () => {
-      // Cache invalidation
-      toast.success('Character updated')
-    }
-  })
-}
-```
-
-### Testing Infrastructure Needed
-
-- MSW handlers for all mutation endpoints
-- Integration tests for mutation operations
-- Optimistic update test coverage
-- Error recovery test scenarios
 
 ## Support
 

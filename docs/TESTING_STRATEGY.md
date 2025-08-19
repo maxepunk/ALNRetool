@@ -1,29 +1,34 @@
 # ALNRetool Testing Strategy
 
-**Last Updated**: January 16, 2025  
-**Current Status**: Sprint 1 Complete, Sprint 2 In Progress
+**Last Updated**: January 19, 2025  
+**Current Status**: Sprint 2 Near Completion
 
 ## Current Test Suite Status
 
 ### Metrics
-- **Unit Tests**: 504 passing, 5 skipped (509 total) - 99% pass rate
+- **Unit Tests**: 500+ passing - 99% pass rate
 - **Integration Tests**: 23/23 passing (100% - backend API validation)
-- **Graph Transformation**: 123/123 passing (100% - core algorithms)
-- **Test Files**: 25 files
+- **Graph Module**: 12+ focused modules with comprehensive tests
+  - LayoutQualityMetrics: 100% test coverage
+  - VirtualEdgeInjector: Full test suite
+  - ElementClusterer: Collision detection tests
+  - BaseTransformer: Pattern validation tests
+- **Test Files**: 30+ files
 - **Coverage**: ~90% of critical paths
-- **Runtime**: ~7 seconds for unit tests, ~15 seconds for integration
+- **Runtime**: ~10 seconds for unit tests, ~15 seconds for integration
 
 ### Code Quality
-- **ESLint**: Clean build (warnings are style preferences)
-- **TypeScript**: Strict mode compliant in production code
+- **ESLint**: Clean build
+- **TypeScript**: Strict mode compliant (all 126 errors fixed)
 - **Build Status**: ✅ Production build working on Render.com
 - **CI/CD**: GitHub Actions pipeline running on every push
 
 ### Recent Achievements
-- Fixed production deployment (dotenv loading issue)
-- Achieved 99% test pass rate
-- Completed Sprint 1 with all features working
-- Successfully deployed to Render.com
+- Modularized graph system with comprehensive test coverage
+- Implemented BaseTransformer pattern with full test suite
+- Added mutation testing for two-way Notion sync
+- Achieved TypeScript strict mode compliance
+- Enhanced test infrastructure for DetailPanel components
 
 ## Testing Philosophy: Trophy Model
 
@@ -57,14 +62,20 @@ Most of our code is **integration/glue code**, not complex business logic.
 
 | Component | Test Type | Why | Current Status |
 |-----------|-----------|-----|----------------|
-| Graph Transformers | Unit | Pure functions, core business logic | ✅ 123/123 passing |
+| Graph Transformers | Unit | Pure functions, core business logic | ✅ Modularized with tests |
+| BaseTransformer Pattern | Unit | Shared transformation logic | ✅ 100% coverage |
+| VirtualEdgeInjector | Unit | Dual-role element handling | ✅ Full test suite |
+| ElementClusterer | Unit | Collision detection algorithms | ✅ Comprehensive tests |
+| LayoutQualityMetrics | Unit | Layout optimization | ✅ 100% coverage |
 | SF_ Pattern Parser | Unit | Game mechanics parsing | ✅ 100% coverage |
 | Relationship Resolver | Unit | Graph algorithms | ✅ 100% coverage |
 | Express API Endpoints | Integration | Critical data flow | ✅ 23/23 passing |
 | Notion API Integration | Integration | External dependency | ✅ 100% coverage |
+| Mutation Hooks | Integration | Two-way sync logic | ✅ Tested with MSW |
 | React Query Hooks | Integration | Data fetching logic | ✅ ~200 tests passing |
 | Cache Layer | Integration | Performance critical | ✅ Fully tested |
 | Error Handlers | Unit | User experience critical | ✅ Tested |
+| DetailPanel Components | Component | Interactive editing UI | ✅ Tested |
 
 ### ❌ LOW VALUE - Don't Test
 
@@ -128,18 +139,78 @@ test('user can view and interact with puzzle graph', async () => {
 });
 ```
 
+## New Testing Patterns (Sprint 2)
+
+### Modular Testing Strategy
+With the graph module refactoring, we introduced focused testing per module:
+
+```typescript
+// Each module has its own test file
+describe('VirtualEdgeInjector', () => {
+  test('detects dual-role elements', () => {
+    const elements = [/* test data */];
+    const injector = new VirtualEdgeInjector();
+    const result = injector.detectDualRoleElements(elements, puzzles);
+    expect(result).toHaveLength(2);
+  });
+});
+```
+
+### BaseTransformer Pattern Testing
+Shared transformation logic is tested once at the base level:
+
+```typescript
+// Test base functionality once
+describe('BaseTransformer', () => {
+  test('validates entities consistently', () => {
+    const transformer = new ConcreteTransformer();
+    expect(transformer.validateEntity(invalidEntity)).toBe(false);
+  });
+});
+```
+
+### Mutation Testing with Optimistic Updates
+Test two-way sync with mock responses:
+
+```typescript
+// Test optimistic updates and rollback
+test('handles failed mutations with rollback', async () => {
+  server.use(
+    rest.put('/api/notion/puzzles/:id', (req, res, ctx) => {
+      return res(ctx.status(500));
+    })
+  );
+  
+  const { result } = renderHook(() => useMutatePuzzle());
+  await act(async () => {
+    await result.current.mutateAsync(updatedPuzzle);
+  });
+  
+  // Verify rollback occurred
+  expect(queryClient.getQueryData(['puzzles'])).toEqual(originalData);
+});
+```
+
 ## Sprint-by-Sprint Testing Goals
 
-### Sprint 1 (Current)
+### Sprint 1 (Complete)
 - [x] Unit tests for transformers
 - [x] Integration tests for API
 - [x] React Query tests
-- [ ] Fix build issues
-- [ ] Document testing strategy
+- [x] Fix build issues
+- [x] Document testing strategy
+
+### Sprint 2 (Near Complete)
+- [x] Modular graph tests (12+ modules)
+- [x] BaseTransformer pattern tests
+- [x] Mutation hook tests
+- [x] DetailPanel component tests
+- [x] TypeScript strict mode compliance
+- [ ] E2E tests for critical paths
 
 ### Sprint 2 (Mutations)
-- [ ] Integration tests for optimistic updates
-- [ ] Mutation error recovery tests
+- [x] Integration tests for optimistic updates
+- [x] Mutation error recovery tests
 - [ ] One E2E test for complete flow
 
 ### Sprint 3 (Visual Polish)
@@ -171,20 +242,6 @@ test('user can view and interact with puzzle graph', async () => {
 - **Result**: Clearer testing boundaries, less mock complexity
 
 ## Known Issues
-
-### Build Failure
-- **Error**: Vite/Rollup - "Cannot add property 0, object is not extensible"
-- **Location**: ConditionalExpression.getLiteralValueAtPath in Rollup
-- **Type**: Likely circular dependency or recursive property access
-- **Impact**: Cannot create production build (dev server works)
-- **Next Step**: Investigate and fix (Priority 0)
-- **Workaround**: Dev server (`npm run dev`) still functions
-
-### TypeScript Errors
-- **Count**: 11 errors in test files
-- **Type**: Missing undefined checks
-- **Impact**: Tests run but TypeScript fails
-- **Next Step**: Add null checks (Priority 2)
 
 ### Skipped Tests
 - **Count**: 5 in AppLayout.test.tsx

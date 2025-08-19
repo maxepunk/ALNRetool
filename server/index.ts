@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit';
 import { config } from 'dotenv';
 import { existsSync } from 'fs';
 import path from 'path';
-import notionRoutes from './routes/notion.js';
+import notionRoutes from './routes/notion/index.js';
 import cacheRoutes from './routes/cache.js';
 import { apiKeyAuth } from './middleware/auth.js';
 import { validatePagination } from './middleware/validation.js';
@@ -138,5 +138,5 @@ process.on('uncaughtException', (error) => {
 });
 
 app.listen(port, () => {
-  console.log(`[server]: Server is running at http://localhost:${port}`);
+  console.log(`[server]: Server is running at http://localhost:${port} (reloaded)`);
 });
