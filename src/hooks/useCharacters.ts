@@ -1,15 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { charactersApi, type PaginationParams } from '@/services/api'
-import { queryKeys } from '@/lib/queryKeys'
-import { QUERY_STALE_TIME } from '@/lib/queryClient'
-
-/**
- * Hook options for fetching characters
- */
-interface UseCharactersOptions extends PaginationParams {
-  enabled?: boolean
-  staleTime?: number
-}
+import { charactersApi } from '@/services/api';
+import { queryKeys } from '@/lib/queryKeys';
+import { useEntityData, useAllEntityData, type UseEntityDataOptions } from './generic/useEntityData';
+import type { Character } from '@/types/notion/app';
 
 /**
  * Custom hook for fetching characters from Notion
@@ -29,43 +21,12 @@ interface UseCharactersOptions extends PaginationParams {
  * // Disabled until ready
  * const { data } = useCharacters({ enabled: false })
  */
-export function useCharacters(options: UseCharactersOptions = {}) {
-  const { limit, cursor, enabled = true, staleTime = QUERY_STALE_TIME } = options
-
-  const query = useQuery({
-    queryKey: queryKeys.charactersList({ limit, cursor }),
-    queryFn: () => charactersApi.list({ limit, cursor }),
-    enabled,
-    staleTime,
-    gcTime: staleTime * 2, // Keep in cache for 2x stale time
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: 'always',
-  })
-
-  // Extract pagination metadata from the response
-  const response = query.data
-  const characters = response?.data ?? undefined
-  const nextCursor = response?.nextCursor ?? undefined
-  const hasMore = response?.hasMore ?? false
-
-  return {
-    // Data
-    data: characters,
-    nextCursor,
-    hasMore,
-    
-    // Query states
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    isSuccess: query.isSuccess,
-    isError: query.isError,
-    
-    // Error handling
-    error: query.error,
-    
-    // Refetch function
-    refetch: query.refetch,
-  }
+export function useCharacters(options: UseEntityDataOptions = {}) {
+  return useEntityData<Character>(
+    charactersApi,
+    queryKeys.characters(),
+    options
+  );
 }
 
 /**
@@ -78,16 +39,11 @@ export function useCharacters(options: UseCharactersOptions = {}) {
  * @example
  * const { data: allCharacters, isLoading } = useAllCharacters()
  */
-export function useAllCharacters(options: Omit<UseCharactersOptions, 'limit' | 'cursor'> = {}) {
-  const { enabled = true, staleTime = QUERY_STALE_TIME } = options
-
-  return useQuery({
-    queryKey: queryKeys.characters(), // Different key from paginated version
-    queryFn: () => charactersApi.listAll(),
-    enabled,
-    staleTime,
-    gcTime: staleTime * 2,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: 'always',
-  })
+export function useAllCharacters(options: Omit<UseEntityDataOptions, 'limit' | 'cursor'> = {}) {
+  return useAllEntityData<Character>(
+    charactersApi,
+    queryKeys.characters(),
+    options,
+    'useAllCharacters' // Debug label
+  );
 }

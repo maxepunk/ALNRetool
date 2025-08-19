@@ -1,15 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { elementsApi, type PaginationParams } from '@/services/api'
-import { queryKeys } from '@/lib/queryKeys'
-import { QUERY_STALE_TIME } from '@/lib/queryClient'
-
-/**
- * Hook options for fetching elements
- */
-interface UseElementsOptions extends PaginationParams {
-  enabled?: boolean
-  staleTime?: number
-}
+import { elementsApi } from '@/services/api';
+import { queryKeys } from '@/lib/queryKeys';
+import { useEntityData, useAllEntityData, type UseEntityDataOptions } from './generic/useEntityData';
+import type { Element } from '@/types/notion/app';
 
 /**
  * Custom hook for fetching elements from Notion
@@ -29,43 +21,12 @@ interface UseElementsOptions extends PaginationParams {
  * // Disabled until ready
  * const { data } = useElements({ enabled: false })
  */
-export function useElements(options: UseElementsOptions = {}) {
-  const { limit, cursor, enabled = true, staleTime = QUERY_STALE_TIME } = options
-
-  const query = useQuery({
-    queryKey: queryKeys.elementsList({ limit, cursor }),
-    queryFn: () => elementsApi.list({ limit, cursor }),
-    enabled,
-    staleTime,
-    gcTime: staleTime * 2, // Keep in cache for 2x stale time
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: 'always',
-  })
-
-  // Extract pagination metadata from the response
-  const response = query.data
-  const elements = response?.data ?? undefined
-  const nextCursor = response?.nextCursor ?? null
-  const hasMore = response?.hasMore ?? false
-
-  return {
-    // Data
-    data: elements,
-    nextCursor,
-    hasMore,
-    
-    // Query states
-    isLoading: query.isLoading,
-    isFetching: query.isFetching,
-    isSuccess: query.isSuccess,
-    isError: query.isError,
-    
-    // Error handling
-    error: query.error,
-    
-    // Refetch function
-    refetch: query.refetch,
-  }
+export function useElements(options: UseEntityDataOptions = {}) {
+  return useEntityData<Element>(
+    elementsApi,
+    queryKeys.elements(),
+    options
+  );
 }
 
 /**
@@ -78,21 +39,11 @@ export function useElements(options: UseElementsOptions = {}) {
  * @example
  * const { data: allElements, isLoading } = useAllElements()
  */
-export function useAllElements(options: Omit<UseElementsOptions, 'limit' | 'cursor'> = {}) {
-  const { enabled = true, staleTime = QUERY_STALE_TIME } = options
-
-  return useQuery({
-    queryKey: queryKeys.elements(), // Different key from paginated version
-    queryFn: async () => {
-      console.log('[useAllElements] Starting to fetch all elements');
-      const result = await elementsApi.listAll();
-      console.log('[useAllElements] Fetched total elements:', result.length);
-      return result;
-    },
-    enabled,
-    staleTime,
-    gcTime: staleTime * 2,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: 'always',
-  })
+export function useAllElements(options: Omit<UseEntityDataOptions, 'limit' | 'cursor'> = {}) {
+  return useAllEntityData<Element>(
+    elementsApi,
+    queryKeys.elements(),
+    options,
+    'useAllElements' // Debug label
+  );
 }

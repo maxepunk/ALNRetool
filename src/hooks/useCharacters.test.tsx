@@ -116,7 +116,7 @@ describe('useCharacters', () => {
 
       // Second page with cursor
       const { result: secondPage } = renderHook(
-        () => useCharacters({ limit: 3, cursor: nextCursor }),
+        () => useCharacters({ limit: 3, cursor: nextCursor || undefined }),
         {
           wrapper: createWrapper(queryClient),
         }
