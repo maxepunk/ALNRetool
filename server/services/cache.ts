@@ -154,6 +154,25 @@ export class CacheService {
     }
     return false;
   }
+
+  /**
+   * Invalidate cache entries matching a pattern
+   * @param pattern - Pattern to match keys (e.g., 'notion_characters_*')
+   */
+  invalidatePattern(pattern: string): number {
+    const keys = this.cache.keys();
+    const regex = new RegExp(pattern.replace(/\*/g, '.*'));
+    let deletedCount = 0;
+    
+    keys.forEach(key => {
+      if (regex.test(key)) {
+        this.cache.del(key);
+        deletedCount++;
+      }
+    });
+    
+    return deletedCount;
+  }
 }
 
 // Singleton instance for application-wide caching

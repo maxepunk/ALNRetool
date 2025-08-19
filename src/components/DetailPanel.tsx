@@ -20,6 +20,13 @@ import type {
   Puzzle,
   TimelineEvent,
 } from '@/types/notion/app';
+import {
+  useUpdateCharacter,
+  useUpdateElement,
+  useUpdatePuzzle,
+  useUpdateTimelineEvent,
+  validateUpdates,
+} from '@/hooks/mutations';
 
 // Entity type union
 type Entity = Character | Element | Puzzle | TimelineEvent;
@@ -353,12 +360,38 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   onClose,
   onSave,
   isLoading,
-  isSaving,
-  error,
+  isSaving: externalIsSaving,
+  error: externalError,
 }) => {
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+  // Get appropriate mutation hook based on entity type
+  const updateCharacter = useUpdateCharacter();
+  const updateElement = useUpdateElement();
+  const updatePuzzle = useUpdatePuzzle();
+  const updateTimeline = useUpdateTimelineEvent();
+
+  // Select the right mutation based on entity type
+  const mutation = useMemo(() => {
+    switch (entityType) {
+      case 'character':
+        return updateCharacter;
+      case 'element':
+        return updateElement;
+      case 'puzzle':
+        return updatePuzzle;
+      case 'timeline':
+        return updateTimeline;
+      default:
+        return null;
+    }
+  }, [entityType, updateCharacter, updateElement, updatePuzzle, updateTimeline]);
+
+  // Combine external and internal saving states
+  const isSaving = externalIsSaving || mutation?.isPending || false;
+  const error = externalError || mutation?.error?.message;
 
   // Get field configurations based on entity type
   const fieldConfigs = useMemo(() => {
@@ -431,21 +464,46 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       return;
     }
     
-    if (onSave && entity) {
-      // Only send changed fields
-      const changes: Partial<Entity> = {};
-      Object.keys(formData).forEach((key) => {
-        if (formData[key as keyof Entity] !== entity[key as keyof Entity]) {
-          changes[key as keyof Entity] = formData[key as keyof Entity];
-        }
-      });
-      
-      if (Object.keys(changes).length > 0) {
+    if (!entity || !mutation) {
+      return;
+    }
+
+    // Only send changed fields
+    const changes: Partial<Entity> = {};
+    Object.keys(formData).forEach((key) => {
+      if (formData[key as keyof Entity] !== entity[key as keyof Entity]) {
+        changes[key as keyof Entity] = formData[key as keyof Entity];
+      }
+    });
+    
+    if (Object.keys(changes).length === 0) {
+      return; // No changes to save
+    }
+
+    // Validate updates using the utility function
+    const validationError = validateUpdates(changes, entityType as any);
+    if (validationError) {
+      setValidationErrors({ _form: validationError });
+      return;
+    }
+
+    try {
+      // Use mutation if available, otherwise fallback to onSave prop
+      if (mutation) {
+        await mutation.mutateAsync({ 
+          id: entity.id, 
+          updates: changes 
+        });
+        setIsDirty(false);
+      } else if (onSave) {
         await onSave(changes);
         setIsDirty(false);
       }
+    } catch (error) {
+      // Error is handled by the mutation hook's toast notification
+      console.error('Failed to save changes:', error);
     }
-  }, [formData, entity, onSave, validateForm]);
+  }, [formData, entity, mutation, onSave, validateForm, entityType]);
 
   // Handle cancel
   const handleCancel = useCallback(() => {

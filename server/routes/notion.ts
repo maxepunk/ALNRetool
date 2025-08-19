@@ -12,6 +12,9 @@ import {
   transformPuzzle,
   transformTimelineEvent
 } from '../../src/types/notion/transforms.js';
+import {
+  toNotionProperties
+} from '../services/notionPropertyMappers.js';
 import type {
   APIResponse,
   APIError,
@@ -145,6 +148,77 @@ router.get('/timeline', asyncHandler(async (req: Request, res: Response) => {
     });
   }
   await handleCachedNotionRequest(req, res, 'timeline', databaseId, transformTimelineEvent);
+}));
+
+// PUT /api/notion/:entityType/:id - Update an entity in Notion
+router.put('/:entityType/:id', asyncHandler(async (req: Request, res: Response) => {
+  const { entityType, id } = req.params;
+  const updates = req.body;
+
+  // Validate entity type
+  const validTypes = ['characters', 'elements', 'puzzles', 'timeline'];
+  if (!validTypes.includes(entityType)) {
+    return res.status(400).json({
+      statusCode: 400,
+      code: 'INVALID_ENTITY_TYPE',
+      message: `Invalid entity type: ${entityType}. Must be one of: ${validTypes.join(', ')}`
+    });
+  }
+
+  try {
+    // Convert updates to Notion property format
+    // toNotionProperties expects the plural form as used in the API
+    const properties = toNotionProperties(entityType as 'characters' | 'elements' | 'puzzles' | 'timeline', updates);
+
+    // Update the page in Notion
+    const updatedPage = await notion.pages.update({
+      page_id: id,
+      properties
+    }) as NotionPage;
+
+    // Transform the updated page back to our app format
+    let transformedEntity;
+    switch (entityType) {
+      case 'characters':
+        transformedEntity = transformCharacter(updatedPage);
+        break;
+      case 'elements':
+        transformedEntity = transformElement(updatedPage);
+        break;
+      case 'puzzles':
+        transformedEntity = transformPuzzle(updatedPage);
+        break;
+      case 'timeline':
+        transformedEntity = transformTimelineEvent(updatedPage);
+        break;
+    }
+
+    // Invalidate cache for this entity type
+    const cacheKey = `notion_${entityType}_*`;
+    cacheService.invalidatePattern(cacheKey);
+
+    // Return the updated entity
+    res.json(transformedEntity);
+  } catch (error) {
+    console.error(`Error updating ${entityType} ${id}:`, error);
+    
+    // Handle Notion API errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const notionError = error as any;
+      return res.status(400).json({
+        statusCode: 400,
+        code: notionError.code,
+        message: notionError.message || `Failed to update ${entityType}`
+      });
+    }
+    
+    // Generic error
+    return res.status(500).json({
+      statusCode: 500,
+      code: 'UPDATE_ERROR',
+      message: `Failed to update ${entityType}: ${error instanceof Error ? error.message : 'Unknown error'}`
+    });
+  }
 }));
 
 export default router;

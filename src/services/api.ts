@@ -157,6 +157,19 @@ export const charactersApi = {
 
     return allCharacters;
   },
+
+  /**
+   * Update a character
+   */
+  update: async (id: string, updates: Partial<Character>): Promise<Character> => {
+    return fetcher<Character>(`/notion/characters/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+  },
 };
 
 /**
@@ -187,6 +200,19 @@ export const elementsApi = {
     }
 
     return allElements;
+  },
+
+  /**
+   * Update an element
+   */
+  update: async (id: string, updates: Partial<Element>): Promise<Element> => {
+    return fetcher<Element>(`/notion/elements/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
   },
 };
 
@@ -219,6 +245,19 @@ export const puzzlesApi = {
 
     return allPuzzles;
   },
+
+  /**
+   * Update a puzzle
+   */
+  update: async (id: string, updates: Partial<Puzzle>): Promise<Puzzle> => {
+    return fetcher<Puzzle>(`/notion/puzzles/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+  },
 };
 
 /**
@@ -249,6 +288,19 @@ export const timelineApi = {
     }
 
     return allEvents;
+  },
+
+  /**
+   * Update a timeline event
+   */
+  update: async (id: string, updates: Partial<TimelineEvent>): Promise<TimelineEvent> => {
+    return fetcher<TimelineEvent>(`/notion/timeline/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
   },
 };
 
