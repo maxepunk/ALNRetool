@@ -150,6 +150,74 @@ router.get('/timeline', asyncHandler(async (req: Request, res: Response) => {
   await handleCachedNotionRequest(req, res, 'timeline', databaseId, transformTimelineEvent);
 }));
 
+// GET /api/notion/synthesized - Get all data with synthesized bidirectional relationships
+router.get('/synthesized', asyncHandler(async (req: Request, res: Response) => {
+  const { synthesizeBidirectionalRelationships } = await import('../services/relationshipSynthesizer.js');
+  
+  // Fetch all elements and puzzles
+  const elementsDb = process.env.NOTION_ELEMENTS_DB;
+  const puzzlesDb = process.env.NOTION_PUZZLES_DB;
+  
+  if (!elementsDb || !puzzlesDb) {
+    return res.status(500).json({ 
+      statusCode: 500, 
+      code: 'CONFIG_ERROR', 
+      message: 'Database IDs not configured' 
+    });
+  }
+  
+  // Check cache first
+  const cacheKey = 'synthesized_all';
+  const bypassCache = req.headers['x-cache-bypass'] === 'true';
+  
+  if (!bypassCache) {
+    const cached = cacheService.get(cacheKey);
+    if (cached) {
+      res.setHeader('X-Cache-Hit', 'true');
+      return res.json(cached);
+    }
+  }
+  
+  // Fetch all data with pagination
+  const allElements: Element[] = [];
+  const allPuzzles: Puzzle[] = [];
+  
+  // Fetch all elements
+  let elementCursor: string | undefined;
+  let hasMoreElements = true;
+  while (hasMoreElements) {
+    const result = await fetchAllPages(elementsDb, 100, elementCursor);
+    allElements.push(...result.pages.map(transformElement));
+    elementCursor = result.nextCursor || undefined;
+    hasMoreElements = result.hasMore;
+  }
+  
+  // Fetch all puzzles
+  let puzzleCursor: string | undefined;
+  let hasMorePuzzles = true;
+  while (hasMorePuzzles) {
+    const result = await fetchAllPages(puzzlesDb, 100, puzzleCursor);
+    allPuzzles.push(...result.pages.map(transformPuzzle));
+    puzzleCursor = result.nextCursor || undefined;
+    hasMorePuzzles = result.hasMore;
+  }
+  
+  // Synthesize bidirectional relationships
+  const synthesized = synthesizeBidirectionalRelationships(allElements, allPuzzles);
+  
+  const response = {
+    elements: synthesized.elements,
+    puzzles: synthesized.puzzles,
+    totalElements: synthesized.elements.length,
+    totalPuzzles: synthesized.puzzles.length
+  };
+  
+  // Cache for 5 minutes
+  cacheService.set(cacheKey, response);
+  res.setHeader('X-Cache-Hit', 'false');
+  res.json(response);
+}));
+
 // PUT /api/notion/:entityType/:id - Update an entity in Notion
 router.put('/:entityType/:id', asyncHandler(async (req: Request, res: Response) => {
   const { entityType, id } = req.params;

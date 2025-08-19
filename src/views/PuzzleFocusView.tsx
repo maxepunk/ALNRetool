@@ -4,15 +4,14 @@
  * Main view for Sprint 1 - shows puzzle relationships and dependencies
  */
 
-import { useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import type { Node, OnSelectionChangeParams } from '@xyflow/react';
 
 // Data hooks
 import { useAllCharacters } from '@/hooks/useCharacters';
-import { useAllElements } from '@/hooks/useElements';
-import { useAllPuzzles } from '@/hooks/usePuzzles';
 import { useAllTimeline } from '@/hooks/useTimeline';
+import { useSynthesizedData } from '@/hooks/useSynthesizedData';
 
 // Components
 import GraphView from '@/components/graph/GraphView';
@@ -33,11 +32,41 @@ export default function PuzzleFocusView() {
   const { puzzleId } = useParams();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   
-  // Fetch data from Notion via React Query - fetching ALL data to avoid pagination issues
+  // Fetch data from Notion via React Query - using synthesized data for proper bidirectional relationships
   const { data: characters = [], isLoading: loadingCharacters } = useAllCharacters();
-  const { data: elements = [], isLoading: loadingElements } = useAllElements();
-  const { data: puzzles = [], isLoading: loadingPuzzles } = useAllPuzzles();
+  const { data: synthesizedData, isLoading: loadingSynthesized } = useSynthesizedData();
   const { data: timeline = [], isLoading: loadingTimeline } = useAllTimeline();
+  
+  // Extract elements and puzzles from synthesized data
+  const elements = synthesizedData?.elements || [];
+  const puzzles = synthesizedData?.puzzles || [];
+  
+  // Debug: Log data counts when loaded
+  React.useEffect(() => {
+    if (!loadingSynthesized && elements.length > 0) {
+      console.log('[PuzzleFocusView] Synthesized data loaded - Elements:', elements.length, 'Puzzles:', puzzles.length);
+      // Check for elements with puzzle relationships
+      const elementsWithPuzzleRefs = elements.filter(e => 
+        (e.requiredForPuzzleIds?.length > 0) || (e.rewardedByPuzzleIds?.length > 0)
+      );
+      console.log('[PuzzleFocusView] Elements with puzzle relationships:', elementsWithPuzzleRefs.length);
+      
+      const blackMarketCard = elements.find(e => e.id === '1dc2f33d-583f-8056-bf34-c6a9922067d8');
+      console.log('[PuzzleFocusView] Black Market Business card found:', !!blackMarketCard);
+      if (blackMarketCard) {
+        console.log('[PuzzleFocusView] Black Market card relationships:', {
+          rewardedByPuzzleIds: blackMarketCard.rewardedByPuzzleIds,
+          requiredForPuzzleIds: blackMarketCard.requiredForPuzzleIds
+        });
+      }
+      
+      // Check first and last element to see range
+      if (elements.length > 0) {
+        console.log('[PuzzleFocusView] First element:', elements[0]?.name);
+        console.log('[PuzzleFocusView] Last element:', elements[elements.length - 1]?.name);
+      }
+    }
+  }, [elements, loadingSynthesized, puzzles]);
 
   // Helper function to get entity from node
   const getEntityFromNode = useCallback((node: Node): Character | Element | Puzzle | TimelineEvent | null => {
@@ -57,7 +86,7 @@ export default function PuzzleFocusView() {
     const entity = node.data?.entity;
     if (entity && typeof entity === 'object' && !Array.isArray(entity)) {
       // Type narrowing for the 'in' operator
-      const obj = entity as Record<string, any>;
+      const obj = entity as Record<string, unknown>;
       if ('tier' in obj) return 'character';
       if ('descriptionText' in obj) return 'element';
       if ('descriptionSolution' in obj) return 'puzzle';
@@ -77,7 +106,7 @@ export default function PuzzleFocusView() {
   }, []);
   
   // Combined loading state
-  const isLoading = loadingCharacters || loadingElements || loadingPuzzles || loadingTimeline;
+  const isLoading = loadingCharacters || loadingSynthesized || loadingTimeline;
   
   // Handle node click
   const handleNodeClick = useCallback((node: Node) => {
@@ -183,6 +212,7 @@ export default function PuzzleFocusView() {
               isLoading={false}
               isSaving={false}
               error={null}
+              allEntities={{ characters, elements, puzzles, timeline }}
             />
           )}
         </div>

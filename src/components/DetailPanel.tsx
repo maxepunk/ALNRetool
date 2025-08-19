@@ -18,6 +18,7 @@ import {
   ANIMATION_EASING,
   getSafeAnimationClasses,
 } from '@/lib/animations';
+import { useGraphAnimation } from '@/contexts/GraphAnimationContext';
 import type {
   Character,
   Element,
@@ -34,6 +35,24 @@ import {
 
 // Entity type union
 type Entity = Character | Element | Puzzle | TimelineEvent;
+
+// Helper function to find entity by ID across all entity types
+const findEntityById = (
+  id: string, 
+  entities?: {
+    characters?: Character[];
+    elements?: Element[];
+    puzzles?: Puzzle[];
+    timeline?: TimelineEvent[];
+  }
+): Entity | undefined => {
+  if (!entities) return undefined;
+  
+  return entities.characters?.find(c => c.id === id) ||
+         entities.elements?.find(e => e.id === id) ||
+         entities.puzzles?.find(p => p.id === id) ||
+         entities.timeline?.find(t => t.id === id);
+};
 
 // Field editor types
 type FieldType = 'text' | 'textarea' | 'select' | 'multiselect' | 'date' | 'url' | 'relation';
@@ -59,6 +78,13 @@ interface DetailPanelProps {
   isLoading?: boolean;
   isSaving?: boolean;
   error?: string | null;
+  // Pass all entities for relationship ID-to-name mapping
+  allEntities?: {
+    characters?: Character[];
+    elements?: Element[];
+    puzzles?: Puzzle[];
+    timeline?: TimelineEvent[];
+  };
 }
 
 // Remove unused type guards - we use entityType prop instead
@@ -91,6 +117,12 @@ const CHARACTER_FIELDS: FieldConfig[] = [
   { key: 'characterLogline', label: 'Character Logline', type: 'text' },
   { key: 'overview', label: 'Overview', type: 'textarea', rows: 4 },
   { key: 'emotionTowardsCEO', label: 'Emotion Towards CEO', type: 'text' },
+  // Relationship fields
+  { key: 'ownedElementIds', label: 'Owned Elements', type: 'relation' },
+  { key: 'associatedElementIds', label: 'Associated Elements', type: 'relation' },
+  { key: 'characterPuzzleIds', label: 'Character Puzzles', type: 'relation' },
+  { key: 'eventIds', label: 'Timeline Events', type: 'relation' },
+  { key: 'connections', label: 'Character Connections', type: 'relation', readOnly: true }, // Rollup field
 ];
 
 const ELEMENT_FIELDS: FieldConfig[] = [
@@ -145,6 +177,15 @@ const ELEMENT_FIELDS: FieldConfig[] = [
   },
   { key: 'productionNotes', label: 'Production Notes', type: 'textarea', rows: 3 },
   { key: 'contentLink', label: 'Content Link', type: 'url' },
+  // Relationship fields
+  { key: 'ownerId', label: 'Owner', type: 'relation' },
+  { key: 'containerId', label: 'Container', type: 'relation' },
+  { key: 'contentIds', label: 'Contents', type: 'relation' },
+  { key: 'timelineEventId', label: 'Timeline Event', type: 'relation' },
+  { key: 'requiredForPuzzleIds', label: 'Required For Puzzles', type: 'relation' },
+  { key: 'rewardedByPuzzleIds', label: 'Rewarded By Puzzles', type: 'relation' },
+  { key: 'containerPuzzleId', label: 'Container Puzzle', type: 'relation' },
+  { key: 'associatedCharacterIds', label: 'Associated Characters', type: 'relation', readOnly: true }, // Rollup field
 ];
 
 const PUZZLE_FIELDS: FieldConfig[] = [
@@ -161,12 +202,22 @@ const PUZZLE_FIELDS: FieldConfig[] = [
     ],
   },
   { key: 'assetLink', label: 'Asset Link', type: 'url' },
+  // Relationship fields
+  { key: 'puzzleElementIds', label: 'Puzzle Elements', type: 'relation' },
+  { key: 'lockedItemId', label: 'Locked Item', type: 'relation' },
+  { key: 'ownerId', label: 'Owner', type: 'relation', readOnly: true }, // Rollup field (from Element owner)
+  { key: 'rewardIds', label: 'Rewards', type: 'relation' },
+  { key: 'parentItemId', label: 'Parent Item', type: 'relation' },
+  { key: 'subPuzzleIds', label: 'Sub-Puzzles', type: 'relation' },
 ];
 
 const TIMELINE_FIELDS: FieldConfig[] = [
   { key: 'description', label: 'Description', type: 'textarea', rows: 3, required: true },
   { key: 'date', label: 'Date', type: 'date', required: true },
   { key: 'notes', label: 'Notes', type: 'textarea', rows: 3 },
+  // Relationship fields
+  { key: 'charactersInvolvedIds', label: 'Characters Involved', type: 'relation' },
+  { key: 'memoryEvidenceIds', label: 'Memory/Evidence', type: 'relation' },
 ];
 
 // Collapsible section component
@@ -174,13 +225,25 @@ interface SectionProps {
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
 }
 
-const CollapsibleSection: React.FC<SectionProps> = ({ title, children, defaultOpen = true }) => {
+const CollapsibleSection: React.FC<SectionProps> = ({ 
+  title, 
+  children, 
+  defaultOpen = true,
+  onMouseEnter,
+  onMouseLeave 
+}) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
   return (
-    <div className="space-y-3">
+    <div 
+      className="space-y-3"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 w-full text-left hover:text-foreground/80 transition-colors"
@@ -203,6 +266,12 @@ interface FieldEditorProps {
   onFocus?: (fieldKey: string) => void;
   onBlur?: () => void;
   isFocused?: boolean;
+  allEntities?: {
+    characters?: Character[];
+    elements?: Element[];
+    puzzles?: Puzzle[];
+    timeline?: TimelineEvent[];
+  };
 }
 
 const FieldEditor: React.FC<FieldEditorProps> = ({ 
@@ -213,7 +282,8 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
   disabled,
   onFocus,
   onBlur,
-  isFocused 
+  isFocused,
+  allEntities 
 }) => {
   switch (field.type) {
     case 'text':
@@ -394,6 +464,73 @@ const FieldEditor: React.FC<FieldEditorProps> = ({
         </div>
       );
 
+    case 'relation':
+      // Debug: log what we're receiving
+      console.log(`Relation field ${field.key}:`, value, typeof value);
+      const relationValues = Array.isArray(value) ? value : (value ? [value] : []);
+      console.log(`Processed relationValues:`, relationValues);
+      
+      // Additional debug for empty arrays
+      if (Array.isArray(value) && value.length === 0) {
+        console.log(`Empty array for ${field.key}`);
+      }
+      
+      // Helper to determine if a value is an ID (UUID format) or a name/text
+      const isUUID = (str: string): boolean => {
+        // Notion IDs are typically 32 chars with hyphens in UUID format
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+      };
+      
+      return (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">
+            {field.label}
+            {field.required && <span className="text-destructive ml-1">*</span>}
+            {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {relationValues.length > 0 ? (
+              relationValues.map((val: string, index: number) => {
+                // Check if the value is an ID or already a name/description
+                let displayName: string;
+                let tooltipText: string;
+                
+                if (isUUID(val)) {
+                  // It's an ID, try to find the entity
+                  const entity = findEntityById(val, allEntities);
+                  displayName = entity?.name || `${val.slice(0, 8)}...`;
+                  tooltipText = entity ? `${entity.name} (ID: ${val})` : `ID: ${val}`;
+                } else {
+                  // It's already a name or description, display as-is
+                  // Truncate long text for display
+                  displayName = val.length > 50 ? `${val.slice(0, 47)}...` : val;
+                  tooltipText = val;
+                }
+                
+                return (
+                  <Badge
+                    key={`${field.key}-${index}`}
+                    variant={field.readOnly ? "secondary" : "outline"}
+                    className={cn(
+                      "text-xs max-w-xs",
+                      field.readOnly ? "cursor-default opacity-80" : "cursor-default"
+                    )}
+                    title={tooltipText}
+                  >
+                    {displayName}
+                  </Badge>
+                );
+              })
+            ) : (
+              <span className="text-muted-foreground text-sm">
+                No relationships
+              </span>
+            )}
+          </div>
+          {error && <p className="text-xs text-destructive">{error}</p>}
+        </div>
+      );
+
     default:
       return null;
   }
@@ -406,6 +543,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   isLoading,
   isSaving: externalIsSaving,
   error: externalError,
+  allEntities,
 }) => {
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [isDirty, setIsDirty] = useState(false);
@@ -417,6 +555,16 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [hasValidationError, setHasValidationError] = useState(false);
+
+  // Graph animation context for coordinated hover effects
+  // Wrap in try-catch since context might not be available if DetailPanel is used outside GraphAnimationProvider
+  let graphAnimation;
+  try {
+    graphAnimation = useGraphAnimation();
+  } catch {
+    // Context not available - DetailPanel can still work without animations
+    graphAnimation = null;
+  }
 
   // Get appropriate mutation hook based on entity type
   const updateCharacter = useUpdateCharacter();
@@ -463,6 +611,17 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // Initialize form data when entity changes
   useMemo(() => {
     if (entity) {
+      console.log('Entity received in DetailPanel:', entity);
+      console.log('Entity type:', entityType);
+      // Log specific relationship fields for debugging
+      if (entityType === 'element') {
+        console.log('Element relationship fields:', {
+          requiredForPuzzleIds: (entity as any).requiredForPuzzleIds,
+          rewardedByPuzzleIds: (entity as any).rewardedByPuzzleIds,
+          containerPuzzleId: (entity as any).containerPuzzleId,
+          associatedCharacterIds: (entity as any).associatedCharacterIds,
+        });
+      }
       setFormData({ ...entity });
       setIsDirty(false);
       setValidationErrors({});
@@ -471,7 +630,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       setSaveSuccess(false);
       setHasValidationError(false);
     }
-  }, [entity]);
+  }, [entity, entityType]);
 
   // Handle entrance animation
   useEffect(() => {
@@ -524,8 +683,18 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     const errors: Record<string, string> = {};
     
     fieldConfigs.forEach((field) => {
-      if (field.required && !formData[field.key as keyof Entity]) {
-        errors[field.key] = `${field.label} is required`;
+      const currentValue = formData[field.key as keyof Entity];
+      const originalValue = entity ? entity[field.key as keyof Entity] : undefined;
+      
+      // Only validate required fields if they were changed from non-empty to empty
+      if (field.required) {
+        const isCurrentlyEmpty = !currentValue || (typeof currentValue === 'string' && currentValue.trim() === '');
+        const wasOriginallyEmpty = !originalValue || (typeof originalValue === 'string' && originalValue.trim() === '');
+        
+        // Only show error if field was not empty before but is empty now
+        if (isCurrentlyEmpty && !wasOriginallyEmpty) {
+          errors[field.key] = `${field.label} is required`;
+        }
       }
       
       // URL validation
@@ -547,7 +716,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     }
     
     return Object.keys(errors).length === 0;
-  }, [fieldConfigs, formData]);
+  }, [fieldConfigs, formData, entity]);
 
   // Handle save
   const handleSave = useCallback(async () => {
@@ -683,7 +852,20 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             )}
 
             {/* Primary Fields Section */}
-            <CollapsibleSection title="Basic Information" defaultOpen={true}>
+            <CollapsibleSection 
+              title="Basic Information" 
+              defaultOpen={true}
+              onMouseEnter={() => {
+                if (entity && graphAnimation) {
+                  graphAnimation.onNodeHoverStart(entity.id);
+                }
+              }}
+              onMouseLeave={() => {
+                if (graphAnimation) {
+                  graphAnimation.onNodeHoverEnd(entity.id);
+                }
+              }}
+            >
               {primaryFields.map((field) => (
                 <FieldEditor
                   key={field.key}
@@ -695,6 +877,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   onFocus={setFocusedField}
                   onBlur={() => setFocusedField(null)}
                   isFocused={focusedField === field.key}
+                  allEntities={allEntities}
                 />
               ))}
             </CollapsibleSection>
@@ -703,7 +886,20 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             {detailFields.length > 0 && (
               <>
                 <Separator className="bg-white/10" />
-                <CollapsibleSection title="Additional Details" defaultOpen={false}>
+                <CollapsibleSection 
+                  title="Additional Details" 
+                  defaultOpen={false}
+                  onMouseEnter={() => {
+                    if (entity && graphAnimation) {
+                      graphAnimation.onNodeHoverStart(entity.id);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (graphAnimation) {
+                      graphAnimation.onNodeHoverEnd(entity.id);
+                    }
+                  }}
+                >
                   {detailFields.map((field) => (
                     <FieldEditor
                       key={field.key}
@@ -715,6 +911,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                       onFocus={setFocusedField}
                       onBlur={() => setFocusedField(null)}
                       isFocused={focusedField === field.key}
+                      allEntities={allEntities}
                     />
                   ))}
                 </CollapsibleSection>

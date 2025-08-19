@@ -147,14 +147,21 @@ export const charactersApi = {
     const allCharacters: Character[] = [];
     let cursor: string | undefined;
     let hasMore = true;
+    let pageCount = 0;
 
+    console.log('[charactersApi.listAll] Starting to fetch all characters');
+    
     while (hasMore) {
+      pageCount++;
       const response = await charactersApi.list({ limit: 100, cursor });
+      console.log(`[charactersApi.listAll] Page ${pageCount}: ${response.data.length} items, hasMore: ${response.hasMore}`);
+      
       allCharacters.push(...response.data);
       cursor = response.nextCursor || undefined;
       hasMore = response.hasMore;
     }
 
+    console.log(`[charactersApi.listAll] Complete. Total: ${allCharacters.length}`);
     return allCharacters;
   },
 
@@ -191,14 +198,41 @@ export const elementsApi = {
     const allElements: Element[] = [];
     let cursor: string | undefined;
     let hasMore = true;
+    let pageCount = 0;
 
+    console.log('[elementsApi.listAll] Starting to fetch all elements');
+    
     while (hasMore) {
+      pageCount++;
+      console.log(`[elementsApi.listAll] Fetching page ${pageCount}, cursor: ${cursor || 'none'}`);
+      
       const response = await elementsApi.list({ limit: 100, cursor });
+      console.log(`[elementsApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
+      
       allElements.push(...response.data);
       cursor = response.nextCursor || undefined;
       hasMore = response.hasMore;
+      
+      // Extra safety check
+      if (!response.nextCursor && response.hasMore) {
+        console.warn('[elementsApi.listAll] WARNING: hasMore is true but nextCursor is null!');
+        hasMore = false;
+      }
+      
+      // Debug: Check if we should continue
+      console.log(`[elementsApi.listAll] Continue? hasMore=${hasMore}, cursor=${cursor}`);
     }
 
+    console.log(`[elementsApi.listAll] Complete. Total elements: ${allElements.length}`);
+    
+    // Debug: Check for the specific element we're looking for
+    const blackMarketCard = allElements.find(e => e.id === '1dc2f33d-583f-8056-bf34-c6a9922067d8');
+    if (blackMarketCard) {
+      console.log('[elementsApi.listAll] Found Black Market Business card in fetched data!');
+    } else {
+      console.log('[elementsApi.listAll] Black Market Business card NOT found in fetched data');
+    }
+    
     return allElements;
   },
 
@@ -327,6 +361,39 @@ export const cacheApi = {
    */
   clearEndpoint: async (endpoint: string): Promise<{ message: string; clearedKeys: number }> => {
     return fetcher(`/cache/clear/${endpoint}`, { method: 'POST' });
+  },
+};
+
+/**
+ * Synthesized data API - returns all entities with bidirectional relationships
+ */
+export const synthesizedApi = {
+  /**
+   * Fetch all entities with synthesized bidirectional relationships
+   */
+  getAll: async (): Promise<{
+    elements: Element[];
+    puzzles: Puzzle[];
+    totalElements: number;
+    totalPuzzles: number;
+  }> => {
+    console.log('[synthesizedApi.getAll] Fetching synthesized data...');
+    const result = await fetcher<{
+      elements: Element[];
+      puzzles: Puzzle[];
+      totalElements: number;
+      totalPuzzles: number;
+    }>('/notion/synthesized');
+    
+    console.log(`[synthesizedApi.getAll] Complete. Elements: ${result.totalElements}, Puzzles: ${result.totalPuzzles}`);
+    
+    // Debug: Check relationship counts
+    const elementsWithPuzzleRefs = result.elements.filter(e => 
+      (e.requiredForPuzzleIds?.length > 0) || (e.rewardedByPuzzleIds?.length > 0)
+    );
+    console.log(`[synthesizedApi.getAll] Elements with puzzle relationships: ${elementsWithPuzzleRefs.length}`);
+    
+    return result;
   },
 };
 

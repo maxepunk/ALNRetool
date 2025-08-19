@@ -83,7 +83,12 @@ export function useAllElements(options: Omit<UseElementsOptions, 'limit' | 'curs
 
   return useQuery({
     queryKey: queryKeys.elements(), // Different key from paginated version
-    queryFn: () => elementsApi.listAll(),
+    queryFn: async () => {
+      console.log('[useAllElements] Starting to fetch all elements');
+      const result = await elementsApi.listAll();
+      console.log('[useAllElements] Fetched total elements:', result.length);
+      return result;
+    },
     enabled,
     staleTime,
     gcTime: staleTime * 2,
