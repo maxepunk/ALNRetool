@@ -373,6 +373,75 @@ The workflow runs on:
 - Use React.memo for custom node components
 - Debounce user interactions by 300ms
 
+## Sprint 2: Search & Filter Implementation
+
+### Filter Architecture (January 2025)
+
+The filtering system is implemented entirely client-side to avoid React Flow state conflicts:
+
+#### Components
+- **GraphControls**: Main filter UI panel with collapsible interface
+  - Location: `src/components/graph/GraphControls.tsx`
+  - Features: Search, Act filter, Puzzle selector, minimize/restore
+  - Uses shadcn/ui components with glassmorphism styling
+
+#### State Management
+```typescript
+interface FilterState {
+  searchTerm: string;
+  selectedActs: Set<string>;
+  selectedPuzzleId: string | null;
+}
+```
+
+- Stored in sessionStorage for persistence
+- Applied BEFORE passing data to React Flow
+- No useGraphFilters hook - direct state management in GraphView
+
+#### Filtering Algorithm
+1. **Search Filter**: Fuzzy text matching on node labels
+   - Includes connected nodes for context
+   - Case-insensitive substring matching
+   
+2. **Act Filter**: Matches elements by firstAvailable property
+   - Elements filtered by firstAvailable field
+   - Puzzles filtered by timing array
+   - Includes all connected nodes
+
+3. **Puzzle Isolation**: Recursive dependency traversal
+   - Finds all upstream and downstream dependencies
+   - Uses bidirectional edge traversal
+
+#### Key Implementation Details
+```typescript
+// Apply filters BEFORE React Flow state initialization
+const filteredGraphData = useMemo(() => {
+  let filteredNodes = [...graphData.nodes];
+  // Apply search, act, and puzzle filters
+  // ...
+  return { nodes: filteredNodes, edges: filteredEdges };
+}, [graphData, filterState]);
+
+// Pass filtered data to useGraphState
+const { nodes, edges } = useGraphState({
+  initialGraphData: filteredGraphData
+});
+```
+
+#### Node Type Fix (Critical Bug)
+The transformers output node types as:
+- `'element'` not `'elementNode'`
+- `'puzzle'` not `'puzzleNode'`
+- `'character'` not `'characterNode'`
+
+This mismatch caused filtering to fail silently.
+
+#### UI Features
+- **Collapsible Panel**: Save screen space with animated transitions
+- **Active Filter Badges**: Visual indicators of applied filters
+- **Clear Filters**: One-click reset with count badges
+- **Responsive Design**: Mobile-friendly with touch support
+
 ---
 
 For more information:

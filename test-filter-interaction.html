@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Filter Interaction Test</title>
+</head>
+<body>
+    <h1>Testing Graph Filter Interactions</h1>
+    <script>
+        // Test instructions for user
+        document.write(`
+            <h2>🔍 Manual Testing Steps:</h2>
+            <ol>
+                <li><strong>Search Test:</strong>
+                    <ul>
+                        <li>Type "Puzzle" in search box</li>
+                        <li>Graph should filter to show only puzzles and connected nodes</li>
+                        <li>Check console for: [GraphView] Filtered data with reduced node count</li>
+                    </ul>
+                </li>
+                <li><strong>Act Filter Test:</strong>
+                    <ul>
+                        <li>Clear search</li>
+                        <li>Select "Act 0" from Acts dropdown</li>
+                        <li>Graph should show only Act 0 elements/puzzles</li>
+                    </ul>
+                </li>
+                <li><strong>Puzzle Isolation Test:</strong>
+                    <ul>
+                        <li>Clear all filters</li>
+                        <li>Select a specific puzzle from dropdown</li>
+                        <li>Graph should show only that puzzle and dependencies</li>
+                    </ul>
+                </li>
+            </ol>
+            
+            <h3>❌ Current Issue (User Feedback):</h3>
+            <p style="color: red; font-weight: bold;">
+                "the search and filter box looks like poop and does not re-render the graph based on the search or filter"
+            </p>
+            
+            <h3>🎯 What to Check:</h3>
+            <ul>
+                <li>Does typing in search box trigger console logs?</li>
+                <li>Does the node/edge count change in the stats overlay?</li>
+                <li>Does the graph visually update when filters change?</li>
+                <li>Are there any console errors?</li>
+            </ul>
+        `);
+        
+        // Open the app
+        window.open('http://localhost:5173/', '_blank');
+    </script>
+</body>
+</html>

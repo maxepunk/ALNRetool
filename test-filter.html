@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Filter Test</title>
+</head>
+<body>
+    <h1>Testing Graph Filters</h1>
+    <script>
+        // Open the app in a new window
+        window.open('http://localhost:5173/', '_blank');
+        
+        // Instructions
+        document.write(`
+            <h2>Test Instructions:</h2>
+            <ol>
+                <li>Open browser DevTools (F12)</li>
+                <li>Go to Console tab</li>
+                <li>Try searching for "Puzzle 1" in the search box</li>
+                <li>Check console for [GraphView] Filtered data logs</li>
+                <li>Select Act 0 from the Acts dropdown</li>
+                <li>Check if graph re-renders with filtered nodes</li>
+                <li>Select a specific puzzle from dropdown</li>
+                <li>Verify graph shows only that puzzle and connections</li>
+            </ol>
+            <h3>Expected Console Output:</h3>
+            <pre>[GraphView] Filtered data: {
+  searchTerm: "Puzzle 1",
+  selectedActs: [],
+  selectedPuzzleId: null,
+  originalNodes: X,
+  filteredNodes: Y (should be less than X),
+  originalEdges: A,
+  filteredEdges: B (should be less than A)
+}</pre>
+        `);
+    </script>
+</body>
+</html>

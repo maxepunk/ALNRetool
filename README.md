@@ -10,6 +10,14 @@
   1. **Puzzle Focus View**: Visualize puzzle dependencies and reward paths
   2. **Character Journey View**: Track character-specific content and access paths
   3. **Content Status View**: Monitor the production status of all game elements
+- **Advanced Search & Filtering** (New in v2.0):
+  - Fuzzy text search across all nodes
+  - Act-based filtering (Act 0/1/2)
+  - Puzzle isolation with dependency traversal
+  - Collapsible filter panel with animations
+  - Active filter badges and persistence
+- **Interactive DetailPanel**: Click any node to view and edit all properties
+- **Two-Way Notion Sync**: Update game content directly from the visualization
 - **Real-time Caching**: 5-minute cache reduces Notion API calls by 70-80%
 - **Robust Security**: API key authentication, CORS protection, and rate limiting
 
@@ -23,8 +31,12 @@
   - ElementClusterer with collision detection
   - LayoutQualityMetrics for optimization
 - **State Management**: TanStack Query for server state, React Flow internal for graph state
+- **UI Components**: shadcn/ui, Radix UI primitives, Tailwind CSS v4
+  - Custom glassmorphism filter panel
+  - Collapsible controls with animations
+  - DetailPanel with field editors
+  - Owner badges and diamond nodes
 - **Testing**: Vitest (500+ tests), Mock Service Worker, Testing Library
-- **Styling**: Tailwind CSS v4, shadcn/ui components, glassmorphism effects
 - **Development**: ESLint, Prettier, Commitizen, GitHub Actions CI/CD
 
 ## 🚀 Quick Start

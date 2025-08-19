@@ -76,6 +76,10 @@ export function useGraphState({
   
   // Update nodes and edges when graph data changes
   useEffect(() => {
+    console.log('[useGraphState] Updating with new graph data:', {
+      nodes: initialGraphData.nodes.length,
+      edges: initialGraphData.edges.length
+    });
     setNodes(initialGraphData.nodes);
     setEdges(initialGraphData.edges);
   }, [initialGraphData, setNodes, setEdges]);
