@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import { X, Save, XCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import { X, Save, XCircle, ChevronDown, ChevronRight, Loader2, Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,6 +14,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import {
+  ANIMATION_EASING,
+  getSafeAnimationClasses,
+} from '@/lib/animations';
 import type {
   Character,
   Element,
@@ -196,13 +200,29 @@ interface FieldEditorProps {
   onChange: (value: any) => void;
   error?: string;
   disabled?: boolean;
+  onFocus?: (fieldKey: string) => void;
+  onBlur?: () => void;
+  isFocused?: boolean;
 }
 
-const FieldEditor: React.FC<FieldEditorProps> = ({ field, value, onChange, error, disabled }) => {
+const FieldEditor: React.FC<FieldEditorProps> = ({ 
+  field, 
+  value, 
+  onChange, 
+  error, 
+  disabled,
+  onFocus,
+  onBlur,
+  isFocused 
+}) => {
   switch (field.type) {
     case 'text':
       return (
-        <div className="space-y-2">
+        <div className={cn(
+          "space-y-2 transition-all",
+          isFocused && "scale-[1.02]",
+          getSafeAnimationClasses(ANIMATION_EASING.smooth)
+        )}>
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -211,20 +231,34 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ field, value, onChange, error
             id={field.key}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
+            onFocus={() => onFocus?.(field.key)}
+            onBlur={onBlur}
             placeholder={field.placeholder}
             disabled={disabled || field.readOnly}
-            className="bg-white/5 border-white/10 focus:border-white/20"
+            className={cn(
+              "bg-white/5 border-white/10 focus:border-white/20 transition-all",
+              isFocused && "ring-2 ring-primary/20",
+              error && "border-destructive/50 animate-shake"
+            )}
           />
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && (
+            <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1">
+              {error}
+            </p>
+          )}
         </div>
       );
 
     case 'textarea':
       return (
-        <div className="space-y-2">
+        <div className={cn(
+          "space-y-2 transition-all",
+          isFocused && "scale-[1.02]",
+          getSafeAnimationClasses(ANIMATION_EASING.smooth)
+        )}>
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -233,15 +267,25 @@ const FieldEditor: React.FC<FieldEditorProps> = ({ field, value, onChange, error
             id={field.key}
             value={value || ''}
             onChange={(e) => onChange(e.target.value)}
+            onFocus={() => onFocus?.(field.key)}
+            onBlur={onBlur}
             placeholder={field.placeholder}
             disabled={disabled || field.readOnly}
             rows={field.rows || 3}
-            className="bg-white/5 border-white/10 focus:border-white/20 resize-none"
+            className={cn(
+              "bg-white/5 border-white/10 focus:border-white/20 resize-none transition-all",
+              isFocused && "ring-2 ring-primary/20",
+              error && "border-destructive/50 animate-shake"
+            )}
           />
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {error && (
+            <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1">
+              {error}
+            </p>
+          )}
         </div>
       );
 
@@ -366,6 +410,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const [formData, setFormData] = useState<Partial<Entity>>({});
   const [isDirty, setIsDirty] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Animation state
+  const [isEntering, setIsEntering] = useState(true);
+  const [isExiting, setIsExiting] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [hasValidationError, setHasValidationError] = useState(false);
 
   // Get appropriate mutation hook based on entity type
   const updateCharacter = useUpdateCharacter();
@@ -415,8 +466,42 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       setFormData({ ...entity });
       setIsDirty(false);
       setValidationErrors({});
+      setIsEntering(true);
+      setIsExiting(false);
+      setSaveSuccess(false);
+      setHasValidationError(false);
     }
   }, [entity]);
+
+  // Handle entrance animation
+  useEffect(() => {
+    if (isEntering) {
+      const timer = setTimeout(() => {
+        setIsEntering(false);
+      }, 300); // normal duration
+      return () => clearTimeout(timer);
+    }
+  }, [isEntering]);
+
+  // Handle save success animation
+  useEffect(() => {
+    if (saveSuccess) {
+      const timer = setTimeout(() => {
+        setSaveSuccess(false);
+      }, 500); // slow duration
+      return () => clearTimeout(timer);
+    }
+  }, [saveSuccess]);
+
+  // Handle validation error animation
+  useEffect(() => {
+    if (hasValidationError) {
+      const timer = setTimeout(() => {
+        setHasValidationError(false);
+      }, 300); // normal duration
+      return () => clearTimeout(timer);
+    }
+  }, [hasValidationError]);
 
   // Handle field changes
   const handleFieldChange = useCallback((key: string, value: any) => {
@@ -455,6 +540,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     });
     
     setValidationErrors(errors);
+    
+    // Trigger error animation if validation fails
+    if (Object.keys(errors).length > 0) {
+      setHasValidationError(true);
+    }
+    
     return Object.keys(errors).length === 0;
   }, [fieldConfigs, formData]);
 
@@ -495,13 +586,16 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           updates: changes 
         });
         setIsDirty(false);
+        setSaveSuccess(true); // Trigger success animation
       } else if (onSave) {
         await onSave(changes);
         setIsDirty(false);
+        setSaveSuccess(true); // Trigger success animation
       }
     } catch (error) {
       // Error is handled by the mutation hook's toast notification
       console.error('Failed to save changes:', error);
+      setHasValidationError(true); // Trigger error animation
     }
   }, [formData, entity, mutation, onSave, validateForm, entityType]);
 
@@ -545,7 +639,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   const detailFields = fieldConfigs.filter((f) => !primaryFields.includes(f));
 
   return (
-    <div className="w-96 h-full bg-white/10 backdrop-blur-md border-l border-white/20 flex flex-col animate-in slide-in-from-right duration-300">
+    <div className={cn(
+      "w-96 h-full bg-white/10 backdrop-blur-md border-l border-white/20 flex flex-col",
+      isEntering && "animate-in slide-in-from-right duration-300",
+      isExiting && "animate-out slide-out-to-right duration-200",
+      saveSuccess && "ring-2 ring-green-500/20",
+      hasValidationError && "animate-shake"
+    )}>
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-white/10">
         <div className="flex items-center gap-3">
@@ -592,6 +692,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                   onChange={(value) => handleFieldChange(field.key, value)}
                   error={validationErrors[field.key]}
                   disabled={isSaving}
+                  onFocus={setFocusedField}
+                  onBlur={() => setFocusedField(null)}
+                  isFocused={focusedField === field.key}
                 />
               ))}
             </CollapsibleSection>
@@ -609,6 +712,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                       onChange={(value) => handleFieldChange(field.key, value)}
                       error={validationErrors[field.key]}
                       disabled={isSaving}
+                      onFocus={setFocusedField}
+                      onBlur={() => setFocusedField(null)}
+                      isFocused={focusedField === field.key}
                     />
                   ))}
                 </CollapsibleSection>
@@ -658,14 +764,24 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           <Button
             onClick={handleSave}
             disabled={!isDirty || isSaving}
-            className="flex-1 bg-primary/20 hover:bg-primary/30"
+            className={cn(
+              "flex-1 transition-all",
+              saveSuccess 
+                ? "bg-green-500/20 hover:bg-green-500/30" 
+                : "bg-primary/20 hover:bg-primary/30",
+              hasValidationError && "animate-shake"
+            )}
           >
             {isSaving ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : saveSuccess ? (
+              <Check className="h-4 w-4 mr-2 animate-in zoom-in" />
+            ) : hasValidationError ? (
+              <AlertCircle className="h-4 w-4 mr-2 animate-pulse" />
             ) : (
               <Save className="h-4 w-4 mr-2" />
             )}
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? 'Saving...' : saveSuccess ? 'Saved!' : hasValidationError ? 'Fix Errors' : 'Save Changes'}
           </Button>
         </div>
       )}
