@@ -112,12 +112,11 @@ export function GraphAnimationProvider({
 
 /**
  * Hook to access the graph animation context
+ * Returns null if context is not available (for optional usage)
  */
 export function useGraphAnimation() {
   const context = useContext(GraphAnimationContext);
-  if (!context) {
-    throw new Error('useGraphAnimation must be used within a GraphAnimationProvider');
-  }
+  // Return null instead of throwing to allow DetailPanel to work without animation context
   return context;
 }
 
@@ -127,21 +126,34 @@ export function useGraphAnimation() {
 export function useNodeAnimation(nodeId: string) {
   const context = useGraphAnimation();
   
-  const isHovered = context.hoveredNodeId === nodeId;
-  const isHighlighted = context.isNodeHighlighted(nodeId);
-  const isPulsing = context.isNodePulsing(nodeId);
-  
+  // Always call hooks to satisfy React's rules
   const handleMouseEnter = useCallback(() => {
-    context.onNodeHoverStart(nodeId);
+    context?.onNodeHoverStart(nodeId);
   }, [context, nodeId]);
   
   const handleMouseLeave = useCallback(() => {
-    context.onNodeHoverEnd(nodeId);
+    context?.onNodeHoverEnd(nodeId);
   }, [context, nodeId]);
   
   const handleClick = useCallback(() => {
-    context.onNodeClick(nodeId);
+    context?.onNodeClick(nodeId);
   }, [context, nodeId]);
+  
+  // Return safe defaults if context is not available
+  if (!context) {
+    return {
+      isHovered: false,
+      isHighlighted: false,
+      isPulsing: false,
+      handleMouseEnter: () => {},
+      handleMouseLeave: () => {},
+      handleClick: () => {},
+    };
+  }
+  
+  const isHovered = context.hoveredNodeId === nodeId;
+  const isHighlighted = context.isNodeHighlighted(nodeId);
+  const isPulsing = context.isNodePulsing(nodeId);
   
   return {
     isHovered,
@@ -159,21 +171,34 @@ export function useNodeAnimation(nodeId: string) {
 export function useEdgeAnimation(edgeId: string) {
   const context = useGraphAnimation();
   
-  const isHovered = context.hoveredEdgeId === edgeId;
-  const isHighlighted = context.isEdgeHighlighted(edgeId);
-  const isFlowing = context.isEdgeFlowing(edgeId);
-  
+  // Always call hooks to satisfy React's rules
   const handleMouseEnter = useCallback(() => {
-    context.onEdgeHoverStart(edgeId);
+    context?.onEdgeHoverStart(edgeId);
   }, [context, edgeId]);
   
   const handleMouseLeave = useCallback(() => {
-    context.onEdgeHoverEnd(edgeId);
+    context?.onEdgeHoverEnd(edgeId);
   }, [context, edgeId]);
   
   const handleClick = useCallback(() => {
-    context.onEdgeClick(edgeId);
+    context?.onEdgeClick(edgeId);
   }, [context, edgeId]);
+  
+  // Return safe defaults if context is not available
+  if (!context) {
+    return {
+      isHovered: false,
+      isHighlighted: false,
+      isFlowing: false,
+      handleMouseEnter: () => {},
+      handleMouseLeave: () => {},
+      handleClick: () => {},
+    };
+  }
+  
+  const isHovered = context.hoveredEdgeId === edgeId;
+  const isHighlighted = context.isEdgeHighlighted(edgeId);
+  const isFlowing = context.isEdgeFlowing(edgeId);
   
   return {
     isHovered,
@@ -195,15 +220,17 @@ export function useAnimationPerformance(elementCount: number) {
   const shouldReduceAnimations = elementCount > PERFORMANCE_THRESHOLD;
   
   React.useEffect(() => {
-    if (shouldReduceAnimations && context.isAnimating) {
-      context.pauseAnimations();
-    } else if (!shouldReduceAnimations && !context.isAnimating) {
-      context.resumeAnimations();
+    if (context) {
+      if (shouldReduceAnimations && context.isAnimating) {
+        context.pauseAnimations();
+      } else if (!shouldReduceAnimations && !context.isAnimating) {
+        context.resumeAnimations();
+      }
     }
   }, [shouldReduceAnimations, context]);
   
   return {
     shouldReduceAnimations,
-    isAnimating: context.isAnimating,
+    isAnimating: context?.isAnimating ?? false,
   };
 }

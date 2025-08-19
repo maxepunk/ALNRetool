@@ -1,0 +1,43 @@
+// Export types
+export type { FieldConfig, FieldGroup, FieldType, SelectOption } from './types';
+
+// Export character fields
+export {
+  CHARACTER_BASIC_FIELDS,
+  CHARACTER_STORY_FIELDS,
+  CHARACTER_RELATIONSHIP_FIELDS,
+  CHARACTER_FIELD_GROUPS,
+  CHARACTER_FIELDS,
+} from './character-fields';
+
+// Export element fields
+export {
+  ELEMENT_BASIC_FIELDS,
+  ELEMENT_STATUS_FIELDS,
+  ELEMENT_LOCK_FIELDS,
+  ELEMENT_RELATIONSHIP_FIELDS,
+  ELEMENT_STATE_FIELDS,
+  ELEMENT_MEDIA_FIELDS,
+  ELEMENT_FIELD_GROUPS,
+  ELEMENT_FIELDS,
+} from './element-fields';
+
+// Export puzzle fields
+export {
+  PUZZLE_BASIC_FIELDS,
+  PUZZLE_DETAILS_FIELDS,
+  PUZZLE_LOCK_FIELDS,
+  PUZZLE_DEPENDENCY_FIELDS,
+  PUZZLE_OWNERSHIP_FIELDS,
+  PUZZLE_FIELD_GROUPS,
+  PUZZLE_FIELDS,
+} from './puzzle-fields';
+
+// Export timeline fields
+export {
+  TIMELINE_BASIC_FIELDS,
+  TIMELINE_DETAILS_FIELDS,
+  TIMELINE_RELATIONSHIP_FIELDS,
+  TIMELINE_FIELD_GROUPS,
+  TIMELINE_FIELDS,
+} from './timeline-fields';

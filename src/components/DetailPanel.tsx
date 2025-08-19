@@ -558,13 +558,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
   // Graph animation context for coordinated hover effects
   // Wrap in try-catch since context might not be available if DetailPanel is used outside GraphAnimationProvider
-  let graphAnimation;
-  try {
-    graphAnimation = useGraphAnimation();
-  } catch {
-    // Context not available - DetailPanel can still work without animations
-    graphAnimation = null;
-  }
+  // Always call the hook to satisfy React's rules of hooks
+  // The hook itself will handle the case where context is not available
+  const graphAnimation = useGraphAnimation();
 
   // Get appropriate mutation hook based on entity type
   const updateCharacter = useUpdateCharacter();

@@ -2,6 +2,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import AppRouter from './router/AppRouter';
+import { FeatureFlagAdmin } from './components/FeatureFlagAdmin';
 
 // Create a client instance
 const queryClient = new QueryClient({
@@ -23,6 +24,7 @@ function App() {
         <AppRouter />
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />
+      <FeatureFlagAdmin />
     </QueryClientProvider>
   );
 }
