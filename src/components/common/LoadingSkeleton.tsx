@@ -3,7 +3,9 @@
  * Displays animated placeholders while data is loading
  */
 
-import styles from './LoadingSkeleton.module.css';
+import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Loader2 } from "lucide-react";
 
 interface LoadingSkeletonProps {
   variant?: 'text' | 'card' | 'list' | 'graph';
@@ -18,24 +20,34 @@ export default function LoadingSkeleton({
 }: LoadingSkeletonProps) {
   if (variant === 'graph') {
     return (
-      <div className={`${styles.graphSkeleton} ${className}`}>
-        <div className={styles.graphNodes}>
+      <div className={cn("flex flex-col items-center justify-center p-8 rounded-lg border border-border bg-card", className)}>
+        <div className="grid grid-cols-3 gap-4 mb-6 w-full max-w-md">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className={styles.graphNode} />
+            <div key={i} className="flex items-center justify-center">
+              <Skeleton className="h-12 w-12 rounded-full" />
+            </div>
           ))}
         </div>
-        <div className={styles.graphMessage}>Loading graph data...</div>
+        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-sm">Loading graph data...</span>
+        </div>
       </div>
     );
   }
 
   if (variant === 'card') {
     return (
-      <div className={`${styles.card} ${className}`}>
-        <div className={styles.cardHeader} />
-        <div className={styles.cardBody}>
+      <div className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}>
+        <Skeleton className="h-48 w-full rounded-none" />
+        <div className="p-4 space-y-3">
+          <Skeleton className="h-5 w-2/3" />
           {[...Array(3)].map((_, i) => (
-            <div key={i} className={styles.line} />
+            <Skeleton 
+              key={i} 
+              className="h-4" 
+              style={{ width: `${Math.random() * 30 + 70}%` }} 
+            />
           ))}
         </div>
       </div>
@@ -44,13 +56,13 @@ export default function LoadingSkeleton({
 
   if (variant === 'list') {
     return (
-      <div className={`${styles.list} ${className}`}>
+      <div className={cn("space-y-3", className)}>
         {[...Array(5)].map((_, i) => (
-          <div key={i} className={styles.listItem}>
-            <div className={styles.listIcon} />
-            <div className={styles.listContent}>
-              <div className={styles.listTitle} />
-              <div className={styles.listSubtitle} />
+          <div key={i} className="flex items-center space-x-4 p-2">
+            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+            <div className="space-y-2 flex-1">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
             </div>
           </div>
         ))}
@@ -60,11 +72,11 @@ export default function LoadingSkeleton({
 
   // Default text variant
   return (
-    <div className={`${styles.skeleton} ${className}`}>
+    <div className={cn("space-y-2", className)}>
       {[...Array(lines)].map((_, i) => (
-        <div 
+        <Skeleton 
           key={i} 
-          className={styles.line}
+          className="h-4"
           style={{ width: `${Math.random() * 30 + 70}%` }}
         />
       ))}

@@ -140,25 +140,25 @@ describe('TimelineSkeleton', () => {
   })
 
   describe('Props Handling', () => {
-    it('handles undefined variant (defaults to timeline)', () => {
-      const { container } = render(<TimelineSkeleton variant={undefined as 'card' | 'list' | 'detail' | 'timeline' | undefined} />)
+    it('handles undefined variant (defaults to card)', () => {
+      const { container } = render(<TimelineSkeleton variant={undefined} />)
       
-      const rootContainer = container.firstChild as HTMLElement
-      expect(rootContainer?.className).toContain('timeline')
+      const card = container.querySelector('[class*="card"]')
+      expect(card).toBeInTheDocument()
     })
 
-    it('handles invalid variant (defaults to timeline)', () => {
+    it('handles invalid variant (defaults to card)', () => {
       const { container } = render(<TimelineSkeleton variant={'invalid' as never} />)
       
-      const rootContainer = container.firstChild as HTMLElement
-      expect(rootContainer?.className).toContain('timeline')
+      const card = container.querySelector('[class*="card"]')
+      expect(card).toBeInTheDocument()
     })
 
     it('handles empty className', () => {
       const { container } = render(<TimelineSkeleton className="" />)
       
-      const rootContainer = container.firstChild as HTMLElement
-      expect(rootContainer?.className).toContain('timeline')
+      const card = container.querySelector('[class*="card"]')
+      expect(card).toBeInTheDocument()
     })
 
     it('handles missing className prop', () => {
@@ -170,14 +170,13 @@ describe('TimelineSkeleton', () => {
   })
 
   describe('Timeline-Specific Features', () => {
-    it('renders circular marker for timeline variant', () => {
-      render(<TimelineSkeleton variant="timeline" />)
+    it('renders list item structure for list variant', () => {
+      render(<TimelineSkeleton variant="list" />)
       
       const progressbars = screen.getAllByRole('progressbar')
-      const circularSkeleton = progressbars.find(el => el.className.includes('circular'))
       
-      // Timeline marker should be small and circular (12x12)
-      expect(circularSkeleton).toHaveStyle({ width: '12px', height: '12px' })
+      // List variant should have at least 4 skeletons (icon, title, date, badge)
+      expect(progressbars.length).toBeGreaterThanOrEqual(4)
     })
 
     it('uses rectangular skeletons for card variant icon', () => {
@@ -191,8 +190,8 @@ describe('TimelineSkeleton', () => {
     })
 
     it('shows appropriate content structure per variant', () => {
-      const variants: Array<'timeline' | 'card' | 'list' | 'detail'> = ['timeline', 'card', 'list', 'detail']
-      const expectedMinCounts = { timeline: 5, card: 6, list: 4, detail: 12 }
+      const variants: Array<'card' | 'list' | 'detail'> = ['card', 'list', 'detail']
+      const expectedMinCounts = { card: 6, list: 4, detail: 12 }
       
       variants.forEach(variant => {
         const { unmount } = render(<TimelineSkeleton variant={variant} />)
@@ -221,7 +220,7 @@ describe('TimelineSkeleton', () => {
 
   describe('Accessibility', () => {
     it('maintains accessibility attributes across variants', () => {
-      const variants: Array<'timeline' | 'card' | 'list' | 'detail'> = ['timeline', 'card', 'list', 'detail']
+      const variants: Array<'card' | 'list' | 'detail'> = ['card', 'list', 'detail']
       
       variants.forEach(variant => {
         const { unmount } = render(<TimelineSkeleton variant={variant} />)
@@ -254,11 +253,6 @@ describe('TimelineSkeleton', () => {
       let progressbars = screen.getAllByRole('progressbar')
       const listCount = progressbars.length
       
-      // Timeline variant
-      rerender(<TimelineSkeleton variant="timeline" />)
-      progressbars = screen.getAllByRole('progressbar')
-      const timelineCount = progressbars.length
-      
       // Card variant
       rerender(<TimelineSkeleton variant="card" />)
       progressbars = screen.getAllByRole('progressbar')
@@ -269,22 +263,16 @@ describe('TimelineSkeleton', () => {
       progressbars = screen.getAllByRole('progressbar')
       const detailCount = progressbars.length
       
-      // Validate expected hierarchy: detail > card > timeline > list
+      // Validate expected hierarchy: detail > card > list
       expect(detailCount).toBeGreaterThan(cardCount)
-      expect(cardCount).toBeGreaterThan(timelineCount)
-      expect(timelineCount).toBeGreaterThan(listCount)
+      expect(cardCount).toBeGreaterThan(listCount)
       expect(listCount).toBe(4) // Specific for list: date + 2 content + meta
     })
 
     it('uses appropriate skeleton shapes per variant', () => {
-      // Timeline variant should use circular marker
-      const { rerender } = render(<TimelineSkeleton variant="timeline" />)
-      let progressbars = screen.getAllByRole('progressbar')
-      expect(progressbars.some(el => el.className.includes('circular'))).toBe(true)
-      
       // Card variant should use rectangular icon
-      rerender(<TimelineSkeleton variant="card" />)
-      progressbars = screen.getAllByRole('progressbar')
+      const { rerender } = render(<TimelineSkeleton variant="card" />)
+      let progressbars = screen.getAllByRole('progressbar')
       expect(progressbars.some(el => el.className.includes('rectangular'))).toBe(true)
       
       // List and detail should not have specific shape requirements beyond text skeletons

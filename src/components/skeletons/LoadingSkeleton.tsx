@@ -1,4 +1,4 @@
-import styles from './LoadingSkeleton.module.css'
+import { cn } from '@/lib/utils'
 
 interface LoadingSkeletonProps {
   width?: string | number
@@ -15,15 +15,19 @@ export function LoadingSkeleton({
   className = '',
   'aria-label': ariaLabel = 'Loading...',
 }: LoadingSkeletonProps) {
-  const styles_variant = variant === 'circular' 
-    ? styles.circular 
-    : variant === 'rectangular' 
-    ? styles.rectangular 
-    : styles.text
+  const variantClasses = {
+    circular: 'rounded-full',
+    rectangular: 'rounded-md',
+    text: 'rounded'
+  }
 
   return (
     <div
-      className={`${styles.skeleton} ${styles_variant} ${className}`}
+      className={cn(
+        "animate-pulse bg-gray-200 dark:bg-gray-700",
+        variantClasses[variant],
+        className
+      )}
       style={{ width, height }}
       aria-label={ariaLabel}
       role="progressbar"

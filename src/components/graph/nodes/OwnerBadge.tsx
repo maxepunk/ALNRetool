@@ -1,5 +1,7 @@
 import { memo, useState } from 'react';
-import styles from './OwnerBadge.module.css';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { HOVER_TRANSITIONS } from '@/lib/animations';
 
 interface OwnerBadgeProps {
   /** Character name to display */
@@ -8,8 +10,10 @@ interface OwnerBadgeProps {
   tier?: 'Tier 1' | 'Tier 2' | 'Tier 3';
   /** Optional portrait URL (future enhancement) */
   portraitUrl?: string;
-  /** Position variant */
+  /** Position variant for absolute positioning when used standalone */
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+  /** Whether to use absolute positioning (default false for slot usage) */
+  useAbsolutePosition?: boolean;
 }
 
 /**
@@ -20,7 +24,8 @@ const OwnerBadge = memo(({
   characterName, 
   tier = 'Tier 3',
   portraitUrl,
-  position = 'top-right' 
+  position = 'top-right',
+  useAbsolutePosition = false
 }: OwnerBadgeProps) => {
   const [imageFailed, setImageFailed] = useState(false);
   
@@ -41,27 +46,77 @@ const OwnerBadge = memo(({
   };
   
   const initials = getInitials(characterName);
-  const tierClass = `tier-${tier.toLowerCase().replace(/\s+/g, '-')}`;
-  const positionClass = `position-${position}`;
+  
+  // Position classes for absolute positioning
+  const positionClasses = useAbsolutePosition ? {
+    'top-right': 'absolute top-0 right-0 -translate-y-1/3 translate-x-1/3',
+    'top-left': 'absolute top-0 left-0 -translate-y-1/3 -translate-x-1/3',
+    'bottom-right': 'absolute bottom-0 right-0 translate-y-1/3 translate-x-1/3',
+    'bottom-left': 'absolute bottom-0 left-0 translate-y-1/3 -translate-x-1/3'
+  } : {
+    'top-right': '',
+    'top-left': '',
+    'bottom-right': '',
+    'bottom-left': ''
+  };
+  
+  // Tier-based styling with improved contrast and animations
+  const tierStyles = {
+    'Tier 1': {
+      wrapper: 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-700 text-white border-[2.5px] shadow-sm',
+      hoverGlow: 'hover:shadow-amber-400/50',
+      pulseColor: 'animate-pulse-glow'
+    },
+    'Tier 2': {
+      wrapper: 'bg-gradient-to-br from-indigo-500 to-indigo-700 border-indigo-800 text-white shadow-sm',
+      hoverGlow: 'hover:shadow-indigo-400/50',
+      pulseColor: ''
+    },
+    'Tier 3': {
+      wrapper: 'bg-gradient-to-br from-gray-500 to-gray-700 border-gray-800 text-white shadow-sm',
+      hoverGlow: 'hover:shadow-gray-400/50',
+      pulseColor: ''
+    }
+  };
+  
+  const tierStyle = tierStyles[tier];
   
   return (
-    <div 
-      className={`${styles.ownerBadge} ${styles[tierClass]} ${styles[positionClass]}`}
-      title={`Owner: ${characterName} (${tier})`}
-    >
-      {portraitUrl && !imageFailed ? (
-        <img 
-          src={portraitUrl} 
-          alt={characterName}
-          className={styles.portrait}
-          onError={() => setImageFailed(true)}
-        />
-      ) : (
-        <span className={styles.initials}>
-          {initials}
-        </span>
-      )}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div 
+          className={cn(
+            'w-7 h-7 rounded-full border-2 flex items-center justify-center',
+            'text-xs font-semibold cursor-help overflow-hidden',
+            'transition-all duration-200',
+            HOVER_TRANSITIONS.scale,
+            'hover:shadow-lg hover:z-10',
+            positionClasses[position],
+            tierStyle.wrapper,
+            tierStyle.hoverGlow,
+            tier === 'Tier 1' && tierStyle.pulseColor,
+            'group'
+          )}
+        >
+          {portraitUrl && !imageFailed ? (
+            <img 
+              src={portraitUrl} 
+              alt={characterName}
+              className="absolute inset-0 w-full h-full object-cover rounded-full transition-transform duration-200 group-hover:scale-105"
+              onError={() => setImageFailed(true)}
+            />
+          ) : (
+            <span className="relative z-[1] tracking-tighter transition-transform duration-200 group-hover:scale-110">
+              {initials}
+            </span>
+          )}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Owner: {characterName}</p>
+        <p className="text-xs text-muted-foreground">{tier}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 });
 

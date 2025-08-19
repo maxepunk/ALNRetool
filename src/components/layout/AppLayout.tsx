@@ -187,30 +187,43 @@ export default function AppLayout() {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Sidebar */}
         <aside 
-          className={`fixed md:relative inset-y-0 left-0 z-30 w-64 border-r border-border bg-background transition-all duration-300 ease-in-out ${
-            leftSidebarOpen ? 'translate-x-0' : '-translate-x-full md:w-0'
+          className={`fixed md:relative inset-y-0 left-0 z-30 border-r border-border bg-background transition-all duration-300 ease-in-out ${
+            leftSidebarOpen ? 'w-64 translate-x-0' : 'w-16 md:w-16 -translate-x-full md:translate-x-0'
           } ${isMobile ? 'shadow-lg' : ''}`}
         >
           {/* Navigation */}
           <nav className="h-full flex flex-col">
             <div className="p-4">              <div className="mb-6">
-                <h2 className="text-sm font-semibold text-muted-foreground mb-2">NAVIGATION</h2>
+                {leftSidebarOpen && (
+                  <h2 className="text-sm font-semibold text-muted-foreground mb-2">NAVIGATION</h2>
+                )}
                 <ul className="space-y-1">
                   {navItems.map(({ path, label, icon: Icon, testId }) => (
                     <li key={path}>
-                      <NavLink
-                        to={path}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 px-3 py-2 rounded-md transition-colors ${
-                            isActive 
-                              ? 'bg-primary/10 text-primary font-medium active' 
-                              : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground'
-                          }`
-                        }
-                      >
-                        <Icon size={18} data-testid={testId} />
-                        <span>{label}</span>
-                      </NavLink>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <NavLink
+                              to={path}
+                              className={({ isActive }) =>
+                                `flex items-center ${leftSidebarOpen ? 'gap-3' : 'justify-center'} px-3 py-2 rounded-md transition-colors ${
+                                  isActive 
+                                    ? 'bg-primary/10 text-primary font-medium active' 
+                                    : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground'
+                                }`
+                              }
+                            >
+                              <Icon size={18} data-testid={testId} />
+                              {leftSidebarOpen && <span>{label}</span>}
+                            </NavLink>
+                          </TooltipTrigger>
+                          {!leftSidebarOpen && (
+                            <TooltipContent side="right">
+                              {label}
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     </li>
                   ))}
                 </ul>
@@ -239,17 +252,21 @@ export default function AppLayout() {
             </div>
           </nav>
           
-          {/* Toggle button for desktop */}
+          {/* Toggle button for desktop - always at the bottom */}
           {!isMobile && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute -right-10 top-4 hidden md:flex"
-              onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-              aria-label={leftSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            >
-              {leftSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-            </Button>
+            <div className="absolute bottom-4 left-0 right-0">
+              <div className={`flex ${leftSidebarOpen ? 'justify-end pr-2' : 'justify-center'}`}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="md:flex"
+                  onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+                  aria-label={leftSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                >
+                  {leftSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                </Button>
+              </div>
+            </div>
           )}
         </aside>
         {/* Mobile overlay */}

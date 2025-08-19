@@ -18,9 +18,12 @@ import { useAllTimeline } from '@/hooks/useTimeline';
 import GraphView from '@/components/graph/GraphView';
 import LoadingSkeleton from '@/components/common/LoadingSkeleton';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import DetailPanel from '@/components/DetailPanel';
 
-// Styles
-import styles from './PuzzleFocusView.module.css';
+// Types
+import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
+
+// Styles - using Tailwind classes
 
 /**
  * Puzzle Focus View Component
@@ -35,6 +38,43 @@ export default function PuzzleFocusView() {
   const { data: elements = [], isLoading: loadingElements } = useAllElements();
   const { data: puzzles = [], isLoading: loadingPuzzles } = useAllPuzzles();
   const { data: timeline = [], isLoading: loadingTimeline } = useAllTimeline();
+
+  // Helper function to get entity from node
+  const getEntityFromNode = useCallback((node: Node): Character | Element | Puzzle | TimelineEvent | null => {
+    if (!node.data?.entity) return null;
+    return node.data.entity as Character | Element | Puzzle | TimelineEvent;
+  }, []);
+
+  // Helper function to determine entity type from node
+  const getEntityType = useCallback((node: Node): 'character' | 'element' | 'puzzle' | 'timeline' => {
+    const nodeType = node.type;
+    if (nodeType === 'characterNode') return 'character';
+    if (nodeType === 'elementNode') return 'element';
+    if (nodeType === 'puzzleNode') return 'puzzle';
+    if (nodeType === 'timelineNode') return 'timeline';
+    
+    // Fallback based on data
+    const entity = node.data?.entity;
+    if (entity && typeof entity === 'object' && !Array.isArray(entity)) {
+      // Type narrowing for the 'in' operator
+      const obj = entity as Record<string, any>;
+      if ('tier' in obj) return 'character';
+      if ('descriptionText' in obj) return 'element';
+      if ('descriptionSolution' in obj) return 'puzzle';
+      if ('date' in obj && 'charactersInvolvedIds' in obj) return 'timeline';
+    }
+    
+    return 'element'; // Default fallback
+  }, []);
+
+  // Handle entity save (placeholder for Sprint 2 mutations)
+  const handleEntitySave = useCallback(async (updates: Partial<Character | Element | Puzzle | TimelineEvent>) => {
+    console.log('Saving entity updates:', updates);
+    // TODO: Implement mutation hooks in Sprint 2
+    // This will call the appropriate mutation based on entity type
+    // For now, just log the changes
+    return Promise.resolve();
+  }, []);
   
   // Combined loading state
   const isLoading = loadingCharacters || loadingElements || loadingPuzzles || loadingTimeline;
@@ -59,12 +99,12 @@ export default function PuzzleFocusView() {
   // Loading state
   if (isLoading) {
     return (
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>Puzzle Network</h1>
-          <p className={styles.subtitle}>Loading puzzle relationships...</p>
+      <div className="flex flex-col h-full bg-background">
+        <div className="px-8 py-6 bg-secondary border-b">
+          <h1 className="text-3xl font-bold text-foreground">Puzzle Network</h1>
+          <p className="mt-2 text-muted-foreground">Loading puzzle relationships...</p>
         </div>
-        <div className={styles.content}>
+        <div className="flex-1 flex relative overflow-hidden">
           <LoadingSkeleton variant="graph" />
         </div>
       </div>
@@ -81,38 +121,38 @@ export default function PuzzleFocusView() {
   
   return (
     <ErrorBoundary>
-      <div className={styles.container}>
+      <div className="flex flex-col h-full bg-background">
         {/* Header */}
-        <div className={styles.header}>
-          <h1 className={styles.title}>Puzzle Network</h1>
-          <p className={styles.subtitle}>
+        <div className="px-8 py-6 bg-secondary border-b">
+          <h1 className="m-0 text-3xl font-bold text-foreground">Puzzle Network</h1>
+          <p className="mt-2 mb-4 text-muted-foreground">
             Interactive visualization of puzzle dependencies and relationships
           </p>
           
           {/* Stats bar */}
-          <div className={styles.statsBar}>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>Puzzles:</span>
-              <span className={styles.statValue}>{stats.totalPuzzles}</span>
+          <div className="flex gap-8 mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-medium">Puzzles:</span>
+              <span className="text-foreground text-lg font-semibold">{stats.totalPuzzles}</span>
             </div>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>Elements:</span>
-              <span className={styles.statValue}>{stats.totalElements}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-medium">Elements:</span>
+              <span className="text-foreground text-lg font-semibold">{stats.totalElements}</span>
             </div>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>Characters:</span>
-              <span className={styles.statValue}>{stats.totalCharacters}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-medium">Characters:</span>
+              <span className="text-foreground text-lg font-semibold">{stats.totalCharacters}</span>
             </div>
-            <div className={styles.stat}>
-              <span className={styles.statLabel}>Timeline:</span>
-              <span className={styles.statValue}>{stats.totalEvents}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-medium">Timeline:</span>
+              <span className="text-foreground text-lg font-semibold">{stats.totalEvents}</span>
             </div>
           </div>
           
           {puzzleId && (
-            <div className={styles.selectedPuzzle}>
-              <span className={styles.selectedLabel}>Selected Puzzle ID:</span>
-              <span className={styles.selectedValue} data-testid="puzzle-id">
+            <div className="mt-4 px-4 py-3 bg-yellow-100 rounded-md inline-flex items-center gap-3">
+              <span className="text-yellow-800 text-sm font-medium">Selected Puzzle ID:</span>
+              <span className="text-yellow-900 text-sm font-semibold font-mono" data-testid="puzzle-id">
                 {puzzleId}
               </span>
             </div>
@@ -120,8 +160,8 @@ export default function PuzzleFocusView() {
         </div>
         
         {/* Main content */}
-        <div className={styles.content}>
-          <div className={styles.graphWrapper}>
+        <div className="flex-1 flex relative overflow-hidden">
+          <div className="flex-1 relative">
             <GraphView
               characters={characters}
               elements={elements}
@@ -133,35 +173,24 @@ export default function PuzzleFocusView() {
             />
           </div>
           
-          {/* Details Panel (placeholder for Sprint 1) */}
+          {/* Enhanced Details Panel with full editing capabilities */}
           {selectedNode && (
-            <div className={styles.detailsPanel}>
-              <h3 className={styles.detailsTitle}>Selected Node</h3>
-              <div className={styles.detailsContent}>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Type:</span>
-                  <span className={styles.detailValue}>{selectedNode.type}</span>
-                </div>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>ID:</span>
-                  <span className={styles.detailValue}>{selectedNode.id}</span>
-                </div>
-                <div className={styles.detailRow}>
-                  <span className={styles.detailLabel}>Label:</span>
-                  <span className={styles.detailValue}>
-                    {(selectedNode.data?.label as string) || 'N/A'}
-                  </span>
-                </div>
-                {/* More details will be added in Sprint 2 */}
-              </div>
-            </div>
+            <DetailPanel
+              entity={getEntityFromNode(selectedNode)}
+              entityType={getEntityType(selectedNode)}
+              onClose={() => setSelectedNode(null)}
+              onSave={handleEntitySave}
+              isLoading={false}
+              isSaving={false}
+              error={null}
+            />
           )}
         </div>
         
         {/* Instructions overlay (for Sprint 1) */}
-        <div className={styles.instructions}>
-          <p>
-            <strong>Navigation:</strong> Click and drag to pan • Scroll to zoom • 
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/75 text-white px-6 py-3 rounded-lg text-sm pointer-events-none z-10 animate-in fade-in-0 slide-in-from-bottom-2 duration-500">
+          <p className="m-0">
+            <strong className="text-yellow-400">Navigation:</strong> Click and drag to pan • Scroll to zoom • 
             Click nodes to select • Hover to highlight connections
           </p>
         </div>

@@ -2,7 +2,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import AppRouter from './router/AppRouter';
-import './App.css';
 
 // Create a client instance
 const queryClient = new QueryClient({

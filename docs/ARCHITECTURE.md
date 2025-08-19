@@ -30,6 +30,8 @@ ALNRetool is a visualization and editing tool for "About Last Night," a murder m
 ```
 src/lib/graph/
 ├── index.ts                    # Public API facade (90 lines)
+├── layout/
+│   └── dagre.ts                # Pure Dagre layout (598 lines, renamed from pureDagreLayout.ts)
 ├── modules/
 │   ├── BaseTransformer.ts      # Abstract base class for transformers
 │   ├── CharacterTransformer.ts # Character-specific transformation
@@ -37,12 +39,14 @@ src/lib/graph/
 │   ├── PuzzleTransformer.ts    # Puzzle-specific transformation
 │   ├── TimelineTransformer.ts  # Timeline-specific transformation
 │   ├── GraphBuilder.ts         # Node and edge assembly
-│   ├── EdgeBuilder.ts          # Edge creation and validation
+│   ├── EdgeBuilder.ts          # Smart edge creation with weighting
 │   ├── ErrorHandler.ts         # Error management and recovery
 │   ├── LayoutOrchestrator.ts   # Layout algorithm coordination
+│   ├── LayoutQualityMetrics.ts # Layout quality measurement (235 lines)
+│   ├── VirtualEdgeInjector.ts  # Virtual edge handling (337 lines)
+│   ├── ElementClusterer.ts     # Post-layout clustering (296 lines)
 │   └── ValidationUtils.ts      # Input validation utilities
 ├── relationships.ts             # Relationship resolution logic
-├── pureDagreLayout.ts          # Pure Dagre layout implementation
 ├── layouts.ts                  # View-specific layout configurations
 └── types.ts                    # TypeScript type definitions
 ```

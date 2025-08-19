@@ -17,9 +17,9 @@
 
 - **Frontend**: React 18, TypeScript, Vite, TanStack Query, React Flow
 - **Backend**: Express.js, TypeScript, Notion API SDK
-- **Graph Visualization**: React Flow with Dagre layout engine
+- **Graph Visualization**: React Flow with Pure Dagre layout engine (modular architecture)
 - **Testing**: Vitest (500+ tests), Mock Service Worker, Testing Library
-- **Styling**: CSS Modules
+- **Styling**: Tailwind CSS v4, shadcn/ui components, glassmorphism effects
 - **Development**: ESLint, Prettier, Commitizen, GitHub Actions CI/CD
 
 ## 🚀 Quick Start
@@ -164,10 +164,14 @@ Pre-commit hooks automatically run:
 - ✅ Comprehensive test coverage (99% passing)
 - ✅ Production deployment on Render
 
-**Sprint 2: Puzzle Focus View (Next)**
-- 🔄 React Flow graph visualization
-- 🔄 Interactive puzzle dependency network
-- 🔄 Mutation support for editing
+**Sprint 2: Interactive Graph Views (In Progress - Week 3)**
+- ✅ React Flow graph visualization with modular architecture
+- ✅ Interactive puzzle dependency network with pure Dagre layout
+- ✅ Visual component enhancements (glassmorphism, animations)
+- ✅ Diamond puzzle nodes with sophisticated styling
+- ✅ Owner badges and element flow indicators
+- ✅ Edge rendering fixed with BaseEdge integration
+- 🔄 Details panel and mutation support pending
 
 ## 📄 License
 

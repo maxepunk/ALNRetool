@@ -1,26 +1,31 @@
-import { LoadingSkeleton, SkeletonGroup } from './LoadingSkeleton'
-import styles from './ElementSkeleton.module.css'
+import { cn } from "@/lib/utils"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface ElementSkeletonProps {
   variant?: 'card' | 'list' | 'detail'
   className?: string
 }
 
+/**
+ * A component that displays loading skeletons for element content in different layouts.
+ * Supports card (default), list, and detail variants.
+ */
 export function ElementSkeleton({ 
   variant = 'card',
   className = ''
 }: ElementSkeletonProps) {
   if (variant === 'list') {
     return (
-      <div className={`${styles.listItem} ${className}`}>
-        <LoadingSkeleton variant="rectangular" width={32} height={32} />
-        <div className={styles.listContent}>
-          <LoadingSkeleton width="70%" height="1.2rem" />
-          <LoadingSkeleton width="45%" height="0.9rem" />
+      <div className={cn("flex items-center gap-3 p-3 border-b border-border", className)}>
+        <Skeleton className="h-8 w-8 rounded" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-3/5" />
+          <Skeleton className="h-4 w-2/5" />
         </div>
-        <div className={styles.listMeta}>
-          <LoadingSkeleton width={50} height="1rem" />
-          <LoadingSkeleton variant="rectangular" width={60} height="1.5rem" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded-full" />
+          <Skeleton className="h-5 w-14 rounded" />
         </div>
       </div>
     )
@@ -28,34 +33,42 @@ export function ElementSkeleton({
 
   if (variant === 'detail') {
     return (
-      <div className={`${styles.detail} ${className}`}>
-        <div className={styles.header}>
-          <LoadingSkeleton variant="rectangular" width={120} height={80} />
-          <div className={styles.headerInfo}>
-            <LoadingSkeleton width="80%" height="2rem" />
-            <LoadingSkeleton width="40%" height="1.2rem" />
-            <div className={styles.badges}>
-              <LoadingSkeleton variant="rectangular" width={80} height="1.5rem" />
-              <LoadingSkeleton variant="rectangular" width={60} height="1.5rem" />
+      <div className={cn("space-y-6", className)}>
+        <div className="flex gap-4">
+          <Skeleton className="h-20 w-20 rounded" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-8 w-3/5" />
+            <Skeleton className="h-5 w-1/3" />
+            <div className="flex gap-2">
+              <Skeleton className="h-6 w-16 rounded" />
+              <Skeleton className="h-6 w-12 rounded" />
+              <Skeleton className="h-6 w-6 rounded-full" />
             </div>
           </div>
         </div>
-        <div className={styles.sections}>
-          <div className={styles.section}>
-            <LoadingSkeleton width="35%" height="1.5rem" />
-            <SkeletonGroup lines={4} />
-          </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="30%" height="1.5rem" />
-            <div className={styles.patterns}>
-              <LoadingSkeleton width="60%" height="1rem" />
-              <LoadingSkeleton width="45%" height="1rem" />
-              <LoadingSkeleton width="70%" height="1rem" />
+        
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-28" />
+            <div className="space-y-2">
+              {Array(3).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
             </div>
           </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="25%" height="1.5rem" />
-            <SkeletonGroup lines={2} />
+          
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-36" />
+            <div className="grid grid-cols-3 gap-3">
+              {Array(3).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded" />
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-12 w-full rounded" />
           </div>
         </div>
       </div>
@@ -64,24 +77,29 @@ export function ElementSkeleton({
 
   // Default card variant
   return (
-    <div className={`${styles.card} ${className}`}>
-      <div className={styles.cardHeader}>
-        <LoadingSkeleton variant="rectangular" width={40} height={40} />
-        <div className={styles.cardTitle}>
-          <LoadingSkeleton width="85%" height="1.5rem" />
-          <LoadingSkeleton width="55%" height="1rem" />
+    <Card className={cn("overflow-hidden", className)}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-10 w-10 rounded" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-4 w-1/3" />
+          </div>
         </div>
-      </div>
-      <div className={styles.cardBody}>
-        <SkeletonGroup lines={3} />
-      </div>
-      <div className={styles.cardFooter}>
-        <div className={styles.cardBadges}>
-          <LoadingSkeleton variant="rectangular" width={60} height="1.2rem" />
-          <LoadingSkeleton variant="rectangular" width={50} height="1.2rem" />
+      </CardHeader>
+      <CardContent className="pb-2">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
         </div>
-        <LoadingSkeleton width="30%" height="1rem" />
-      </div>
-    </div>
+      </CardContent>
+      <CardFooter className="flex justify-between pt-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded-full" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+        <Skeleton className="h-5 w-16 rounded" />
+      </CardFooter>
+    </Card>
   )
 }

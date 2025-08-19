@@ -4,7 +4,7 @@
  */
 
 import { Link, useLocation } from 'react-router-dom'
-import styles from './Breadcrumbs.module.css'
+import { ChevronRight } from 'lucide-react'
 
 export default function Breadcrumbs() {
   const location = useLocation()
@@ -16,10 +16,13 @@ export default function Breadcrumbs() {
   }
 
   return (
-    <nav aria-label="Breadcrumb" className={styles.breadcrumbs}>
-      <ol className={styles.list}>
-        <li className={styles.item}>
-          <Link to="/" className={styles.link}>
+    <nav aria-label="Breadcrumb" className="py-2">
+      <ol className="flex items-center space-x-1 text-sm">
+        <li className="flex items-center">
+          <Link 
+            to="/" 
+            className="text-gray-500 hover:text-gray-700 transition-colors"
+          >
             Home
           </Link>
         </li>
@@ -29,12 +32,15 @@ export default function Breadcrumbs() {
           const label = value.charAt(0).toUpperCase() + value.slice(1)
 
           return (
-            <li key={to} className={styles.item}>
-              <span className={styles.separator}>/</span>
+            <li key={to} className="flex items-center">
+              <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
               {isLast ? (
-                <span className={styles.current}>{label}</span>
+                <span className="text-gray-900 font-medium">{label}</span>
               ) : (
-                <Link to={to} className={styles.link}>
+                <Link 
+                  to={to} 
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
                   {label}
                 </Link>
               )}

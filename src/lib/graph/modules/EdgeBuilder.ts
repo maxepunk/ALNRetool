@@ -5,6 +5,8 @@
  */
 
 import type { GraphEdge, RelationshipType, GraphNode } from '../types';
+import { MarkerType } from '@xyflow/react';
+import type { EdgeMarker } from '@xyflow/react';
 
 /**
  * Edge style configurations by relationship type
@@ -15,43 +17,80 @@ const EDGE_STYLES: Record<RelationshipType, {
   strokeDasharray?: string;
   animated?: boolean;
   label?: string;
+  markerEnd?: EdgeMarker;
 }> = {
   requirement: {
-    stroke: '#dc2626', // Red
+    stroke: 'hsl(var(--destructive))', // Using shadcn CSS variable
     strokeWidth: 2,
     label: 'requires',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 20,
+      height: 20,
+      color: 'hsl(var(--destructive))',
+    },
   },
   reward: {
-    stroke: '#10b981', // Green
+    stroke: 'hsl(var(--success, 142 76% 36%))', // Green with fallback
     strokeWidth: 2,
     strokeDasharray: '5,5',
     animated: true,
     label: 'rewards',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 20,
+      height: 20,
+      color: 'hsl(var(--success, 142 76% 36%))',
+    },
   },
   collaboration: {
-    stroke: '#06b6d4', // Cyan
+    stroke: 'hsl(var(--info, 199 89% 48%))', // Cyan with fallback
     strokeWidth: 2,
     strokeDasharray: '3,3',
     label: 'collaborates',
+    markerEnd: {
+      type: MarkerType.Arrow,
+      width: 15,
+      height: 15,
+      color: 'hsl(var(--info, 199 89% 48%))',
+    },
   },
   timeline: {
-    stroke: '#f59e0b', // Amber
+    stroke: 'hsl(var(--warning, 45 93% 47%))', // Amber with fallback
     strokeWidth: 2,
     strokeDasharray: '3,3',
     label: 'timeline',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 18,
+      height: 18,
+      color: 'hsl(var(--warning, 45 93% 47%))',
+    },
   },
   owner: {
-    stroke: '#3b82f6', // Blue
+    stroke: 'hsl(var(--primary))', // Using primary theme color
     strokeWidth: 2,
     label: 'owns',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 20,
+      height: 20,
+      color: 'hsl(var(--primary))',
+    },
   },
   ownership: {
-    stroke: '#3b82f6', // Blue
+    stroke: 'hsl(var(--primary))', // Using primary theme color
     strokeWidth: 2,
     label: 'owns',
+    markerEnd: {
+      type: MarkerType.ArrowClosed,
+      width: 20,
+      height: 20,
+      color: 'hsl(var(--primary))',
+    },
   },
   container: {
-    stroke: '#64748b', // Slate
+    stroke: 'hsl(var(--muted-foreground))', // Muted theme color
     strokeWidth: 2,
     strokeDasharray: 'none',
     label: 'contains',
@@ -62,9 +101,15 @@ const EDGE_STYLES: Record<RelationshipType, {
     label: '', // No label needed for virtual edges
   },
   'puzzle-grouping': {
-    stroke: '#6b7280', // Gray - for puzzle chain grouping
+    stroke: 'hsl(var(--border))', // Border theme color
     strokeWidth: 3,
     label: 'group',
+    markerEnd: {
+      type: MarkerType.Arrow,
+      width: 18,
+      height: 18,
+      color: 'hsl(var(--border))',
+    },
   },
 };
 
@@ -156,6 +201,19 @@ export class EdgeBuilder {
       type: 'default',
       animated: styleConfig.animated || false,
       style,
+      markerEnd: styleConfig.markerEnd, // Add arrow marker
+      label: styleConfig.label, // Add label at edge level for React Flow
+      labelStyle: {
+        fill: 'hsl(var(--foreground))',
+        fontSize: 12,
+        fontWeight: 500,
+      },
+      labelBgPadding: [8, 4],
+      labelBgBorderRadius: 4,
+      labelBgStyle: {
+        fill: 'hsl(var(--background))',
+        fillOpacity: 0.9,
+      },
       data: {
         relationshipType,
         weight,

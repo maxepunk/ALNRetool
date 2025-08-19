@@ -22,6 +22,12 @@ import PuzzleNode from './nodes/PuzzleNode';
 import TimelineNode from './nodes/TimelineNode';
 import GroupNode from './nodes/GroupNode';
 
+// Import custom edge components
+import { edgeTypes as customEdgeTypes } from './edges';
+
+// Import animation context
+import { GraphAnimationProvider } from '@/contexts/GraphAnimationContext';
+
 import { 
   buildGraph,
   buildPuzzleFocusGraph,
@@ -39,7 +45,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 
-import styles from './GraphView.module.css';
+// CSS Module import removed - using Tailwind classes
 
 // Define custom node types - memoized to prevent recreation
 const nodeTypes: NodeTypes = {
@@ -50,8 +56,8 @@ const nodeTypes: NodeTypes = {
   group: GroupNode,
 };
 
-// Define custom edge types (using default for now)
-const edgeTypes: EdgeTypes = {};
+// Use our custom edge types for different relationship types
+const edgeTypes: EdgeTypes = customEdgeTypes;
 
 interface GraphViewProps {
   characters: Character[];
@@ -61,6 +67,7 @@ interface GraphViewProps {
   viewType?: ViewType;
   onNodeClick?: (node: Node) => void;
   onSelectionChange?: (params: OnSelectionChangeParams) => void;
+  onGraphDataChange?: (data: { nodes: Node[]; edges: any[] }) => void;
 }
 
 /**
@@ -74,6 +81,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   viewType = 'puzzle-focus',
   onNodeClick,
   onSelectionChange,
+  onGraphDataChange,
 }) => {
   // Memoize the notion data object to prevent unnecessary recalculations
   const notionData = useMemo(
@@ -133,6 +141,13 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     onSelectionChange,
   });
   
+  // Pass nodes and edges to parent for animation context
+  useEffect(() => {
+    if (onGraphDataChange && nodes.length > 0) {
+      onGraphDataChange({ nodes, edges });
+    }
+  }, [nodes, edges, onGraphDataChange]);
+  
   // Get React Flow instance for viewport controls
   const reactFlowInstance = useReactFlow();
   const [isReady, setIsReady] = useState(false);
@@ -182,12 +197,12 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   }, []);
   
   return (
-    <div className={styles.graphContainer}>
+    <div className="w-full h-full relative bg-gray-50">
       {/* Floating Toolbar - only show when React Flow is ready */}
       {isReady && (
-        <div className={styles.floatingToolbar}>
+        <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-1 flex items-center gap-1 shadow-md z-10">
           <button 
-            className={styles.toolbarButton} 
+            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
             onClick={handleZoomIn}
             title="Zoom In"
             type="button"
@@ -195,7 +210,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
             <ZoomIn size={16} />
           </button>
           <button 
-            className={styles.toolbarButton} 
+            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
             onClick={handleZoomOut}
             title="Zoom Out"
             type="button"
@@ -203,10 +218,10 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
             <ZoomOut size={16} />
           </button>
           
-          <div className={styles.toolbarSeparator} />
+          <div className="w-px h-6 bg-gray-200 mx-1" />
           
           <button 
-            className={styles.toolbarButton} 
+            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
             onClick={handleZoomToFit}
             title="Fit to View"
             type="button"
@@ -214,7 +229,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
             <Maximize size={16} />
           </button>
           <button 
-            className={styles.toolbarButton} 
+            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
             onClick={handleResetView}
             title="Reset View"
             type="button"
@@ -241,6 +256,44 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
         disableKeyboardA11y={true}
         style={{ width: '100%', height: '100%' }}
       >
+        {/* SVG Marker Definitions for Edge Arrows */}
+        <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+          <defs>
+            <marker
+              id="arrowclosed"
+              viewBox="0 0 20 20"
+              refX="19"
+              refY="10"
+              markerWidth="20"
+              markerHeight="20"
+              orient="auto"
+            >
+              <path
+                d="M 2 2 L 18 10 L 2 18 Z"
+                fill="currentColor"
+                stroke="currentColor"
+                strokeWidth="1"
+              />
+            </marker>
+            <marker
+              id="arrow"
+              viewBox="0 0 20 20"
+              refX="19"
+              refY="10"
+              markerWidth="15"
+              markerHeight="15"
+              orient="auto"
+            >
+              <path
+                d="M 2 2 L 18 10 L 2 18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              />
+            </marker>
+          </defs>
+        </svg>
+        
         <Background 
           variant={BackgroundVariant.Dots} 
           gap={12} 
@@ -257,18 +310,18 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
       </ReactFlow>
       
       {/* Stats overlay */}
-      <div className={styles.statsOverlay}>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Nodes:</span>
-          <span className={styles.statValue}>{nodes.length}</span>
+      <div className="absolute top-5 right-5 bg-white rounded-lg px-4 py-3 shadow-lg flex gap-5 z-10 text-sm">
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-500 font-medium">Nodes:</span>
+          <span className="text-gray-900 font-semibold">{nodes.length}</span>
         </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>Edges:</span>
-          <span className={styles.statValue}>{edges.length}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-500 font-medium">Edges:</span>
+          <span className="text-gray-900 font-semibold">{edges.length}</span>
         </div>
-        <div className={styles.stat}>
-          <span className={styles.statLabel}>View:</span>
-          <span className={styles.statValue}>{viewType}</span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-gray-500 font-medium">View:</span>
+          <span className="text-gray-900 font-semibold">{viewType}</span>
         </div>
       </div>
     </div>
@@ -276,14 +329,31 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
 };
 
 /**
- * GraphView component wrapped with ReactFlowProvider
- * This is necessary for our custom hooks to work properly
+ * GraphView component wrapped with necessary providers
+ * ReactFlowProvider is needed for React Flow hooks
+ * GraphAnimationProvider manages unified animation state
  */
 const GraphView: React.FC<GraphViewProps> = (props) => {
   return (
     <ReactFlowProvider>
-      <GraphViewInner {...props} />
+      <GraphViewWithAnimation {...props} />
     </ReactFlowProvider>
+  );
+};
+
+/**
+ * Intermediate component that provides animation context
+ * This needs to be inside ReactFlowProvider to access nodes/edges
+ */
+const GraphViewWithAnimation: React.FC<GraphViewProps> = (props) => {
+  // This component will wrap GraphViewInner with GraphAnimationProvider
+  // We need to render GraphViewInner first to get nodes/edges, then provide them to the context
+  const [graphData, setGraphData] = useState<{ nodes: Node[]; edges: any[] }>({ nodes: [], edges: [] });
+  
+  return (
+    <GraphAnimationProvider nodes={graphData.nodes} edges={graphData.edges}>
+      <GraphViewInner {...props} onGraphDataChange={setGraphData} />
+    </GraphAnimationProvider>
   );
 };
 

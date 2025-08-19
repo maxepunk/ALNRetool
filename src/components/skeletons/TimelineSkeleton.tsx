@@ -1,63 +1,70 @@
-import { LoadingSkeleton, SkeletonGroup } from './LoadingSkeleton'
-import styles from './TimelineSkeleton.module.css'
+import { cn } from "@/lib/utils"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface TimelineSkeletonProps {
-  variant?: 'card' | 'list' | 'detail' | 'timeline'
+  variant?: 'card' | 'list' | 'detail'
   className?: string
 }
 
+/**
+ * A component that displays loading skeletons for timeline content in different layouts.
+ * Supports card (default), list, and detail variants.
+ */
 export function TimelineSkeleton({ 
-  variant = 'timeline',
+  variant = 'card',
   className = ''
 }: TimelineSkeletonProps) {
   if (variant === 'list') {
     return (
-      <div className={`${styles.listItem} ${className}`}>
-        <div className={styles.listDate}>
-          <LoadingSkeleton width={80} height="1rem" />
+      <div className={cn("flex items-center gap-3 p-3 border-b border-border", className)}>
+        <Skeleton className="h-10 w-10 rounded" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-4/5" />
+          <Skeleton className="h-4 w-1/4" />
         </div>
-        <div className={styles.listContent}>
-          <LoadingSkeleton width="80%" height="1.2rem" />
-          <LoadingSkeleton width="55%" height="0.9rem" />
-        </div>
-        <div className={styles.listMeta}>
-          <LoadingSkeleton width={30} height="1rem" />
-        </div>
+        <Skeleton className="h-5 w-24 rounded" />
       </div>
     )
   }
 
   if (variant === 'detail') {
     return (
-      <div className={`${styles.detail} ${className}`}>
-        <div className={styles.header}>
-          <div className={styles.dateInfo}>
-            <LoadingSkeleton width={120} height="2.5rem" />
-            <LoadingSkeleton width={100} height="1.2rem" />
-          </div>
-          <div className={styles.headerContent}>
-            <LoadingSkeleton width="90%" height="2rem" />
-            <LoadingSkeleton width="60%" height="1.2rem" />
+      <div className={cn("space-y-6", className)}>
+        <div className="flex gap-4">
+          <Skeleton className="h-16 w-16 rounded" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-8 w-full" />
+            <Skeleton className="h-5 w-1/4" />
+            <Skeleton className="h-6 w-32 rounded" />
           </div>
         </div>
-        <div className={styles.sections}>
-          <div className={styles.section}>
-            <LoadingSkeleton width="40%" height="1.5rem" />
-            <SkeletonGroup lines={4} />
-          </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="35%" height="1.5rem" />
-            <div className={styles.participants}>
-              <LoadingSkeleton width="70%" height="1rem" />
-              <LoadingSkeleton width="60%" height="1rem" />
-              <LoadingSkeleton width="55%" height="1rem" />
+        
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-36" />
+            <div className="space-y-2">
+              {Array(6).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
             </div>
           </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="25%" height="1.5rem" />
-            <div className={styles.evidence}>
-              <LoadingSkeleton width="65%" height="1rem" />
-              <LoadingSkeleton width="50%" height="1rem" />
+          
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-48" />
+            <div className="grid grid-cols-2 gap-3">
+              {Array(4).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full rounded" />
+              ))}
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-40" />
+            <div className="space-y-2">
+              {Array(3).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-3/4" />
+              ))}
             </div>
           </div>
         </div>
@@ -65,44 +72,31 @@ export function TimelineSkeleton({
     )
   }
 
-  if (variant === 'card') {
-    return (
-      <div className={`${styles.card} ${className}`}>
-        <div className={styles.cardHeader}>
-          <LoadingSkeleton variant="rectangular" width={60} height={60} />
-          <div className={styles.cardTitle}>
-            <LoadingSkeleton width="85%" height="1.5rem" />
-            <LoadingSkeleton width="40%" height="1rem" />
-          </div>
-        </div>
-        <div className={styles.cardBody}>
-          <SkeletonGroup lines={2} />
-        </div>
-        <div className={styles.cardFooter}>
-          <LoadingSkeleton width="50%" height="0.9rem" />
-          <LoadingSkeleton width="30%" height="0.9rem" />
-        </div>
-      </div>
-    )
-  }
-
-  // Default timeline variant
+  // Default card variant
   return (
-    <div className={`${styles.timeline} ${className}`}>
-      <div className={styles.timelineMarker}>
-        <LoadingSkeleton variant="circular" width={12} height={12} />
-      </div>
-      <div className={styles.timelineContent}>
-        <div className={styles.timelineHeader}>
-          <LoadingSkeleton width="70%" height="1.2rem" />
-          <LoadingSkeleton width={80} height="0.9rem" />
+    <Card className={cn("overflow-hidden", className)}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-full" />
+            <Skeleton className="h-4 w-1/3" />
+          </div>
         </div>
-        <LoadingSkeleton width="90%" height="1rem" />
-        <div className={styles.timelineMeta}>
-          <LoadingSkeleton width="40%" height="0.8rem" />
-          <LoadingSkeleton width="30%" height="0.8rem" />
+      </CardHeader>
+      <CardContent className="pt-2">
+        <div className="space-y-3">
+          <div className="space-y-2">
+            {Array(2).fill(0).map((_, i) => (
+              <Skeleton key={i} className="h-4 w-full" />
+            ))}
+          </div>
+          <div className="flex justify-between items-center">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-5 w-24 rounded" />
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

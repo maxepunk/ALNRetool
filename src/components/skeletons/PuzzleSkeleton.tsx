@@ -1,26 +1,31 @@
-import { LoadingSkeleton, SkeletonGroup } from './LoadingSkeleton'
-import styles from './PuzzleSkeleton.module.css'
+import { cn } from "@/lib/utils"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface PuzzleSkeletonProps {
   variant?: 'card' | 'list' | 'detail'
   className?: string
 }
 
+/**
+ * A component that displays loading skeletons for puzzle content in different layouts.
+ * Supports card (default), list, and detail variants.
+ */
 export function PuzzleSkeleton({ 
   variant = 'card',
   className = ''
 }: PuzzleSkeletonProps) {
   if (variant === 'list') {
     return (
-      <div className={`${styles.listItem} ${className}`}>
-        <LoadingSkeleton variant="rectangular" width={32} height={32} />
-        <div className={styles.listContent}>
-          <LoadingSkeleton width="75%" height="1.2rem" />
-          <LoadingSkeleton width="50%" height="0.9rem" />
+      <div className={cn("flex items-center gap-3 p-3 border-b border-border", className)}>
+        <Skeleton className="h-8 w-8 rounded" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-3/4" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
-        <div className={styles.listMeta}>
-          <LoadingSkeleton width={40} height="1rem" />
-          <LoadingSkeleton width="60%" height="0.9rem" />
+        <div className="flex flex-col items-end gap-2">
+          <Skeleton className="h-4 w-10" />
+          <Skeleton className="h-4 w-16" />
         </div>
       </div>
     )
@@ -28,35 +33,40 @@ export function PuzzleSkeleton({
 
   if (variant === 'detail') {
     return (
-      <div className={`${styles.detail} ${className}`}>
-        <div className={styles.header}>
-          <LoadingSkeleton variant="rectangular" width={100} height={100} />
-          <div className={styles.headerInfo}>
-            <LoadingSkeleton width="85%" height="2rem" />
-            <LoadingSkeleton width="35%" height="1.2rem" />
-            <div className={styles.difficulty}>
-              <LoadingSkeleton variant="rectangular" width={120} height="2rem" />
-            </div>
+      <div className={cn("space-y-6", className)}>
+        <div className="flex gap-4">
+          <Skeleton className="h-24 w-24 rounded" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-8 w-4/5" />
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-8 w-32 rounded" />
           </div>
         </div>
-        <div className={styles.sections}>
-          <div className={styles.section}>
-            <LoadingSkeleton width="40%" height="1.5rem" />
-            <SkeletonGroup lines={5} />
-          </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="35%" height="1.5rem" />
-            <div className={styles.requirements}>
-              <LoadingSkeleton width="80%" height="1rem" />
-              <LoadingSkeleton width="65%" height="1rem" />
-              <LoadingSkeleton width="70%" height="1rem" />
+        
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-40" />
+            <div className="space-y-2">
+              {Array(5).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
             </div>
           </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="25%" height="1.5rem" />
-            <div className={styles.rewards}>
-              <LoadingSkeleton width="60%" height="1rem" />
-              <LoadingSkeleton width="55%" height="1rem" />
+          
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-36" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+          
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-28" />
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-3/5" />
+              <Skeleton className="h-4 w-1/2" />
             </div>
           </div>
         </div>
@@ -66,24 +76,30 @@ export function PuzzleSkeleton({
 
   // Default card variant
   return (
-    <div className={`${styles.card} ${className}`}>
-      <div className={styles.cardHeader}>
-        <LoadingSkeleton variant="rectangular" width={50} height={50} />
-        <div className={styles.cardTitle}>
-          <LoadingSkeleton width="90%" height="1.5rem" />
-          <LoadingSkeleton width="45%" height="1rem" />
+    <Card className={cn("overflow-hidden", className)}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-12 w-12 rounded" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-9/10" />
+            <Skeleton className="h-4 w-2/5" />
+          </div>
         </div>
-      </div>
-      <div className={styles.cardBody}>
-        <SkeletonGroup lines={3} />
-      </div>
-      <div className={styles.cardFooter}>
-        <div className={styles.cardMeta}>
-          <LoadingSkeleton width="50%" height="0.9rem" />
-          <LoadingSkeleton width="40%" height="0.9rem" />
+      </CardHeader>
+      <CardContent className="pb-2">
+        <div className="space-y-2">
+          {Array(3).fill(0).map((_, i) => (
+            <Skeleton key={i} className="h-4 w-full" />
+          ))}
         </div>
-        <LoadingSkeleton variant="rectangular" width={70} height="1.5rem" />
-      </div>
-    </div>
+      </CardContent>
+      <CardFooter className="flex justify-between pt-2">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+        <Skeleton className="h-6 w-20 rounded" />
+      </CardFooter>
+    </Card>
   )
 }

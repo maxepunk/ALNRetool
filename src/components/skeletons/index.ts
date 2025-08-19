@@ -1,5 +1,5 @@
-export { LoadingSkeleton, SkeletonGroup } from './LoadingSkeleton'
+export { PuzzleSkeleton } from './PuzzleSkeleton'
 export { CharacterSkeleton } from './CharacterSkeleton'
 export { ElementSkeleton } from './ElementSkeleton'
-export { PuzzleSkeleton } from './PuzzleSkeleton'
 export { TimelineSkeleton } from './TimelineSkeleton'
+// LoadingSkeleton is deprecated - use components from shadcn/ui directly

@@ -193,20 +193,39 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
 - **Path Alias**: `@/*` maps to `src/*` (use in frontend imports)
 - **Strict Mode**: All strict checks enabled including `noUncheckedIndexedAccess`
 
-#### CSS Architecture (Hybrid Approach - January 17, 2025)
-- **Tailwind CSS v4**: Installed for utility-first styling and shadcn/ui component integration
-- **CSS Modules**: Retained for existing complex components (GraphView, nodes, etc.)
-- **shadcn/ui Components**: Using Button, Tooltip, Separator, and other primitives for UI consistency
+#### CSS Architecture (Hybrid Approach - January 17-18, 2025)
+- **Tailwind CSS v4**: Primary styling approach with utility-first classes
+- **CSS Modules**: Phased out in favor of Tailwind (migrated away from .module.css files)
+- **shadcn/ui Components**: Using Button, Tooltip, Separator, Badge, and other primitives
 - **PostCSS**: Configured with `@tailwindcss/postcss` (Tailwind v4 requirement) and autoprefixer
+- **Global Styles**: Animation keyframes and utility classes in `src/index.css`
 - **Strategy**: 
-  - New components use Tailwind utilities + shadcn/ui
-  - Complex existing components keep CSS Modules for encapsulation
-  - Gradual migration path from CSS Modules to Tailwind as needed
+  - All components use Tailwind utilities + shadcn/ui
+  - Glassmorphism effects via Tailwind's backdrop-blur utilities
+  - Animation classes defined globally, applied via cn() utility
 - **Configuration Files**:
   - `tailwind.config.js`: Extends shadcn/ui theme, includes custom colors
   - `postcss.config.js`: Uses `@tailwindcss/postcss` plugin (not `tailwindcss`)
   - `components.json`: shadcn/ui configuration with component paths
 - **Import Pattern**: shadcn/ui components from `@/components/ui/*` (lowercase)
+
+#### Animation Architecture (January 18, 2025)
+- **Animation Utilities**: Centralized in `src/lib/animations.ts`
+  - Reusable animation constants and classes
+  - Edge-specific animation helpers
+  - Performance-aware transitions
+- **Animation State Hook**: `src/hooks/useAnimationState.ts`
+  - Manages hover states and connected element highlighting
+  - Debounced state updates for performance
+  - Group hover coordination
+- **GraphAnimationContext**: `src/contexts/GraphAnimationContext.tsx`
+  - Unified animation state for entire graph
+  - Coordinates hover effects across nodes and edges
+  - Performance controls for large graphs
+- **CSS Animations**: Defined in `src/index.css`
+  - Keyframes for flow, pulse, ripple, highlight effects
+  - Edge-type specific classes
+  - Respects prefers-reduced-motion
 
 #### Vite Configuration
 - **Proxy**: `/api` routes proxy to `localhost:3001` in dev

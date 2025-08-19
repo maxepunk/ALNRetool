@@ -1,51 +1,68 @@
-import { LoadingSkeleton, SkeletonGroup } from './LoadingSkeleton'
-import styles from './CharacterSkeleton.module.css'
+import { cn } from "@/lib/utils"
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface CharacterSkeletonProps {
   variant?: 'card' | 'list' | 'detail'
   className?: string
 }
 
+/**
+ * A component that displays loading skeletons for character content in different layouts.
+ * Supports card (default), list, and detail variants.
+ */
 export function CharacterSkeleton({ 
   variant = 'card',
   className = ''
 }: CharacterSkeletonProps) {
   if (variant === 'list') {
     return (
-      <div className={`${styles.listItem} ${className}`}>
-        <LoadingSkeleton variant="circular" width={40} height={40} />
-        <div className={styles.listContent}>
-          <LoadingSkeleton width="60%" height="1.2rem" />
-          <LoadingSkeleton width="40%" height="0.9rem" />
+      <div className={cn("flex items-center gap-3 p-3 border-b border-border", className)}>
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
         </div>
-        <LoadingSkeleton width={60} height="1.5rem" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-16 rounded" />
+          <Skeleton className="h-5 w-12 rounded" />
+        </div>
       </div>
     )
   }
 
   if (variant === 'detail') {
     return (
-      <div className={`${styles.detail} ${className}`}>
-        <div className={styles.header}>
-          <LoadingSkeleton variant="circular" width={80} height={80} />
-          <div className={styles.headerInfo}>
-            <LoadingSkeleton width="70%" height="2rem" />
-            <LoadingSkeleton width="50%" height="1.2rem" />
-            <LoadingSkeleton width="40%" height="1rem" />
+      <div className={cn("space-y-6", className)}>
+        <div className="flex gap-4">
+          <Skeleton className="h-32 w-32 rounded-full" />
+          <div className="flex-1 space-y-3">
+            <Skeleton className="h-8 w-3/4" />
+            <Skeleton className="h-5 w-1/2" />
+            <div className="flex gap-2">
+              <Skeleton className="h-6 w-20 rounded" />
+              <Skeleton className="h-6 w-16 rounded" />
+            </div>
           </div>
         </div>
-        <div className={styles.sections}>
-          <div className={styles.section}>
-            <LoadingSkeleton width="30%" height="1.5rem" />
-            <SkeletonGroup lines={3} />
+        
+        <div className="space-y-6">
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-32" />
+            <div className="space-y-2">
+              {Array(4).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-4 w-full" />
+              ))}
+            </div>
           </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="25%" height="1.5rem" />
-            <SkeletonGroup lines={2} />
-          </div>
-          <div className={styles.section}>
-            <LoadingSkeleton width="35%" height="1.5rem" />
-            <SkeletonGroup lines={4} />
+          
+          <div className="space-y-3">
+            <Skeleton className="h-6 w-40" />
+            <div className="grid grid-cols-2 gap-3">
+              {Array(6).fill(0).map((_, i) => (
+                <Skeleton key={i} className="h-20 w-full rounded" />
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -54,21 +71,29 @@ export function CharacterSkeleton({
 
   // Default card variant
   return (
-    <div className={`${styles.card} ${className}`}>
-      <div className={styles.cardHeader}>
-        <LoadingSkeleton variant="circular" width={50} height={50} />
-        <div className={styles.cardTitle}>
-          <LoadingSkeleton width="80%" height="1.5rem" />
-          <LoadingSkeleton width="50%" height="1rem" />
+    <Card className={cn("overflow-hidden", className)}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center gap-3">
+          <Skeleton className="h-14 w-14 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-6 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
         </div>
-      </div>
-      <div className={styles.cardBody}>
-        <SkeletonGroup lines={2} />
-      </div>
-      <div className={styles.cardFooter}>
-        <LoadingSkeleton width="40%" height="1rem" />
-        <LoadingSkeleton width="30%" height="1rem" />
-      </div>
-    </div>
+      </CardHeader>
+      <CardContent className="pb-2">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between pt-2">
+        <div className="flex gap-2">
+          <Skeleton className="h-5 w-14 rounded" />
+          <Skeleton className="h-5 w-10 rounded" />
+        </div>
+        <Skeleton className="h-4 w-16" />
+      </CardFooter>
+    </Card>
   )
 }

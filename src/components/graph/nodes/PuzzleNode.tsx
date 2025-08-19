@@ -1,131 +1,70 @@
-import { memo, useState, useEffect } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { memo } from 'react';
 import type { NodeProps } from '@xyflow/react';
 import type { GraphNodeData } from '@/lib/graph/types';
 import type { Puzzle } from '@/types/notion/app';
-import styles from './PuzzleNode.module.css';
+import DiamondCard, { type NodeStatus } from './DiamondCard';
+import { Puzzle as PuzzleIcon, User } from 'lucide-react';
 
 /**
- * Custom React Flow node component for Puzzle entities with diamond shape
- * Implements visual hierarchy, status-based styling, and multi-zoom optimization
+ * Custom React Flow node component for Puzzle entities
+ * Uses DiamondCard for distinctive diamond-shaped visualization
  */
 const PuzzleNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as GraphNodeData<Puzzle>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
   
-  // Determine depth level for visual hierarchy
+  // Determine hierarchy
   const isParent = entity.subPuzzleIds && entity.subPuzzleIds.length > 0;
   const isChild = entity.parentItemId !== undefined;
   
-  // Determine complexity level
-  const complexity = metadata.visualHints?.size ?? 'medium';
-  
-  // Check if it's part of a chain
-  const isChained = isParent || isChild;
+  // Determine complexity from metadata or calculate based on connections
+  const getComplexity = () => {
+    const totalConnections = (entity.puzzleElementIds?.length || 0) + (entity.rewardIds?.length || 0);
+    if (metadata.visualHints?.size === 'large' || totalConnections > 8) return 'complex';
+    if (metadata.visualHints?.size === 'small' || totalConnections < 3) return 'simple';
+    return 'medium';
+  };
   
   // Check if puzzle is locked (from visual hints)
   const isLocked = metadata.visualHints?.icon === 'lock';
   
-  // Determine status for styling based on whether it has elements
+  // Determine status based on elements
   const hasElements = entity.puzzleElementIds && entity.puzzleElementIds.length > 0;
   const isDraft = !hasElements;
   const isReady = hasElements;
+  const isChained = isParent || isChild;
   
-  // Calculate size class based on hierarchy
-  const getSizeClass = () => {
-    if (isParent) return 'parent';
-    if (isChild) return 'child';
-    return complexity;
-  };
+  // Build status array
+  const statuses: NodeStatus[] = [];
+  if (hasError) statuses.push('error');
+  else if (isDraft) statuses.push('draft');
+  else if (isReady) statuses.push('ready');
+  if (isChained) statuses.push('chained');
+  if (isLocked) statuses.push('locked');
   
-  // Pulse animation for critical path (check if it's a parent puzzle with many dependencies)
-  const isCritical = isParent && entity.subPuzzleIds.length > 2;
-  const [isPulsing, setIsPulsing] = useState(isCritical);
-  
-  useEffect(() => {
-    setIsPulsing(isCritical);
-  }, [isCritical]);
-  
-  // Calculate opacity based on hierarchy position
-  const depthOpacity = isParent ? 1 : isChild ? 0.7 : 0.85;
+  // Owner badge - simplified
+  const ownerBadge = entity.ownerId ? (
+    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100/80 backdrop-blur-sm">
+      <User className="h-3 w-3 text-gray-600" />
+    </div>
+  ) : undefined;
   
   return (
-    <div 
-      className={`${styles.puzzleNodeContainer} ${styles[`complexity-${getSizeClass()}`]}`}
-      style={{ opacity: depthOpacity }}
-    >
-      {/* Diamond shape container with status-based styling */}
-      <div 
-        className={`${styles.puzzleNode} ${isChained ? styles.chained : ''} ${hasError ? styles.error : ''} ${selected ? styles.selected : ''} ${isDraft ? styles.draft : ''} ${isReady ? styles.ready : ''} ${isPulsing ? styles.pulsing : ''}`}
-      >
-      {/* Chain indicator */}
-      {isChained && (
-        <div className={styles.chainBadge}>🔗</div>
-      )}
-      
-      {/* Lock indicator for locked puzzles */}
-      {isLocked && (
-        <div className={styles.lockBadge}>🔒</div>
-      )}
-      
-        {/* Main content centered in diamond */}
-        <div className={styles.content}>
-          <div className={styles.icon}>🧩</div>
-          <div className={styles.name}>{entity.name}</div>
-        
-        {/* Requirements and rewards */}
-        <div className={styles.stats}>
-          {entity.puzzleElementIds && entity.puzzleElementIds.length > 0 && (
-            <span className={styles.requirement}>
-              ↓ {entity.puzzleElementIds.length}
-            </span>
-          )}
-          {entity.rewardIds && entity.rewardIds.length > 0 && (
-            <span className={styles.reward}>
-              ↑ {entity.rewardIds.length}
-            </span>
-          )}
-        </div>
-        
-        {/* Owner indicator */}
-        {entity.ownerId && (
-          <div className={styles.owner}>👤</div>
-        )}
-        </div>
-        
-        {/* Error indicator */}
-        {hasError && (
-          <div className={styles.errorIndicator} title={metadata.errorState?.message}>
-            ⚠️
-          </div>
-        )}
-      </div>
-      
-      {/* Connection handles positioned for LR layout */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="requires"
-        className={styles.handleRequires}
-        style={{ left: '0', top: '50%', transform: 'translate(-50%, -50%)' }}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="rewards"
-        className={styles.handleRewards}
-        style={{ right: '0', top: '50%', transform: 'translate(50%, -50%)' }}
-      />
-      
-      {/* Flow indicators for dependencies - horizontal for LR layout */}
-      {(entity.puzzleElementIds?.length > 0 || entity.rewardIds?.length > 0) && (
-        <div className={styles.flowIndicators}>
-          <div className={styles.flowLeft} />
-          <div className={styles.flowRight} />
-        </div>
-      )}
-    </div>
+    <DiamondCard
+      title={entity.name}
+      icon={<PuzzleIcon className="h-5 w-5" />}
+      selected={selected}
+      statuses={statuses}
+      requirementsCount={entity.puzzleElementIds?.length || 0}
+      rewardsCount={entity.rewardIds?.length || 0}
+      ownerBadge={ownerBadge}
+      isParent={isParent}
+      isChild={isChild}
+      complexity={getComplexity()}
+      size="medium"
+      maxCount={5}
+    />
   );
 });
 

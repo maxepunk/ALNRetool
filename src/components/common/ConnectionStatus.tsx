@@ -3,7 +3,8 @@
  * Shows online/offline status and last sync time
  */
 
-import styles from './ConnectionStatus.module.css'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 interface ConnectionStatusProps {
   isOnline: boolean
@@ -15,21 +16,25 @@ export default function ConnectionStatus({
   lastSyncTime 
 }: ConnectionStatusProps) {
   return (
-    <div 
-      className={`${styles.container} ${isOnline ? styles.online : styles.offline}`}
-      data-testid="connection-status"
-    >
-      <span 
-        className={`
-          ${styles.indicator} 
-          ${isOnline ? 'status-connected' : 'status-disconnected'}
-        `}
-      />
-      <span className={styles.text}>
-        {isOnline ? 'Connected' : 'Offline'}
-      </span>
+    <div className="flex items-center gap-2" data-testid="connection-status">
+      <Badge 
+        variant={isOnline ? "default" : "secondary"}
+        className={cn(
+          "flex items-center gap-1.5",
+          isOnline ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-600"
+        )}
+      >
+        <span 
+          className={cn(
+            "w-2 h-2 rounded-full",
+            isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
+          )}
+        />
+        <span>{isOnline ? 'Connected' : 'Offline'}</span>
+      </Badge>
+      
       {isOnline && lastSyncTime && (
-        <span className={styles.syncTime}>
+        <span className="text-xs text-gray-500">
           Last synced: <time>{lastSyncTime}</time>
         </span>
       )}
