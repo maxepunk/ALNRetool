@@ -589,7 +589,7 @@ export default function Sidebar({ isOpen, onToggle, isMobile }: SidebarProps) {
                 <div className="space-y-1">
                   {searchTerm && (
                     <div className="text-xs text-muted-foreground truncate">
-                      Search: "{searchTerm}"
+                      Search: &quot;{searchTerm}&quot;
                     </div>
                   )}
                   {puzzleFilters.selectedActs.size > 0 && (
