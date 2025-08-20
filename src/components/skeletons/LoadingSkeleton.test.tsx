@@ -18,8 +18,9 @@ describe('LoadingSkeleton', () => {
       render(<LoadingSkeleton />)
       const skeletonEl = screen.getByRole('progressbar')
       
-      expect(skeletonEl.className).toContain('skeleton')
-      expect(skeletonEl.className).toContain('text')
+      expect(skeletonEl.className).toContain('animate-pulse')
+      expect(skeletonEl.className).toContain('bg-gray-200')
+      expect(skeletonEl.className).toContain('rounded')
     })
   })
 
@@ -28,7 +29,7 @@ describe('LoadingSkeleton', () => {
       render(<LoadingSkeleton variant="circular" width={40} height={40} />)
       const skeletonEl = screen.getByRole('progressbar')
       
-      expect(skeletonEl.className).toContain('circular')
+      expect(skeletonEl.className).toContain('rounded-full')
       expect(skeletonEl).toHaveStyle({ width: '40px', height: '40px' })
     })
 
@@ -36,7 +37,7 @@ describe('LoadingSkeleton', () => {
       render(<LoadingSkeleton variant="rectangular" width="80%" height="2rem" />)
       const skeletonEl = screen.getByRole('progressbar')
       
-      expect(skeletonEl.className).toContain('rectangular')
+      expect(skeletonEl.className).toContain('rounded-md')
       expect(skeletonEl).toHaveStyle({ width: '80%', height: '32px' })
     })
 
@@ -44,7 +45,7 @@ describe('LoadingSkeleton', () => {
       render(<LoadingSkeleton variant="text" />)
       const skeletonEl = screen.getByRole('progressbar')
       
-      expect(skeletonEl.className).toContain('text')
+      expect(skeletonEl.className).toContain('rounded')
     })
   })
 
@@ -60,8 +61,9 @@ describe('LoadingSkeleton', () => {
       render(<LoadingSkeleton className="custom-test-class" />)
       const skeletonEl = screen.getByRole('progressbar')
       
-      expect(skeletonEl.className).toContain('skeleton')
-      expect(skeletonEl.className).toContain('text')
+      expect(skeletonEl.className).toContain('animate-pulse')
+      expect(skeletonEl.className).toContain('bg-gray-200')
+      expect(skeletonEl.className).toContain('rounded')
       expect(skeletonEl.className).toContain('custom-test-class')
     })
 
@@ -92,8 +94,9 @@ describe('LoadingSkeleton', () => {
       render(<LoadingSkeleton className="" />)
       const skeletonEl = screen.getByRole('progressbar')
       
-      expect(skeletonEl.className).toContain('skeleton')
-      expect(skeletonEl.className).toContain('text')
+      expect(skeletonEl.className).toContain('animate-pulse')
+      expect(skeletonEl.className).toContain('bg-gray-200')
+      expect(skeletonEl.className).toContain('rounded')
     })
 
     it('handles empty aria-label', () => {

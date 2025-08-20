@@ -19,6 +19,7 @@ import type {
   Puzzle,
   TimelineEvent,
 } from '@/types/notion/app';
+import { requestBatcher } from './requestBatcher';
 
 // Get API base URL from environment or use relative path in production
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
@@ -44,9 +45,29 @@ export class ApiError extends Error {
 }
 
 /**
- * Generic fetcher function with error handling
+ * Generic fetcher function with error handling and request deduplication
  */
 async function fetcher<T>(
+  endpoint: string,
+  options?: RequestInit
+): Promise<T> {
+  // Use request batcher for GET requests to deduplicate
+  if (!options?.method || options.method === 'GET') {
+    return requestBatcher.execute(
+      endpoint,
+      () => fetcherImpl<T>(endpoint, options),
+      options?.body ? JSON.parse(options.body as string) : undefined
+    );
+  }
+  
+  // For non-GET requests, execute directly
+  return fetcherImpl<T>(endpoint, options);
+}
+
+/**
+ * Internal fetcher implementation
+ */
+async function fetcherImpl<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
@@ -313,14 +334,38 @@ export const timelineApi = {
     const allEvents: TimelineEvent[] = [];
     let cursor: string | undefined;
     let hasMore = true;
+    let pageCount = 0;
 
+    console.log('[timelineApi.listAll] Starting to fetch all timeline events');
+    
     while (hasMore) {
+      pageCount++;
+      console.log(`[timelineApi.listAll] Fetching page ${pageCount}, cursor: ${cursor || 'none'}`);
+      
       const response = await timelineApi.list({ limit: 100, cursor });
+      console.log(`[timelineApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
+      
       allEvents.push(...response.data);
       cursor = response.nextCursor || undefined;
       hasMore = response.hasMore;
+      
+      // Extra safety check
+      if (!response.nextCursor && response.hasMore) {
+        console.warn('[timelineApi.listAll] WARNING: hasMore is true but nextCursor is null!');
+        hasMore = false;
+      }
     }
 
+    console.log(`[timelineApi.listAll] Complete. Total timeline events: ${allEvents.length}`);
+    
+    // Debug: Check for the specific timeline event we're looking for
+    const missingEvent = allEvents.find(e => e.id === '1b52f33d-583f-80f0-a1f3-ecb9b9cdd040');
+    if (missingEvent) {
+      console.log('[timelineApi.listAll] Found timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 in fetched data!');
+    } else {
+      console.log('[timelineApi.listAll] Timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 NOT found in fetched data');
+    }
+    
     return allEvents;
   },
 

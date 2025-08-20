@@ -15,10 +15,10 @@ describe('useGraphFilters', () => {
   });
 
   const mockNodes: Node[] = [
-    { id: 'p1', type: 'puzzleNode', position: { x: 0, y: 0 }, data: { label: 'Puzzle 1', entity: { id: 'p1', name: 'Puzzle 1' } } },
-    { id: 'p2', type: 'puzzleNode', position: { x: 100, y: 0 }, data: { label: 'Puzzle 2', entity: { id: 'p2', name: 'Puzzle 2' } } },
-    { id: 'e1', type: 'elementNode', position: { x: 200, y: 0 }, data: { label: 'Element 1', entity: { id: 'e1', name: 'Element 1' } } },
-    { id: 'e2', type: 'elementNode', position: { x: 300, y: 0 }, data: { label: 'Element 2', entity: { id: 'e2', name: 'Element 2' } } },
+    { id: 'p1', type: 'puzzle', position: { x: 0, y: 0 }, data: { label: 'Puzzle 1', entity: { id: 'p1', name: 'Puzzle 1' } } },
+    { id: 'p2', type: 'puzzle', position: { x: 100, y: 0 }, data: { label: 'Puzzle 2', entity: { id: 'p2', name: 'Puzzle 2' } } },
+    { id: 'e1', type: 'element', position: { x: 200, y: 0 }, data: { label: 'Element 1', entity: { id: 'e1', name: 'Element 1' } } },
+    { id: 'e2', type: 'element', position: { x: 300, y: 0 }, data: { label: 'Element 2', entity: { id: 'e2', name: 'Element 2' } } },
   ];
 
   const mockEdges: Edge[] = [

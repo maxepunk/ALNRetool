@@ -38,7 +38,7 @@ export function injectVirtualEdges(nodes: GraphNode[], edges: GraphEdge[]): Grap
   const puzzleNames = new Map<string, string>(); // id -> name
   
   nodes
-    .filter(n => n.type === 'puzzleNode' || n.type === 'puzzle')
+    .filter(n => n.type === 'puzzle')
     .forEach(n => {
       puzzleNodeIds.add(n.id);
       puzzleNames.set(n.id, n.data.label || n.id);
@@ -289,7 +289,7 @@ function createPuzzleGroupingEdges(
 export function getVirtualEdgeStats(nodes: GraphNode[], edges: GraphEdge[]): VirtualEdgeStats {
   const puzzleNodeIds = new Set(
     nodes
-      .filter(n => n.type === 'puzzleNode' || n.type === 'puzzle')
+      .filter(n => n.type === 'puzzle')
       .map(n => n.id)
   );
   

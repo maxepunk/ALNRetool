@@ -15,12 +15,14 @@ import type {
   OnSelectionChangeParams,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { GraphErrorBoundary } from '@/components/common/GraphErrorBoundary';
 
 import CharacterNode from './nodes/CharacterNode';
 import ElementNode from './nodes/ElementNode';
 import PuzzleNode from './nodes/PuzzleNode';
 import TimelineNode from './nodes/TimelineNode';
 import GroupNode from './nodes/GroupNode';
+import { CharacterTreeNode } from '../nodes/CharacterTreeNode';
 import GraphControls from './GraphControls';
 import type { FilterState } from './GraphControls';
 
@@ -34,7 +36,8 @@ import {
   buildGraph,
   buildPuzzleFocusGraph,
   buildCharacterJourneyGraph,
-  buildContentStatusGraph 
+  buildContentStatusGraph,
+  buildFullConnectionGraph
 } from '@/lib/graph';
 import { useGraphState } from '@/hooks/useGraphState';
 import { useGraphInteractions } from '@/hooks/useGraphInteractions';
@@ -52,6 +55,7 @@ import {
 // Define custom node types - memoized to prevent recreation
 const nodeTypes: NodeTypes = {
   character: CharacterNode,
+  characterTree: CharacterTreeNode,
   element: ElementNode,
   puzzle: PuzzleNode,
   timeline: TimelineNode,
@@ -70,6 +74,11 @@ interface GraphViewProps {
   onNodeClick?: (node: Node) => void;
   onSelectionChange?: (params: OnSelectionChangeParams) => void;
   onGraphDataChange?: (data: { nodes: Node[]; edges: any[] }) => void;
+  // View-specific options
+  viewOptions?: {
+    characterId?: string; // For character-journey view
+    [key: string]: any;
+  };
 }
 
 /**
@@ -123,6 +132,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   onNodeClick,
   onSelectionChange,
   onGraphDataChange,
+  viewOptions = {},
 }) => {
   // Memoize the notion data object to prevent unnecessary recalculations
   const notionData = useMemo(
@@ -141,7 +151,16 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
         graph = buildPuzzleFocusGraph(notionData);
         break;
       case 'character-journey':
-        graph = buildCharacterJourneyGraph(notionData);
+        // Use full connection web if specified, otherwise use filtered journey
+        if (viewOptions.viewMode === 'full-web' && viewOptions.characterId) {
+          graph = buildFullConnectionGraph(notionData, viewOptions.characterId, {
+            maxDepth: viewOptions.expansionDepth || 3,  // Reduced default from 10 to 3 hops
+            maxNodes: 250
+          });
+        } else {
+          // Pass characterId to filter the journey
+          graph = buildCharacterJourneyGraph(notionData, viewOptions.characterId);
+        }
         break;
       case 'content-status':
         graph = buildContentStatusGraph(notionData);
@@ -158,7 +177,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     }
     
     return graph;
-  }, [notionData, viewType]); // Now depends on memoized notionData
+  }, [notionData, viewType, viewOptions.characterId, viewOptions.viewMode, viewOptions.expansionDepth]); // Rebuild when data, view, or characterId changes
   
   // Use graph filtering hook first to get filter state
   const [filterState, setFilterState] = useState<FilterState>(() => {
@@ -435,6 +454,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
         filterState={filterState}
         onFilterChange={handleFilterChange}
         onClearFilters={handleClearFilters}
+        viewType={viewType}
       />
       
       {/* Floating Toolbar - only show when React Flow is ready */}
@@ -580,12 +600,15 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
  * GraphView component wrapped with necessary providers
  * ReactFlowProvider is needed for React Flow hooks
  * GraphAnimationProvider manages unified animation state
+ * GraphErrorBoundary catches and handles rendering errors
  */
 const GraphView: React.FC<GraphViewProps> = (props) => {
   return (
-    <ReactFlowProvider>
-      <GraphViewWithAnimation {...props} />
-    </ReactFlowProvider>
+    <GraphErrorBoundary>
+      <ReactFlowProvider>
+        <GraphViewWithAnimation {...props} />
+      </ReactFlowProvider>
+    </GraphErrorBoundary>
   );
 };
 

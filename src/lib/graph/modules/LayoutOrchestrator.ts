@@ -15,6 +15,7 @@ import {
   LAYOUT_PRESETS
 } from '../layouts';
 import { applyPureDagreLayout as pureDagreLayout } from '../layout/dagre';
+import { applyForceLayout, applyClusteredForceLayout } from '../layout/force';
 
 export class LayoutOrchestrator implements ILayoutOrchestrator {
   /**
@@ -25,18 +26,30 @@ export class LayoutOrchestrator implements ILayoutOrchestrator {
     
     console.log('Applying layout:', {
       algorithm: layoutConfig.algorithm,
+      direction: layoutConfig.direction,
       nodeCount: graph.nodes.length,
-      edgeCount: graph.edges.length
+      edgeCount: graph.edges.length,
+      fullConfig: layoutConfig
     });
 
     let result: GraphData;
     
     switch (layoutConfig.algorithm) {
+      case 'none':
+        // Skip layout, return graph as-is
+        result = graph;
+        break;
       case 'pure-dagre':
         result = this.applyPureDagreLayout(graph, layoutConfig);
         break;
       case 'dagre':
         result = this.applyDagreLayout(graph, layoutConfig);
+        break;
+      case 'force':
+        result = this.applyForceLayout(graph, layoutConfig);
+        break;
+      case 'force-clustered':
+        result = this.applyClusteredForceLayout(graph, layoutConfig);
         break;
       default:
         result = this.applyDagreLayout(graph, layoutConfig);
@@ -152,6 +165,86 @@ export class LayoutOrchestrator implements ILayoutOrchestrator {
       default:
         return this.getDefaultConfig();
     }
+  }
+
+  /**
+   * Apply force-directed layout
+   */
+  applyForceLayout(graph: GraphData, config?: LayoutConfig): GraphData {
+    // Pass through all configuration from GraphBuilder
+    // The force.ts implementation will handle adaptive parameters internally
+    const forceConfig = {
+      // Pass through all properties from the config
+      ...(config as any),
+      
+      // Ensure critical properties exist with sensible defaults
+      // These are fallbacks only if not provided by GraphBuilder
+      chargeStrength: (config as any)?.chargeStrength,
+      linkDistance: (config as any)?.linkDistance,
+      linkStrength: (config as any)?.linkStrength,
+      collisionRadius: (config as any)?.collisionRadius,
+      iterations: (config as any)?.iterations || 800,
+      width: (config as any)?.width || 8000,
+      height: (config as any)?.height || 6000,
+      centerStrength: (config as any)?.centerStrength || 0.05,
+      
+      // Pass through semantic features if provided (don't default to false)
+      enableLanePositioning: (config as any)?.enableLanePositioning,
+      enableTierClustering: (config as any)?.enableTierClustering,
+      enableTimelineOrdering: (config as any)?.enableTimelineOrdering,
+      
+      // Pass through node-type specific configurations
+      // These are now multipliers that force.ts will apply to adaptive base values
+      nodeStrengthByType: (config as any)?.nodeStrengthByType || {},
+      nodeSizeByType: (config as any)?.nodeSizeByType || {}
+    };
+
+    console.log('🔧 LayoutOrchestrator passing config to force layout:', {
+      hasSemanticFeatures: forceConfig.enableTierClustering || forceConfig.enableTimelineOrdering,
+      nodeCount: graph.nodes.length,
+      configKeys: Object.keys(forceConfig).filter(k => forceConfig[k] !== undefined)
+    });
+
+    const positionedNodes = applyForceLayout(
+      graph.nodes,
+      graph.edges,
+      forceConfig
+    );
+
+    return {
+      ...graph,
+      nodes: positionedNodes
+    };
+  }
+
+  /**
+   * Apply clustered force-directed layout
+   */
+  applyClusteredForceLayout(graph: GraphData, config?: LayoutConfig): GraphData {
+    // Cluster by entity type by default
+    const clusterBy = (node: any) => node.type || 'unknown';
+    
+    const forceConfig = {
+      chargeStrength: (config as any)?.chargeStrength || -400,
+      linkDistance: (config as any)?.linkDistance || 120,
+      linkStrength: (config as any)?.linkStrength || 0.4,
+      collisionRadius: (config as any)?.collisionRadius || 55,
+      iterations: (config as any)?.iterations || 400,
+      width: (config as any)?.width || 2400,
+      height: (config as any)?.height || 1800
+    };
+
+    const positionedNodes = applyClusteredForceLayout(
+      graph.nodes,
+      graph.edges,
+      clusterBy,
+      forceConfig
+    );
+
+    return {
+      ...graph,
+      nodes: positionedNodes
+    };
   }
 
   /**

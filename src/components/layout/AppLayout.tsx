@@ -98,7 +98,7 @@ export default function AppLayout() {
 
   const navItems = [
     { path: '/puzzles', label: 'Puzzles', icon: Puzzle, testId: 'puzzle-icon' },
-    { path: '/characters', label: 'Characters', icon: Users, testId: 'character-icon' },
+    { path: '/character-journey', label: 'Characters', icon: Users, testId: 'character-icon' },
     { path: '/status', label: 'Status', icon: BarChart3, testId: 'status-icon' },
   ]
 

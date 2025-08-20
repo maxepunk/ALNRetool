@@ -138,10 +138,10 @@ body {
   background-color: #fff;
 }
 
-.react-flow__node-puzzleNode,
-.react-flow__node-characterNode,
-.react-flow__node-elementNode,
-.react-flow__node-timelineNode {
+.react-flow__node-puzzle,
+.react-flow__node-character,
+.react-flow__node-element,
+.react-flow__node-timeline {
   font-size: 12px;
   text-align: center;
   border-radius: 8px;
@@ -150,10 +150,10 @@ body {
   cursor: move;
 }
 
-.react-flow__node-puzzleNode.selected,
-.react-flow__node-characterNode.selected,
-.react-flow__node-elementNode.selected,
-.react-flow__node-timelineNode.selected {
+.react-flow__node-puzzle.selected,
+.react-flow__node-character.selected,
+.react-flow__node-element.selected,
+.react-flow__node-timeline.selected {
   border-color: #1a192b;
   box-shadow: 0 0 0 2px rgba(26, 25, 43, 0.08);
 }

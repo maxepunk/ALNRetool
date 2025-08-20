@@ -383,7 +383,8 @@ function createTimelineEdgesWithBuilder(
     // Check if timeline event exists
     const timelineEvent = lookupMaps.timeline.get(element.timelineEventId);
     if (!timelineEvent) {
-      console.warn(`Element ${element.name} references unknown timeline event: ${element.timelineEventId}`);
+      // This is expected in filtered views where not all timeline events are included
+      console.debug(`Element ${element.name} references timeline event not in current view: ${element.timelineEventId}`);
       return;
     }
     

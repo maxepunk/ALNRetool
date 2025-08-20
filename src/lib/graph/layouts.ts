@@ -36,12 +36,15 @@ export const LAYOUT_PRESETS = {
   /**
    * Character Journey View - Vertical tree showing ownership
    * Character at top, owned items below
+   * Hierarchical structure: Character -> Puzzles -> Elements -> Timeline
    */
   characterJourney: {
     direction: 'TB' as const,
-    rankSeparation: 200,  // Increased from 150
-    nodeSeparation: 120,  // Increased from 75
+    rankSeparation: 200,  // Vertical spacing between hierarchy levels
+    nodeSeparation: 120,  // Horizontal spacing between nodes at same level
     center: true,
+    alignment: 'UL' as const,  // Upper-left alignment for tree structure
+    rankdir: 'TB' as const,    // Top-to-bottom direction
   },
   
   /**

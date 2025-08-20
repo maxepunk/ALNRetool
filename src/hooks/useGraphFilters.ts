@@ -99,7 +99,7 @@ export function useGraphFilters(
           // Find the node for this element
           const elementNode = filteredNodes.find(n => {
             const entity = n.data?.entity as any;
-            return n.type === 'elementNode' && entity?.id === element.id;
+            return n.type === 'element' && entity?.id === element.id;
           });
           if (elementNode) {
             actNodeIds.add(elementNode.id);
@@ -123,7 +123,7 @@ export function useGraphFilters(
         if (hasSelectedAct) {
           const puzzleNode = filteredNodes.find(n => {
             const entity = n.data?.entity as any;
-            return n.type === 'puzzleNode' && entity?.id === puzzle.id;
+            return n.type === 'puzzle' && entity?.id === puzzle.id;
           });
           if (puzzleNode) {
             actNodeIds.add(puzzleNode.id);
@@ -150,7 +150,7 @@ export function useGraphFilters(
       // Find the selected puzzle node
       const puzzleNode = filteredNodes.find(n => {
         const entity = n.data?.entity as any;
-        return n.type === 'puzzleNode' && entity?.id === filterState.selectedPuzzleId;
+        return n.type === 'puzzle' && entity?.id === filterState.selectedPuzzleId;
       });
       
       if (puzzleNode) {

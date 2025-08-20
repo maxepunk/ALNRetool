@@ -90,8 +90,21 @@ export function buildPuzzleFocusGraph(data: any) {
  * Build a graph for the Character Journey View
  * Delegates to GraphBuilder module
  */
-export function buildCharacterJourneyGraph(data: any) {
-  return graphBuilder.buildCharacterJourneyGraph(data);
+export function buildCharacterJourneyGraph(data: any, characterId?: string) {
+  return graphBuilder.buildCharacterJourneyGraph(data, characterId);
+}
+
+/**
+ * Build full connection web graph using BFS traversal
+ * Shows ALL transitive connections from a starting character
+ * Delegates to GraphBuilder module
+ */
+export function buildFullConnectionGraph(
+  data: any, 
+  characterId: string,
+  options?: { maxDepth?: number; maxNodes?: number; expandedNodes?: Set<string> }
+) {
+  return graphBuilder.buildFullConnectionGraph(data, characterId, options);
 }
 
 /**

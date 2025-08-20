@@ -33,9 +33,9 @@ describe('AppRouter', () => {
       })
     })
 
-    it('should render CharacterJourneyView at /characters route', async () => {
+    it('should render CharacterJourneyView at /character-journey route', async () => {
       renderWithProviders(<AppRouter />, {
-        initialEntries: ['/characters'],
+        initialEntries: ['/character-journey'],
       })
 
       await waitFor(() => {
@@ -96,7 +96,7 @@ describe('AppRouter', () => {
 
     it('should highlight active navigation link', async () => {
       renderWithProviders(<AppRouter />, {
-        initialEntries: ['/characters'],
+        initialEntries: ['/character-journey'],
       })
 
       await waitFor(() => {

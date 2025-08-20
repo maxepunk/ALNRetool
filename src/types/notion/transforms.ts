@@ -260,7 +260,6 @@ export function transformTimelineEvent(page: NotionPage): TimelineEvent {
   const props = page.properties;
   const description = getTitle(props['Description']);
   
-  
   return {
     id: page.id,
     name: description || 'Untitled Event', // Add name field

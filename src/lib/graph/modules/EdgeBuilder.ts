@@ -31,7 +31,7 @@ const EDGE_STYLES: Record<RelationshipType, {
     },
   },
   reward: {
-    stroke: 'hsl(var(--success, 142 76% 36%))', // Green with fallback
+    stroke: '#10b981', // emerald-500
     strokeWidth: 2,
     strokeDasharray: '5,5',
     animated: true,
@@ -40,11 +40,11 @@ const EDGE_STYLES: Record<RelationshipType, {
       type: MarkerType.ArrowClosed,
       width: 20,
       height: 20,
-      color: 'hsl(var(--success, 142 76% 36%))',
+      color: '#10b981', // emerald-500
     },
   },
   collaboration: {
-    stroke: 'hsl(var(--info, 199 89% 48%))', // Cyan with fallback
+    stroke: '#3b82f6', // blue-500
     strokeWidth: 2,
     strokeDasharray: '3,3',
     label: 'collaborates',
@@ -52,11 +52,11 @@ const EDGE_STYLES: Record<RelationshipType, {
       type: MarkerType.Arrow,
       width: 15,
       height: 15,
-      color: 'hsl(var(--info, 199 89% 48%))',
+      color: '#3b82f6', // blue-500
     },
   },
   timeline: {
-    stroke: 'hsl(var(--warning, 45 93% 47%))', // Amber with fallback
+    stroke: '#f59e0b', // amber-500
     strokeWidth: 2,
     strokeDasharray: '3,3',
     label: 'timeline',
@@ -64,7 +64,7 @@ const EDGE_STYLES: Record<RelationshipType, {
       type: MarkerType.ArrowClosed,
       width: 18,
       height: 18,
-      color: 'hsl(var(--warning, 45 93% 47%))',
+      color: '#f59e0b', // amber-500
     },
   },
   owner: {

@@ -77,10 +77,10 @@ export default function PuzzleFocusView() {
   // Helper function to determine entity type from node
   const getEntityType = useCallback((node: Node): 'character' | 'element' | 'puzzle' | 'timeline' => {
     const nodeType = node.type;
-    if (nodeType === 'characterNode') return 'character';
-    if (nodeType === 'elementNode') return 'element';
-    if (nodeType === 'puzzleNode') return 'puzzle';
-    if (nodeType === 'timelineNode') return 'timeline';
+    if (nodeType === 'character') return 'character';
+    if (nodeType === 'element') return 'element';
+    if (nodeType === 'puzzle') return 'puzzle';
+    if (nodeType === 'timeline') return 'timeline';
     
     // Fallback based on data
     const entity = node.data?.entity;

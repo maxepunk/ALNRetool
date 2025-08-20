@@ -72,12 +72,12 @@ describe('AppLayout', () => {
       const statusLink = screen.getByRole('link', { name: /status/i })
       
       expect(puzzlesLink).toHaveAttribute('href', '/puzzles')
-      expect(charactersLink).toHaveAttribute('href', '/characters')
+      expect(charactersLink).toHaveAttribute('href', '/character-journey')
       expect(statusLink).toHaveAttribute('href', '/status')
     })
 
     it('should highlight active navigation link based on current route', () => {
-      renderWithProviders(<AppLayout />, { initialEntries: ['/characters'] })
+      renderWithProviders(<AppLayout />, { initialEntries: ['/character-journey'] })
       
       const charactersLink = screen.getByRole('link', { name: /characters/i })
       // NavLink from react-router-dom adds aria-current for active links

@@ -143,6 +143,12 @@ export interface NodeMetadata {
   status?: string; // Element status
   ownerName?: string; // For elements owned by characters
   ownerTier?: string; // Owner's tier (Core, Supporting, etc.)
+  // Force simulation properties
+  vx?: number; // Velocity x for d3-force simulation
+  vy?: number; // Velocity y for d3-force simulation
+  tier?: string; // Node tier for grouping
+  timestamp?: number; // Unix timestamp for timeline ordering
+  time?: number; // Alternative time representation
 }
 
 /**
@@ -166,6 +172,19 @@ export interface GraphNode<T = any> extends Omit<Node, 'data'> {
   parentNode?: string;
   extent?: 'parent';
   expandParent?: boolean;
+}
+
+/**
+ * Graph node with D3 force simulation properties
+ * Used during force-directed layout calculations
+ */
+export interface SimulationGraphNode extends GraphNode {
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number | null;
+  fy?: number | null;
 }
 
 /**
@@ -236,7 +255,7 @@ export interface BuildGraphOptions {
  * Configuration for layout algorithms
  */
 export interface LayoutConfig {
-  algorithm?: 'dagre' | 'pure-dagre' | 'elk' | 'custom';
+  algorithm?: 'dagre' | 'pure-dagre' | 'elk' | 'custom' | 'none' | 'force' | 'force-clustered';
   direction?: 'TB' | 'BT' | 'LR' | 'RL';
   spacing?: {
     nodeSpacing?: number;

@@ -47,7 +47,7 @@ export default function AppRouter() {
             />
           </Route>
           
-          <Route path="characters">
+          <Route path="character-journey">
             <Route
               index
               element={

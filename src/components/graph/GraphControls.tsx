@@ -32,6 +32,7 @@ interface GraphControlsProps {
   onFilterChange: (state: FilterState) => void;
   onClearFilters: () => void;
   className?: string;
+  viewType?: 'puzzle-focus' | 'character-journey' | 'content-status';
 }
 
 /**
@@ -80,6 +81,7 @@ export default function GraphControls({
   onFilterChange,
   onClearFilters,
   className,
+  viewType = 'puzzle-focus',
 }: GraphControlsProps) {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -290,101 +292,229 @@ export default function GraphControls({
 
       {/* Filters Row */}
       <div className="flex gap-3 items-stretch">
-        {/* Act Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className={cn(
-                "flex items-center gap-1.5 h-10 px-3",
-                "border-border/50 dark:border-border/40",
-                "bg-background dark:bg-background/60",
-                "hover:bg-accent/50 hover:text-accent-foreground",
-                "transition-all duration-200",
-                filterState.selectedActs.size > 0 && "border-primary/30 bg-primary/5 text-primary/90"
-              )}
-            >
-              <Filter className="w-3.5 h-3.5 opacity-70" />
-              <span>Acts</span>
-              {filterState.selectedActs.size > 0 && (
-                <Badge 
-                  variant="secondary" 
+        {/* Render filters based on viewType */}
+        {viewType === 'puzzle-focus' ? (
+          <>
+            {/* Act Filter - Only for puzzle view */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
                   className={cn(
-                    "ml-0.5 px-1.5 h-5 font-normal text-xs",
-                    "bg-primary/15 text-primary hover:bg-primary/20",
-                    "transition-colors duration-200"
+                    "flex items-center gap-1.5 h-10 px-3",
+                    "border-border/50 dark:border-border/40",
+                    "bg-background dark:bg-background/60",
+                    "hover:bg-accent/50 hover:text-accent-foreground",
+                    "transition-all duration-200",
+                    filterState.selectedActs.size > 0 && "border-primary/30 bg-primary/5 text-primary/90"
                   )}
                 >
-                  {filterState.selectedActs.size}
-                </Badge>
-              )}
-              <ChevronDown className="w-3 h-3 ml-auto opacity-50" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="start" 
-            className="w-40 p-1 animate-in fade-in-0 zoom-in-95"
-          >
-            {['Act 0', 'Act 1', 'Act 2'].map((act) => (
-              <DropdownMenuItem
-                key={act}
-                onClick={() => handleActToggle(act)}
+                  <Filter className="w-3.5 h-3.5 opacity-70" />
+                  <span>Acts</span>
+                  {filterState.selectedActs.size > 0 && (
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "ml-0.5 px-1.5 h-5 font-normal text-xs",
+                        "bg-primary/15 text-primary hover:bg-primary/20",
+                        "transition-colors duration-200"
+                      )}
+                    >
+                      {filterState.selectedActs.size}
+                    </Badge>
+                  )}
+                  <ChevronDown className="w-3 h-3 ml-auto opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-40 p-1 animate-in fade-in-0 zoom-in-95"
+              >
+                {['Act 0', 'Act 1', 'Act 2'].map((act) => (
+                  <DropdownMenuItem
+                    key={act}
+                    onClick={() => handleActToggle(act)}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 cursor-pointer",
+                      "hover:bg-accent/50 hover:text-accent-foreground",
+                      "transition-colors duration-150",
+                      filterState.selectedActs.has(act) && "bg-primary/10 text-primary"
+                    )}
+                  >
+                    <span className="text-sm">{act}</span>
+                    {filterState.selectedActs.has(act) && (
+                      <div className="w-5 h-5 flex items-center justify-center text-primary">
+                        <Check className="w-4 h-4" />
+                      </div>
+                    )}
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator className="my-1" />
+                <DropdownMenuItem
+                  onClick={() => onFilterChange({ ...filterState, selectedActs: new Set() })}
+                  className="text-muted-foreground px-3 py-1.5 cursor-pointer"
+                >
+                  Clear Acts
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Puzzle Selector - Only for puzzle view */}
+            <Select
+              value={filterState.selectedPuzzleId || 'all'}
+              onValueChange={(value) => handlePuzzleSelect(value === 'all' ? null : value)}
+            >
+              <SelectTrigger 
                 className={cn(
-                  "flex items-center justify-between px-3 py-2 cursor-pointer",
+                  "flex-1 min-w-[11rem] h-10",
+                  "border-border/50 dark:border-border/40",
+                  "bg-background dark:bg-background/60",
                   "hover:bg-accent/50 hover:text-accent-foreground",
-                  "transition-colors duration-150",
-                  filterState.selectedActs.has(act) && "bg-primary/10 text-primary"
+                  "transition-all duration-200",
+                  filterState.selectedPuzzleId && "border-primary/30 bg-primary/5 text-primary/90"
                 )}
               >
-                <span className="text-sm">{act}</span>
-                {filterState.selectedActs.has(act) && (
-                  <div className="w-5 h-5 flex items-center justify-center text-primary">
-                    <Check className="w-4 h-4" />
-                  </div>
-                )}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator className="my-1" />
-            <DropdownMenuItem
-              onClick={() => onFilterChange({ ...filterState, selectedActs: new Set() })}
-              className="text-muted-foreground px-3 py-1.5 cursor-pointer"
-            >
-              Clear Acts
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <SelectValue placeholder="All Puzzles" />
+              </SelectTrigger>
+              <SelectContent 
+                className="max-h-[20rem] animate-in fade-in-0 zoom-in-95"
+                position="popper"
+                sideOffset={4}
+              >
+                <SelectItem value="all" className="py-2">All Puzzles</SelectItem>
+                {puzzles.map((puzzle) => (
+                  <SelectItem key={puzzle.id} value={puzzle.id} className="py-2">
+                    {puzzle.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        ) : viewType === 'character-journey' ? (
+          <>
+            {/* Character Journey Filters - Tier Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className={cn(
+                    "flex items-center gap-1.5 h-10 px-3",
+                    "border-border/50 dark:border-border/40",
+                    "bg-background dark:bg-background/60",
+                    "hover:bg-accent/50 hover:text-accent-foreground",
+                    "transition-all duration-200"
+                  )}
+                >
+                  <Filter className="w-3.5 h-3.5 opacity-70" />
+                  <span>Tiers</span>
+                  <ChevronDown className="w-3 h-3 ml-auto opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-40 p-1 animate-in fade-in-0 zoom-in-95"
+              >
+                {['Core', 'Secondary', 'Tertiary'].map((tier) => (
+                  <DropdownMenuItem
+                    key={tier}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 cursor-pointer",
+                      "hover:bg-accent/50 hover:text-accent-foreground",
+                      "transition-colors duration-150"
+                    )}
+                  >
+                    <span className="text-sm">{tier}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-        {/* Puzzle Selector */}
-        <Select
-          value={filterState.selectedPuzzleId || 'all'}
-          onValueChange={(value) => handlePuzzleSelect(value === 'all' ? null : value)}
-        >
-          <SelectTrigger 
-            className={cn(
-              "flex-1 min-w-[11rem] h-10",
-              "border-border/50 dark:border-border/40",
-              "bg-background dark:bg-background/60",
-              "hover:bg-accent/50 hover:text-accent-foreground",
-              "transition-all duration-200",
-              filterState.selectedPuzzleId && "border-primary/30 bg-primary/5 text-primary/90"
-            )}
-          >
-            <SelectValue placeholder="All Puzzles" />
-          </SelectTrigger>
-          <SelectContent 
-            className="max-h-[20rem] animate-in fade-in-0 zoom-in-95"
-            position="popper"
-            sideOffset={4}
-          >
-            <SelectItem value="all" className="py-2">All Puzzles</SelectItem>
-            {puzzles.map((puzzle) => (
-              <SelectItem key={puzzle.id} value={puzzle.id} className="py-2">
-                {puzzle.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+            {/* Ownership Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className={cn(
+                    "flex items-center gap-1.5 h-10 px-3",
+                    "border-border/50 dark:border-border/40",
+                    "bg-background dark:bg-background/60",
+                    "hover:bg-accent/50 hover:text-accent-foreground",
+                    "transition-all duration-200"
+                  )}
+                >
+                  <Filter className="w-3.5 h-3.5 opacity-70" />
+                  <span>Ownership</span>
+                  <ChevronDown className="w-3 h-3 ml-auto opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-44 p-1 animate-in fade-in-0 zoom-in-95"
+              >
+                {['Owned', 'Accessible', 'Shared', 'Locked'].map((status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 cursor-pointer",
+                      "hover:bg-accent/50 hover:text-accent-foreground",
+                      "transition-colors duration-150"
+                    )}
+                  >
+                    <span className="text-sm">{status}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Character Type Filter */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className={cn(
+                    "flex items-center gap-1.5 h-10 px-3",
+                    "border-border/50 dark:border-border/40",
+                    "bg-background dark:bg-background/60",
+                    "hover:bg-accent/50 hover:text-accent-foreground",
+                    "transition-all duration-200"
+                  )}
+                >
+                  <Filter className="w-3.5 h-3.5 opacity-70" />
+                  <span>Type</span>
+                  <ChevronDown className="w-3 h-3 ml-auto opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent 
+                align="start" 
+                className="w-36 p-1 animate-in fade-in-0 zoom-in-95"
+              >
+                {['Player', 'NPC'].map((type) => (
+                  <DropdownMenuItem
+                    key={type}
+                    className={cn(
+                      "flex items-center justify-between px-3 py-2 cursor-pointer",
+                      "hover:bg-accent/50 hover:text-accent-foreground",
+                      "transition-colors duration-150"
+                    )}
+                  >
+                    <span className="text-sm">{type}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        ) : (
+          <>
+            {/* Content Status Filters */}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Content status filters will be shown here</span>
+            </div>
+          </>
+        )}
 
         {/* Clear All Filters */}
         {hasActiveFilters && (

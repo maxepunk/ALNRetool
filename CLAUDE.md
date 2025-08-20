@@ -6,84 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 player murder mystery game. It enables puzzle and narrative designers to visualize and edit game content stored in Notion databases through interactive graph interfaces.
 
-## Essential Planning Documents - Navigation Guide
-
-### Product Requirements Document (alnretool-prd.md)
-**Size**: ~25K lines | **When to read**: Understanding features, user requirements, or design decisions
-
-**Quick Navigation by Section:**
-- **Lines 1-50**: Executive summary and project overview
-- **Lines 100-300**: User personas and their needs (Critical for UI/UX decisions)
-- **Lines 400-800**: Core feature specifications for each view
-  - Puzzle Focus View: ~Line 450
-  - Character Journey View: ~Line 550  
-  - Content Status View: ~Line 650
-- **Lines 900-1200**: Technical requirements and constraints
-- **Lines 1300-1600**: Notion database schema (Critical for data work)
-- **Lines 1700-2000**: SF_ pattern specifications
-- **Lines 2100-2400**: Success metrics and MVP definition
-
-**When to reference PRD:**
-- Implementing new features → Check feature specifications section
-- Working with Notion data → Review database schema section
-- Making UI decisions → Consult user personas section
-- Determining scope → Check MVP definition section
-
-### Development Action Plan (alnretool-action-plan.md)
-**Size**: ~46K lines | **When to read**: Understanding timeline, sprint goals, or implementation order
-
-**Quick Navigation by Sprint:**
-- **Sprint 1 (Weeks 1-2)**: Lines 100-500 - Foundation & data layer
-- **Sprint 2 (Weeks 3-4)**: Lines 600-1000 - Puzzle Focus View  
-- **Sprint 3 (Weeks 5-6)**: Lines 1100-1500 - Character & Status Views
-- **Sprint 4 (Weeks 7-8)**: Lines 1600-2000 - Production polish
-
-**Key Implementation Details:**
-- **Daily Task Breakdowns**: Each sprint has day-by-day tasks
-- **Technical Decisions**: Lines 2100-2500 - Architecture choices explained
-- **Risk Mitigation**: Lines 2600-2800 - Common pitfalls and solutions
-- **Testing Strategy**: Lines 2900-3200 - What to test and when
-
-**When to reference Action Plan:**
-- Starting new sprint work → Read that sprint's section
-- Estimating tasks → Check daily breakdowns
-- Making architecture decisions → Review technical decisions section
-- Planning tests → Consult testing strategy
-
-### Reading Strategy for AI Assistants
-
-**For Quick Tasks**: Don't read entire files. Use specific line ranges above.
-
-**For Feature Implementation**: 
-1. Read relevant sprint section in action-plan
-2. Read corresponding feature spec in PRD
-3. Check current progress in docs/PROJECT_STATUS.md
-
-**For Bug Fixes**: Usually not needed unless understanding original intent
-
-**For Architecture Changes**: 
-1. Read technical requirements in PRD (lines 900-1200)
-2. Review technical decisions in action-plan (lines 2100-2500)
-3. Check current implementation in code
-
 ## Key Technical Context
 
-### Architecture Overview (Updated January 17, 2025)
+### Architecture Overview
 - **Frontend**: React 18 + TypeScript + Vite + TanStack Query + React Flow
 - **Backend**: Express.js proxy server for Notion API authentication
 - **Data Flow**: Frontend → Express API → Notion API → Transform → Cache → Response
-- **Graph System**: Modular architecture with BaseTransformer pattern (refactored from monolithic)
+- **Graph System**: Modular architecture with BaseTransformer pattern
 - **Layout Engine**: Pure Dagre with semantic edge-based positioning
 
-### High-Level Code Architecture
-
-#### State Management Pattern
-- **React Query**: All server state managed via TanStack Query hooks in `src/hooks/`
-- **Local State**: Component-level state for UI interactions
-- **Graph State**: React Flow manages node/edge state internally with Zustand
-- **No Global Store**: Intentionally avoiding Redux/Context for simplicity
-
-#### Data Transformation Pipeline
+### Data Transformation Pipeline
 ```
 1. Notion API Response (server/services/notion.ts)
    ↓ Raw Notion blocks
@@ -91,185 +23,14 @@ ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 pl
    ↓ Normalized entities
 3. API Response with Caching (5-minute TTL via node-cache)
    ↓ JSON over HTTP
-4. Frontend React Query (src/hooks/useNotion*.ts)
+4. Frontend React Query (src/hooks/)
    ↓ Cached & deduplicated
-5. Graph Transformers (src/lib/graph/transformers/)
+5. Graph Transformers (src/lib/graph/modules/)
    ↓ Nodes & edges
-6. Layout Engine (src/lib/graph/layouts.ts using Dagre)
+6. Layout Engine (src/lib/graph/layout/dagre.ts)
    ↓ Positioned nodes
 7. React Flow Rendering
 ```
-
-#### Key Architectural Decisions
-
-**Why Express Proxy?**
-- Notion API requires server-side auth (API key security)
-- Enables response caching to reduce API calls
-- Provides rate limiting and CORS control
-- Allows data pre-processing before client
-
-**Why React Flow over D3?**
-- Built-in pan/zoom, node dragging, minimap
-- React-native integration (no imperative DOM)
-- Extensible with custom nodes/edges
-- Better performance for interactive graphs
-
-**Why TanStack Query over RTK Query?**
-- Lighter weight (no Redux dependency)
-- Superior cache invalidation patterns
-- Built-in optimistic updates
-- Better TypeScript inference
-
-**Testing Strategy Layers**
-1. **Unit Tests**: Component logic, transformers, utilities
-2. **Integration Tests**: API endpoints with real Notion
-3. **MSW Mocks**: Frontend tests with mocked API responses
-4. **Smoke Tests**: Quick validation without real API
-
-### Important Patterns
-
-#### Modular Graph Architecture (January 17-18, 2025 Refactor)
-- **From Monolithic to Modular**: 722-line `index.ts` decomposed into 12+ focused modules
-- **Module Structure**: 
-  ```
-  src/lib/graph/
-  ├── index.ts                      # Public API facade (90 lines)
-  ├── layout/
-  │   └── dagre.ts                  # Pure Dagre layout (598 lines, was pureDagreLayout.ts)
-  ├── modules/
-  │   ├── BaseTransformer.ts        # Abstract base for all transformers
-  │   ├── CharacterTransformer.ts   # Character-specific
-  │   ├── ElementTransformer.ts     # Element-specific
-  │   ├── PuzzleTransformer.ts      # Puzzle-specific
-  │   ├── TimelineTransformer.ts    # Timeline-specific
-  │   ├── GraphBuilder.ts           # Node/edge assembly
-  │   ├── EdgeBuilder.ts            # Smart edge creation with weighting
-  │   ├── ErrorHandler.ts           # Error management
-  │   ├── LayoutOrchestrator.ts     # Layout coordination
-  │   ├── LayoutQualityMetrics.ts   # Layout quality measurement (235 lines)
-  │   ├── VirtualEdgeInjector.ts    # Virtual edge handling (337 lines)
-  │   └── ElementClusterer.ts       # Post-layout clustering (296 lines)
-  ```
-
-#### BaseTransformer Pattern (Code Duplication Solution)
-- **Purpose**: Eliminate 60%+ code duplication across entity transformers
-- **Implementation**: Abstract base class with template method pattern
-- **Benefits**:
-  - Shared validation logic (`validateEntity`)
-  - Common metadata creation (`createBaseMetadata`)
-  - Consistent error handling (`createErrorMetadata`)
-  - Batch transformation with error recovery (`transformMultiple`)
-- **Usage Example**:
-  ```typescript
-  class PuzzleTransformer extends BaseTransformer<Puzzle> {
-    protected entityType = 'puzzle' as const;
-    protected nodeType = 'puzzleNode';
-    
-    protected createMetadata(puzzle: Puzzle, errors: string[]): NodeMetadata {
-      // Puzzle-specific metadata only
-    }
-  }
-  ```
-
-#### Pure Dagre Layout (Sprint 2 Refactor - January 17-18, 2025)
-- **Location**: `src/lib/graph/layout/dagre.ts` (renamed from pureDagreLayout.ts)
-- **Size**: Reduced from 1290 to 598 lines (53.6% reduction)
-- **Strategy**: Natural edge flow creates semantic positioning
-  - Requirements flow INTO puzzles (element→puzzle edges)
-  - Rewards flow OUT OF puzzles (puzzle→element edges)
-  - This creates automatic left-to-right layout without manual positioning
-- **Key Features**:
-  - Virtual edge injection for dual-role elements (VirtualEdgeInjector module)
-  - Element clustering with collision detection (ElementClusterer module)
-  - Layout quality metrics and reporting (LayoutQualityMetrics module)
-  - Adaptive spacing based on node density
-  - Smart edge weighting via EdgeBuilder pattern
-- **Algorithm**: Network-simplex for minimal edge crossings
-- **Configuration**: LR direction, adaptive rank separation (300-400px), fractional ranks enabled
-
-#### TypeScript Configuration
-- **Frontend**: `tsconfig.app.json` - ESNext modules, React JSX, path aliases
-- **Backend**: `tsconfig.server.json` - CommonJS output for Node.js
-- **Path Alias**: `@/*` maps to `src/*` (use in frontend imports)
-- **Strict Mode**: All strict checks enabled including `noUncheckedIndexedAccess`
-
-#### CSS Architecture (Hybrid Approach - January 17-18, 2025)
-- **Tailwind CSS v4**: Primary styling approach with utility-first classes
-- **CSS Modules**: Phased out in favor of Tailwind (migrated away from .module.css files)
-- **shadcn/ui Components**: Using Button, Tooltip, Separator, Badge, and other primitives
-- **PostCSS**: Configured with `@tailwindcss/postcss` (Tailwind v4 requirement) and autoprefixer
-- **Global Styles**: Animation keyframes and utility classes in `src/index.css`
-- **Strategy**: 
-  - All components use Tailwind utilities + shadcn/ui
-  - Glassmorphism effects via Tailwind's backdrop-blur utilities
-  - Animation classes defined globally, applied via cn() utility
-- **Configuration Files**:
-  - `tailwind.config.js`: Extends shadcn/ui theme, includes custom colors
-  - `postcss.config.js`: Uses `@tailwindcss/postcss` plugin (not `tailwindcss`)
-  - `components.json`: shadcn/ui configuration with component paths
-- **Import Pattern**: shadcn/ui components from `@/components/ui/*` (lowercase)
-
-#### Animation Architecture (January 18, 2025)
-- **Animation Utilities**: Centralized in `src/lib/animations.ts`
-  - Reusable animation constants and classes
-  - Edge-specific animation helpers
-  - Performance-aware transitions
-- **Animation State Hook**: `src/hooks/useAnimationState.ts`
-  - Manages hover states and connected element highlighting
-  - Debounced state updates for performance
-  - Group hover coordination
-- **GraphAnimationContext**: `src/contexts/GraphAnimationContext.tsx`
-  - Unified animation state for entire graph
-  - Coordinates hover effects across nodes and edges
-  - Performance controls for large graphs
-- **CSS Animations**: Defined in `src/index.css`
-  - Keyframes for flow, pulse, ripple, highlight effects
-  - Edge-type specific classes
-  - Respects prefers-reduced-motion
-
-#### Vite Configuration
-- **Proxy**: `/api` routes proxy to `localhost:3001` in dev
-- **Build Output**: `dist/client/` for frontend, `dist/server/` for backend
-- **Test Environment**: `happy-dom` for fast unit tests
-- **Test Setup**: `src/test/setup.ts` for global test configuration
-- **Coverage Thresholds**: 80% for branches, functions, lines, statements
-- **Optimizations**: React Flow excluded from pre-bundling for compatibility
-- **Circular Dependencies**: Warnings suppressed in Rollup config
-
-#### Environment Variables
-- **Production**: NEVER load dotenv - use platform environment variables only
-- **Development**: Load from .env file
-- **Test**: Load from .env.test if exists, otherwise .env
-
-```typescript
-// Correct pattern in server/index.ts
-if (process.env.NODE_ENV !== 'production') {
-  config(); // Only load dotenv in dev/test
-}
-```
-
-#### API Response Structure
-```typescript
-interface APIResponse<T> {
-  data: T[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
-```
-
-#### Error Handling
-Always use `asyncHandler` wrapper for Express routes:
-```typescript
-router.get('/endpoint', asyncHandler(async (req: Request, res: Response) => {
-  // Implementation
-}));
-```
-
-### Notion Database IDs
-- Characters: `18c2f33d-583f-8060-a6ab-de32ff06bca2`
-- Elements: `18c2f33d-583f-8020-91bc-d84c7dd94306`
-- Puzzles: `1b62f33d-583f-80cc-87cf-d7d6c4b0b265`
-- Timeline: `1b52f33d-583f-80de-ae5a-d20020c120dd`
 
 ## Common Development Commands
 
@@ -312,35 +73,107 @@ npx vitest --inspect-brk src/lib/graph/transformers.test.ts
 npx cz                  # Interactive commit with conventional format
 ```
 
-## Development Workflow
+## Important Patterns
 
-### Making Changes
-1. **Check existing patterns**: Look at neighboring files before implementing
-2. **Follow conventions**: Use existing libraries, don't introduce new ones without need
-3. **Test your changes**: Run `npm test` and `npm run typecheck`
-4. **Use conventional commits**: `npx cz` for commit messages
+### Modular Graph Architecture
+```
+src/lib/graph/
+├── index.ts                      # Public API facade
+├── layout/
+│   └── dagre.ts                  # Pure Dagre layout
+├── modules/
+│   ├── BaseTransformer.ts        # Abstract base for all transformers
+│   ├── EntityTransformer.ts      # Entity-to-node transformations
+│   ├── GraphBuilder.ts           # Node/edge assembly
+│   ├── EdgeBuilder.ts            # Smart edge creation with weighting
+│   ├── ErrorHandler.ts           # Error management
+│   ├── LayoutOrchestrator.ts     # Layout coordination
+│   ├── LayoutQualityMetrics.ts   # Layout quality measurement
+│   ├── VirtualEdgeInjector.ts    # Virtual edge handling
+│   └── ElementClusterer.ts       # Post-layout clustering
+```
 
-### Common Tasks
+### TypeScript Configuration
+- **Frontend**: `tsconfig.app.json` - ESNext modules, React JSX, path aliases
+- **Backend**: `tsconfig.server.json` - CommonJS output for Node.js
+- **Path Alias**: `@/*` maps to `src/*` (use in frontend imports)
+- **Strict Mode**: All strict checks enabled including `noUncheckedIndexedAccess`
 
-#### Adding a New API Endpoint
-1. Add route handler in `server/routes/notion.ts`
-2. Use `asyncHandler` wrapper
-3. Add TypeScript types in `src/types/notion/`
-4. Add React Query hook in `src/hooks/`
-5. Add MSW handler in `src/test/mocks/handlers.ts`
+### CSS Architecture
+- **Tailwind CSS v4**: Primary styling with `@tailwindcss/postcss` plugin
+- **shadcn/ui Components**: UI primitives from `@/components/ui/*`
+- **Global Styles**: Animation keyframes in `src/index.css`
+- **No CSS Modules**: Migrated to Tailwind utilities
 
-#### Working with React Flow
-1. Custom nodes go in `src/components/nodes/`
-2. Graph transformations in `src/lib/graph/transformers/`
-3. Layout logic in `src/lib/graph/pureDagreLayout.ts` (pure Dagre approach)
-4. Layout orchestration in `src/lib/graph/layouts.ts` (view-specific configurations)
+### State Management Pattern
+- **React Query**: All server state via TanStack Query hooks in `src/hooks/`
+- **Local State**: Component-level state for UI interactions
+- **Graph State**: React Flow manages node/edge state internally with Zustand
+- **No Global Store**: Intentionally avoiding Redux/Context for simplicity
 
-**React Flow Node Types**:
-- `puzzleNode`: Diamond-shaped nodes for puzzles with dependency indicators
-- `characterNode`: Green nodes for characters with role badges
+### Hook Organization
+```
+src/hooks/
+├── generic/              # Generic reusable patterns
+│   └── useEntityData.ts  # Base hook for entity fetching
+├── mutations/            # Mutation hooks
+├── detail-panel/         # Detail panel specific hooks
+├── useCharacters.ts      # Entity-specific hooks
+├── useElements.ts
+├── usePuzzles.ts
+└── useTimeline.ts
+```
+
+### Environment Variables
+- **Production**: NEVER load dotenv - use platform environment variables only
+- **Development**: Load from .env file
+- **Test**: Load from .env.test if exists, otherwise .env
+
+```typescript
+// Correct pattern in server/index.ts
+if (process.env.NODE_ENV !== 'production') {
+  config(); // Only load dotenv in dev/test
+}
+```
+
+### API Response Structure
+```typescript
+interface APIResponse<T> {
+  data: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+```
+
+### Error Handling
+Always use `asyncHandler` wrapper for Express routes:
+```typescript
+router.get('/endpoint', asyncHandler(async (req: Request, res: Response) => {
+  // Implementation
+}));
+```
+
+## Notion Database IDs
+- Characters: `18c2f33d-583f-8060-a6ab-de32ff06bca2`
+- Elements: `18c2f33d-583f-8020-91bc-d84c7dd94306`
+- Puzzles: `1b62f33d-583f-80cc-87cf-d7d6c4b0b265`
+- Timeline: `1b52f33d-583f-80de-ae5a-d20020c120dd`
+
+## Vite Configuration
+- **Proxy**: `/api` routes proxy to `localhost:3001` in dev
+- **Build Output**: `dist/client/` for frontend, `dist/server/` for backend
+- **Test Environment**: `happy-dom` for fast unit tests
+- **Coverage Thresholds**: 80% for branches, functions, lines, statements
+- **Optimizations**: React Flow excluded from pre-bundling for compatibility
+- **Circular Dependencies**: Warnings suppressed in Rollup config
+
+## React Flow Configuration
+**Node Types**:
+- `puzzleNode`: Diamond-shaped nodes for puzzles
+- `characterNode`: Green nodes for characters
 - `elementNode`: Purple nodes for story elements
 - `timelineNode`: Orange nodes for timeline events
-- `group`: Container nodes for puzzle chains (puzzle-focus view)
+- `group`: Container nodes for puzzle chains
 
 **Edge Types**:
 - `dependency`: Solid arrow for puzzle dependencies
@@ -348,54 +181,23 @@ npx cz                  # Interactive commit with conventional format
 - `relation`: Dotted line for character relationships
 - `chain`: Extra-weighted edges for puzzle chains
 
-**Layout Algorithm (Pure Dagre)**: 
-- Direction: Left-to-right (`LR`) for puzzle-focus view
+**Layout Algorithm (Pure Dagre)**:
+- Direction: Left-to-right (`LR`)
 - Natural edge flow creates semantic positioning
-- Requirements flow INTO puzzles, rewards flow OUT
 - Network-simplex algorithm for minimal edge crossings
-- Fractional ranks support dual-role elements
-- Configuration in `applyPureDagreLayout()`:
-  - rankSeparation: 300px (horizontal spacing between columns)
-  - nodeSeparation: 100px (vertical spacing within columns)
-  - puzzleSpacing: 300px (extra spacing for chains)
-  - optimizeEdgeCrossings: true (network-simplex)
+- Configuration in `LayoutOrchestrator`:
+  - rankSeparation: 300px (horizontal spacing)
+  - nodeSeparation: 100px (vertical spacing)
 
-#### Debugging Production Issues
-1. Check environment variables are set in platform (not .env file)
-2. Verify CORS configuration matches deployment URL
-3. Check server logs for startup validation messages
-4. Test health endpoint: `/api/health`
-
-## Debugging Utilities
-
-### Debug Scripts (in scripts/)
+## Debug Scripts (in scripts/)
 ```bash
 tsx scripts/debug-notion-data.ts      # Inspect raw Notion API responses
 tsx scripts/debug-missing-fields.ts   # Check for missing entity references
 tsx scripts/test-single-endpoint.ts   # Test individual API endpoints
+tsx scripts/test-synthesized-endpoint.ts # Test bidirectional synthesis
 tsx scripts/analyze-process-tree.ts   # Debug process management issues
-tsx scripts/inspect-notion-data.ts    # Detailed entity inspection
-```
-
-### Performance Testing
-```bash
 tsx scripts/test-timeline-performance.ts  # Timeline endpoint benchmarking
-npm run test:coverage                    # Generate coverage reports
 ```
-
-## Deployment Notes
-
-### Render.com Deployment
-- Environment variables set in Render dashboard (not .env files)
-- Build command: `npm install && npm run build`
-- Start command: `npm start`
-- Health check: `/healthz`
-
-### Critical Production Settings
-1. NODE_ENV must be "production"
-2. All NOTION_* environment variables must be set
-3. FRONTEND_URL should match deployment domain
-4. dotenv must NOT load in production
 
 ## Common Pitfalls to Avoid
 
@@ -403,53 +205,20 @@ npm run test:coverage                    # Generate coverage reports
 2. **Don't expose Notion API key to frontend** - always proxy through Express
 3. **Don't skip asyncHandler** - unhandled promise rejections crash the server
 4. **Don't use relative imports** - use path aliases (`@/*` for src)
-5. **Don't commit .env files** - they're gitignored for a reason
-6. **Don't use TypeScript enums** - use const objects for erasableSyntaxOnly compatibility
-7. **Don't create monolithic modules** - split into focused, single-responsibility files
-8. **Don't duplicate transformation logic** - extend BaseTransformer for new entity types
-
-## Refactoring Best Practices (Lessons from January 2025)
-
-### When Refactoring Large Files
-1. **Start with analysis**: Use tools to understand dependencies and coupling
-2. **Identify patterns**: Look for repeated code that can be abstracted
-3. **Create base classes**: Abstract common functionality (like BaseTransformer)
-4. **Use facade pattern**: Keep public API stable while changing internals
-5. **Test continuously**: Run tests after each extraction to catch breaks
-
-### TypeScript Strict Mode Tips
-1. **Fix direction type issues**: Reorder spread operators when mapping types
-2. **Handle null entities**: Add explicit null checks in transformers
-3. **Use const assertions**: Replace enums with `as const` objects
-4. **Type guard functions**: Create type predicates for runtime validation
-
-### Performance Optimization Patterns
-1. **React.memo everything**: Wrap all node components to prevent re-renders
-2. **useMemo for derived data**: Memoize expensive transformations
-3. **useCallback for handlers**: Prevent function recreation on each render
-4. **Batch API calls**: Use parallel requests when fetching independent data
+5. **Don't use TypeScript enums** - use const objects for erasableSyntaxOnly compatibility
+6. **Don't create monolithic modules** - split into focused, single-responsibility files
+7. **Don't duplicate transformation logic** - extend BaseTransformer for new entity types
 
 ## Current Development Status
 
 - **Sprint 1**: ✅ Complete - Foundation, API integration, data layer
-- **Sprint 2**: 🚧 In Progress - React Flow visualization with modular graph system
-  - ✅ Complete graph module refactoring (January 17-18, 2025)
-  - ✅ Pure Dagre layout with 53.6% code reduction
-  - ✅ 12+ focused modules extracted from monolithic code
-  - ✅ Virtual edge injection for dual-role elements
-  - ✅ Element clustering with collision detection
-  - ✅ Layout quality metrics and reporting
-  - ✅ TypeScript strict mode compliance (all 126 errors fixed)
-  - 🚧 Details panel and mutations pending
-  - 🚧 Visual flow indicators and styling pending
+- **Sprint 2**: 🚧 In Progress (~75% Complete) - React Flow visualization
+  - ✅ Graph module refactoring complete
+  - ✅ Pure Dagre layout with virtual edge injection
+  - ✅ DetailPanel with two-way Notion sync
+  - ✅ Visual enhancements with glassmorphism
+  - 🚧 Remaining: Additional mutations and polish
 - **Sprint 3**: 📋 Planned - Character journey view
 - **Sprint 4**: 📋 Planned - Production polish
 
 See [docs/PROJECT_STATUS.md](./docs/PROJECT_STATUS.md) for detailed status.
-
-## Getting Help
-
-- Main documentation: [README.md](./README.md)
-- API reference: [docs/API.md](./docs/API.md)
-- Deployment guide: [DEPLOYMENT.md](./DEPLOYMENT.md)
-- Test strategy: [docs/TESTING_STRATEGY.md](./docs/TESTING_STRATEGY.md)
