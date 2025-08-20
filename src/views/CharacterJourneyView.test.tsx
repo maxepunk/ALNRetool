@@ -32,12 +32,21 @@ vi.mock('@/components/FilterSection', () => ({
   FilterSection: vi.fn(() => <div data-testid="filter-section">Filter Section</div>)
 }));
 
-vi.mock('@/components/common/LoadingSpinner', () => ({
-  default: vi.fn(({ message }) => <div data-testid="loading-spinner">{message}</div>)
+vi.mock('@/components/common/LoadingSkeleton', () => ({
+  default: vi.fn(({ variant }) => <div data-testid="loading-skeleton">{variant}</div>)
 }));
 
 vi.mock('@/components/common/ErrorDisplay', () => ({
   ErrorDisplay: vi.fn(({ error }) => <div data-testid="error-display">{error.message}</div>)
+}));
+
+vi.mock('@/components/DetailPanel', () => ({
+  default: vi.fn(({ entity, onClose }) => (
+    <div data-testid="detail-panel">
+      {entity && <div>Detail panel for entity: {entity.name || entity.id}</div>}
+      <button onClick={onClose}>Close</button>
+    </div>
+  ))
 }));
 
 // Mock React Flow styles
@@ -104,8 +113,8 @@ describe('CharacterJourneyView', () => {
 
       renderWithRouter();
       
-      expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
-      expect(screen.getByText('Loading character journey data...')).toBeInTheDocument();
+      expect(screen.getByTestId('loading-skeleton')).toBeInTheDocument();
+      expect(screen.getByText('Loading character ownership paths...')).toBeInTheDocument();
     });
   });
 
@@ -327,7 +336,7 @@ describe('CharacterJourneyView', () => {
       const testNode = screen.getByText('Test Node');
       fireEvent.click(testNode);
       
-      expect(screen.getByText('Detail panel for node: test-node')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-panel')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
     });
 
@@ -338,13 +347,13 @@ describe('CharacterJourneyView', () => {
       const testNode = screen.getByText('Test Node');
       fireEvent.click(testNode);
       
-      expect(screen.getByText('Detail panel for node: test-node')).toBeInTheDocument();
+      expect(screen.getByTestId('detail-panel')).toBeInTheDocument();
       
       // Close detail panel
       const closeButton = screen.getByRole('button', { name: 'Close' });
       fireEvent.click(closeButton);
       
-      expect(screen.queryByText('Detail panel for node: test-node')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('detail-panel')).not.toBeInTheDocument();
     });
   });
 

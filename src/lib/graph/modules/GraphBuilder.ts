@@ -24,6 +24,7 @@ import {
   resolveRelationshipsWithIntegrity,
   filterEdgesByType
 } from '../relationships';
+import { matchesTierFilter } from '@/lib/utils/tierUtils';
 
 export class GraphBuilder implements IGraphBuilder {
   /**
@@ -557,10 +558,46 @@ export class GraphBuilder implements IGraphBuilder {
    * Creates a hierarchical structure: Character -> Puzzles -> Elements -> Timeline
    * @param data - The Notion data to process
    * @param characterId - Optional characterId to filter the journey to a specific character
+   * @param filters - Optional character filters to apply
    */
-  buildCharacterJourneyGraph(data: NotionData, characterId?: string): GraphData {
+  buildCharacterJourneyGraph(data: NotionData, characterId?: string, filters?: any): GraphData {
     // If characterId is provided, filter data to only include relevant entities
     let filteredData = data;
+    
+    // First apply character filters if provided
+    if (filters) {
+      try {
+        // Filter characters based on tier, ownership, and type filters
+        let filteredCharacters = data.characters;
+        
+        // Apply tier filter
+        if (filters.selectedTiers && filters.selectedTiers.size > 0) {
+          console.log('Applying tier filter:', Array.from(filters.selectedTiers));
+          filteredCharacters = filteredCharacters.filter(char => 
+            matchesTierFilter(char.tier, filters.selectedTiers)
+          );
+        }
+        
+        // Apply character type filter
+        if (filters.characterType && filters.characterType !== 'all') {
+          console.log('Applying character type filter:', filters.characterType);
+          filteredCharacters = filteredCharacters.filter(char => 
+            char.type === filters.characterType
+          );
+        }
+        
+        // Update data with filtered characters
+        data = {
+          ...data,
+          characters: filteredCharacters
+        };
+        
+        console.log(`Character filters applied: ${data.characters.length} characters after filtering`);
+      } catch (error) {
+        console.error('Error applying character filters:', error);
+        // Continue with unfiltered data if there's an error
+      }
+    }
     
     if (characterId) {
       // Find the character

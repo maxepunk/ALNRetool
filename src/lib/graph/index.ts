@@ -90,8 +90,8 @@ export function buildPuzzleFocusGraph(data: any) {
  * Build a graph for the Character Journey View
  * Delegates to GraphBuilder module
  */
-export function buildCharacterJourneyGraph(data: any, characterId?: string) {
-  return graphBuilder.buildCharacterJourneyGraph(data, characterId);
+export function buildCharacterJourneyGraph(data: any, characterId?: string, filters?: any) {
+  return graphBuilder.buildCharacterJourneyGraph(data, characterId, filters);
 }
 
 /**

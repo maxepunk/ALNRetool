@@ -1,208 +1,251 @@
 # ALNRetool
 
-**ALNRetool** is a visualization and editing tool for "About Last Night," a 20-40 player murder mystery game. It enables puzzle and narrative designers to visualize and edit game content stored in Notion databases through interactive graph interfaces.
+A modern web-based visualization and editing tool for "About Last Night," a murder mystery game for 20-40 players. This tool provides interactive graph visualization and real-time editing capabilities for game content stored in Notion databases.
 
-## 🎯 Core Features
+## 🚀 Current Status
 
-- **Interactive Graph Visualizations**: Understand complex relationships between characters, puzzles, and story elements
-- **Direct Notion Integration**: Fetches data directly from your game's Notion databases via a secure API proxy
-- **Three Core Views**:
-  1. **Puzzle Focus View**: Visualize puzzle dependencies and reward paths
-  2. **Character Journey View**: Track character-specific content and access paths
-  3. **Content Status View**: Monitor the production status of all game elements
-- **Advanced Search & Filtering** (New in v2.0):
-  - Fuzzy text search across all nodes
-  - Act-based filtering (Act 0/1/2)
-  - Puzzle isolation with dependency traversal
-  - Collapsible filter panel with animations
-  - Active filter badges and persistence
-- **Interactive DetailPanel**: Click any node to view and edit all properties
-- **Two-Way Notion Sync**: Update game content directly from the visualization
-- **Real-time Caching**: 5-minute cache reduces Notion API calls by 70-80%
-- **Robust Security**: API key authentication, CORS protection, and rate limiting
+- **Version**: Sprint 2 (~75% Complete)
+- **Production Ready**: ❌ Not yet (targeting Sprint 4)
+- **Core Features**: ✅ Working
+- **Graph Visualization**: ✅ Implemented
+- **Two-way Notion Sync**: ✅ Implemented
+- **Character Journey**: 🚧 In Progress
+
+## ✨ Features
+
+### Implemented ✅
+- **Interactive Graph Visualization**: React Flow-based graph with custom node types
+- **Multi-view System**: 
+  - Content Status View (default)
+  - Puzzle Focus View 
+  - Character Journey View (partial)
+- **Real-time Notion Integration**: Two-way sync with Notion databases
+- **Detail Panel**: Interactive editing with optimistic updates
+- **Advanced Filtering**: Filter by puzzle chains, character stories, narrative threads
+- **Smart Layout Engine**: Pure Dagre layout with semantic edge positioning
+- **Visual Enhancements**: Glassmorphism effects, smooth animations, skeleton loading
+- **Performance Optimizations**: Request batching, 5-minute cache TTL, React Query
+
+### In Development 🚧
+- Character journey timeline visualization
+- Additional mutation operations
+- Production deployment configuration
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite, TanStack Query, React Flow
-- **Backend**: Express.js, TypeScript, Notion API SDK
-- **Graph Visualization**: React Flow with modular Dagre layout engine
-  - 12+ focused modules with BaseTransformer pattern
-  - VirtualEdgeInjector for dual-role elements
-  - ElementClusterer with collision detection
-  - LayoutQualityMetrics for optimization
-- **State Management**: TanStack Query for server state, React Flow internal for graph state
-- **UI Components**: shadcn/ui, Radix UI primitives, Tailwind CSS v4
-  - Custom glassmorphism filter panel
-  - Collapsible controls with animations
-  - DetailPanel with field editors
-  - Owner badges and diamond nodes
-- **Testing**: Vitest (500+ tests), Mock Service Worker, Testing Library
-- **Development**: ESLint, Prettier, Commitizen, GitHub Actions CI/CD
+### Frontend
+- **React 18** with TypeScript
+- **Vite** for fast development and optimized builds
+- **React Flow** for graph visualization
+- **TanStack Query** for server state management
+- **Tailwind CSS v4** with PostCSS
+- **shadcn/ui** component library
+- **Dagre** for graph layout algorithms
 
-## 🚀 Quick Start
+### Backend
+- **Express.js** API server
+- **Notion SDK** for database integration
+- **node-cache** for response caching
+- **Rate limiting** and API key authentication
+- **TypeScript** with CommonJS output
+
+## 📦 Installation
 
 ### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Notion API key and database IDs
 
-- Node.js v18+ and npm
-- Git
-- Notion API key and database IDs (request from team lead)
+### Setup
 
-### Installation
-
+1. Clone the repository:
 ```bash
-# Clone the repository
-git clone https://github.com/maxepunk/ALNRetool.git
+git clone https://github.com/yourusername/ALNRetool.git
 cd ALNRetool
-
-# Install dependencies
-npm install
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your Notion credentials
 ```
 
-### Environment Variables
+2. Install dependencies:
+```bash
+npm install
+```
 
-Edit `.env` with the following required values:
+3. Configure environment variables:
+```bash
+cp .env.example .env
+```
 
+Edit `.env` with your Notion credentials:
 ```env
-# Notion API Configuration (get from team lead)
-NOTION_API_KEY="your-notion-integration-token"
-NOTION_CHARACTERS_DB="18c2f33d-583f-8060-a6ab-de32ff06bca2"
-NOTION_ELEMENTS_DB="18c2f33d-583f-8020-91bc-d84c7dd94306"
-NOTION_PUZZLES_DB="1b62f33d-583f-80cc-87cf-d7d6c4b0b265"
-NOTION_TIMELINE_DB="1b52f33d-583f-80de-ae5a-d20020c120dd"
+# Notion Configuration (Required)
+NOTION_API_KEY=your_notion_integration_token
+NOTION_CHARACTERS_DB=18c2f33d-583f-8060-a6ab-de32ff06bca2
+NOTION_ELEMENTS_DB=18c2f33d-583f-8020-91bc-d84c7dd94306
+NOTION_PUZZLES_DB=1b62f33d-583f-80cc-87cf-d7d6c4b0b265
+NOTION_TIMELINE_DB=1b52f33d-583f-80de-ae5a-d20020c120dd
 
-# Server Configuration
+# Server Configuration (Optional)
 PORT=3001
 NODE_ENV=development
+API_KEY=your_optional_api_key
 ```
 
-### Development
+## 🚀 Development
 
+### Start Development Server
 ```bash
-# Start both frontend and backend
 npm run dev
+```
+This starts:
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:3001
 
-# Frontend only (Vite on port 5173)
-npm run dev:client
+### Available Scripts
 
-# Backend only (Express on port 3001)
-npm run dev:server
+#### Development
+```bash
+npm run dev              # Start both frontend and backend
+npm run dev:client       # Frontend only (Vite)
+npm run dev:server       # Backend only (Express)
 ```
 
-Visit http://localhost:5173 to see the application.
+#### Testing
+```bash
+npm test                 # Run tests in watch mode
+npm run test:run         # Run all tests once
+npm run test:ui          # Open Vitest UI
+npm run test:coverage    # Generate coverage report
+npm run test:integration # Integration tests (requires .env)
+npm run test:smoke       # Quick smoke test
+```
+
+#### Build & Production
+```bash
+npm run build            # Build for production
+npm start                # Start production server
+npm run preview          # Preview production build
+```
+
+#### Code Quality
+```bash
+npm run lint             # Run ESLint
+npm run typecheck        # TypeScript validation
+```
 
 ## 📁 Project Structure
 
 ```
 ALNRetool/
-├── src/                    # Frontend React application
+├── src/                    # Frontend source code
 │   ├── components/         # React components
+│   │   ├── graph/         # Graph visualization components
+│   │   ├── detail-panel/  # Entity detail panels
+│   │   ├── nodes/         # Custom node components
+│   │   └── ui/            # shadcn/ui components
 │   ├── hooks/             # Custom React hooks
-│   ├── services/          # API client services
-│   ├── lib/graph/         # Graph transformation logic
-│   └── types/             # TypeScript type definitions
-├── server/                # Backend Express server
+│   ├── lib/               # Core libraries
+│   │   └── graph/         # Graph transformation system
+│   │       ├── modules/   # Modular transformers
+│   │       └── layout/    # Layout algorithms
+│   ├── services/          # API and data services
+│   ├── types/             # TypeScript type definitions
+│   └── views/             # Page-level components
+├── server/                # Backend source code
+│   ├── middleware/        # Express middleware
 │   ├── routes/            # API route handlers
-│   ├── services/          # Notion API integration
-│   └── middleware/        # Auth, validation, error handling
-├── docs/                  # Additional documentation
-└── scripts/               # Utility and testing scripts
+│   ├── services/          # Business logic
+│   └── types/             # Server type definitions
+├── scripts/               # Utility scripts
+├── docs/                  # Documentation
+└── tests/                 # Test files
 ```
+
+## 🔌 API Endpoints
+
+### Entity Endpoints
+- `GET /api/notion/characters` - Fetch all characters
+- `GET /api/notion/characters/:id` - Fetch single character
+- `PUT /api/notion/characters/:id` - Update character
+- `GET /api/notion/elements` - Fetch all story elements
+- `GET /api/notion/elements/:id` - Fetch single element
+- `PUT /api/notion/elements/:id` - Update element
+- `GET /api/notion/puzzles` - Fetch all puzzles
+- `GET /api/notion/puzzles/:id` - Fetch single puzzle
+- `PUT /api/notion/puzzles/:id` - Update puzzle
+- `GET /api/notion/timeline` - Fetch timeline events
+
+### Specialized Endpoints
+- `GET /api/notion/synthesized` - Get all entities with bidirectional relationships
+- `GET /api/cache/stats` - Cache statistics
+- `POST /api/cache/clear` - Clear cache
+- `POST /api/cache/warm` - Warm cache
+
+### Health Checks
+- `GET /api/health` - API health check
+- `GET /healthz` - Production health check
 
 ## 🧪 Testing
 
+The project uses Vitest for testing with the following configuration:
+- **Unit Tests**: Component and hook testing with React Testing Library
+- **Integration Tests**: API endpoint testing with real Notion integration
+- **Coverage Thresholds**: 80% for branches, functions, lines, statements
+
+Run tests:
 ```bash
-# Run all tests
-npm test
-
-# Unit tests only (500+ tests)
-npm run test:run
-
-# Integration tests (requires .env)
-npm run test:integration
-
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
+npm test                 # Watch mode
+npm run test:run         # Single run
+npm run test:coverage    # With coverage
 ```
 
 ## 🚢 Deployment
 
-The application is deployed on [Render.com](https://render.com). See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions.
+### Environment Variables (Production)
+Set these in your deployment platform:
+- `NOTION_API_KEY` - Your Notion integration token
+- `NOTION_CHARACTERS_DB` - Characters database ID
+- `NOTION_ELEMENTS_DB` - Elements database ID  
+- `NOTION_PUZZLES_DB` - Puzzles database ID
+- `NOTION_TIMELINE_DB` - Timeline database ID
+- `NODE_ENV=production` - Production mode
+- `API_KEY` - Optional API key for additional security
 
-### Production Build
-
+### Build for Production
 ```bash
-# Build for production
 npm run build
-
-# Start production server
 npm start
 ```
 
+### Deployment Platforms
+The app is configured for deployment on:
+- **Render**: Use `render.yaml` configuration
+- **Vercel**: Frontend deployment ready
+- **Railway/Heroku**: Node.js deployment ready
+
 ## 📚 Documentation
 
-### Planning Documents
-- [Product Requirements](./alnretool-prd.md) - Complete product vision and feature specifications
-- [Development Roadmap](./alnretool-action-plan.md) - 8-week sprint plan and timeline
-
-### Technical Documentation
-- [Developer Handbook](./docs/DEVELOPER_HANDBOOK.md) - Architecture decisions and development patterns
-- [API Documentation](./docs/API.md) - Backend API endpoints reference
-- [Testing Strategy](./docs/TESTING_STRATEGY.md) - Testing approach and coverage
-- [Deployment Guide](./DEPLOYMENT.md) - Production deployment instructions
-- [Project Status](./docs/PROJECT_STATUS.md) - Current sprint progress and metrics
+- [Project Status](docs/PROJECT_STATUS.md) - Sprint progress and roadmap
+- [API Documentation](docs/API.md) - Detailed API reference
+- [Architecture](docs/ARCHITECTURE.md) - System design and data flow
+- [Graph Architecture](docs/GRAPH_ARCHITECTURE.md) - Graph system details
+- [Developer Handbook](docs/DEVELOPER_HANDBOOK.md) - Development guidelines
+- [Testing Strategy](docs/TESTING_STRATEGY.md) - Testing approach
 
 ## 🤝 Contributing
 
-This project uses conventional commits with Commitizen. To make a commit:
-
-```bash
-npx cz
-```
-
-Pre-commit hooks automatically run:
-- ESLint for code quality
-- TypeScript type checking
-- Located in `.git/hooks/pre-commit`
-
-## 📊 Current Status
-
-**Sprint 1: Foundation (Complete)**
-- ✅ Development environment setup
-- ✅ Notion API integration with all 4 databases
-- ✅ React Query data layer implementation
-- ✅ Server-side caching with cache management
-- ✅ Comprehensive test coverage (99% passing)
-- ✅ Production deployment on Render
-
-**Sprint 2: Interactive Graph Views (Week 4)**
-- ✅ React Flow graph visualization with modular architecture (12+ focused modules)
-- ✅ Interactive puzzle dependency network with pure Dagre layout (53.6% code reduction)
-- ✅ Visual component enhancements (glassmorphism, animations)
-- ✅ Diamond puzzle nodes with sophisticated styling
-- ✅ Owner badges and element flow indicators
-- ✅ Edge rendering fixed with BaseEdge integration
-- ✅ DetailPanel with field editors and mutations
-- ✅ Two-way Notion sync with optimistic updates
-- ✅ Comprehensive animation system with GraphAnimationContext
-- ✅ TypeScript strict mode compliance (all 126 errors fixed)
-- 🔄 Visual flow indicators and polish pending
+1. Check [PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for current sprint goals
+2. Review [DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md) for coding standards
+3. Create feature branch from `main`
+4. Write tests for new features
+5. Ensure all tests pass and coverage thresholds are met
+6. Submit PR with clear description
 
 ## 📄 License
 
-Private repository - All rights reserved
+Private project - All rights reserved
 
-## 👥 Team
+## 🙏 Acknowledgments
 
-- Game Design: About Last Night team
-- Development: ALNRetool contributors
-
----
-
-For AI assistant instructions, see [CLAUDE.md](./CLAUDE.md)
+- Built with React Flow for graph visualization
+- Powered by Notion API for content management
+- UI components from shadcn/ui
+- Layout algorithms from Dagre

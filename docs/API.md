@@ -1,176 +1,181 @@
-# ALNRetool API Documentation
+# API Documentation
 
-## Overview
+Complete API reference for ALNRetool backend services.
 
-The ALNRetool API provides a secure proxy layer between the React frontend and Notion's API, handling authentication, rate limiting, and data transformation. All endpoints return consistent response formats and error structures.
+## Base URL
 
-**Base URL**: `http://localhost:3001/api`  
-**Authentication**: X-API-Key header required for all `/notion/*` endpoints
-
-## Table of Contents
-
-1. [Authentication](#authentication)
-2. [Rate Limiting](#rate-limiting)
-3. [Response Formats](#response-formats)
-4. [Endpoints](#endpoints)
-   - [Health Check](#health-check)
-   - [Characters](#characters)
-   - [Elements](#elements)
-   - [Puzzles](#puzzles)
-   - [Timeline](#timeline)
-   - [Synthesized Data](#synthesized-data)
-   - [Mutations](#mutations)
-   - [Cache Management](#cache-management)
-5. [Caching](#caching)
-6. [Input Validation](#input-validation)
-7. [Error Handling](#error-handling)
-8. [Environment Configuration](#environment-configuration)
-9. [CORS Policy](#cors-policy)
+- **Development**: `http://localhost:3001/api`
+- **Production**: `https://your-domain.com/api`
 
 ## Authentication
 
-### Development Mode
-All Notion API endpoints require authentication via the `X-API-Key` header:
+All API endpoints (except health checks) require API key authentication:
 
 ```http
 X-API-Key: your-api-key-here
 ```
 
-### Production Mode
-- **Same-origin requests**: Allowed without API key
-- **Cross-origin requests**: Require `X-API-Key` header
-
-### Authentication Errors
-
-Missing or invalid API key:
-```json
-{
-  "statusCode": 401,
-  "code": "UNAUTHORIZED",
-  "message": "Unauthorized - Invalid API key"
-}
-```
-
-Server configuration error (API_KEY not set):
-```json
-{
-  "statusCode": 500,
-  "code": "CONFIG_ERROR",
-  "message": "Server configuration error."
-}
-```
+Set the `API_KEY` environment variable to enable authentication. If not set, authentication is bypassed in development mode.
 
 ## Rate Limiting
 
-The API implements two layers of rate limiting:
-
-### 1. Express Rate Limiting (Incoming Requests)
 - **Limit**: 100 requests per minute per IP
-- **Window**: 1 minute rolling window
-- **Applies to**: All `/api/*` endpoints
-- **Error Response** (429):
-```json
-{
-  "message": "Too many requests from this IP, please try again after a minute"
-}
-```
+- **Window**: 1 minute sliding window
+- **Headers**: Standard rate limit headers included in responses
 
-### 2. Bottleneck Rate Limiting (Notion API Calls)
-- **Limit**: ~2.94 requests per second (340ms spacing)
-- **Purpose**: Respect Notion's 3 req/sec rate limit
-- **Implementation**: Automatic queuing with no user-facing errors
-- **Note**: Multiple requests are queued and processed sequentially
+## Response Format
 
-## Response Formats
-
-### Success Response
-
-All successful API responses follow this structure:
+All successful responses follow this structure:
 
 ```typescript
 interface APIResponse<T> {
-  data: T[];           // Array of entities
-  nextCursor: null;    // Always null (pagination handled internally)
-  hasMore: false;      // Always false (all data fetched)
+  data: T[];
+  nextCursor: string | null;
+  hasMore: boolean;
 }
 ```
 
-Example:
-```json
-{
-  "data": [
-    {
-      "id": "abc-123",
-      "name": "Sofia Chen",
-      "type": "Player",
-      "tier": "Core"
-      // ... additional fields
-    }
-  ],
-  "nextCursor": null,
-  "hasMore": false
-}
-```
-
-### Error Response
-
-All errors follow this structure:
+Error responses:
 
 ```typescript
-interface APIError {
-  statusCode: number;  // HTTP status code
-  code: string;        // Error code constant
-  message: string;     // Human-readable message
+interface ErrorResponse {
+  error: string;
+  details?: any;
+  stack?: string; // Only in development
 }
 ```
 
 ## Endpoints
 
-### Health Check
+### Health Checks
 
-Check server status without authentication.
+#### GET /api/health
+Check API server health status.
 
-**Endpoint**: `GET /api/health`  
-**Authentication**: None required  
-**Rate Limit**: Subject to Express rate limit only
+**Authentication**: Not required
 
-#### Response (200 OK)
+**Response**:
 ```json
 {
   "status": "ok",
-  "timestamp": "2025-01-14T12:34:56.789Z"
+  "timestamp": "2025-01-20T12:00:00.000Z"
 }
 ```
 
-### Characters
+#### GET /healthz
+Production health check endpoint (for Render/monitoring).
 
-Fetch all characters from the Notion database.
+**Authentication**: Not required
 
-**Endpoint**: `GET /api/notion/characters`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply  
+**Response**: 
+```
+OK
+```
+
+### Character Endpoints
+
+#### GET /api/notion/characters
+Fetch all characters from Notion database.
+
 **Query Parameters**:
-- `limit` (optional): Number of results to return (1-100, default: 20)
-- `cursor` (optional): Pagination cursor for next page
+- `cursor` (string, optional): Pagination cursor
+- `limit` (number, optional): Results per page (max 100, default 100)
 
-#### Success Response (200 OK)
+**Response**:
 ```json
 {
   "data": [
     {
-      "id": "18c2f33d-583f-8060-a6ab-de32ff06bca2",
-      "name": "Sofia Chen",
-      "type": "Player",
-      "tier": "Core",
-      "ownedElementIds": ["elem-1", "elem-2"],
-      "associatedElementIds": ["elem-3"],
-      "characterPuzzleIds": ["puzzle-1"],
-      "eventIds": ["event-1", "event-2"],
-      "connections": ["char-2", "char-3"],
-      "primaryAction": "Investigates financial records",
-      "characterLogline": "Ambitious CFO with hidden agenda",
-      "overview": "Sofia joined the company...",
-      "emotionTowardsCEO": "Resentful but respectful"
+      "id": "char-uuid",
+      "name": "Character Name",
+      "description": "Character description",
+      "relationships": ["char-uuid-2", "char-uuid-3"],
+      "narrativeThreads": ["thread1", "thread2"],
+      "timing": "early",
+      "color": "#4ADE80",
+      "imageUrl": "https://example.com/image.jpg",
+      "notes": "Internal notes"
+    }
+  ],
+  "nextCursor": "cursor-string",
+  "hasMore": false
+}
+```
+
+#### GET /api/notion/characters/:id
+Fetch a single character by ID.
+
+**Response**:
+```json
+{
+  "data": [{
+    "id": "char-uuid",
+    "name": "Character Name",
+    "description": "Character description",
+    "relationships": ["char-uuid-2"],
+    "narrativeThreads": ["thread1"],
+    "timing": "early",
+    "color": "#4ADE80"
+  }],
+  "nextCursor": null,
+  "hasMore": false
+}
+```
+
+#### PUT /api/notion/characters/:id
+Update a character's properties.
+
+**Request Body**:
+```json
+{
+  "name": "Updated Name",
+  "description": "Updated description",
+  "relationships": ["char-uuid-2", "char-uuid-3"],
+  "narrativeThreads": ["thread1", "thread2"],
+  "timing": "middle"
+}
+```
+
+**Response**:
+```json
+{
+  "data": [{
+    "id": "char-uuid",
+    "name": "Updated Name",
+    "description": "Updated description",
+    "relationships": ["char-uuid-2", "char-uuid-3"],
+    "narrativeThreads": ["thread1", "thread2"],
+    "timing": "middle"
+  }],
+  "nextCursor": null,
+  "hasMore": false
+}
+```
+
+### Element Endpoints
+
+#### GET /api/notion/elements
+Fetch all story elements.
+
+**Query Parameters**:
+- `cursor` (string, optional): Pagination cursor
+- `limit` (number, optional): Results per page (max 100, default 100)
+
+**Response**:
+```json
+{
+  "data": [
+    {
+      "id": "elem-uuid",
+      "name": "Element Name",
+      "description": "Element description",
+      "type": "object",
+      "narrativeThreads": ["thread1"],
+      "timing": "middle",
+      "color": "#A855F7",
+      "discoveredBy": ["char-uuid"],
+      "puzzles": ["puzzle-uuid"],
+      "notes": "Internal notes"
     }
   ],
   "nextCursor": null,
@@ -178,71 +183,53 @@ Fetch all characters from the Notion database.
 }
 ```
 
-#### Character Object Fields
+#### GET /api/notion/elements/:id
+Fetch a single element by ID.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique Notion page ID |
-| name | string | Character name |
-| type | "NPC" \| "Player" | Character playability |
-| tier | "Core" \| "Secondary" \| "Tertiary" | Narrative importance |
-| ownedElementIds | string[] | IDs of elements character starts with |
-| associatedElementIds | string[] | IDs of narratively connected elements |
-| characterPuzzleIds | string[] | IDs of accessible puzzles |
-| eventIds | string[] | IDs of timeline events involving character |
-| connections | string[] | IDs of characters with shared events |
-| primaryAction | string | Core character behavior |
-| characterLogline | string | One-line description |
-| overview | string | Detailed background |
-| emotionTowardsCEO | string | Relationship dynamics |
+#### PUT /api/notion/elements/:id
+Update an element's properties.
 
-### Elements
+**Request Body**:
+```json
+{
+  "name": "Updated Element",
+  "description": "Updated description",
+  "type": "information",
+  "narrativeThreads": ["thread1", "thread2"],
+  "timing": "late",
+  "discoveredBy": ["char-uuid-1", "char-uuid-2"],
+  "puzzles": ["puzzle-uuid-1"]
+}
+```
 
-Fetch all game elements (props, documents, memory tokens).
+### Puzzle Endpoints
 
-**Endpoint**: `GET /api/notion/elements`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply  
+#### GET /api/notion/puzzles
+Fetch all puzzles.
+
 **Query Parameters**:
-- `limit` (optional): Number of results to return (1-100, default: 20)
-- `cursor` (optional): Pagination cursor for next page
+- `cursor` (string, optional): Pagination cursor
+- `limit` (number, optional): Results per page (max 100, default 100)
 
-#### Success Response (200 OK)
+**Response**:
 ```json
 {
   "data": [
     {
-      "id": "elem-123",
-      "name": "Contract Draft",
-      "descriptionText": "Legal document with amendments...",
-      "sfPatterns": {
-        "rfid": "RFID-001",
-        "valueRating": 4,
-        "memoryType": "Business",
-        "group": "Legal Documents"
-      },
-      "basicType": "Document",
-      "ownerId": "char-1",
-      "containerId": null,
-      "contentIds": [],
-      "timelineEventId": "event-1",
-      "status": "Writing Complete",
-      "firstAvailable": "Act 1",
-      "requiredForPuzzleIds": ["puzzle-1"],
-      "rewardedByPuzzleIds": ["puzzle-2"],
-      "containerPuzzleId": null,
-      "narrativeThreads": ["Corporate Espionage", "Financial Fraud"],
-      "associatedCharacterIds": ["char-1", "char-2"],
-      "puzzleChain": [],
-      "productionNotes": "Print on aged paper",
-      "filesMedia": [
-        {
-          "name": "contract-v2.pdf",
-          "url": "https://notion.so/..."
-        }
-      ],
-      "contentLink": "https://drive.google.com/...",
-      "isContainer": false
+      "id": "puzzle-uuid",
+      "name": "Puzzle Name",
+      "description": "Puzzle description",
+      "solutionType": "deduction",
+      "difficulty": 3,
+      "dependencies": ["puzzle-uuid-2"],
+      "rewards": ["elem-uuid"],
+      "requiredElements": ["elem-uuid-2"],
+      "location": "library",
+      "timing": "middle",
+      "narrativeThreads": ["thread1"],
+      "chain": "chain-name",
+      "solvableBy": ["char-uuid"],
+      "notes": "Internal notes"
     }
   ],
   "nextCursor": null,
@@ -250,75 +237,54 @@ Fetch all game elements (props, documents, memory tokens).
 }
 ```
 
-#### Element Object Fields
+#### GET /api/notion/puzzles/:id
+Fetch a single puzzle by ID.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique element ID |
-| name | string | Element name |
-| descriptionText | string | Full content including SF_ patterns |
-| sfPatterns | object | Parsed metadata (rfid, valueRating, etc.) |
-| basicType | string | Physical manifestation type |
-| ownerId | string? | Character who starts with item |
-| containerId | string? | Parent container element |
-| contentIds | string[] | Elements contained within |
-| timelineEventId | string? | Associated timeline event |
-| status | string | Production readiness status |
-| firstAvailable | Act? | When element becomes accessible |
-| requiredForPuzzleIds | string[] | Puzzles needing this element |
-| rewardedByPuzzleIds | string[] | Puzzles that unlock this |
-| containerPuzzleId | string? | Puzzle that opens container |
-| narrativeThreads | string[] | Story categories (26 options) |
-| associatedCharacterIds | string[] | Characters in related events |
-| puzzleChain | string[] | Puzzle dependency chain |
-| productionNotes | string | Design/fabrication notes |
-| filesMedia | array | Attached files with URLs |
-| contentLink | string? | External resource URL |
-| isContainer | boolean | Whether element contains others |
+#### PUT /api/notion/puzzles/:id
+Update a puzzle's properties.
 
-#### Element Types
-- `Set Dressing` - Environmental decoration
-- `Prop` - Interactive physical item
-- `Memory Token (Audio)` - RFID audio content
-- `Memory Token (Video)` - RFID video content
-- `Memory Token (Image)` - RFID image content
-- `Memory Token (Audio+Image)` - RFID multimedia
-- `Document` - Written content
+**Request Body**:
+```json
+{
+  "name": "Updated Puzzle",
+  "description": "Updated description",
+  "solutionType": "physical",
+  "difficulty": 4,
+  "dependencies": ["puzzle-uuid-1", "puzzle-uuid-2"],
+  "rewards": ["elem-uuid-1"],
+  "requiredElements": ["elem-uuid-2", "elem-uuid-3"],
+  "location": "garden",
+  "timing": "late",
+  "narrativeThreads": ["thread1", "thread2"],
+  "chain": "new-chain",
+  "solvableBy": ["char-uuid-1", "char-uuid-2"]
+}
+```
 
-#### Element Status Values
-- **To-do**: `Idea/Placeholder`
-- **In Progress**: `in space playtest ready`, `In development`, `Writing Complete`, `Design Complete`, `Source Prop/print`, `Ready for Playtest`
-- **Complete**: `Done`
+### Timeline Endpoints
 
-### Puzzles
+#### GET /api/notion/timeline
+Fetch timeline events.
 
-Fetch all puzzles and their dependencies.
-
-**Endpoint**: `GET /api/notion/puzzles`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply  
 **Query Parameters**:
-- `limit` (optional): Number of results to return (1-100, default: 20)
-- `cursor` (optional): Pagination cursor for next page
+- `cursor` (string, optional): Pagination cursor
+- `limit` (number, optional): Results per page (max 100, default 100)
 
-#### Success Response (200 OK)
+**Response**:
 ```json
 {
   "data": [
     {
-      "id": "puzzle-123",
-      "name": "Hidden Safe",
-      "descriptionSolution": "Enter code 4-8-15 after finding clues",
-      "puzzleElementIds": ["elem-1", "elem-2"],
-      "lockedItemId": "elem-safe",
-      "ownerId": "char-1",
-      "rewardIds": ["elem-3", "elem-4"],
-      "parentItemId": null,
-      "subPuzzleIds": ["puzzle-124"],
-      "storyReveals": ["event-1"],
-      "timing": ["Act 1"],
-      "narrativeThreads": ["Corporate Secrets"],
-      "assetLink": "https://docs.google.com/..."
+      "id": "timeline-uuid",
+      "name": "Event Name",
+      "description": "Event description",
+      "timestamp": "2025-01-20T20:00:00Z",
+      "location": "ballroom",
+      "participants": ["char-uuid-1", "char-uuid-2"],
+      "narrativeThreads": ["thread1"],
+      "puzzles": ["puzzle-uuid"],
+      "elements": ["elem-uuid"],
+      "notes": "Internal notes"
     }
   ],
   "nextCursor": null,
@@ -326,419 +292,229 @@ Fetch all puzzles and their dependencies.
 }
 ```
 
-#### Puzzle Object Fields
+### Synthesized Data Endpoint
 
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique puzzle ID |
-| name | string | Puzzle name |
-| descriptionSolution | string | How to solve the puzzle |
-| puzzleElementIds | string[] | Required elements to solve |
-| lockedItemId | string? | Container this puzzle opens |
-| ownerId | string? | Character who "owns" puzzle |
-| rewardIds | string[] | Elements gained on completion |
-| parentItemId | string? | Parent in puzzle chain |
-| subPuzzleIds | string[] | Child puzzles |
-| storyReveals | string[] | Timeline events uncovered |
-| timing | Act[] | When puzzle becomes solvable |
-| narrativeThreads | string[] | Story categories touched |
-| assetLink | string? | External documentation |
+#### GET /api/notion/synthesized
+Fetch all entities with bidirectional relationships resolved.
 
-### Timeline
+This endpoint returns all characters, elements, and puzzles with their relationships fully synthesized. It ensures bidirectional consistency (e.g., if Character A references Character B, Character B will also reference Character A).
 
-Fetch all timeline events (game backstory).
-
-**Endpoint**: `GET /api/notion/timeline`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply  
 **Query Parameters**:
-- `limit` (optional): Number of results to return (1-100, default: 20)
-- `cursor` (optional): Pagination cursor for next page
+- `includeTimeline` (boolean, optional): Include timeline events (default: false)
 
-#### Success Response (200 OK)
-```json
-{
-  "data": [
-    {
-      "id": "event-123",
-      "description": "CEO announces merger plans",
-      "date": "2024-03-15",
-      "charactersInvolvedIds": ["char-1", "char-2"],
-      "memoryEvidenceIds": ["elem-1"],
-      "memTypes": ["Memory Token (Video)"],
-      "notes": "Critical story beat",
-      "lastEditedTime": "2025-01-14T10:30:00.000Z"
-    }
-  ],
-  "nextCursor": null,
-  "hasMore": false
-}
-```
-
-#### Timeline Object Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| id | string | Unique event ID |
-| description | string | Event summary |
-| date | string | ISO date when event occurred |
-| charactersInvolvedIds | string[] | Characters present |
-| memoryEvidenceIds | string[] | Elements revealing this event |
-| memTypes | string[] | Types of evidence |
-| notes | string | Design notes |
-| lastEditedTime | string | Last modification timestamp |
-
-### Synthesized Data
-
-Fetch all entities with bidirectional relationships synthesized for complete graph visualization.
-
-**Endpoint**: `GET /api/notion/synthesized`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply  
-**Headers**: `X-Cache-Bypass: true` (optional) to force fresh fetch
-
-#### Success Response (200 OK)
+**Response**:
 ```json
 {
   "data": {
-    "elements": [...],  // Array of elements with synthesized relationships
-    "puzzles": [...],   // Array of puzzles with synthesized relationships
-    "timestamp": "2025-01-19T12:34:56.789Z"
+    "characters": [...],
+    "elements": [...],
+    "puzzles": [...],
+    "timeline": [...]  // Only if includeTimeline=true
+  },
+  "metadata": {
+    "characterCount": 25,
+    "elementCount": 50,
+    "puzzleCount": 30,
+    "timelineCount": 20,
+    "synthesizedAt": "2025-01-20T12:00:00.000Z"
   }
 }
 ```
 
-#### Synthesized Relationships
-This endpoint automatically resolves bidirectional relationships that may be missing in Notion:
-- If element A lists puzzle B as requirement, puzzle B will list element A as required
-- If puzzle A lists element B as reward, element B will list puzzle A as rewarding
-- Eliminates data inconsistencies for graph visualization
+### Cache Management Endpoints
 
-### Mutations
+#### GET /api/cache/stats
+Get cache statistics.
 
-Update entity properties in Notion databases.
-
-#### Update Character
-
-**Endpoint**: `PUT /api/notion/characters/:id`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply
-
-##### Request Body
+**Response**:
 ```json
 {
-  "name": "Updated Character Name",
-  "type": "Player",
-  "tier": "Core",
-  // ... other character fields
-}
-```
-
-##### Response (200 OK)
-Returns the updated character object with invalidated cache.
-
-#### Update Element
-
-**Endpoint**: `PUT /api/notion/elements/:id`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply
-
-##### Request Body
-```json
-{
-  "name": "Updated Element Name",
-  "descriptionText": "Updated description",
-  "status": "Writing Complete",
-  // ... other element fields
-}
-```
-
-##### Response (200 OK)
-Returns the updated element object with invalidated cache.
-
-#### Update Puzzle
-
-**Endpoint**: `PUT /api/notion/puzzles/:id`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Both Express and Bottleneck apply
-
-##### Request Body
-```json
-{
-  "name": "Updated Puzzle Name",
-  "description": "Updated puzzle description",
-  "puzzleType": "Logic",
-  // ... other puzzle fields
-}
-```
-
-##### Response (200 OK)
-Returns the updated puzzle object with invalidated cache.
-
-#### Get Single Entity
-
-Each entity type also supports fetching by ID:
-
-- `GET /api/notion/characters/:id` - Get single character
-- `GET /api/notion/elements/:id` - Get single element
-- `GET /api/notion/puzzles/:id` - Get single puzzle
-- `GET /api/notion/timeline/:id` - Get single timeline event
-
-These endpoints use the same authentication and rate limiting as their list counterparts.
-
-### Cache Management
-
-Manage the server-side cache for optimal performance.
-
-#### Get Cache Statistics
-
-**Endpoint**: `GET /api/cache/stats`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Express rate limit applies
-
-##### Response (200 OK)
-```json
-{
+  "keys": 12,
   "hits": 245,
-  "misses": 50,
-  "hitRate": "83.05%",
-  "totalKeys": 12,
-  "keySizeBytes": 480,
-  "valueSizeBytes": 15360,
-  "totalSizeBytes": 15840,
-  "timestamp": "2025-01-14T12:34:56.789Z"
+  "misses": 23,
+  "ksize": 1024,
+  "vsize": 524288,
+  "cachedEndpoints": [
+    "/api/notion/characters",
+    "/api/notion/elements",
+    "/api/notion/puzzles"
+  ]
 }
 ```
 
-#### Clear All Cache
+#### POST /api/cache/clear
+Clear all cached data.
 
-**Endpoint**: `POST /api/cache/clear`  
-**Authentication**: Required (X-API-Key)  
-**Headers**: `X-Admin-Key` required in production  
-**Rate Limit**: Express rate limit applies
+**Request Body** (optional):
+```json
+{
+  "pattern": "characters*"  // Optional pattern to clear specific keys
+}
+```
 
-##### Response (200 OK)
+**Response**:
 ```json
 {
   "message": "Cache cleared successfully",
-  "clearedKeys": 12,
-  "timestamp": "2025-01-14T12:34:56.789Z"
+  "keysCleared": 12
 }
 ```
 
-#### Clear Endpoint Cache
+#### POST /api/cache/warm
+Pre-warm the cache by fetching all entities.
 
-**Endpoint**: `POST /api/cache/clear/:endpoint`  
-**Authentication**: Required (X-API-Key)  
-**Rate Limit**: Express rate limit applies  
-**Valid Endpoints**: `characters`, `elements`, `puzzles`, `timeline`
-
-##### Response (200 OK)
+**Response**:
 ```json
 {
-  "message": "Cache cleared for characters",
-  "pattern": "characters:*",
-  "clearedKeys": 3,
-  "timestamp": "2025-01-14T12:34:56.789Z"
+  "message": "Cache warmed successfully",
+  "endpoints": [
+    "/api/notion/characters",
+    "/api/notion/elements",
+    "/api/notion/puzzles",
+    "/api/notion/timeline"
+  ],
+  "totalCached": 4
 }
-```
-
-## Caching
-
-The API implements server-side caching to reduce Notion API load and improve response times.
-
-### Cache Configuration
-- **TTL**: 5 minutes (300 seconds) - configurable via `CACHE_TTL` env var
-- **Max Keys**: 1000 entries
-- **Strategy**: Cache-first with fallback to Notion
-
-### Cache Headers
-
-All cached responses include these headers:
-- `X-Cache-Hit`: `"true"` if served from cache, `"false"` if fetched from Notion
-
-### Cache Bypass
-
-Force a fresh fetch from Notion by including:
-```http
-X-Cache-Bypass: true
-```
-
-### Cache Key Format
-Cache keys follow the pattern: `{endpoint}:{limit}:{cursor}`
-- Example: `characters:20:null` or `elements:50:abc123`
-
-## Input Validation
-
-All Notion endpoints validate pagination parameters to prevent invalid requests.
-
-### Validation Rules
-
-#### Limit Parameter
-- **Type**: Integer
-- **Range**: 1-100
-- **Default**: 20 (if not provided)
-- **Error Code**: `INVALID_LIMIT`
-
-#### Invalid Limit Examples
-```bash
-# Too large
-GET /api/notion/characters?limit=101
-# Response: 400 Bad Request
-{
-  "statusCode": 400,
-  "code": "INVALID_LIMIT",
-  "message": "Limit must be between 1 and 100"
-}
-
-# Too small
-GET /api/notion/elements?limit=0
-# Response: 400 Bad Request
-
-# Non-numeric
-GET /api/notion/puzzles?limit=abc
-# Response: 400 Bad Request
 ```
 
 ## Error Handling
 
-### Common Error Responses
+### HTTP Status Codes
 
-#### 400 Bad Request
-Notion validation error:
+- `200 OK`: Successful request
+- `400 Bad Request`: Invalid parameters or request body
+- `401 Unauthorized`: Missing or invalid API key
+- `404 Not Found`: Resource not found
+- `429 Too Many Requests`: Rate limit exceeded
+- `500 Internal Server Error`: Server error
+
+### Error Response Format
+
 ```json
 {
-  "statusCode": 400,
-  "code": "validation_error",
-  "message": "Invalid database ID"
+  "error": "Detailed error message",
+  "details": {
+    "field": "Additional context"
+  },
+  "stack": "Stack trace (development only)"
 }
 ```
 
-#### 401 Unauthorized
-Missing or invalid API key:
-```json
-{
-  "statusCode": 401,
-  "code": "UNAUTHORIZED",
-  "message": "Unauthorized - Invalid API key"
+## Pagination
+
+All list endpoints support cursor-based pagination:
+
+1. Initial request without cursor returns first page
+2. Response includes `nextCursor` if more results exist
+3. Pass `nextCursor` as query parameter for next page
+4. `hasMore: false` indicates last page
+
+Example:
+```http
+GET /api/notion/characters?limit=10
+GET /api/notion/characters?limit=10&cursor=eyJpZCI6InV1aWQifQ==
+```
+
+## Caching
+
+- **TTL**: 5 minutes for all cached responses
+- **Cache Key**: Based on endpoint and query parameters
+- **Invalidation**: Automatic on entity updates
+- **Manual Clear**: Use `/api/cache/clear` endpoint
+
+## Rate Limiting Headers
+
+Responses include rate limit information:
+
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 1705750800
+```
+
+## CORS Configuration
+
+- **Development**: Allows localhost ports 5173-5175
+- **Production**: Configured via `FRONTEND_URL` environment variable
+- **Credentials**: Supported for authenticated requests
+
+## Environment Variables
+
+Required for all endpoints:
+- `NOTION_API_KEY`: Notion integration token
+- `NOTION_CHARACTERS_DB`: Characters database ID
+- `NOTION_ELEMENTS_DB`: Elements database ID
+- `NOTION_PUZZLES_DB`: Puzzles database ID
+- `NOTION_TIMELINE_DB`: Timeline database ID
+
+Optional:
+- `API_KEY`: API key for authentication
+- `PORT`: Server port (default: 3001)
+- `NODE_ENV`: Environment (development/production)
+- `FRONTEND_URL`: Frontend URL for CORS in production
+
+## TypeScript Types
+
+See `server/types/index.ts` for complete type definitions:
+
+```typescript
+interface Character {
+  id: string;
+  name: string;
+  description: string;
+  relationships: string[];
+  narrativeThreads: string[];
+  timing: 'early' | 'middle' | 'late';
+  color?: string;
+  imageUrl?: string;
+  notes?: string;
+}
+
+interface Element {
+  id: string;
+  name: string;
+  description: string;
+  type: 'object' | 'information' | 'location';
+  narrativeThreads: string[];
+  timing: 'early' | 'middle' | 'late';
+  color?: string;
+  discoveredBy: string[];
+  puzzles: string[];
+  notes?: string;
+}
+
+interface Puzzle {
+  id: string;
+  name: string;
+  description: string;
+  solutionType: 'deduction' | 'physical' | 'social' | 'technical';
+  difficulty: number;
+  dependencies: string[];
+  rewards: string[];
+  requiredElements: string[];
+  location?: string;
+  timing: 'early' | 'middle' | 'late';
+  narrativeThreads: string[];
+  chain?: string;
+  solvableBy: string[];
+  notes?: string;
 }
 ```
 
-#### 429 Too Many Requests
-Rate limit exceeded:
-```json
-{
-  "message": "Too many requests from this IP, please try again after a minute"
-}
-```
+## Testing
 
-#### 500 Internal Server Error
-Configuration error:
-```json
-{
-  "statusCode": 500,
-  "code": "CONFIG_ERROR",
-  "message": "Characters database ID not configured"
-}
-```
-
-Generic server error:
-```json
-{
-  "statusCode": 500,
-  "code": "INTERNAL_ERROR",
-  "message": "An unexpected error occurred"
-}
-```
-
-## Environment Configuration
-
-Required environment variables:
+Test the API using the provided scripts:
 
 ```bash
-# Server Configuration
-PORT=3001                    # Server port (default: 3001)
-NODE_ENV=development         # Environment mode
+# Test individual endpoints
+tsx scripts/test-single-endpoint.ts
 
-# Notion Configuration (CRITICAL: Use exact variable names)
-NOTION_API_KEY=secret_xxx    # Notion integration token
-NOTION_CHARACTERS_DB=xxx     # Characters database ID (NOT NOTION_CHARACTER_DB_ID)
-NOTION_ELEMENTS_DB=xxx       # Elements database ID (NOT NOTION_ELEMENT_DB_ID)
-NOTION_PUZZLES_DB=xxx        # Puzzles database ID (NOT NOTION_PUZZLE_DB_ID)
-NOTION_TIMELINE_DB=xxx       # Timeline database ID
+# Test synthesized endpoint
+tsx scripts/test-synthesized-endpoint.ts
 
-# Cache Configuration (optional)
-CACHE_TTL=300               # Cache TTL in seconds (default: 300 = 5 minutes)
-ADMIN_KEY=your-admin-key    # Required for cache clear in production
+# Test timeline performance
+tsx scripts/test-timeline-performance.ts
 
-# Production Only
-FRONTEND_URL=https://app.com # Frontend origin for CORS
+# Integration tests
+npm run test:integration
 ```
-
-## CORS Policy
-
-### Development Mode
-- Allowed origin: `http://localhost:5173`
-- Credentials: Enabled
-
-### Production Mode
-- Allowed origin: Value of `FRONTEND_URL` environment variable
-- Credentials: Enabled
-
-### Headers Set
-- `Access-Control-Allow-Origin`: Frontend URL
-- `Access-Control-Allow-Credentials`: true
-
-## Usage Examples
-
-### Fetch All Characters
-```bash
-curl -X GET http://localhost:3001/api/notion/characters \
-  -H "X-API-Key: your-api-key-here"
-```
-
-### Check Server Health
-```bash
-curl -X GET http://localhost:3001/api/health
-```
-
-### Handle Rate Limiting in Client
-```javascript
-async function fetchWithRetry(endpoint, options, retries = 3) {
-  try {
-    const response = await fetch(endpoint, options);
-    
-    if (response.status === 429 && retries > 0) {
-      // Wait 60 seconds before retry
-      await new Promise(resolve => setTimeout(resolve, 60000));
-      return fetchWithRetry(endpoint, options, retries - 1);
-    }
-    
-    return response;
-  } catch (error) {
-    if (retries > 0) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      return fetchWithRetry(endpoint, options, retries - 1);
-    }
-    throw error;
-  }
-}
-```
-
-## Notes
-
-1. **Pagination**: The API supports query-based pagination with `limit` (1-100) and `cursor` parameters.
-2. **Real-time Updates**: The API does not support webhooks or real-time updates. Use polling if needed.
-3. **Caching**: Server-side caching with 5-minute TTL reduces Notion API calls by 70-80%. Use `X-Cache-Bypass: true` to force fresh data.
-4. **Data Freshness**: Cached data is served by default (5-minute TTL). Fresh data available via cache bypass header.
-5. **Performance**: Cached requests return in <50ms. Initial Notion requests may take 1-3 seconds depending on database size.
-
-
-
-## Support
-
-For issues or questions:
-1. Check server logs for detailed error messages
-2. Verify all environment variables are set correctly
-3. Ensure Notion integration has proper permissions
-4. Test with the smoke test suite: `npm test`

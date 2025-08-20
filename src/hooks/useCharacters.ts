@@ -1,7 +1,12 @@
-import { charactersApi } from '@/services/api';
+import { charactersApi, type CharacterFilterParams } from '@/services/api';
 import { queryKeys } from '@/lib/queryKeys';
 import { useEntityData, useAllEntityData, type UseEntityDataOptions } from './generic/useEntityData';
 import type { Character } from '@/types/notion/app';
+
+/**
+ * Character hook options extending filter params
+ */
+export interface UseCharacterOptions extends UseEntityDataOptions, Omit<CharacterFilterParams, keyof UseEntityDataOptions> {}
 
 /**
  * Custom hook for fetching characters from Notion
@@ -18,11 +23,15 @@ import type { Character } from '@/types/notion/app';
  * const { data, nextCursor, hasMore } = useCharacters({ limit: 10, cursor: 'abc' })
  * 
  * @example
+ * // With filters
+ * const { data } = useCharacters({ tiers: 'Core', type: 'players' })
+ * 
+ * @example
  * // Disabled until ready
  * const { data } = useCharacters({ enabled: false })
  */
-export function useCharacters(options: UseEntityDataOptions = {}) {
-  return useEntityData<Character>(
+export function useCharacters(options: UseCharacterOptions = {}) {
+  return useEntityData<Character, CharacterFilterParams>(
     charactersApi,
     queryKeys.characters(),
     options

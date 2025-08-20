@@ -10,10 +10,13 @@ import type { NodeProps } from '@xyflow/react';
 import BaseNodeCard from '../graph/nodes/BaseNodeCard';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-
+import { 
+  normalizeTier, 
+  getTierBadgeVariant, 
+  getTierColorClasses,
+  getTierIconName 
+} from '@/lib/utils/tierUtils';
 import { User, Users, Crown, Star, Circle } from 'lucide-react';
-
-
 
 /**
  * CharacterTreeNode Component
@@ -28,38 +31,33 @@ export const CharacterTreeNode = memo(({
   const nodeData = data as any;
   const metadata = nodeData?.metadata || {};
   const character = metadata?.enrichedData?.character || {};
-  const tier = character?.tier?.toLowerCase() || 'tertiary';
+  const normalizedTier = normalizeTier(character?.tier);
   
   // Get tier-based size
   const getTierSize = () => {
-    if (tier === 'core' || tier === 'tier 1') return 'w-64 h-64'; // 64px
-    if (tier === 'secondary' || tier === 'tier 2') return 'w-48 h-48'; // 48px
-    return 'w-32 h-32'; // 32px - tertiary
+    switch (normalizedTier) {
+      case 'Core':
+        return 'w-64 h-64'; // 64px
+      case 'Secondary':
+        return 'w-48 h-48'; // 48px
+      case 'Tertiary':
+      default:
+        return 'w-32 h-32'; // 32px
+    }
   };
   
-  // Get tier icon
+  // Get tier icon component
   const getTierIcon = () => {
-    if (tier === 'core' || tier === 'tier 1') return Crown;
-    if (tier === 'secondary' || tier === 'tier 2') return Star;
-    return Circle;
-  };
-  
-  // Get tier badge variant
-  const getTierBadgeVariant = (): "default" | "secondary" | "outline" => {
-    if (tier === 'core' || tier === 'tier 1') return 'default';
-    if (tier === 'secondary' || tier === 'tier 2') return 'secondary';
-    return 'outline';
-  };
-
-  // Get tier color classes
-  const getTierColorClasses = () => {
-    if (tier === 'core' || tier === 'tier 1') {
-      return 'bg-gradient-to-br from-amber-500/20 to-yellow-500/20 border-amber-400';
+    const iconName = getTierIconName(character?.tier);
+    switch (iconName) {
+      case 'Crown':
+        return Crown;
+      case 'Star':
+        return Star;
+      case 'Circle':
+      default:
+        return Circle;
     }
-    if (tier === 'secondary' || tier === 'tier 2') {
-      return 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-blue-400';
-    }
-    return 'bg-gradient-to-br from-gray-500/20 to-slate-500/20 border-gray-400';
   };
 
   const TierIcon = getTierIcon();
@@ -104,7 +102,7 @@ export const CharacterTreeNode = memo(({
         selected={selected}
         className={cn(
           'h-full flex flex-col items-center justify-center p-4 cursor-pointer',
-          getTierColorClasses(),
+          getTierColorClasses(character?.tier),
           isDropTarget && 'ring-2 ring-green-500 ring-offset-2'
         )}
       >
@@ -132,7 +130,7 @@ export const CharacterTreeNode = memo(({
         {/* Character name */}
         <h3 className={cn(
           'font-semibold text-center line-clamp-2',
-          tier === 'core' || tier === 'tier 1' ? 'text-lg' : 'text-sm'
+          normalizedTier === 'Core' ? 'text-lg' : 'text-sm'
         )}>
           {nodeData?.label || ''}
         </h3>
@@ -140,10 +138,8 @@ export const CharacterTreeNode = memo(({
         {/* Tier indicator */}
         <div className="mt-2 flex items-center gap-1">
           <TierIcon className="h-3 w-3" />
-          <Badge variant={getTierBadgeVariant()} className="text-xs">
-            {tier === 'core' || tier === 'tier 1' ? 'Core' :
-             tier === 'secondary' || tier === 'tier 2' ? 'Secondary' : 
-             'Tertiary'}
+          <Badge variant={getTierBadgeVariant(character?.tier)} className="text-xs">
+            {normalizedTier}
           </Badge>
         </div>
 

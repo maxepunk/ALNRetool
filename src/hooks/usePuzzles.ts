@@ -1,7 +1,12 @@
-import { puzzlesApi } from '@/services/api';
+import { puzzlesApi, type PuzzleFilterParams } from '@/services/api';
 import { queryKeys } from '@/lib/queryKeys';
 import { useEntityData, useAllEntityData, type UseEntityDataOptions } from './generic/useEntityData';
 import type { Puzzle } from '@/types/notion/app';
+
+/**
+ * Puzzle hook options extending filter params
+ */
+export interface UsePuzzleOptions extends UseEntityDataOptions, Omit<PuzzleFilterParams, keyof UseEntityDataOptions> {}
 
 /**
  * Custom hook for fetching puzzles from Notion
@@ -18,11 +23,15 @@ import type { Puzzle } from '@/types/notion/app';
  * const { data, nextCursor, hasMore } = usePuzzles({ limit: 10, cursor: 'abc' })
  * 
  * @example
+ * // With filters
+ * const { data } = usePuzzles({ acts: 'Act 1', lastEdited: 'week' })
+ * 
+ * @example
  * // Disabled until ready
  * const { data } = usePuzzles({ enabled: false })
  */
-export function usePuzzles(options: UseEntityDataOptions = {}) {
-  return useEntityData<Puzzle>(
+export function usePuzzles(options: UsePuzzleOptions = {}) {
+  return useEntityData<Puzzle, PuzzleFilterParams>(
     puzzlesApi,
     queryKeys.puzzles(),
     options

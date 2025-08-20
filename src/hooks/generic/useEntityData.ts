@@ -14,13 +14,14 @@ import type { APIResponse } from '@/types/notion/app';
 export interface UseEntityDataOptions extends PaginationParams {
   enabled?: boolean;
   staleTime?: number;
+  [key: string]: any; // Allow additional filter params
 }
 
 /**
  * Entity API interface that all entity APIs must implement
  */
-export interface EntityAPI<T> {
-  list: (params?: PaginationParams) => Promise<APIResponse<T>>;
+export interface EntityAPI<T, P extends PaginationParams = PaginationParams> {
+  list: (params?: P) => Promise<APIResponse<T>>;
   listAll: () => Promise<T[]>;
 }
 
@@ -61,16 +62,16 @@ export interface EntityDataResult<T> {
  *   { limit: 10, cursor: 'abc' }
  * )
  */
-export function useEntityData<T>(
-  api: EntityAPI<T>,
+export function useEntityData<T, P extends PaginationParams = PaginationParams>(
+  api: EntityAPI<T, P>,
   queryKey: readonly unknown[],
   options: UseEntityDataOptions = {}
 ): EntityDataResult<T> {
-  const { limit, cursor, enabled = true, staleTime = QUERY_STALE_TIME } = options;
+  const { enabled = true, staleTime = QUERY_STALE_TIME, ...params } = options;
 
   const query = useQuery({
-    queryKey: [...queryKey, 'list', { limit, cursor }],
-    queryFn: () => api.list({ limit, cursor }),
+    queryKey: [...queryKey, 'list', params],
+    queryFn: () => api.list(params as P),
     enabled,
     staleTime,
     gcTime: staleTime * 2, // Keep in cache for 2x stale time

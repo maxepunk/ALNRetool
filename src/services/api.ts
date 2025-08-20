@@ -150,13 +150,39 @@ export interface PaginationParams {
 }
 
 /**
+ * Filter parameters for puzzle queries
+ */
+export interface PuzzleFilterParams extends PaginationParams {
+  acts?: string;
+  status?: string;
+  lastEdited?: string;
+}
+
+/**
+ * Filter parameters for character queries
+ */
+export interface CharacterFilterParams extends PaginationParams {
+  tiers?: string;
+  type?: string;
+  lastEdited?: string;
+}
+
+/**
+ * Filter parameters for element queries
+ */
+export interface ElementFilterParams extends PaginationParams {
+  status?: string;
+  lastEdited?: string;
+}
+
+/**
  * Characters API
  */
 export const charactersApi = {
   /**
    * Fetch paginated list of characters
    */
-  list: async (params?: PaginationParams): Promise<APIResponse<Character>> => {
+  list: async (params?: CharacterFilterParams): Promise<APIResponse<Character>> => {
     const queryString = buildQueryString(params as Record<string, unknown>);
     return fetcher<APIResponse<Character>>(`/notion/characters${queryString}`);
   },
@@ -207,7 +233,7 @@ export const elementsApi = {
   /**
    * Fetch paginated list of elements
    */
-  list: async (params?: PaginationParams): Promise<APIResponse<Element>> => {
+  list: async (params?: ElementFilterParams): Promise<APIResponse<Element>> => {
     const queryString = buildQueryString(params as Record<string, unknown>);
     return fetcher<APIResponse<Element>>(`/notion/elements${queryString}`);
   },
@@ -278,7 +304,7 @@ export const puzzlesApi = {
   /**
    * Fetch paginated list of puzzles
    */
-  list: async (params?: PaginationParams): Promise<APIResponse<Puzzle>> => {
+  list: async (params?: PuzzleFilterParams): Promise<APIResponse<Puzzle>> => {
     const queryString = buildQueryString(params as Record<string, unknown>);
     return fetcher<APIResponse<Puzzle>>(`/notion/puzzles${queryString}`);
   },

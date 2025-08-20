@@ -22,6 +22,9 @@ export interface EntityRouterConfig<T> {
   
   /** Optional function to convert entity to Notion properties for updates */
   toNotionProps?: (entity: Partial<T>) => any;
+  
+  /** Optional function to build Notion filters from query params */
+  buildFilters?: (params: any) => any;
 }
 
 /**
@@ -32,12 +35,16 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
   
   // GET / - List entities with pagination
   router.get('/', asyncHandler(async (req, res) => {
+    // Build filters if function provided
+    const filter = config.buildFilters ? config.buildFilters(req.query) : undefined;
+    
     await handleCachedNotionRequest(
       req, 
       res, 
       config.entityName, 
       config.databaseId, 
-      config.transform
+      config.transform,
+      filter
     );
   }));
   

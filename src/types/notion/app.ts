@@ -33,6 +33,8 @@ export interface Character {
   id: string;
   /** Character's display name */
   name: string;
+  /** Last edited timestamp from Notion */
+  lastEdited?: string;
   /** Whether character is playable (Player) or not (NPC) */
   type: CharacterType;
   /** Narrative importance level affecting game balance */
@@ -123,6 +125,7 @@ export interface SFPatterns {
 export interface Element {
   id: string;
   name: string;
+  lastEdited?: string; // Last edited timestamp from Notion
   descriptionText: string;
   sfPatterns: SFPatterns; // Parsed from descriptionText
   basicType: ElementBasicType;
@@ -152,6 +155,7 @@ export interface Element {
 export interface Puzzle {
   id: string;
   name: string;
+  lastEdited?: string; // Last edited timestamp from Notion
   descriptionSolution: string;
   puzzleElementIds: string[];
   lockedItemId?: string;
@@ -173,6 +177,7 @@ export interface Puzzle {
 export interface TimelineEvent {
   id: string;
   name: string; // Same as description, for consistency with other types
+  lastEdited?: string; // Last edited timestamp from Notion
   description: string;
   date: string; // ISO date string
   charactersInvolvedIds: string[];

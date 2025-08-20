@@ -4,12 +4,10 @@
  * how character ownership affects puzzle access and story discovery
  */
 
-import { useState, useMemo, useCallback } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import GraphView from '@/components/graph/GraphView';
-import { CharacterSelector } from '@/components/CharacterSelector';
-import { FilterSection } from '@/components/FilterSection';
-import LoadingSpinner from '@/components/common/LoadingSpinner';
+import LoadingSkeleton from '@/components/common/LoadingSkeleton';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,34 +15,48 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCharacterJourneyData } from '@/hooks/useCharacterJourneyData';
-
+import DetailPanel from '@/components/DetailPanel';
 import { useGraphDragDrop } from '@/hooks/useGraphInteractions';
+import { useFilterStore } from '@/stores/filterStore';
+import { normalizeTier, getTierBadgeVariant } from '@/lib/utils/tierUtils';
 import type { Node } from '@xyflow/react';
-import { Users, Share2, Filter } from 'lucide-react';
+import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
+import { Users, Share2 } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
-interface ViewControls {
-  showOnlyOwned: boolean;
-  showAccessible: boolean;
-  highlightShared: boolean;
-  viewMode: 'filtered' | 'full-web';
-  expansionDepth?: number;
-}
-
 export default function CharacterJourneyView() {
-  const { characterId } = useParams<{ characterId?: string }>();
+  const { characterId: urlCharacterId } = useParams<{ characterId?: string }>();
+  const navigate = useNavigate();
   const { data, isLoading, error } = useCharacterJourneyData();
   
-  // View state
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [viewControls, setViewControls] = useState<ViewControls>({
-    showOnlyOwned: true,
-    showAccessible: true,
-    highlightShared: false,
-    viewMode: 'filtered',
-    expansionDepth: 3,  // Reduced from 10 to 3 for more focused view
-  });
-  const [showFilters, setShowFilters] = useState(false);
+  // Get filter state and actions from Zustand store
+  const characterFilters = useFilterStore(state => state.characterFilters);
+  const selectCharacter = useFilterStore(state => state.selectCharacter);
+  const setHighlightShared = useFilterStore(state => state.setHighlightShared);
+  
+  // View-specific state only (not filters)
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [viewMode, setViewMode] = useState<'filtered' | 'full-web'>('filtered');
+  const [expansionDepth, setExpansionDepth] = useState<number>(3);
+  
+  // Use store as primary source, URL as secondary
+  const characterId = characterFilters.selectedCharacterId || urlCharacterId;
+  
+  // Sync URL with store when store changes
+  useEffect(() => {
+    if (characterFilters.selectedCharacterId && characterFilters.selectedCharacterId !== urlCharacterId) {
+      navigate(`/character-journey/${characterFilters.selectedCharacterId}`, { replace: true });
+    } else if (!characterFilters.selectedCharacterId && urlCharacterId) {
+      navigate('/character-journey', { replace: true });
+    }
+  }, [characterFilters.selectedCharacterId, urlCharacterId, navigate]);
+  
+  // Sync store with URL on mount
+  useEffect(() => {
+    if (urlCharacterId && urlCharacterId !== characterFilters.selectedCharacterId) {
+      selectCharacter(urlCharacterId);
+    }
+  }, [urlCharacterId, selectCharacter]);
 
   // Find selected character
   const selectedCharacter = useMemo(() => {
@@ -52,23 +64,72 @@ export default function CharacterJourneyView() {
     return data.characters.find(c => c.id === characterId);
   }, [characterId, data?.characters]);
 
+  // Helper function to get entity from node
+  const getEntityFromNode = useCallback((node: Node): Character | Element | Puzzle | TimelineEvent | null => {
+    if (!node.data?.entity) return null;
+    return node.data.entity as Character | Element | Puzzle | TimelineEvent;
+  }, []);
+
+  // Helper function to determine entity type from node
+  const getEntityType = useCallback((node: Node): 'character' | 'element' | 'puzzle' | 'timeline' => {
+    const nodeType = node.type;
+    if (nodeType === 'characterNode') return 'character';
+    if (nodeType === 'elementNode') return 'element';
+    if (nodeType === 'puzzleNode') return 'puzzle';
+    if (nodeType === 'timelineNode') return 'timeline';
+    
+    // Fallback based on data
+    const entity = node.data?.entity;
+    if (entity && typeof entity === 'object' && !Array.isArray(entity)) {
+      // Type narrowing for the 'in' operator
+      const obj = entity as Record<string, unknown>;
+      if ('tier' in obj) return 'character';
+      if ('descriptionText' in obj) return 'element';
+      if ('descriptionSolution' in obj) return 'puzzle';
+      if ('date' in obj && 'charactersInvolvedIds' in obj) return 'timeline';
+    }
+    
+    // Fallback to 'element' if type cannot be determined.
+    // This assumes 'element' is a safe default for unknown node types.
+    return 'element';
+  }, []);
+
+  // Handle entity save (placeholder for Sprint 2 mutations)
+  const handleEntitySave = useCallback(async (updates: Partial<Character | Element | Puzzle | TimelineEvent>) => {
+    console.log('Saving entity updates:', updates);
+    // TODO: Implement mutation hooks in Sprint 2
+    // This will call the appropriate mutation based on entity type
+    // For now, just log the changes
+    return Promise.resolve();
+  }, []);
 
   // Drag and drop hook
   const { isDragging } = useGraphDragDrop();
 
   // Handle node selection
   const handleNodeClick = useCallback((node: Node) => {
-    setSelectedNodeId(node.id);
+    console.log('Node clicked:', node);
+    setSelectedNode(node);
   }, []);
 
   // Close detail panel
   const handleCloseDetails = useCallback(() => {
-    setSelectedNodeId(null);
+    setSelectedNode(null);
   }, []);
 
   // Loading state
   if (isLoading) {
-    return <LoadingSpinner message="Loading character journey data..." />;
+    return (
+      <div className="flex flex-col h-full bg-background">
+        <div className="px-8 py-6 bg-secondary border-b">
+          <h1 className="text-3xl font-bold text-foreground">Character Journey</h1>
+          <p className="mt-2 text-muted-foreground">Loading character ownership paths...</p>
+        </div>
+        <div className="flex-1 flex relative overflow-hidden">
+          <LoadingSkeleton variant="graph" />
+        </div>
+      </div>
+    );
   }
 
   // Error state
@@ -81,7 +142,7 @@ export default function CharacterJourneyView() {
     return <ErrorDisplay error={new Error('No data available')} />;
   }
 
-  // No character selected - show selector
+  // No character selected - prompt to use sidebar
   if (!characterId) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-8">
@@ -89,12 +150,14 @@ export default function CharacterJourneyView() {
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              <h2 className="text-xl font-semibold">Select a Character</h2>
+              <h2 className="text-xl font-semibold">No Character Selected</h2>
             </div>
             <p className="text-sm text-muted-foreground">
-              Choose a character to explore their ownership paths and story journey
+              Please select a character from the sidebar to explore their ownership paths and story journey.
             </p>
-            <CharacterSelector />
+            <p className="text-xs text-muted-foreground">
+              Use the character selector in the sidebar&apos;s Character Filters section to choose a character.
+            </p>
           </div>
         </Card>
       </div>
@@ -106,13 +169,6 @@ export default function CharacterJourneyView() {
     return <Navigate to="/character-journey" replace />;
   }
 
-  // Get tier badge variant
-  const getTierBadgeVariant = (tier: string): "default" | "secondary" | "outline" => {
-    const tierLower = tier?.toLowerCase() || '';
-    if (tierLower === 'core' || tierLower === 'tier 1') return 'default';
-    if (tierLower === 'secondary' || tierLower === 'tier 2') return 'secondary';
-    return 'outline';
-  };
 
   return (
     <div className="h-full flex flex-col" data-testid="character-journey-view">
@@ -123,15 +179,13 @@ export default function CharacterJourneyView() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className="text-lg font-medium">{selectedCharacter.name}</span>
-              <Badge variant={getTierBadgeVariant(selectedCharacter.tier || '')}>
-                {selectedCharacter.tier || 'Tertiary'}
+              <Badge variant={getTierBadgeVariant(selectedCharacter.tier)}>
+                {normalizeTier(selectedCharacter.tier)}
               </Badge>
               {selectedCharacter.type && (
                 <Badge variant="outline">{selectedCharacter.type}</Badge>
               )}
             </div>
-            {/* Character Selector for switching */}
-            <CharacterSelector className="ml-auto" />
           </div>
 
           {/* View Controls */}
@@ -140,16 +194,16 @@ export default function CharacterJourneyView() {
             <div className="flex items-center gap-1 bg-muted rounded-md p-1">
               <Button
                 size="sm"
-                variant={viewControls.viewMode === 'filtered' ? 'default' : 'ghost'}
-                onClick={() => setViewControls(prev => ({ ...prev, viewMode: 'filtered' }))}
+                variant={viewMode === 'filtered' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('filtered')}
                 className="h-7 px-3"
               >
                 Filtered
               </Button>
               <Button
                 size="sm"
-                variant={viewControls.viewMode === 'full-web' ? 'default' : 'ghost'}
-                onClick={() => setViewControls(prev => ({ ...prev, viewMode: 'full-web' }))}
+                variant={viewMode === 'full-web' ? 'default' : 'ghost'}
+                onClick={() => setViewMode('full-web')}
                 className="h-7 px-3"
               >
                 Full Web
@@ -157,18 +211,15 @@ export default function CharacterJourneyView() {
             </div>
 
             {/* Show depth control for Full Web mode */}
-            {viewControls.viewMode === 'full-web' && (
+            {viewMode === 'full-web' && (
               <div className="flex items-center gap-2">
                 <Label htmlFor="depth-select" className="text-sm">
                   Connection Depth:
                 </Label>
                 <select
                   id="depth-select"
-                  value={viewControls.expansionDepth}
-                  onChange={(e) => setViewControls(prev => ({ 
-                    ...prev, 
-                    expansionDepth: parseInt(e.target.value) 
-                  }))}
+                  value={expansionDepth}
+                  onChange={(e) => setExpansionDepth(parseInt(e.target.value))}
                   className="h-7 px-2 text-sm border rounded"
                 >
                   <option value="1">1 hop (immediate connections)</option>
@@ -180,68 +231,29 @@ export default function CharacterJourneyView() {
               </div>
             )}
 
-            {/* Only show these controls in filtered mode */}
-            {viewControls.viewMode === 'filtered' && (
-              <>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="show-owned"
-                    checked={viewControls.showOnlyOwned}
-                    onCheckedChange={(checked) =>
-                      setViewControls(prev => ({ ...prev, showOnlyOwned: !!checked }))
-                    }
-                  />
-                  <Label htmlFor="show-owned" className="text-sm cursor-pointer">
-                    Show only owned
-                  </Label>
-                </div>
+            {/* Show highlight shared control */}
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="highlight-shared"
+                checked={characterFilters.highlightShared}
+                onCheckedChange={(checked) => setHighlightShared(!!checked)}
+              />
+              <Label htmlFor="highlight-shared" className="text-sm cursor-pointer">
+                <Share2 className="h-3 w-3 inline mr-1" />
+                Highlight shared
+              </Label>
+            </div>
 
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="show-accessible"
-                    checked={viewControls.showAccessible}
-                    onCheckedChange={(checked) =>
-                      setViewControls(prev => ({ ...prev, showAccessible: !!checked }))
-                    }
-                  />
-                  <Label htmlFor="show-accessible" className="text-sm cursor-pointer">
-                    Show accessible
-                  </Label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="highlight-shared"
-                    checked={viewControls.highlightShared}
-                    onCheckedChange={(checked) =>
-                      setViewControls(prev => ({ ...prev, highlightShared: !!checked }))
-                    }
-                  />
-                  <Label htmlFor="highlight-shared" className="text-sm cursor-pointer">
-                    <Share2 className="h-3 w-3 inline mr-1" />
-                    Highlight shared
-                  </Label>
-                </div>
-              </>
+            {/* Show active filters indicator */}
+            {(characterFilters.selectedTiers.size > 0 || 
+              characterFilters.ownershipStatus.size > 0) && (
+              <Badge variant="secondary" className="text-xs">
+                {characterFilters.selectedTiers.size + characterFilters.ownershipStatus.size} filters active
+              </Badge>
             )}
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filters
-            </Button>
           </div>
         </div>
-
-        {/* Collapsible filter section */}
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t">
-            <FilterSection />
-          </div>
-        )}
       </div>
 
       {/* Graph View */}
@@ -256,13 +268,23 @@ export default function CharacterJourneyView() {
             onNodeClick={handleNodeClick}
             viewOptions={{
               characterId: characterId,
-              viewMode: viewControls.viewMode,
-              expansionDepth: viewControls.expansionDepth
+              viewMode: viewMode,
+              expansionDepth: expansionDepth,
+              characterFilters: characterFilters
             }}
           />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-muted-foreground">No data to display for this character</p>
+          </div>
+        )}
+
+        {/* Full Web Mode Indicator */}
+        {viewMode === 'filtered' && (
+          <div className="absolute top-4 right-4 z-10">
+            <Badge variant="secondary" className="bg-yellow-100 text-yellow-900 px-3 py-1.5">
+              Simplified View - Click &quot;Full Web&quot; above to see all connections
+            </Badge>
           </div>
         )}
 
@@ -277,14 +299,19 @@ export default function CharacterJourneyView() {
       </div>
 
       {/* Detail Panel */}
-      {/* TODO: Implement entity lookup from selectedNodeId */}
-      {selectedNodeId && (
-        <div className="fixed right-0 top-0 h-full w-96 bg-background border-l shadow-lg p-4">
-          <Button onClick={handleCloseDetails} size="sm" variant="ghost" className="mb-4">
-            Close
-          </Button>
-          <p className="text-muted-foreground">Detail panel for node: {selectedNodeId}</p>
-        </div>
+      {selectedNode && (
+        <DetailPanel
+          entity={getEntityFromNode(selectedNode)}
+          entityType={getEntityType(selectedNode)}
+          onClose={handleCloseDetails}
+          onSave={handleEntitySave}
+          allEntities={{ 
+            characters: data?.characters || [], 
+            elements: data?.elements || [], 
+            puzzles: data?.puzzles || [], 
+            timeline: data?.timeline || [] 
+          }}
+        />
       )}
     </div>
   );

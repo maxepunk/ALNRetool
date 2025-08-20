@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react';
+import React, { useMemo, useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -6,7 +6,6 @@ import {
   Background,
   BackgroundVariant,
   ReactFlowProvider,
-  useReactFlow,
 } from '@xyflow/react';
 import type {
   Node,
@@ -24,13 +23,15 @@ import TimelineNode from './nodes/TimelineNode';
 import GroupNode from './nodes/GroupNode';
 import { CharacterTreeNode } from '../nodes/CharacterTreeNode';
 import GraphControls from './GraphControls';
-import type { FilterState } from './GraphControls';
 
 // Import custom edge components
 import { edgeTypes as customEdgeTypes } from './edges';
 
 // Import animation context
 import { GraphAnimationProvider } from '@/contexts/GraphAnimationContext';
+
+// Import Zustand stores
+import { useFilterStore } from '@/stores/filterStore';
 
 import { 
   buildGraph,
@@ -43,12 +44,6 @@ import { useGraphState } from '@/hooks/useGraphState';
 import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 import type { ViewType } from '@/lib/graph/types';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
-import {
-  ZoomIn,
-  ZoomOut,
-  Maximize,
-  RotateCcw,
-} from 'lucide-react';
 
 // CSS Module import removed - using Tailwind classes
 
@@ -86,17 +81,17 @@ interface GraphViewProps {
  * 
  * @description
  * The main graph rendering component that integrates React Flow with our custom
- * node and edge types. Implements client-side filtering for search, act selection,
- * and puzzle isolation. All filtering is performed before passing data to React Flow
- * to avoid state management conflicts.
+ * node and edge types. Note: Filtering is now handled by upstream graph building
+ * functions and parent components before data is passed to GraphView, not within
+ * this component itself.
  * 
  * @features
  * - **Dynamic Graph Building**: Switches between puzzle-focus, character-journey, and content-status views
- * - **Real-time Filtering**: Applies search and filter criteria to nodes and edges
+ * - **Pre-filtered Data**: Receives already filtered data from parent components
  * - **Performance Optimized**: Uses memoization for expensive graph computations
- * - **Session Persistence**: Maintains filter state across page refreshes
- * - **Connected Node Inclusion**: Search results include connected nodes for context
- * - **Recursive Traversal**: Puzzle isolation includes all dependencies
+ * - **Session Persistence**: Filter state maintained by parent components/stores
+ * - **Custom Node/Edge Types**: Renders with specialized components for each entity type
+ * - **Interactive Controls**: Zoom, pan, and minimap through GraphControls
  * 
  * @param {GraphViewProps} props - Component props
  * @param {Character[]} props.characters - Character entities from Notion
@@ -117,8 +112,8 @@ interface GraphViewProps {
  * 
  * @flow
  * 1. Build graph from Notion entities based on view type
- * 2. Apply filters (search, acts, puzzle selection)
- * 3. Pass filtered data to React Flow
+ * 2. Receive pre-filtered data from parent components
+ * 3. Pass data directly to React Flow
  * 4. Render with custom node/edge components
  * 
  * @since Sprint 2
@@ -158,8 +153,8 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
             maxNodes: 250
           });
         } else {
-          // Pass characterId to filter the journey
-          graph = buildCharacterJourneyGraph(notionData, viewOptions.characterId);
+          // Pass characterId and character filters to filter the journey
+          graph = buildCharacterJourneyGraph(notionData, viewOptions.characterId, viewOptions.characterFilters);
         }
         break;
       case 'content-status':
@@ -179,172 +174,42 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     return graph;
   }, [notionData, viewType, viewOptions.characterId, viewOptions.viewMode, viewOptions.expansionDepth]); // Rebuild when data, view, or characterId changes
   
-  // Use graph filtering hook first to get filter state
-  const [filterState, setFilterState] = useState<FilterState>(() => {
-    const stored = sessionStorage.getItem('alnretool-graph-filters');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        return {
-          ...parsed,
-          selectedActs: new Set(parsed.selectedActs || []),
-        };
-      } catch (e) {
-        console.error('Failed to parse stored filters:', e);
-      }
-    }
-    return {
-      searchTerm: '',
-      selectedActs: new Set<string>(),
-      selectedPuzzleId: null,
-    };
-  });
+  // Get filter state from Zustand store
+  const searchTerm = useFilterStore(state => state.searchTerm);
+  const puzzleFilters = useFilterStore(state => state.puzzleFilters);
+  const characterFilters = useFilterStore(state => state.characterFilters);
+  const contentFilters = useFilterStore(state => state.contentFilters);
+  const setActiveView = useFilterStore(state => state.setActiveView);
+  
+  // Create filterState object for backward compatibility with existing filter logic
+  const filterState = useMemo(() => ({
+    searchTerm,
+    selectedActs: puzzleFilters.selectedActs,
+    selectedPuzzleId: puzzleFilters.selectedPuzzleId,
+    // Add new filter types
+    characterFilters,
+    contentFilters,
+  }), [searchTerm, puzzleFilters, characterFilters, contentFilters]);
+  
+  // Set active view when component mounts or viewType changes
+  useEffect(() => {
+    setActiveView(viewType);
+  }, [viewType, setActiveView]);
+  
 
   /**
-   * Applies client-side filtering to graph data
+   * Pass-through for pre-filtered graph data
    * 
    * @description
-   * Filters nodes and edges based on search term, selected acts, and puzzle selection.
-   * Filtering is performed before passing data to React Flow to avoid state conflicts.
-   * 
-   * @complexity
-   * - Search: O(n) + O(e) for connected nodes
-   * - Act filter: O(n*m) where m = elements/puzzles per act
-   * - Puzzle isolation: O(n) worst case for full graph traversal
-   * 
-   * @algorithm
-   * 1. Search filter: Fuzzy match on node labels, include connected nodes
-   * 2. Act filter: Match elements/puzzles by firstAvailable/timing properties
-   * 3. Puzzle filter: Recursive traversal to find all dependencies
-   * 4. Edge filtering: Only include edges between visible nodes
+   * Filtering is now handled by upstream graph building functions
+   * and parent components before data reaches GraphView. This ensures
+   * consistency and avoids duplicate filtering logic.
    */
   const filteredGraphData = useMemo(() => {
-    let filteredNodes = [...graphData.nodes];
-    let filteredEdges = [...graphData.edges];
-    
-    // Apply search filter with fuzzy matching
-    if (filterState.searchTerm) {
-      const searchLower = filterState.searchTerm.toLowerCase();
-      const matchingNodeIds = new Set<string>();
-      
-      filteredNodes.forEach(node => {
-        const label = typeof node.data?.label === 'string' ? node.data.label.toLowerCase() : '';
-        const entity = node.data?.entity as Character | Element | Puzzle | TimelineEvent | undefined;
-        const name = typeof entity?.name === 'string' ? entity.name.toLowerCase() : '';
-        const matches = label.includes(searchLower) || name.includes(searchLower);
-        
-        if (matches) {
-          matchingNodeIds.add(node.id);
-          // Include connected nodes
-          graphData.edges.forEach(edge => {
-            if (edge.source === node.id) matchingNodeIds.add(edge.target);
-            if (edge.target === node.id) matchingNodeIds.add(edge.source);
-          });
-        }
-      });
-      
-      if (matchingNodeIds.size > 0) {
-        filteredNodes = filteredNodes.filter(node => matchingNodeIds.has(node.id));
-      } else {
-        filteredNodes = [];
-      }
-    }
-    
-    // Apply Act filter
-    if (filterState.selectedActs.size > 0) {
-      const actNodeIds = new Set<string>();
-      
-      elements.forEach(element => {
-        if (element.firstAvailable && filterState.selectedActs.has(element.firstAvailable)) {
-          const elementNode = filteredNodes.find(n => 
-            n.type === 'element' && (n.data?.entity as Element | undefined)?.id === element.id
-          );
-          if (elementNode) {
-            actNodeIds.add(elementNode.id);
-            graphData.edges.forEach(edge => {
-              if (edge.source === elementNode.id || edge.target === elementNode.id) {
-                actNodeIds.add(edge.source);
-                actNodeIds.add(edge.target);
-              }
-            });
-          }
-        }
-      });
-      
-      puzzles.forEach(puzzle => {
-        const hasSelectedAct = puzzle.timing?.some(act => 
-          act && filterState.selectedActs.has(act)
-        );
-        if (hasSelectedAct) {
-          const puzzleNode = filteredNodes.find(n =>
-            n.type === 'puzzle' && (n.data?.entity as Puzzle | undefined)?.id === puzzle.id
-          );
-          if (puzzleNode) {
-            actNodeIds.add(puzzleNode.id);
-            graphData.edges.forEach(edge => {
-              if (edge.source === puzzleNode.id || edge.target === puzzleNode.id) {
-                actNodeIds.add(edge.source);
-                actNodeIds.add(edge.target);
-              }
-            });
-          }
-        }
-      });
-      
-      if (actNodeIds.size > 0) {
-        filteredNodes = filteredNodes.filter(node => actNodeIds.has(node.id));
-      }
-    }
-    
-    // Apply puzzle filter
-    if (filterState.selectedPuzzleId) {
-      const puzzleNodeIds = new Set<string>();
-      const puzzleNode = filteredNodes.find(n =>
-        n.type === 'puzzle' && (n.data?.entity as Puzzle | undefined)?.id === filterState.selectedPuzzleId
-      );
-      
-      if (puzzleNode) {
-        const findConnected = (nodeId: string, visited = new Set<string>()) => {
-          if (visited.has(nodeId)) return;
-          visited.add(nodeId);
-          puzzleNodeIds.add(nodeId);
-          
-          graphData.edges.forEach(edge => {
-            if (edge.source === nodeId && !visited.has(edge.target)) {
-              findConnected(edge.target, visited);
-            }
-            if (edge.target === nodeId && !visited.has(edge.source)) {
-              findConnected(edge.source, visited);
-            }
-          });
-        };
-        
-        findConnected(puzzleNode.id);
-        filteredNodes = filteredNodes.filter(node => puzzleNodeIds.has(node.id));
-      }
-    }
-    
-    // Filter edges to only include those between visible nodes
-    const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
-    filteredEdges = filteredEdges.filter(edge =>
-      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-    );
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[GraphView] Filtered data:', {
-        searchTerm: filterState.searchTerm,
-        selectedActs: Array.from(filterState.selectedActs),
-        selectedPuzzleId: filterState.selectedPuzzleId,
-        originalNodes: graphData.nodes.length,
-        filteredNodes: filteredNodes.length,
-        originalEdges: graphData.edges.length,
-        filteredEdges: filteredEdges.length,
-        actuallyFiltered: filteredNodes.length !== graphData.nodes.length
-      });
-    }
-    
-    return { nodes: filteredNodes, edges: filteredEdges };
-  }, [graphData, filterState, elements, puzzles]);
+    // Data is already filtered by parent components/hooks
+    // Simply pass through without additional filtering
+    return graphData;
+  }, [graphData]);
   
   // Use our custom graph state hook with filtered data
   const {
@@ -362,26 +227,9 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     onSelectionChange,
   });
   
-  // Save filter state to sessionStorage
-  useEffect(() => {
-    const toStore = {
-      ...filterState,
-      selectedActs: Array.from(filterState.selectedActs),
-    };
-    sessionStorage.setItem('alnretool-graph-filters', JSON.stringify(toStore));
-  }, [filterState]);
+  // No need for manual sessionStorage - handled by Zustand persist middleware
   
-  const handleFilterChange = useCallback((newState: FilterState) => {
-    setFilterState(newState);
-  }, []);
-  
-  const handleClearFilters = useCallback(() => {
-    setFilterState({
-      searchTerm: '',
-      selectedActs: new Set(),
-      selectedPuzzleId: null,
-    });
-  }, []);
+  // Get filter actions from store
   
   // Use graph interactions hook for additional features
   const {
@@ -398,33 +246,6 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     }
   }, [nodes, edges, onGraphDataChange]);
   
-  // Get React Flow instance for viewport controls
-  const reactFlowInstance = useReactFlow();
-  const [isReady, setIsReady] = useState(false);
-  
-  // Mark as ready when React Flow is initialized
-  useEffect(() => {
-    if (reactFlowInstance) {
-      setIsReady(true);
-    }
-  }, [reactFlowInstance]);
-  
-  // Viewport control handlers
-  const handleZoomIn = useCallback(() => {
-    reactFlowInstance?.zoomIn({ duration: 200 });
-  }, [reactFlowInstance]);
-  
-  const handleZoomOut = useCallback(() => {
-    reactFlowInstance?.zoomOut({ duration: 200 });
-  }, [reactFlowInstance]);
-  
-  const handleZoomToFit = useCallback(() => {
-    reactFlowInstance?.fitView({ padding: 0.2, duration: 800 });
-  }, [reactFlowInstance]);
-  
-  const handleResetView = useCallback(() => {
-    reactFlowInstance?.setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
-  }, [reactFlowInstance]);
   
   // Memoize nodeTypes and edgeTypes to prevent React Flow re-initialization
   const memoizedNodeTypes = useMemo(() => nodeTypes, []);
@@ -448,55 +269,8 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   
   return (
     <div className="w-full h-full relative bg-gray-50">
-      {/* Graph Controls for Search and Filtering */}
-      <GraphControls
-        puzzles={puzzles}
-        filterState={filterState}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        viewType={viewType}
-      />
-      
-      {/* Floating Toolbar - only show when React Flow is ready */}
-      {isReady && (
-        <div className="absolute top-5 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-lg p-1 flex items-center gap-1 shadow-md z-10">
-          <button 
-            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
-            onClick={handleZoomIn}
-            title="Zoom In"
-            type="button"
-          >
-            <ZoomIn size={16} />
-          </button>
-          <button 
-            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
-            onClick={handleZoomOut}
-            title="Zoom Out"
-            type="button"
-          >
-            <ZoomOut size={16} />
-          </button>
-          
-          <div className="w-px h-6 bg-gray-200 mx-1" />
-          
-          <button 
-            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
-            onClick={handleZoomToFit}
-            title="Fit to View"
-            type="button"
-          >
-            <Maximize size={16} />
-          </button>
-          <button 
-            className="flex items-center justify-center w-8 h-8 border-none bg-transparent rounded-md cursor-pointer transition-colors hover:bg-gray-100" 
-            onClick={handleResetView}
-            title="Reset View"
-            type="button"
-          >
-            <RotateCcw size={16} />
-          </button>
-        </div>
-      )}
+      {/* Graph Controls for Zoom and Layout */}
+      <GraphControls />
       
       <ReactFlow
         nodes={nodes}

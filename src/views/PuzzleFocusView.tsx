@@ -4,14 +4,20 @@
  * Main view for Sprint 1 - shows puzzle relationships and dependencies
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import type { Node, OnSelectionChangeParams } from '@xyflow/react';
 
 // Data hooks
-import { useAllCharacters } from '@/hooks/useCharacters';
+import { useCharacters } from '@/hooks/useCharacters';
 import { useAllTimeline } from '@/hooks/useTimeline';
 import { useSynthesizedData } from '@/hooks/useSynthesizedData';
+import { usePuzzles } from '@/hooks/usePuzzles';
+import { useElements } from '@/hooks/useElements';
+
+// Store and filters
+import { useFilterStore } from '@/stores/filterStore';
+import { applyPuzzleFilters, applyCharacterFilters, applySearchFilter } from '@/lib/filters';
 
 // Components
 import GraphView from '@/components/graph/GraphView';
@@ -32,41 +38,150 @@ export default function PuzzleFocusView() {
   const { puzzleId } = useParams();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   
-  // Fetch data from Notion via React Query - using synthesized data for proper bidirectional relationships
-  const { data: characters = [], isLoading: loadingCharacters } = useAllCharacters();
-  const { data: synthesizedData, isLoading: loadingSynthesized } = useSynthesizedData();
-  const { data: timeline = [], isLoading: loadingTimeline } = useAllTimeline();
+  // Get filters from store
+  const searchTerm = useFilterStore(state => state.searchTerm);
+  const puzzleFilters = useFilterStore(state => state.puzzleFilters);
+  const characterFilters = useFilterStore(state => state.characterFilters);
+  const contentFilters = useFilterStore(state => state.contentFilters);
+  const setActiveView = useFilterStore(state => state.setActiveView);
   
-  // Extract elements and puzzles from synthesized data
-  const elements = synthesizedData?.elements || [];
-  const puzzles = synthesizedData?.puzzles || [];
+  // Set active view on mount
+  React.useEffect(() => {
+    setActiveView('puzzle-focus');
+  }, [setActiveView]);
+  
+  // Prepare server-side filter parameters
+  const serverPuzzleFilters = useMemo(() => {
+    const params: any = {};
+    
+    // Convert act filters
+    if (puzzleFilters.selectedActs.size > 0) {
+      params.acts = Array.from(puzzleFilters.selectedActs).join(',');
+    }
+    
+    // Note: completion status is derived client-side, can't filter server-side
+    // Note: Puzzle filters don't have lastEditedRange property
+    
+    return params;
+  }, [puzzleFilters]);
+  
+  const serverCharacterFilters = useMemo(() => {
+    const params: any = {};
+    
+    // Convert tier filters
+    if (characterFilters.selectedTiers.size > 0) {
+      params.tiers = Array.from(characterFilters.selectedTiers).join(',');
+    }
+    
+    // Convert type filter - use characterType property
+    if (characterFilters.characterType !== 'all') {
+      params.type = characterFilters.characterType;
+    }
+    
+    // Note: ownership status is derived client-side from elements
+    // Note: Character filters don't have lastEditedRange property
+    
+    return params;
+  }, [characterFilters]);
+  
+  const serverElementFilters = useMemo(() => {
+    const params: any = {};
+    
+    // Add status filter - use contentStatus property
+    if (contentFilters.contentStatus.size > 0) {
+      params.status = Array.from(contentFilters.contentStatus).join(',');
+    }
+    
+    // Add last edited filter
+    if (contentFilters.lastEditedRange !== 'all') {
+      params.lastEdited = contentFilters.lastEditedRange;
+    }
+    
+    return params;
+  }, [contentFilters]);
+  
+  // Fetch data with server-side filtering where possible
+  // For graph view, we still need synthesized data for relationships
+  const { data: synthesizedData, isLoading: loadingSynthesized } = useSynthesizedData();
+  
+  // For non-graph views or when we need specific filtered data, use individual endpoints
+  const { data: puzzlesFiltered = [], isLoading: loadingPuzzles } = usePuzzles({
+    ...serverPuzzleFilters,
+    limit: 500, // Get all for now
+    enabled: !puzzleFilters.selectedPuzzleId // Disable if filtering by specific puzzle client-side
+  });
+  
+  const { data: charactersFiltered = [], isLoading: loadingCharacters } = useCharacters({
+    ...serverCharacterFilters,
+    limit: 500, // Get all for now
+  });
+  
+  const { data: elementsFiltered = [], isLoading: loadingElements } = useElements({
+    ...serverElementFilters,
+    limit: 500, // Get all for now
+  });
+  
+  const { data: timelineRaw = [], isLoading: loadingTimeline } = useAllTimeline();
+  
+  // Use synthesized data for graph relationships, but prefer filtered data when available
+  const elementsRaw = synthesizedData?.elements || [];
+  const puzzlesRaw = synthesizedData?.puzzles || [];
+  
+  // Apply remaining client-side filters (for derived fields and search)
+  const { characters, elements, puzzles, timeline } = useMemo(() => {
+    // Start with server-filtered data when available, otherwise use synthesized
+    let filteredPuzzles = puzzlesFiltered.length > 0 ? puzzlesFiltered : puzzlesRaw;
+    let filteredCharacters = charactersFiltered;
+    let filteredElements = elementsFiltered.length > 0 ? elementsFiltered : elementsRaw;
+    
+    // Apply client-side puzzle filters (completion status, specific puzzle)
+    if (puzzleFilters.completionStatus !== 'all' || puzzleFilters.selectedPuzzleId) {
+      filteredPuzzles = applyPuzzleFilters(filteredPuzzles, puzzleFilters);
+    }
+    
+    // Apply client-side character filters (ownership status)
+    if (characterFilters.ownershipStatus.size > 0) {
+      filteredCharacters = applyCharacterFilters(filteredCharacters, characterFilters);
+    }
+    
+    // Apply search filter across all entities
+    if (searchTerm) {
+      filteredPuzzles = applySearchFilter(filteredPuzzles, searchTerm, ['name', 'descriptionSolution']);
+      filteredCharacters = applySearchFilter(filteredCharacters, searchTerm, ['name', 'overview', 'characterLogline']);
+      filteredElements = applySearchFilter(filteredElements, searchTerm, ['name', 'descriptionText', 'productionNotes']);
+    }
+    
+    return {
+      characters: filteredCharacters,
+      elements: filteredElements,
+      puzzles: filteredPuzzles,
+      timeline: timelineRaw // Timeline doesn't have specific filters yet
+    };
+  }, [puzzlesRaw, puzzlesFiltered, charactersFiltered, elementsRaw, elementsFiltered, timelineRaw, searchTerm, puzzleFilters, characterFilters]);
   
   // Debug: Log data counts when loaded
   React.useEffect(() => {
     if (!loadingSynthesized && elements.length > 0) {
-      console.log('[PuzzleFocusView] Synthesized data loaded - Elements:', elements.length, 'Puzzles:', puzzles.length);
+      console.log('[PuzzleFocusView] Filtered data loaded - Elements:', elements.length, 'Puzzles:', puzzles.length);
+      console.log('[PuzzleFocusView] Original counts - Elements:', elementsRaw.length, 'Puzzles:', puzzlesRaw.length);
+      
       // Check for elements with puzzle relationships
       const elementsWithPuzzleRefs = elements.filter(e => 
         (e.requiredForPuzzleIds?.length > 0) || (e.rewardedByPuzzleIds?.length > 0)
       );
       console.log('[PuzzleFocusView] Elements with puzzle relationships:', elementsWithPuzzleRefs.length);
       
-      const blackMarketCard = elements.find(e => e.id === '1dc2f33d-583f-8056-bf34-c6a9922067d8');
-      console.log('[PuzzleFocusView] Black Market Business card found:', !!blackMarketCard);
-      if (blackMarketCard) {
-        console.log('[PuzzleFocusView] Black Market card relationships:', {
-          rewardedByPuzzleIds: blackMarketCard.rewardedByPuzzleIds,
-          requiredForPuzzleIds: blackMarketCard.requiredForPuzzleIds
-        });
-      }
-      
-      // Check first and last element to see range
-      if (elements.length > 0) {
-        console.log('[PuzzleFocusView] First element:', elements[0]?.name);
-        console.log('[PuzzleFocusView] Last element:', elements[elements.length - 1]?.name);
+      // Log active filters
+      const activeFilters = [];
+      if (searchTerm) activeFilters.push(`search="${searchTerm}"`);
+      if (puzzleFilters.selectedActs.size > 0) activeFilters.push(`acts=${Array.from(puzzleFilters.selectedActs).join(',')}`);
+      if (puzzleFilters.selectedPuzzleId) activeFilters.push(`puzzleId=${puzzleFilters.selectedPuzzleId}`);
+      if (puzzleFilters.completionStatus !== 'all') activeFilters.push(`status=${puzzleFilters.completionStatus}`);
+      if (activeFilters.length > 0) {
+        console.log('[PuzzleFocusView] Active filters:', activeFilters.join(', '));
       }
     }
-  }, [elements, loadingSynthesized, puzzles]);
+  }, [elements, elementsRaw, puzzles, puzzlesRaw, loadingSynthesized, searchTerm, puzzleFilters]);
 
   // Helper function to get entity from node
   const getEntityFromNode = useCallback((node: Node): Character | Element | Puzzle | TimelineEvent | null => {
@@ -106,7 +221,7 @@ export default function PuzzleFocusView() {
   }, []);
   
   // Combined loading state
-  const isLoading = loadingCharacters || loadingSynthesized || loadingTimeline;
+  const isLoading = loadingCharacters || loadingSynthesized || loadingTimeline || loadingPuzzles || loadingElements;
   
   // Handle node click
   const handleNodeClick = useCallback((node: Node) => {

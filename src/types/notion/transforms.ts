@@ -193,6 +193,7 @@ export function transformCharacter(page: NotionPage): Character {
   return {
     id: page.id,
     name: getTitle(props['Name']),
+    lastEdited: page.last_edited_time,
     type: (getSelect(props['Type']) || 'NPC') as Character['type'],
     tier: (getSelect(props['Tier']) || 'Tertiary') as Character['tier'],
     ownedElementIds: getRelationIds(props['Owned Elements']),
@@ -214,6 +215,7 @@ export function transformElement(page: NotionPage): Element {
   return {
     id: page.id,
     name: getTitle(props['Name']),
+    lastEdited: page.last_edited_time,
     descriptionText,
     sfPatterns: parseSFPatterns(descriptionText),
     basicType: (getSelect(props['Basic Type']) || 'Prop') as ElementBasicType,
@@ -242,6 +244,7 @@ export function transformPuzzle(page: NotionPage): Puzzle {
   return {
     id: page.id,
     name: getTitle(props['Puzzle']),
+    lastEdited: page.last_edited_time,
     descriptionSolution: getRichText(props['Description/Solution']),
     puzzleElementIds: getRelationIds(props['Puzzle Elements']),
     lockedItemId: getRelationIds(props['Locked Item'])[0],
@@ -263,6 +266,7 @@ export function transformTimelineEvent(page: NotionPage): TimelineEvent {
   return {
     id: page.id,
     name: description || 'Untitled Event', // Add name field
+    lastEdited: page.last_edited_time,
     description: description || '',
     date: getDate(props['Date']) || '',
     charactersInvolvedIds: getRelationIds(props['Characters Involved']),

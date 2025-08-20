@@ -1,338 +1,566 @@
-# Graph Module Architecture Documentation
+# Graph Architecture Documentation
 
-**Last Updated**: January 18, 2025  
-**Status**: Refactoring Complete ✅
+Comprehensive documentation of ALNRetool's graph visualization system.
 
 ## Overview
 
-The graph module has undergone a comprehensive refactoring from a monolithic 722-line file to a clean, modular architecture with 12 focused modules. This document describes the new architecture, design patterns, and technical decisions.
+The graph system transforms Notion database entities into an interactive node-edge visualization using React Flow and Dagre layout algorithms. The architecture follows a modular transformer pattern with clear separation of concerns.
 
-## Architecture Evolution
+## Architecture Diagram
 
-### Before (Monolithic)
+```
+Notion Data → Transformers → Graph Builder → Layout Engine → React Flow
+     ↓            ↓              ↓              ↓              ↓
+  Entities    Normalized      Nodes/Edges    Positioned    Rendered
+              Entities                        Graph         UI
+```
+
+## Core Modules
+
+### Directory Structure
 ```
 src/lib/graph/
-├── index.ts (722 lines - everything mixed together)
-├── pureDagreLayout.ts (1290 lines - layout + metrics + clustering)
-└── relationships.ts (821 lines - all edge creation logic)
-```
-
-### After (Modular)
-```
-src/lib/graph/
-├── index.ts (90 lines - clean public API)
+├── index.ts                      # Public API facade
+├── types.ts                      # TypeScript type definitions
+├── relationships.ts              # Relationship mapping utilities
 ├── layout/
-│   └── dagre.ts (598 lines - pure layout logic)
-├── modules/
-│   ├── BaseTransformer.ts (abstract base class)
-│   ├── CharacterTransformer.ts (character-specific)
-│   ├── ElementTransformer.ts (element-specific)
-│   ├── PuzzleTransformer.ts (puzzle-specific)
-│   ├── TimelineTransformer.ts (timeline-specific)
-│   ├── GraphBuilder.ts (node/edge assembly)
-│   ├── EdgeBuilder.ts (smart edge creation)
-│   ├── ErrorHandler.ts (error management)
-│   ├── LayoutOrchestrator.ts (layout coordination)
-│   ├── MetricsCalculator.ts (quality metrics)
-│   ├── LayoutQualityMetrics.ts (235 lines - extracted)
-│   ├── VirtualEdgeInjector.ts (337 lines - extracted)
-│   └── ElementClusterer.ts (296 lines - extracted)
+│   ├── dagre.ts                 # Pure Dagre layout implementation
+│   └── force.ts                 # D3-force layout (experimental)
+└── modules/
+    ├── BaseTransformer.ts       # Abstract base class
+    ├── EntityTransformer.ts     # Entity-to-node transformation
+    ├── GraphBuilder.ts          # Node/edge assembly
+    ├── EdgeBuilder.ts           # Smart edge creation
+    ├── ErrorHandler.ts          # Error management
+    ├── LayoutOrchestrator.ts    # Layout coordination
+    ├── LayoutQualityMetrics.ts  # Quality measurement
+    ├── VirtualEdgeInjector.ts   # Virtual edge handling
+    └── ElementClusterer.ts      # Post-layout clustering
 ```
 
-## Key Design Patterns
+## Module Responsibilities
 
-### 1. BaseTransformer Pattern
-
-**Problem**: 60%+ code duplication across entity transformers  
-**Solution**: Abstract base class with template method pattern
+### BaseTransformer
+Abstract base class providing common transformation patterns.
 
 ```typescript
-abstract class BaseTransformer<T extends BaseEntity> {
-  // Shared validation logic
-  protected validateEntity(entity: T): string[] {
-    const errors: string[] = [];
-    if (!entity.id) errors.push('Missing entity ID');
-    if (!entity.title) errors.push('Missing entity title');
-    return errors;
-  }
-
-  // Common metadata creation
-  protected createBaseMetadata(entity: T): BaseMetadata {
-    return {
-      entityId: entity.id,
-      entityType: this.entityType,
-      lastModified: entity.lastEditedTime,
-      createdTime: entity.createdTime,
-    };
-  }
-
-  // Template method for specific metadata
-  protected abstract createMetadata(entity: T, errors: string[]): NodeMetadata;
+abstract class BaseTransformer<TInput, TOutput> {
+  protected errorHandler: ErrorHandler;
+  
+  abstract transform(input: TInput): TOutput;
+  abstract validate(input: TInput): ValidationResult;
+  
+  protected handleError(error: Error): void;
+  protected logMetrics(metrics: TransformMetrics): void;
 }
 ```
 
-**Benefits**:
-- Eliminated 400+ lines of duplicate code
-- Consistent error handling across all transformers
-- Easy to add new entity types
-- Testable shared logic
+**Key Features**:
+- Error handling framework
+- Validation pipeline
+- Metrics collection
+- Logging infrastructure
 
-### 2. Virtual Edge Injection
+### EntityTransformer
+Converts Notion entities into React Flow nodes.
 
-**Problem**: Dual-role elements (both reward and requirement) break layout  
-**Solution**: Create invisible edges to enforce dependency ordering
+**Transformations**:
+```typescript
+Character → CharacterNode {
+  id: string
+  type: 'characterNode'
+  position: { x: 0, y: 0 }
+  data: {
+    label: string
+    description: string
+    relationships: string[]
+    narrativeThreads: string[]
+    timing: 'early' | 'middle' | 'late'
+    color: string
+  }
+}
+
+Element → ElementNode {
+  id: string
+  type: 'elementNode'
+  position: { x: 0, y: 0 }
+  data: {
+    label: string
+    description: string
+    type: 'object' | 'information' | 'location'
+    discoveredBy: string[]
+    puzzles: string[]
+    color: string
+  }
+}
+
+Puzzle → PuzzleNode {
+  id: string
+  type: 'puzzleNode'
+  position: { x: 0, y: 0 }
+  data: {
+    label: string
+    description: string
+    difficulty: number
+    solutionType: string
+    chain?: string
+    dependencies: string[]
+    rewards: string[]
+    color: string
+  }
+}
+```
+
+### EdgeBuilder
+Creates typed edges with intelligent weighting.
+
+**Edge Types**:
+- `dependency`: Puzzle prerequisites (weight: 10)
+- `reward`: Puzzle rewards (weight: 8)
+- `relation`: Character relationships (weight: 5)
+- `chain`: Puzzle chain connections (weight: 15)
+- `discovered`: Element discovery (weight: 6)
+
+**Edge Creation Logic**:
+```typescript
+class EdgeBuilder {
+  buildEdges(nodes: Node[]): Edge[] {
+    const edges: Edge[] = [];
+    
+    // Puzzle dependencies
+    puzzles.forEach(puzzle => {
+      puzzle.dependencies.forEach(dep => {
+        edges.push({
+          id: `dep-${puzzle.id}-${dep}`,
+          source: dep,
+          target: puzzle.id,
+          type: 'dependency',
+          weight: 10
+        });
+      });
+    });
+    
+    // Character relationships (bidirectional)
+    characters.forEach(char => {
+      char.relationships.forEach(rel => {
+        if (!edgeExists(char.id, rel)) {
+          edges.push({
+            id: `rel-${char.id}-${rel}`,
+            source: char.id,
+            target: rel,
+            type: 'relation',
+            weight: 5
+          });
+        }
+      });
+    });
+    
+    return edges;
+  }
+}
+```
+
+### VirtualEdgeInjector
+Adds virtual edges to improve layout quality without affecting visualization.
+
+**Virtual Edge Strategy**:
+```typescript
+class VirtualEdgeInjector {
+  injectVirtualEdges(nodes: Node[], edges: Edge[]): Edge[] {
+    const virtualEdges: Edge[] = [];
+    
+    // Connect isolated nodes to nearest cluster
+    isolatedNodes.forEach(node => {
+      const nearest = findNearestCluster(node);
+      virtualEdges.push({
+        id: `virtual-${node.id}-${nearest.id}`,
+        source: node.id,
+        target: nearest.id,
+        weight: 0.1,
+        hidden: true
+      });
+    });
+    
+    // Add chain continuity edges
+    puzzleChains.forEach(chain => {
+      chain.puzzles.forEach((puzzle, i) => {
+        if (i < chain.puzzles.length - 1) {
+          virtualEdges.push({
+            id: `chain-${puzzle}-${chain.puzzles[i+1]}`,
+            source: puzzle,
+            target: chain.puzzles[i+1],
+            weight: 15,
+            hidden: false
+          });
+        }
+      });
+    });
+    
+    return [...edges, ...virtualEdges];
+  }
+}
+```
+
+### LayoutOrchestrator
+Coordinates the layout process using Dagre.
+
+**Configuration**:
+```typescript
+const dagreConfig = {
+  rankdir: 'LR',           // Left-to-right flow
+  ranksep: 300,            // Horizontal spacing
+  nodesep: 100,            // Vertical spacing
+  align: 'UL',             // Upper-left alignment
+  acyclicer: 'greedy',     // Cycle removal strategy
+  ranker: 'network-simplex' // Optimal edge crossing
+};
+```
+
+**Layout Process**:
+1. Initialize Dagre graph
+2. Add nodes with dimensions
+3. Add edges with weights
+4. Inject virtual edges
+5. Run layout algorithm
+6. Extract positions
+7. Apply clustering
+8. Remove virtual edges
+
+### LayoutQualityMetrics
+Measures and reports layout quality.
+
+**Metrics Collected**:
+- Edge crossing count
+- Node overlap percentage
+- Aspect ratio
+- Whitespace distribution
+- Cluster cohesion
+- Edge length variance
 
 ```typescript
-// Element is both a reward from Puzzle A and requirement for Puzzle B
-// Create virtual edge: A → B to ensure correct ordering
-virtualEdges.push({
-  id: `virtual-${puzzleA}-${puzzleB}`,
-  source: puzzleA,
-  target: puzzleB,
-  style: { display: 'none' }, // Hidden, for layout only
-  data: {
-    isVirtual: true,
-    relationshipType: 'virtual-dependency',
-    weight: 1000, // Extremely high weight to force ordering
-  },
+interface LayoutMetrics {
+  crossings: number;
+  overlaps: number;
+  aspectRatio: number;
+  avgEdgeLength: number;
+  edgeLengthVariance: number;
+  clusterCohesion: number;
+  whitespaceRatio: number;
+  layoutTime: number;
+}
+```
+
+## Node Types
+
+### Character Node
+```typescript
+{
+  type: 'characterNode',
+  style: {
+    background: 'linear-gradient(135deg, #10B981, #059669)',
+    borderRadius: '12px',
+    border: '2px solid rgba(16, 185, 129, 0.3)',
+    minWidth: '200px',
+    minHeight: '80px'
+  }
+}
+```
+
+### Element Node
+```typescript
+{
+  type: 'elementNode',
+  style: {
+    background: 'linear-gradient(135deg, #A855F7, #9333EA)',
+    borderRadius: '8px',
+    border: '2px solid rgba(168, 85, 247, 0.3)',
+    minWidth: '180px',
+    minHeight: '70px'
+  }
+}
+```
+
+### Puzzle Node
+```typescript
+{
+  type: 'puzzleNode',
+  style: {
+    background: 'linear-gradient(135deg, #3B82F6, #2563EB)',
+    clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+    minWidth: '160px',
+    minHeight: '160px'
+  }
+}
+```
+
+### Timeline Node
+```typescript
+{
+  type: 'timelineNode',
+  style: {
+    background: 'linear-gradient(135deg, #F97316, #EA580C)',
+    borderRadius: '16px',
+    border: '2px solid rgba(249, 115, 22, 0.3)',
+    minWidth: '220px',
+    minHeight: '90px'
+  }
+}
+```
+
+## Edge Types
+
+### Dependency Edge
+- **Style**: Solid line with arrow
+- **Color**: `#94A3B8`
+- **Weight**: 10
+- **Use**: Puzzle prerequisites
+
+### Reward Edge
+- **Style**: Dashed line with arrow
+- **Color**: `#10B981`
+- **Weight**: 8
+- **StrokeDasharray**: "5,5"
+- **Use**: Puzzle rewards (elements)
+
+### Relation Edge
+- **Style**: Dotted line, no arrow
+- **Color**: `#A855F7`
+- **Weight**: 5
+- **StrokeDasharray**: "2,4"
+- **Use**: Character relationships
+
+### Chain Edge
+- **Style**: Bold solid line
+- **Color**: `#F97316`
+- **Weight**: 15
+- **StrokeWidth**: 3
+- **Use**: Puzzle chain connections
+
+## Layout Algorithm
+
+### Dagre Configuration
+```javascript
+const g = new dagre.graphlib.Graph({
+  directed: true,
+  multigraph: false,
+  compound: false
+});
+
+g.setGraph({
+  rankdir: 'LR',
+  align: 'UL',
+  nodesep: 100,
+  edgesep: 50,
+  ranksep: 300,
+  marginx: 50,
+  marginy: 50,
+  acyclicer: 'greedy',
+  ranker: 'network-simplex'
 });
 ```
 
-**Benefits**:
-- Correct left-to-right flow for game progression
-- No visual clutter (edges are hidden)
-- Dagre respects dependencies automatically
-- Handles complex puzzle chains
+### Layout Steps
 
-### 3. Collision-Aware Clustering
+1. **Graph Initialization**
+   ```typescript
+   const g = new dagre.graphlib.Graph();
+   g.setGraph(config);
+   ```
 
-**Problem**: Post-layout element clustering causes overlaps  
-**Solution**: Track occupied spaces and find safe positions
+2. **Node Addition**
+   ```typescript
+   nodes.forEach(node => {
+     g.setNode(node.id, {
+       width: node.width || 200,
+       height: node.height || 100
+     });
+   });
+   ```
 
-```typescript
-interface OccupiedRange {
-  id: string;
-  top: number;
-  bottom: number;
-}
+3. **Edge Addition with Weights**
+   ```typescript
+   edges.forEach(edge => {
+     g.setEdge(edge.source, edge.target, {
+       weight: edge.weight || 1,
+       minlen: edge.minlen || 1
+     });
+   });
+   ```
 
-// Check for overlaps before moving
-const hasOverlap = (x: number, top: number, bottom: number): boolean => {
-  const xBucket = Math.round(x / 50) * 50; // Group by X position
-  const ranges = occupiedSpaces.get(xBucket) || [];
-  
-  return ranges.some(range => {
-    const padding = 10;
-    return !(bottom + padding < range.top || top - padding > range.bottom);
-  });
-};
+4. **Layout Execution**
+   ```typescript
+   dagre.layout(g);
+   ```
 
-// Find nearest safe position if overlap detected
-const finalY = hasOverlap(x, desiredY, height) 
-  ? findSafePosition(x, desiredY, height)
-  : desiredY;
-```
-
-**Benefits**:
-- No node overlaps after clustering
-- Elements group near related puzzles
-- Maintains readability at all zoom levels
-- O(n log n) complexity with spatial indexing
-
-## Layout Quality Metrics
-
-The system now calculates 9 quality metrics to evaluate layout effectiveness:
-
-```typescript
-interface LayoutQualityMetrics {
-  edgeCrossings: number;         // Fewer is better
-  totalEdgeLength: number;       // Shorter total is better
-  averageEdgeLength: number;     // Consistency matters
-  nodeOverlaps: number;          // Should be zero
-  aspectRatio: number;           // Around 3:1 is ideal
-  density: number;               // Nodes per unit area
-  edgeLengthVariance: number;    // Lower is more uniform
-  elementClusteringScore: number; // 0-1, higher is better
-  puzzleAlignmentScore: number;   // 0-1, higher is better
-}
-```
-
-**Quality Assessment**:
-- Overall score calculated from weighted metrics
-- Automatic quality level: Excellent/Good/Fair/Poor
-- Helps identify layout problems programmatically
+5. **Position Extraction**
+   ```typescript
+   nodes.forEach(node => {
+     const position = g.node(node.id);
+     node.position = {
+       x: position.x - position.width / 2,
+       y: position.y - position.height / 2
+     };
+   });
+   ```
 
 ## Performance Optimizations
 
-### 1. React Component Memoization
+### Caching Strategy
+- Layout results cached for 5 minutes
+- Invalidated on entity updates
+- Partial re-layout for local changes
+
+### Batch Processing
+- Edge creation batched by type
+- Virtual edge injection in single pass
+- Position updates batched
+
+### Rendering Optimizations
+- React.memo for node components
+- Virtualization for large graphs (>500 nodes)
+- Progressive rendering for initial load
+
+## Quality Metrics
+
+### Target Metrics
+- **Edge Crossings**: < 10% of total edges
+- **Node Overlaps**: 0
+- **Aspect Ratio**: 16:9 to 4:3
+- **Layout Time**: < 200ms for 100 nodes
+- **Frame Rate**: 60fps during interactions
+
+### Monitoring
 ```typescript
-export const PuzzleNode = React.memo(({ data, selected }: NodeProps) => {
-  // Component only re-renders if props change
+const metrics = layoutQualityMetrics.calculate(nodes, edges);
+console.log('Layout Quality:', {
+  crossings: metrics.crossings,
+  overlaps: metrics.overlaps,
+  aspectRatio: metrics.aspectRatio,
+  performance: metrics.layoutTime
 });
 ```
 
-### 2. Smart Edge Weighting
+## React Flow Integration
+
+### Graph Component
 ```typescript
-// EdgeBuilder assigns weights based on relationship importance
-if (relationshipType === 'virtual-dependency') {
-  weight = 1000; // Force strict ordering
-} else if (relationshipType === 'requirement') {
-  weight = 10;   // Important but flexible
-} else {
-  weight = 1;    // Default weight
+<ReactFlow
+  nodes={nodes}
+  edges={edges}
+  nodeTypes={nodeTypes}
+  edgeTypes={edgeTypes}
+  onNodesChange={onNodesChange}
+  onEdgesChange={onEdgesChange}
+  onNodeClick={handleNodeClick}
+  fitView
+  fitViewOptions={{
+    padding: 0.2,
+    maxZoom: 1.5
+  }}
+>
+  <Background variant="dots" />
+  <Controls />
+  <MiniMap />
+</ReactFlow>
+```
+
+### Custom Hooks
+```typescript
+// useGraphLayout.ts
+const useGraphLayout = (entities: GraphData) => {
+  const { nodes, edges } = useMemo(() => {
+    const transformer = new GraphBuilder();
+    return transformer.build(entities);
+  }, [entities]);
+  
+  const layoutedElements = useMemo(() => {
+    const orchestrator = new LayoutOrchestrator();
+    return orchestrator.layout(nodes, edges);
+  }, [nodes, edges]);
+  
+  return layoutedElements;
+};
+```
+
+## Error Handling
+
+### Error Types
+```typescript
+enum GraphErrorType {
+  TRANSFORM_ERROR = 'TRANSFORM_ERROR',
+  LAYOUT_ERROR = 'LAYOUT_ERROR',
+  RENDER_ERROR = 'RENDER_ERROR',
+  DATA_ERROR = 'DATA_ERROR'
 }
 ```
 
-### 3. Adaptive Spacing
+### Error Recovery
 ```typescript
-// Adjust spacing based on node density
-const baseRankSep = 300;
-const densityFactor = Math.min(nodes.length / 50, 2);
-const rankSeparation = baseRankSep / densityFactor;
-```
-
-## TypeScript Strict Mode Compliance
-
-All 126 TypeScript errors were fixed through:
-
-1. **Proper null checking**:
-```typescript
-// Before
-const node = nodes[index];
-node.position.x = 100; // Error: Object possibly undefined
-
-// After
-const node = nodes[index];
-if (node) {
-  node.position.x = 100;
-}
-```
-
-2. **Const assertions instead of enums**:
-```typescript
-// Before
-enum NodeType { Puzzle, Element }
-
-// After
-const NodeType = {
-  Puzzle: 'puzzle',
-  Element: 'element',
-} as const;
-```
-
-3. **Explicit type guards**:
-```typescript
-function isPuzzleNode(node: GraphNode): node is PuzzleNode {
-  return node.type === 'puzzleNode';
+class ErrorHandler {
+  handleError(error: GraphError): RecoveryAction {
+    switch (error.type) {
+      case GraphErrorType.TRANSFORM_ERROR:
+        return { action: 'SKIP_ENTITY', fallback: null };
+      case GraphErrorType.LAYOUT_ERROR:
+        return { action: 'USE_FALLBACK_LAYOUT', fallback: 'grid' };
+      case GraphErrorType.RENDER_ERROR:
+        return { action: 'SHOW_ERROR_BOUNDARY', fallback: <ErrorFallback /> };
+      default:
+        return { action: 'LOG_AND_CONTINUE', fallback: null };
+    }
+  }
 }
 ```
 
 ## Testing Strategy
 
-### Unit Tests (100% coverage for critical modules)
-- LayoutQualityMetrics: Edge crossing detection, overlap calculation
-- VirtualEdgeInjector: Dual-role detection, edge creation
-- ElementClusterer: Collision detection, safe positioning
+### Unit Tests
+- Transformer logic validation
+- Edge weight calculations
+- Layout algorithm correctness
+- Error handling paths
 
 ### Integration Tests
-- End-to-end layout with real game data
-- Performance benchmarks (target: <500ms for 200 nodes)
-- Visual regression tests for layout stability
+- Full transformation pipeline
+- Layout with real data
+- React Flow rendering
+- User interactions
 
-### Example Test
-```typescript
-describe('LayoutQualityMetrics', () => {
-  it('should detect edge crossings correctly', () => {
-    const nodes = [
-      { id: '1', position: { x: 0, y: 0 } },
-      { id: '2', position: { x: 100, y: 100 } },
-      { id: '3', position: { x: 0, y: 100 } },
-      { id: '4', position: { x: 100, y: 0 } },
-    ];
-    
-    const edges = [
-      { source: '1', target: '2' }, // Diagonal \
-      { source: '3', target: '4' }, // Diagonal /
-    ];
-    
-    const metrics = calculateLayoutQuality(nodes, edges);
-    expect(metrics.edgeCrossings).toBe(1);
-  });
-});
-```
+### Performance Tests
+- Layout time benchmarks
+- Memory usage profiling
+- Render performance
+- Large dataset handling
 
-## Migration Guide
+## Future Enhancements
 
-### For Developers
+### Planned Features
+1. **Alternative Layouts**
+   - Force-directed layout
+   - Hierarchical layout
+   - Circular layout
+   - Grid layout
 
-1. **Import changes**:
-```typescript
-// Before
-import { transformPuzzles, applyLayout } from '@/lib/graph';
+2. **Advanced Interactions**
+   - Multi-select operations
+   - Bulk editing
+   - Drag-and-drop reordering
+   - Context menus
 
-// After
-import { createGraphBuilder } from '@/lib/graph';
-const builder = createGraphBuilder();
-```
+3. **Visual Improvements**
+   - Animated transitions
+   - 3D visualization option
+   - Custom node shapes
+   - Theme customization
 
-2. **API changes**:
-```typescript
-// Before
-const nodes = transformPuzzles(puzzles);
-const edges = createEdges(nodes);
-const layout = applyLayout(nodes, edges);
+4. **Performance**
+   - WebWorker for layout calculation
+   - GPU acceleration
+   - Incremental layout updates
+   - Level-of-detail rendering
 
-// After
-const graph = builder
-  .addPuzzles(puzzles)
-  .addElements(elements)
-  .build();
-const layout = graph.applyLayout('dagre');
-```
-
-### For New Entity Types
-
-1. Extend BaseTransformer:
-```typescript
-class NewEntityTransformer extends BaseTransformer<NewEntity> {
-  protected entityType = 'newEntity' as const;
-  protected nodeType = 'newEntityNode';
-  
-  protected createMetadata(entity: NewEntity): NodeMetadata {
-    // Entity-specific metadata
-  }
-}
-```
-
-2. Register in GraphBuilder:
-```typescript
-this.transformers.set('newEntity', new NewEntityTransformer());
-```
-
-## Future Improvements
-
-### Short Term (Sprint 3)
-- [ ] Add caching layer for transformed nodes
-- [ ] Implement incremental layout updates
-- [ ] Add layout animation support
-
-### Medium Term
-- [ ] WebWorker for layout calculations
-- [ ] Alternative layout algorithms (force-directed, hierarchical)
-- [ ] Layout presets for different view modes
-
-### Long Term
-- [ ] Machine learning for optimal layout parameters
-- [ ] Collaborative real-time graph editing
-- [ ] 3D graph visualization option
-
-## Conclusion
-
-The refactored graph module architecture provides:
-- **Maintainability**: Clear separation of concerns, single responsibility
-- **Performance**: 53.6% code reduction, optimized algorithms
-- **Extensibility**: Easy to add new entity types and layout strategies
-- **Quality**: Comprehensive metrics and testing
-- **Type Safety**: Full TypeScript strict mode compliance
-
-This foundation enables the team to build sophisticated graph visualizations while maintaining code quality and performance.
+5. **Analytics**
+   - Graph complexity metrics
+   - User interaction tracking
+   - Performance monitoring
+   - Layout quality reporting

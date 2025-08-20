@@ -20,12 +20,16 @@ export async function handleCachedNotionRequest<T>(
   res: Response, 
   endpointName: string, 
   databaseId: string, 
-  transformFn: (page: NotionPage) => T
+  transformFn: (page: NotionPage) => T,
+  filter?: any
 ): Promise<void> {
   const cursor = req.query.cursor as string | undefined;
   const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
   const bypassCache = req.headers['x-cache-bypass'] === 'true';
-  const cacheKey = cacheService.getCacheKey(endpointName, { limit, cursor });
+  
+  // Include filter params in cache key
+  const cacheParams = { limit, cursor, ...req.query };
+  const cacheKey = cacheService.getCacheKey(endpointName, cacheParams);
 
   if (!bypassCache) {
     const cachedResponse = cacheService.get<APIResponse<T>>(cacheKey);
@@ -36,7 +40,7 @@ export async function handleCachedNotionRequest<T>(
     }
   }
 
-  const result = await fetchAllPages(databaseId, limit, cursor);
+  const result = await fetchAllPages(databaseId, limit, cursor, filter);
   const data = result.pages.map(transformFn);
 
   const response: APIResponse<T> = {
@@ -56,7 +60,8 @@ export async function handleCachedNotionRequest<T>(
 export async function fetchAllPages(
   databaseId: string, 
   maxItems: number = 100,
-  startCursor?: string
+  startCursor?: string,
+  filter?: any
 ): Promise<{ pages: NotionPage[], hasMore: boolean, nextCursor: string | null }> {
   const pages: NotionPage[] = [];
   let cursor: string | undefined = startCursor;
@@ -65,11 +70,18 @@ export async function fetchAllPages(
   // Fetch only up to maxItems to prevent timeouts
   while (totalFetched < maxItems) {
     const pageSize = Math.min(100, maxItems - totalFetched);
-    const response = await notion.databases.query({
+    const queryParams: any = {
       database_id: databaseId,
       start_cursor: cursor,
       page_size: pageSize
-    }) as NotionListResponse<NotionPage>;
+    };
+    
+    // Add filter if provided
+    if (filter) {
+      queryParams.filter = filter;
+    }
+    
+    const response = await notion.databases.query(queryParams) as NotionListResponse<NotionPage>;
     
     pages.push(...response.results);
     totalFetched += response.results.length;

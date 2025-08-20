@@ -1,87 +1,145 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import GraphControls from './GraphControls';
-import type { FilterState } from './GraphControls';
+import { useGraphStore } from '@/stores/graphStore';
+
+// Mock the graph store
+vi.mock('@/stores/graphStore', () => ({
+  useGraphStore: vi.fn(),
+}));
 
 describe('GraphControls', () => {
-  const mockPuzzles = [
-    { id: '1', name: 'Puzzle 1' },
-    { id: '2', name: 'Puzzle 2' },
-  ];
+  const mockZoomIn = vi.fn();
+  const mockZoomOut = vi.fn();
+  const mockResetZoom = vi.fn();
+  const mockFitView = vi.fn();
+  const mockSetLayoutAlgorithm = vi.fn();
+  const mockTriggerRelayout = vi.fn();
 
-  const mockFilterState: FilterState = {
-    searchTerm: '',
-    selectedActs: new Set(),
-    selectedPuzzleId: null,
-  };
-
-  const mockOnFilterChange = vi.fn();
-  const mockOnClearFilters = vi.fn();
-
-  it('renders all filter controls', () => {
-    render(
-      <GraphControls
-        puzzles={mockPuzzles as any}
-        filterState={mockFilterState}
-        onFilterChange={mockOnFilterChange}
-        onClearFilters={mockOnClearFilters}
-      />
-    );
-
-    // Check search box is rendered
-    expect(screen.getByPlaceholderText('Search nodes...')).toBeInTheDocument();
+  beforeEach(() => {
+    // Reset mocks
+    vi.clearAllMocks();
     
-    // Check Acts button is rendered
-    expect(screen.getByText('Acts')).toBeInTheDocument();
-    
-    // Check puzzle selector is rendered
-    expect(screen.getByText('All Puzzles')).toBeInTheDocument();
-  });
-
-  it('handles search input', () => {
-    render(
-      <GraphControls
-        puzzles={mockPuzzles as any}
-        filterState={mockFilterState}
-        onFilterChange={mockOnFilterChange}
-        onClearFilters={mockOnClearFilters}
-      />
-    );
-
-    const searchInput = screen.getByPlaceholderText('Search nodes...') as HTMLInputElement;
-    fireEvent.change(searchInput, { target: { value: 'test search' } });
-
-    expect(mockOnFilterChange).toHaveBeenCalledWith({
-      ...mockFilterState,
-      searchTerm: 'test search',
+    // Setup mock store
+    (useGraphStore as any).mockImplementation((selector: any) => {
+      const state = {
+        zoomIn: mockZoomIn,
+        zoomOut: mockZoomOut,
+        resetZoom: mockResetZoom,
+        fitView: mockFitView,
+        layoutAlgorithm: 'dagre',
+        setLayoutAlgorithm: mockSetLayoutAlgorithm,
+        triggerRelayout: mockTriggerRelayout,
+      };
+      return selector(state);
     });
   });
 
-  it('shows active filter badges', () => {
-    const activeFilterState: FilterState = {
-      searchTerm: 'puzzle',
-      selectedActs: new Set(['Act 0', 'Act 1']),
-      selectedPuzzleId: '1',
-    };
+  it('renders zoom controls', () => {
+    render(<GraphControls />);
 
-    render(
-      <GraphControls
-        puzzles={mockPuzzles as any}
-        filterState={activeFilterState}
-        onFilterChange={mockOnFilterChange}
-        onClearFilters={mockOnClearFilters}
-      />
-    );
+    // Check zoom buttons are rendered (by their titles)
+    expect(screen.getByTitle('Zoom In')).toBeInTheDocument();
+    expect(screen.getByTitle('Zoom Out')).toBeInTheDocument();
+    expect(screen.getByTitle('Fit to View')).toBeInTheDocument();
+    expect(screen.getByTitle('Reset Zoom')).toBeInTheDocument();
+  });
 
-    // Check that active filters are displayed
-    expect(screen.getByText('puzzle')).toBeInTheDocument();
-    expect(screen.getByText('Act 0')).toBeInTheDocument();
-    expect(screen.getByText('Act 1')).toBeInTheDocument();
-    // Use getAllByText since "Puzzle 1" appears in both the select and the badge
-    const puzzle1Elements = screen.getAllByText('Puzzle 1');
-    expect(puzzle1Elements.length).toBeGreaterThan(0);
+  it('handles zoom in', () => {
+    render(<GraphControls />);
     
-    // Check clear button is shown
-    expect(screen.getByText('Clear')).toBeInTheDocument();
+    const zoomInButton = screen.getByTitle('Zoom In');
+    fireEvent.click(zoomInButton);
+    
+    expect(mockZoomIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles zoom out', () => {
+    render(<GraphControls />);
+    
+    const zoomOutButton = screen.getByTitle('Zoom Out');
+    fireEvent.click(zoomOutButton);
+    
+    expect(mockZoomOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles fit to view', () => {
+    render(<GraphControls />);
+    
+    const fitViewButton = screen.getByTitle('Fit to View');
+    fireEvent.click(fitViewButton);
+    
+    expect(mockFitView).toHaveBeenCalledTimes(1);
+  });
+
+  it('handles reset zoom', () => {
+    render(<GraphControls />);
+    
+    const resetButton = screen.getByTitle('Reset Zoom');
+    fireEvent.click(resetButton);
+    
+    expect(mockResetZoom).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders layout settings button', () => {
+    render(<GraphControls />);
+    
+    const settingsButton = screen.getByTitle('Layout Settings');
+    expect(settingsButton).toBeInTheDocument();
+  });
+
+  it('handles layout algorithm change', () => {
+    render(<GraphControls />);
+    
+    // Open the dropdown
+    const settingsButton = screen.getByTitle('Layout Settings');
+    fireEvent.click(settingsButton);
+    
+    // Click on Force-Directed option
+    const forceOption = screen.getByText('Force-Directed');
+    fireEvent.click(forceOption);
+    
+    expect(mockSetLayoutAlgorithm).toHaveBeenCalledWith('force');
+    expect(mockTriggerRelayout).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows current layout algorithm as selected', () => {
+    // Setup mock to return 'force' as current algorithm
+    (useGraphStore as any).mockImplementation((selector: any) => {
+      const state = {
+        zoomIn: mockZoomIn,
+        zoomOut: mockZoomOut,
+        resetZoom: mockResetZoom,
+        fitView: mockFitView,
+        layoutAlgorithm: 'force',
+        setLayoutAlgorithm: mockSetLayoutAlgorithm,
+        triggerRelayout: mockTriggerRelayout,
+      };
+      return selector(state);
+    });
+    
+    render(<GraphControls />);
+    
+    // Open the dropdown
+    const settingsButton = screen.getByTitle('Layout Settings');
+    fireEvent.click(settingsButton);
+    
+    // Check that Force-Directed has the active styling
+    const forceOption = screen.getByText('Force-Directed');
+    expect(forceOption.parentElement).toHaveClass('bg-accent');
+  });
+
+  it('handles re-layout trigger', () => {
+    render(<GraphControls />);
+    
+    // Open the dropdown
+    const settingsButton = screen.getByTitle('Layout Settings');
+    fireEvent.click(settingsButton);
+    
+    // Click on Re-layout option
+    const relayoutOption = screen.getByText('Re-layout Graph');
+    fireEvent.click(relayoutOption);
+    
+    expect(mockTriggerRelayout).toHaveBeenCalledTimes(1);
   });
 });

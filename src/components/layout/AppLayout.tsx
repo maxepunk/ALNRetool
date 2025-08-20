@@ -5,28 +5,27 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, Link } from 'react-router-dom'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useLastSyncTime } from '@/hooks/useLastSyncTime'
 import Breadcrumbs from '@/components/common/Breadcrumbs'
 import ConnectionStatus from '@/components/common/ConnectionStatus'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
+import Sidebar from '@/components/layout/SidebarRefactored'
 import { 
   Menu, 
   X, 
-  ChevronLeft, 
-  ChevronRight,
   PanelLeft,
-  Puzzle,
-  Users,
-  BarChart3,
-  Settings,
   Sun,
-  Moon
+  Moon,
+  Search,
+  Bell,
+  User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
@@ -49,11 +48,14 @@ export default function AppLayout() {
   // Handle responsive behavior
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.matchMedia('(max-width: 768px)').matches)
+      const isMobileView = window.matchMedia('(max-width: 768px)').matches
+      setIsMobile(isMobileView)
       
-      // Close sidebar on mobile
-      if (window.matchMedia('(max-width: 768px)').matches) {
+      // Auto-manage sidebar based on screen size
+      if (isMobileView) {
         setLeftSidebarOpen(false)
+      } else {
+        setLeftSidebarOpen(true)
       }
     }
     
@@ -96,32 +98,36 @@ export default function AppLayout() {
     }
   }, [location, isMobile])
 
-  const navItems = [
-    { path: '/puzzles', label: 'Puzzles', icon: Puzzle, testId: 'puzzle-icon' },
-    { path: '/character-journey', label: 'Characters', icon: Users, testId: 'character-icon' },
-    { path: '/status', label: 'Status', icon: BarChart3, testId: 'status-icon' },
-  ]
-
   const toggleDarkMode = () => {
     setIsDarkMode(!isDarkMode)
   }
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      {/* Skip Navigation Link for Accessibility */}      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-background p-2 rounded-md">
+      {/* Skip Navigation Link for Accessibility */}
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 z-50 bg-primary text-primary-foreground px-3 py-2 rounded-md shadow-lg"
+      >
         Skip to content
       </a>
 
-      {/* Header */}
-      <header 
+      {/* Header with Glass Morphism */}
+      <motion.header 
         ref={headerRef}
         role="banner" 
-        className={`sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur transition-all duration-300 ${
-          headerMinimized ? 'h-12' : 'h-16'
-        }`}
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className={cn(
+          "sticky top-0 z-40 border-b transition-all duration-300",
+          "bg-background/80 backdrop-blur-xl backdrop-saturate-150",
+          "border-border/40 shadow-sm",
+          headerMinimized ? 'h-14' : 'h-auto'
+        )}
       >
-        <div className="flex items-center justify-between h-full px-4">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between h-14 px-4 md:px-6">
+          <div className="flex items-center gap-3">
             {/* Mobile menu toggle */}
             {isMobile && (
               <Button
@@ -130,23 +136,123 @@ export default function AppLayout() {
                 onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
                 aria-label={leftSidebarOpen ? "Close menu" : "Open menu"}
                 aria-expanded={leftSidebarOpen}
+                className="text-foreground hover:bg-accent/50 transition-colors"
               >
-                {leftSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                <AnimatePresence mode="wait">
+                  {leftSidebarOpen ? (
+                    <motion.div
+                      key="close"
+                      initial={{ rotate: -90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: 90, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <X size={20} />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="open"
+                      initial={{ rotate: 90, opacity: 0 }}
+                      animate={{ rotate: 0, opacity: 1 }}
+                      exit={{ rotate: -90, opacity: 0 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <Menu size={20} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </Button>
             )}
             
-            <h1 className={`font-bold transition-all duration-300 ${
-              headerMinimized ? 'text-lg' : 'text-xl'
-            }`}>              ALNRetool
-            </h1>
+            {/* Desktop sidebar toggle */}
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+                aria-label={leftSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+                className="text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+              >
+                <PanelLeft size={18} />
+              </Button>
+            )}
+            
+            {/* Logo and Title */}
+            <Link 
+              to="/" 
+              className="flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-md"
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-md">
+                <span className="text-primary-foreground font-bold text-sm">ALN</span>
+              </div>
+              <h1 className={cn(
+                "font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent transition-all duration-300",
+                headerMinimized ? 'text-lg hidden sm:block' : 'text-xl'
+              )}>
+                ALNRetool
+              </h1>
+            </Link>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 md:gap-3">
+            {/* Search - Desktop only */}
+            {!isMobile && (
+              <div className="relative max-w-xs hidden lg:block">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className={cn(
+                    "w-full h-9 pl-9 pr-4 rounded-lg text-sm",
+                    "bg-muted/30 backdrop-blur-sm",
+                    "border border-border/50",
+                    "placeholder-muted-foreground",
+                    "focus:bg-background focus:border-primary",
+                    "focus:ring-1 focus:ring-primary focus:ring-offset-0",
+                    "transition-all duration-200"
+                  )}
+                />
+              </div>
+            )}
+            
+            {/* Mobile Search Button */}
+            {isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Search"
+                className="text-muted-foreground hover:text-foreground hover:bg-accent/50"
+              >
+                <Search size={18} />
+              </Button>
+            )}
+            
             {/* Connection status */}
             <ConnectionStatus 
               isOnline={isOnline} 
               lastSyncTime={lastSyncTime}
             />
+            
+            {/* Notifications */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Notifications"
+                    className="relative text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+                  >
+                    <Bell size={18} />
+                    {/* Notification dot */}
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>3 new notifications</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             
             {/* Dark mode toggle */}
             <TooltipProvider>
@@ -157,142 +263,179 @@ export default function AppLayout() {
                     size="icon"
                     onClick={toggleDarkMode}
                     aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+                    className="text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
                   >
-                    {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                    <motion.div
+                      initial={{ rotate: 0, scale: 1 }}
+                      animate={{ 
+                        rotate: isDarkMode ? 360 : 0,
+                        scale: isDarkMode ? [1, 1.2, 1] : [1, 0.8, 1]
+                      }}
+                      transition={{ 
+                        duration: 0.5, 
+                        ease: "easeInOut",
+                        scale: { duration: 0.3 }
+                      }}
+                    >
+                      {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+                    </motion.div>
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
-                  {isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
+                <TooltipContent side="bottom">
+                  <p>{isDarkMode ? "Light mode" : "Dark mode"}</p>
                 </TooltipContent>
               </Tooltip>
-            </TooltipProvider>          </div>
+            </TooltipProvider>
+            
+            {/* User profile */}
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="User profile"
+                    className={cn(
+                      "relative rounded-full",
+                      "bg-gradient-to-br from-primary/20 to-primary/10",
+                      "hover:from-primary/30 hover:to-primary/20",
+                      "transition-all duration-200"
+                    )}
+                  >
+                    <User size={18} className="text-foreground" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>User profile</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
         
-        {/* Breadcrumbs - only visible when header is not minimized */}
-        <div className={`px-4 transition-all duration-300 overflow-hidden ${
-          headerMinimized ? 'h-0 opacity-0' : 'h-8 opacity-100'
-        }`}>
-          <Breadcrumbs />
-        </div>
-      </header>
+        {/* Breadcrumbs - animated visibility */}
+        <AnimatePresence>
+          {!headerMinimized && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="px-4 md:px-6 py-2 overflow-hidden border-t border-border/20"
+            >
+              <Breadcrumbs />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.header>
 
       {/* Loading indicator */}
-      {isNavigationPending && (
-        <div 
-          className="h-1 bg-primary/80 animate-pulse" 
-          data-testid="navigation-loading"
-        />
-      )}
-
-      <div className="flex flex-1 overflow-hidden">
-        {/* Left Sidebar */}
-        <aside 
-          className={`fixed md:relative inset-y-0 left-0 z-30 border-r border-border bg-background transition-all duration-300 ease-in-out ${
-            leftSidebarOpen ? 'w-64 translate-x-0' : 'w-16 md:w-16 -translate-x-full md:translate-x-0'
-          } ${isMobile ? 'shadow-lg' : ''}`}
-        >
-          {/* Navigation */}
-          <nav className="h-full flex flex-col">
-            <div className="p-4">              <div className="mb-6">
-                {leftSidebarOpen && (
-                  <h2 className="text-sm font-semibold text-muted-foreground mb-2">NAVIGATION</h2>
-                )}
-                <ul className="space-y-1">
-                  {navItems.map(({ path, label, icon: Icon, testId }) => (
-                    <li key={path}>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <NavLink
-                              to={path}
-                              className={({ isActive }) =>
-                                `flex items-center ${leftSidebarOpen ? 'gap-3' : 'justify-center'} px-3 py-2 rounded-md transition-colors ${
-                                  isActive 
-                                    ? 'bg-primary/10 text-primary font-medium active' 
-                                    : 'text-foreground/80 hover:bg-accent hover:text-accent-foreground'
-                                }`
-                              }
-                            >
-                              <Icon size={18} data-testid={testId} />
-                              {leftSidebarOpen && <span>{label}</span>}
-                            </NavLink>
-                          </TooltipTrigger>
-                          {!leftSidebarOpen && (
-                            <TooltipContent side="right">
-                              {label}
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              
-              <Separator className="my-4" />
-              
-              <div>
-                <h2 className="text-sm font-semibold text-muted-foreground mb-2">FILTERS</h2>
-                {/* Filter content would go here */}
-                <div className="py-2 text-sm text-muted-foreground">                  Filter controls would be placed here
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-auto p-4 border-t border-border">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => {}}
-              >
-                <Settings size={16} className="mr-2" />
-                Settings
-              </Button>
-            </div>
-          </nav>
-          
-          {/* Toggle button for desktop - always at the bottom */}
-          {!isMobile && (
-            <div className="absolute bottom-4 left-0 right-0">
-              <div className={`flex ${leftSidebarOpen ? 'justify-end pr-2' : 'justify-center'}`}>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:flex"
-                  onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-                  aria-label={leftSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-                >
-                  {leftSidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-                </Button>
-              </div>
-            </div>
-          )}
-        </aside>
-        {/* Mobile overlay */}
-        {isMobile && leftSidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-20"
-            onClick={() => setLeftSidebarOpen(false)}
-            aria-hidden="true"
+      <AnimatePresence>
+        {isNavigationPending && (
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            exit={{ scaleX: 0 }}
+            transition={{ duration: 0.3 }}
+            className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary origin-left" 
+            data-testid="navigation-loading"
           />
         )}
+      </AnimatePresence>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar with Animation Wrapper */}
+        <AnimatePresence mode="wait">
+          {leftSidebarOpen && (
+            <>
+              {/* Desktop Sidebar */}
+              {!isMobile && (
+                <motion.div
+                  initial={{ x: -280, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -280, opacity: 0 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30
+                  }}
+                  className="relative"
+                >
+                  <Sidebar />
+                </motion.div>
+              )}
+              
+              {/* Mobile Sidebar */}
+              {isMobile && (
+                <motion.div
+                  initial={{ x: -280 }}
+                  animate={{ x: 0 }}
+                  exit={{ x: -280 }}
+                  transition={{ 
+                    type: "spring",
+                    stiffness: 300,
+                    damping: 30
+                  }}
+                  className="fixed inset-y-0 left-0 z-30 mt-14"
+                >
+                  <Sidebar />
+                </motion.div>
+              )}
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile overlay with blur */}
+        <AnimatePresence>
+          {isMobile && leftSidebarOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20"
+              onClick={() => setLeftSidebarOpen(false)}
+              aria-hidden="true"
+            />
+          )}
+        </AnimatePresence>
 
         {/* Main Content Area */}
         <main 
           id="main-content" 
           role="main" 
           data-testid="main-content"
-          className="flex-1 overflow-auto relative"
+          className={cn(
+            "flex-1 overflow-auto relative",
+            "transition-all duration-300 ease-in-out"
+          )}
         >
-          {/* Toggle left sidebar button */}          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute left-4 top-4 md:hidden"
-            onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-          >
-            <PanelLeft size={16} />
-          </Button>
+          {/* Floating sidebar toggle when closed */}
+          <AnimatePresence>
+            {!leftSidebarOpen && !isMobile && (
+              <motion.div
+                initial={{ x: -20, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -20, opacity: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className={cn(
+                    "absolute left-4 top-4 z-10",
+                    "bg-background/80 backdrop-blur-sm",
+                    "border-border/50 shadow-lg",
+                    "hover:bg-accent/50"
+                  )}
+                  onClick={() => setLeftSidebarOpen(true)}
+                  aria-label="Open sidebar"
+                >
+                  <PanelLeft size={16} />
+                </Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
           
           <ErrorBoundary>
             <div className="h-full">
@@ -302,13 +445,32 @@ export default function AppLayout() {
         </main>
       </div>
 
-      {/* Footer */}
-      <footer role="contentinfo" className="border-t border-border py-2 px-4 text-sm text-muted-foreground">
-        <div className="flex justify-between items-center">
-          <p>© 2024 ALNRetool - About Last Night Visualization Tool</p>
-          <p>
-            Last synced: <time data-testid="last-sync-time">{lastSyncTime}</time>
+      {/* Footer with Glass Morphism */}
+      <footer 
+        role="contentinfo" 
+        className={cn(
+          "border-t py-3 px-4 md:px-6 text-xs",
+          "bg-background/80 backdrop-blur-xl backdrop-saturate-150",
+          "border-border/40 text-muted-foreground"
+        )}
+      >
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+          <p className="text-center sm:text-left">
+            © 2024 ALNRetool - About Last Night Visualization Tool
           </p>
+          <div className="flex items-center gap-2">
+            <motion.span 
+              className={cn(
+                "inline-block w-2 h-2 rounded-full",
+                isOnline ? 'bg-green-500' : 'bg-red-500'
+              )}
+              animate={isOnline ? {} : { scale: [1, 1.2, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            />
+            <p>
+              Last synced: <time data-testid="last-sync-time">{lastSyncTime}</time>
+            </p>
+          </div>
         </div>
       </footer>
     </div>
