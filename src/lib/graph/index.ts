@@ -96,15 +96,16 @@ export function buildCharacterJourneyGraph(data: any, characterId?: string, filt
 
 /**
  * Build full connection web graph using BFS traversal
- * Shows ALL transitive connections from a starting character
+ * Shows ALL transitive connections from a starting node of any type
  * Delegates to GraphBuilder module
  */
 export function buildFullConnectionGraph(
   data: any, 
-  characterId: string,
+  nodeId: string,
+  nodeType: 'character' | 'puzzle' | 'element' | 'timeline',
   options?: { maxDepth?: number; maxNodes?: number; expandedNodes?: Set<string> }
 ) {
-  return graphBuilder.buildFullConnectionGraph(data, characterId, options);
+  return graphBuilder.buildFullConnectionGraph(data, nodeId, nodeType, options);
 }
 
 /**

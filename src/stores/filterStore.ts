@@ -31,6 +31,11 @@ export interface ContentFilters {
   lastEditedRange: 'today' | 'week' | 'month' | 'all';
 }
 
+export interface NodeConnectionsFilters {
+  nodeType: 'character' | 'puzzle' | 'element' | 'timeline';
+  selectedNodeId: string | null;
+}
+
 export interface FilterState {
   // Universal filters
   searchTerm: string;
@@ -42,9 +47,10 @@ export interface FilterState {
   puzzleFilters: PuzzleFilters;
   characterFilters: CharacterFilters;
   contentFilters: ContentFilters;
+  nodeConnectionsFilters: NodeConnectionsFilters | null;
   
   // Current active view (for route-aware filtering)
-  activeView: 'puzzle-focus' | 'character-journey' | 'content-status' | null;
+  activeView: 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections' | null;
 }export interface FilterActions {
   // Universal filter actions
   setSearchTerm: (term: string) => void;
@@ -73,8 +79,13 @@ export interface FilterState {
   setLastEditedRange: (range: 'today' | 'week' | 'month' | 'all') => void;
   clearContentFilters: () => void;
   
+  // Node connections filter actions
+  setNodeType: (type: 'character' | 'puzzle' | 'element' | 'timeline') => void;
+  setSelectedNodeId: (nodeId: string | null) => void;
+  clearNodeConnectionsFilters: () => void;
+  
   // View management
-  setActiveView: (view: 'puzzle-focus' | 'character-journey' | 'content-status' | null) => void;
+  setActiveView: (view: 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections' | null) => void;
   
   // Global actions
   clearAllFilters: () => void;
@@ -115,6 +126,7 @@ export const useFilterStore = create<FilterStore>()(
           hasIssues: null,
           lastEditedRange: 'all',
         },
+        nodeConnectionsFilters: null,
         activeView: null,
 
         // Universal filter actions
@@ -214,6 +226,21 @@ export const useFilterStore = create<FilterStore>()(
           }
         })),
 
+        // Node connections filter actions
+        setNodeType: (type) => set((state) => ({
+          nodeConnectionsFilters: {
+            ...(state.nodeConnectionsFilters || { selectedNodeId: null }),
+            nodeType: type
+          }
+        })),
+        setSelectedNodeId: (nodeId) => set((state) => ({
+          nodeConnectionsFilters: {
+            ...(state.nodeConnectionsFilters || { nodeType: 'character' }),
+            selectedNodeId: nodeId
+          }
+        })),
+        clearNodeConnectionsFilters: () => set({ nodeConnectionsFilters: null }),
+
         // View management
         setActiveView: (view) => set({ activeView: view }),
 
@@ -236,7 +263,8 @@ export const useFilterStore = create<FilterStore>()(
             contentStatus: new Set(),
             hasIssues: null,
             lastEditedRange: 'all',
-          }
+          },
+          nodeConnectionsFilters: null
         }),        // Apply preset filters
         applyPreset: (preset) => {
           switch (preset) {
@@ -291,7 +319,8 @@ export const useFilterStore = create<FilterStore>()(
             state.characterFilters.highlightShared ||
             state.contentFilters.contentStatus.size > 0 ||
             state.contentFilters.hasIssues !== null ||
-            state.contentFilters.lastEditedRange !== 'all'
+            state.contentFilters.lastEditedRange !== 'all' ||
+            state.nodeConnectionsFilters?.selectedNodeId
           );
         },
 
@@ -311,6 +340,7 @@ export const useFilterStore = create<FilterStore>()(
           count += state.contentFilters.contentStatus.size;
           if (state.contentFilters.hasIssues !== null) count++;
           if (state.contentFilters.lastEditedRange !== 'all') count++;
+          if (state.nodeConnectionsFilters?.selectedNodeId) count++;
           
           return count;
         },        getActiveFiltersForView: () => {
@@ -360,6 +390,15 @@ export const useFilterStore = create<FilterStore>()(
               }
               if (state.contentFilters.lastEditedRange !== 'all') {
                 filters.push(`Edited: ${state.contentFilters.lastEditedRange}`);
+              }
+              break;
+              
+            case 'node-connections':
+              if (state.nodeConnectionsFilters?.nodeType) {
+                filters.push(`Type: ${state.nodeConnectionsFilters.nodeType}`);
+              }
+              if (state.nodeConnectionsFilters?.selectedNodeId) {
+                filters.push('Node selected');
               }
               break;
           }
@@ -415,6 +454,7 @@ export const useSearchTerm = () => useFilterStore(state => state.searchTerm);
 export const usePuzzleFilters = () => useFilterStore(state => state.puzzleFilters);
 export const useCharacterFilters = () => useFilterStore(state => state.characterFilters);
 export const useContentFilters = () => useFilterStore(state => state.contentFilters);
+export const useNodeConnectionsFilters = () => useFilterStore(state => state.nodeConnectionsFilters);
 export const useActiveView = () => useFilterStore(state => state.activeView);
 export const useHasActiveFilters = () => useFilterStore(state => state.hasActiveFilters());
 export const useActiveFilterCount = () => useFilterStore(state => state.activeFilterCount());

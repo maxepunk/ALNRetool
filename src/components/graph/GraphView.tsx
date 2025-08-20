@@ -148,17 +148,21 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
         graph = buildPuzzleFocusGraph(notionData);
         break;
       case 'character-journey':
-        // Use full connection web if specified, otherwise use filtered journey
-        if (viewOptions.viewMode === 'full-web' && viewOptions.characterId) {
-          console.log('📍 GraphView: Building full web with expansionDepth:', viewOptions.expansionDepth);
-          graph = buildFullConnectionGraph(notionData, viewOptions.characterId, {
-            maxDepth: viewOptions.expansionDepth || 3,  // Reduced default from 10 to 3 hops
+        // Pass characterId and character filters to filter the journey
+        graph = buildCharacterJourneyGraph(notionData, viewOptions.characterId, viewOptions.characterFilters);
+        break;
+      case 'node-connections':
+        // Build full connection web for any node type
+        console.log('📍 GraphView: Building node connections for:', viewOptions.nodeType, viewOptions.nodeId);
+        graph = buildFullConnectionGraph(
+          notionData,
+          viewOptions.nodeId,
+          viewOptions.nodeType,
+          {
+            maxDepth: viewOptions.expansionDepth || 3,
             maxNodes: 250
-          });
-        } else {
-          // Pass characterId and character filters to filter the journey
-          graph = buildCharacterJourneyGraph(notionData, viewOptions.characterId, viewOptions.characterFilters);
-        }
+          }
+        );
         break;
       case 'content-status':
         graph = buildContentStatusGraph(notionData);
@@ -175,7 +179,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     }
     
     return graph;
-  }, [notionData, viewType, viewOptions.characterId, viewOptions.viewMode, viewOptions.expansionDepth]); // Rebuild when data, view, or characterId changes
+  }, [notionData, viewType, viewOptions.characterId, viewOptions.nodeId, viewOptions.nodeType, viewOptions.expansionDepth]); // Rebuild when data, view, or node selection changes
   
   // Get filter state from Zustand store
   const searchTerm = useFilterStore(state => state.searchTerm);

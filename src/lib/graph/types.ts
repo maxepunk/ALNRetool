@@ -55,7 +55,7 @@ export type {
 /**
  * Supported view types for graph visualization
  */
-export type ViewType = 'puzzle-focus' | 'character-journey' | 'content-status';
+export type ViewType = 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections';
 
 /**
  * Entity types that can be represented as nodes

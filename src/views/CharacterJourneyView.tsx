@@ -9,7 +9,6 @@ import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import GraphView from '@/components/graph/GraphView';
 import LoadingSkeleton from '@/components/common/LoadingSkeleton';
 import { ErrorDisplay } from '@/components/common/ErrorDisplay';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
@@ -21,8 +20,7 @@ import { useFilterStore } from '@/stores/filterStore';
 import { normalizeTier, getTierBadgeVariant } from '@/lib/utils/tierUtils';
 import type { Node } from '@xyflow/react';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
-import type { DepthMetadata } from '@/lib/graph/types';
-import { Users, Share2, Info } from 'lucide-react';
+import { Users, Share2 } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
 export default function CharacterJourneyView() {
@@ -34,13 +32,9 @@ export default function CharacterJourneyView() {
   const characterFilters = useFilterStore(state => state.characterFilters);
   const selectCharacter = useFilterStore(state => state.selectCharacter);
   const setHighlightShared = useFilterStore(state => state.setHighlightShared);
-  const connectionDepth = useFilterStore(state => state.connectionDepth);
-  console.log('🔥 CharacterJourneyView: connectionDepth from store:', connectionDepth);
   
   // View-specific state only (not filters)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [viewMode, setViewMode] = useState<'filtered' | 'full-web'>('filtered');
-  const [depthMetadata, setDepthMetadata] = useState<DepthMetadata | undefined>(undefined);
   
   // Use store as primary source, URL as secondary
   const characterId = characterFilters.selectedCharacterId || urlCharacterId;
@@ -120,21 +114,6 @@ export default function CharacterJourneyView() {
     setSelectedNode(null);
   }, []);
 
-  // Handle graph data change including depth metadata
-  const handleGraphDataChange = useCallback((data: { nodes: Node[]; edges: any[]; depthMetadata?: DepthMetadata }) => {
-    console.log('📊 CharacterJourneyView: handleGraphDataChange called with:', {
-      nodes: data.nodes.length,
-      edges: data.edges.length,
-      hasDepthMetadata: !!data.depthMetadata,
-      depthMetadata: data.depthMetadata
-    });
-    if (data.depthMetadata) {
-      setDepthMetadata(data.depthMetadata);
-      console.log('✅ Depth metadata set in state:', data.depthMetadata);
-    } else {
-      console.log('⚠️ No depth metadata in callback data');
-    }
-  }, []);
 
   // Loading state
   if (isLoading) {
@@ -209,50 +188,6 @@ export default function CharacterJourneyView() {
 
           {/* View Controls */}
           <div className="flex items-center gap-4 flex-wrap">
-            {/* View Mode Toggle */}
-            <div className="flex items-center gap-1 bg-muted rounded-md p-1">
-              <Button
-                size="sm"
-                variant={viewMode === 'filtered' ? 'default' : 'ghost'}
-                onClick={() => setViewMode('filtered')}
-                className="h-7 px-3"
-              >
-                Filtered
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === 'full-web' ? 'default' : 'ghost'}
-                onClick={() => setViewMode('full-web')}
-                className="h-7 px-3"
-              >
-                Full Web
-              </Button>
-            </div>
-
-            {/* Show depth metadata feedback for Full Web mode */}
-            {viewMode === 'full-web' && depthMetadata && (
-              <div className="flex items-center gap-2">
-                {depthMetadata.isCompleteNetwork ? (
-                  <Badge variant="secondary" className="text-xs bg-green-50 text-green-700 border-green-200">
-                    <Info className="h-3 w-3 mr-1" />
-                    Complete network shown ({depthMetadata.totalReachableNodes} nodes)
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                    <Info className="h-3 w-3 mr-1" />
-                    Showing {depthMetadata.nodesAtCurrentDepth} of {depthMetadata.totalReachableNodes} nodes (depth {connectionDepth})
-                  </Badge>
-                )}
-              </div>
-            )}
-            
-            {/* Fallback if no metadata yet */}
-            {viewMode === 'full-web' && !depthMetadata && (
-              <Badge variant="outline" className="text-xs">
-                Depth: {connectionDepth} hop{connectionDepth !== 1 ? 's' : ''}
-              </Badge>
-            )}
-
             {/* Show highlight shared control */}
             <div className="flex items-center gap-2">
               <Checkbox
@@ -288,11 +223,8 @@ export default function CharacterJourneyView() {
             timeline={data.timeline}
             viewType="character-journey"
             onNodeClick={handleNodeClick}
-            onGraphDataChange={handleGraphDataChange}
             viewOptions={{
               characterId: characterId,
-              viewMode: viewMode,
-              expansionDepth: connectionDepth,
               characterFilters: characterFilters
             }}
           />
@@ -302,14 +234,6 @@ export default function CharacterJourneyView() {
           </div>
         )}
 
-        {/* Full Web Mode Indicator */}
-        {viewMode === 'filtered' && (
-          <div className="absolute top-4 right-4 z-10">
-            <Badge variant="secondary" className="bg-yellow-100 text-yellow-900 px-3 py-1.5">
-              Simplified View - Click &quot;Full Web&quot; above to see all connections
-            </Badge>
-          </div>
-        )}
 
         {/* Drag indicator */}
         {isDragging && (

@@ -14,6 +14,7 @@ import ErrorBoundary from '@/components/common/ErrorBoundary'
 const PuzzleFocusView = lazy(() => import('@/views/PuzzleFocusView'))
 const CharacterJourneyView = lazy(() => import('@/views/CharacterJourneyView'))
 const ContentStatusView = lazy(() => import('@/views/ContentStatusView'))
+const NodeConnectionsView = lazy(() => import('@/views/NodeConnectionsView'))
 
 /**
  * AppRouter component
@@ -74,6 +75,33 @@ export default function AppRouter() {
               </Suspense>
             }
           />
+          
+          <Route path="node-connections">
+            <Route
+              index
+              element={
+                <Suspense fallback={<LoadingSpinner message="Loading Node Connections..." />}>
+                  <NodeConnectionsView />
+                </Suspense>
+              }
+            />
+            <Route
+              path=":nodeType"
+              element={
+                <Suspense fallback={<LoadingSpinner message="Loading Node Connections..." />}>
+                  <NodeConnectionsView />
+                </Suspense>
+              }
+            />
+            <Route
+              path=":nodeType/:nodeId"
+              element={
+                <Suspense fallback={<LoadingSpinner message="Loading Node Details..." />}>
+                  <NodeConnectionsView />
+                </Suspense>
+              }
+            />
+          </Route>
           
           {/* 404 handler */}
           <Route path="*" element={<NotFound />} />

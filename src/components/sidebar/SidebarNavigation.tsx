@@ -9,7 +9,8 @@ import {
   Network, 
   Users, 
   CheckSquare, 
-  Clock
+  Clock,
+  Share2
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -32,6 +33,12 @@ const navItems: NavItem[] = [
     label: 'Character Journey',
     icon: Users,
     description: 'Track character ownership paths'
+  },
+  {
+    path: '/node-connections',
+    label: 'Node Connections',
+    icon: Share2,
+    description: 'Explore any entity\'s connections'
   },
   {
     path: '/status',

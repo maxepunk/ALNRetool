@@ -21,6 +21,7 @@ import { GraphDepthControl } from '../sidebar/GraphDepthControl';
 import { PuzzleFilters } from '../sidebar/PuzzleFilters';
 import { CharacterFilters } from '../sidebar/CharacterFilters';
 import { ContentFilters } from '../sidebar/ContentFilters';
+import { NodeConnectionsFilters } from '../sidebar/NodeConnectionsFilters';
 import { ActiveFiltersSummary } from '../sidebar/ActiveFiltersSummary';
 import { ThemeToggle } from '../sidebar/ThemeToggle';
 
@@ -34,6 +35,7 @@ export default function Sidebar() {
     puzzle: false,
     character: false,
     content: false,
+    nodeConnections: false,
   });
 
   // Update active view based on route
@@ -43,6 +45,8 @@ export default function Sidebar() {
       setActiveView('puzzle-focus');
     } else if (path.includes('character-journey')) {
       setActiveView('character-journey');
+    } else if (path.includes('node-connections')) {
+      setActiveView('node-connections');
     } else if (path.includes('status')) {
       setActiveView('content-status');
     } else {
@@ -54,7 +58,7 @@ export default function Sidebar() {
     toggleSidebar();
   }, [toggleSidebar]);
 
-  const handleToggleSection = useCallback((section: 'puzzle' | 'character' | 'content') => {
+  const handleToggleSection = useCallback((section: 'puzzle' | 'character' | 'content' | 'nodeConnections') => {
     setExpandedSections(prev => ({
       ...prev,
       [section]: !prev[section]
@@ -63,6 +67,7 @@ export default function Sidebar() {
   const showPuzzleFilters = location.pathname.includes('puzzles');
   const showCharacterFilters = location.pathname.includes('character-journey');
   const showContentFilters = location.pathname.includes('status');
+  const showNodeConnectionsFilters = location.pathname.includes('node-connections');
 
   const isOpen = !sidebarCollapsed; // Invert the logic for easier use
 
@@ -228,6 +233,21 @@ export default function Sidebar() {
                     isOpen={isOpen}
                     isExpanded={expandedSections.content}
                     onToggleExpanded={() => handleToggleSection('content')}
+                  />
+                </motion.div>
+              )}
+              
+              {showNodeConnectionsFilters && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <NodeConnectionsFilters
+                    isOpen={isOpen}
+                    isExpanded={expandedSections.nodeConnections}
+                    onToggleExpanded={() => handleToggleSection('nodeConnections')}
                   />
                 </motion.div>
               )}

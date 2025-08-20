@@ -215,14 +215,15 @@ export class GraphBuilder implements IGraphBuilder {
    */
   buildFullConnectionGraph(
     data: NotionData,
-    characterId: string,
+    nodeId: string,
+    nodeType: 'character' | 'puzzle' | 'element' | 'timeline',
     options: {
       maxDepth?: number;
       maxNodes?: number;
       expandedNodes?: Set<string>;
     } = {}
   ): GraphData {
-    console.log('🔍 buildFullConnectionGraph called with:', { characterId, options });
+    console.log('🔍 buildFullConnectionGraph called with:', { nodeId, nodeType, options });
     console.log('📊 Input data size:', {
       characters: data.characters.length,
       elements: data.elements.length,
@@ -247,23 +248,42 @@ export class GraphBuilder implements IGraphBuilder {
     type QueueItem = [string, number, 'character' | 'element' | 'puzzle' | 'timeline'];
     const queue: QueueItem[] = [];
     
-    // Find starting character
-    const startCharacter = data.characters.find(c => c.id === characterId);
-    if (!startCharacter) {
-      console.warn(`Character ${characterId} not found`);
+    // Find starting node based on type
+    let startNode: any = null;
+    let startNodeName = '';
+    
+    switch (nodeType) {
+      case 'character':
+        startNode = data.characters.find(c => c.id === nodeId);
+        startNodeName = startNode?.name || 'Unknown';
+        break;
+      case 'puzzle':
+        startNode = data.puzzles.find(p => p.id === nodeId);
+        startNodeName = startNode?.title || 'Unknown';
+        break;
+      case 'element':
+        startNode = data.elements.find(e => e.id === nodeId);
+        startNodeName = startNode?.title || 'Unknown';
+        break;
+      case 'timeline':
+        startNode = data.timeline.find(t => t.id === nodeId);
+        startNodeName = startNode?.title || `Event on ${startNode?.date}` || 'Unknown';
+        break;
+    }
+    
+    if (!startNode) {
+      console.warn(`${nodeType} ${nodeId} not found`);
       return { nodes: [], edges: [] };
     }
     
-    console.log('📊 Starting character found:', startCharacter.name, {
-      ownedElements: startCharacter.ownedElementIds?.length || 0
-    });
+    console.log(`📊 Starting ${nodeType} found:`, startNodeName);
     
-    // Initialize with starting character
-    queue.push([characterId, 0, 'character']);
-    visitedNodes.add(characterId);
-    nodesToInclude.add(characterId);
-    nodeDistances.set(characterId, 0);
-    depthDistribution.get(0)!.add(characterId);
+    // Initialize with starting node
+    queue.push([nodeId, 0, nodeType]);
+    visitedNodes.add(nodeId);
+    nodesToInclude.add(nodeId);
+    nodeDistances.set(nodeId, 0);
+    depthDistribution.get(0)!.add(nodeId);
     
     // Build relationship maps for efficient traversal
     const elementOwners = new Map<string, string[]>();
@@ -314,9 +334,9 @@ export class GraphBuilder implements IGraphBuilder {
     const fullDepthDistribution = new Map<number, Set<string>>();
     
     // Clone queue for full traversal
-    const fullQueue: QueueItem[] = [[characterId, 0, 'character']];
-    const fullVisited = new Set<string>([characterId]);
-    allReachableNodes.add(characterId);
+    const fullQueue: QueueItem[] = [[nodeId, 0, nodeType]];
+    const fullVisited = new Set<string>([nodeId]);
+    allReachableNodes.add(nodeId);
     
     // Do a complete BFS to find all reachable nodes
     while (fullQueue.length > 0) {
@@ -443,7 +463,7 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add owned elements
           (char.ownedElementIds || []).forEach(elemId => {
-            if (!visitedNodes.has(elemId) && nextDistance <= maxDepth) {
+            if (!visitedNodes.has(elemId) && nextDistance < maxDepth) {
               visitedNodes.add(elemId);
               nodesToInclude.add(elemId);
               nodeDistances.set(elemId, nextDistance);
@@ -454,7 +474,7 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add timeline events character participates in
           data.timeline.forEach(event => {
-            if (event.charactersInvolvedIds?.includes(currentId) && !visitedNodes.has(event.id) && nextDistance <= maxDepth) {
+            if (event.charactersInvolvedIds?.includes(currentId) && !visitedNodes.has(event.id) && nextDistance < maxDepth) {
               visitedNodes.add(event.id);
               nodesToInclude.add(event.id);
               nodeDistances.set(event.id, nextDistance);
@@ -477,7 +497,7 @@ export class GraphBuilder implements IGraphBuilder {
           const puzzles = elementPuzzles.get(currentId) || [];
           console.log(`     Connected puzzles: ${puzzles.length}`);
           puzzles.forEach(puzzleId => {
-            if (!visitedNodes.has(puzzleId) && nextDistance <= maxDepth) {
+            if (!visitedNodes.has(puzzleId) && nextDistance < maxDepth) {
               visitedNodes.add(puzzleId);
               nodesToInclude.add(puzzleId);
               nodeDistances.set(puzzleId, nextDistance);
@@ -488,7 +508,7 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add timeline event for this element
           const timelineId = elementTimelines.get(currentId);
-          if (timelineId && !visitedNodes.has(timelineId) && nextDistance <= maxDepth) {
+          if (timelineId && !visitedNodes.has(timelineId) && nextDistance < maxDepth) {
             visitedNodes.add(timelineId);
             nodesToInclude.add(timelineId);
             nodeDistances.set(timelineId, nextDistance);
@@ -499,7 +519,7 @@ export class GraphBuilder implements IGraphBuilder {
           // Add other characters who own this element
           const owners = elementOwners.get(currentId) || [];
           owners.forEach(ownerId => {
-            if (!visitedNodes.has(ownerId) && nextDistance <= maxDepth) {
+            if (!visitedNodes.has(ownerId) && nextDistance < maxDepth) {
               visitedNodes.add(ownerId);
               nodesToInclude.add(ownerId);
               nodeDistances.set(ownerId, nextDistance);
@@ -516,7 +536,7 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add all requirement and reward elements
           [...(puzzle.puzzleElementIds || []), ...(puzzle.rewardIds || [])].forEach(elemId => {
-            if (!visitedNodes.has(elemId) && nextDistance <= maxDepth) {
+            if (!visitedNodes.has(elemId) && nextDistance < maxDepth) {
               visitedNodes.add(elemId);
               nodesToInclude.add(elemId);
               nodeDistances.set(elemId, nextDistance);
@@ -533,7 +553,7 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add all involved characters
           (event.charactersInvolvedIds || []).forEach(charId => {
-            if (!visitedNodes.has(charId) && nextDistance <= maxDepth) {
+            if (!visitedNodes.has(charId) && nextDistance < maxDepth) {
               visitedNodes.add(charId);
               nodesToInclude.add(charId);
               nodeDistances.set(charId, nextDistance);
@@ -556,24 +576,68 @@ export class GraphBuilder implements IGraphBuilder {
         elements: Array.from(nodesToInclude).filter(id => data.elements.some(e => e.id === id)).length,
         puzzles: Array.from(nodesToInclude).filter(id => data.puzzles.some(p => p.id === id)).length,
         timeline: Array.from(nodesToInclude).filter(id => data.timeline.some(t => t.id === id)).length
+      },
+      missingFromData: Array.from(nodesToInclude).filter(id => 
+        !data.characters.some(c => c.id === id) &&
+        !data.elements.some(e => e.id === id) &&
+        !data.puzzles.some(p => p.id === id) &&
+        !data.timeline.some(t => t.id === id)
+      ).length
+    });
+    
+    // Transform only the discovered nodes directly
+    const allNodes: GraphNode[] = [];
+    
+    // Transform discovered characters
+    const discoveredCharacters = data.characters.filter(c => nodesToInclude.has(c.id));
+    allNodes.push(...entityTransformer.transformCharacters(discoveredCharacters));
+    
+    // Transform discovered elements
+    const discoveredElements = data.elements.filter(e => nodesToInclude.has(e.id));
+    allNodes.push(...entityTransformer.transformElements(discoveredElements));
+    
+    // Transform discovered puzzles
+    const discoveredPuzzles = data.puzzles.filter(p => nodesToInclude.has(p.id));
+    allNodes.push(...entityTransformer.transformPuzzles(discoveredPuzzles));
+    
+    // Transform discovered timeline events
+    const discoveredTimeline = data.timeline.filter(t => nodesToInclude.has(t.id));
+    allNodes.push(...entityTransformer.transformTimeline(discoveredTimeline));
+    
+    // Create a set of actual node IDs that we successfully transformed
+    const actualNodeIds = new Set(allNodes.map(node => node.id));
+    
+    // Create edges only between nodes that actually exist
+    const allEdges: GraphEdge[] = this.createEdgesForDiscoveredNodes(
+      data,
+      actualNodeIds,  // Use actual nodes, not discovered nodes
+      ['ownership', 'timeline', 'requirement', 'reward']
+    );
+    
+    // Build the graph structure with proper metadata
+    const startTime = performance.now();
+    const graph = {
+      nodes: allNodes,
+      edges: allEdges,
+      metadata: {
+        metrics: {
+          startTime,
+          endTime: 0, // Will be updated after layout
+          duration: 0, // Will be updated after layout
+          nodeCount: allNodes.length,
+          edgeCount: allEdges.length,
+          warnings: [],
+          layoutMetrics: {
+            width: 0,
+            height: 0,
+            density: allNodes.length > 0 ? allEdges.length / allNodes.length : 0,
+            overlap: 0
+          }
+        },
+        viewType: 'node-connections' as any,
+        timestamp: new Date().toISOString()
       }
-    });
-    
-    // Filter data to only include discovered entities
-    const filteredData: NotionData = {
-      characters: data.characters.filter(c => nodesToInclude.has(c.id)),
-      elements: data.elements.filter(e => nodesToInclude.has(e.id)),
-      puzzles: data.puzzles.filter(p => nodesToInclude.has(p.id)),
-      timeline: data.timeline.filter(t => nodesToInclude.has(t.id))
     };
-    
-    // Build graph with filtered data
-    const graph = this.buildGraphData(filteredData, {
-      viewType: 'character-journey' as any, // Use character-journey type for compatibility
-      filterRelationships: ['ownership', 'timeline', 'requirement', 'reward'],
-      includeOrphans: false,
-      layoutConfig: { algorithm: 'none' } as any // Skip layout initially
-    });
     
     // Add distance metadata to nodes for visual hierarchy
     graph.nodes = graph.nodes.map(node => ({
@@ -650,6 +714,29 @@ export class GraphBuilder implements IGraphBuilder {
       }
     };
     const graphWithLayout = layoutOrchestrator.applyLayout(graph, layoutConfig);
+    
+    // Update metadata with layout results
+    const endTime = performance.now();
+    graphWithLayout.metadata = {
+      ...graphWithLayout.metadata,
+      metrics: {
+        startTime: graphWithLayout.metadata?.metrics?.startTime || startTime,
+        endTime,
+        duration: endTime - (graphWithLayout.metadata?.metrics?.startTime || startTime),
+        nodeCount: graphWithLayout.metadata?.metrics?.nodeCount || graphWithLayout.nodes.length,
+        edgeCount: graphWithLayout.metadata?.metrics?.edgeCount || graphWithLayout.edges.length,
+        warnings: graphWithLayout.metadata?.metrics?.warnings,
+        layoutMetrics: {
+          width: Math.max(...graphWithLayout.nodes.map(n => n.position?.x || 0)) - 
+                 Math.min(...graphWithLayout.nodes.map(n => n.position?.x || 0)),
+          height: Math.max(...graphWithLayout.nodes.map(n => n.position?.y || 0)) - 
+                  Math.min(...graphWithLayout.nodes.map(n => n.position?.y || 0)),
+          density: graphWithLayout.nodes.length > 0 ? 
+                   graphWithLayout.edges.length / graphWithLayout.nodes.length : 0,
+          overlap: 0
+        }
+      }
+    };
     
     console.log('📐 Force layout applied to Full Connection Web:', {
       nodeCount: graphWithLayout.nodes.length,
@@ -855,6 +942,107 @@ export class GraphBuilder implements IGraphBuilder {
       viewType: 'content-status',
       includeOrphans: true,
     });
+  }
+
+  /**
+   * Create edges only between discovered nodes
+   * This avoids creating broken relationships when entities are missing
+   */
+  private createEdgesForDiscoveredNodes(
+    data: NotionData,
+    discoveredNodeIds: Set<string>,
+    relationshipTypes: string[]
+  ): GraphEdge[] {
+    const edges: GraphEdge[] = [];
+    const edgeIdSet = new Set<string>();
+    
+    // Helper to add edge if both nodes are discovered
+    const addEdge = (source: string, target: string, type: string, metadata?: any) => {
+      if (discoveredNodeIds.has(source) && discoveredNodeIds.has(target)) {
+        const edgeId = `${type}-${source}-${target}`;
+        if (!edgeIdSet.has(edgeId)) {
+          edgeIdSet.add(edgeId);
+          edges.push({
+            id: edgeId,
+            source,
+            target,
+            type,
+            data: {
+              relationshipType: type,
+              ...metadata
+            }
+          });
+        }
+      }
+    };
+    
+    // Create ownership edges (Character -> Element)
+    if (relationshipTypes.includes('ownership')) {
+      data.characters.forEach(character => {
+        if (discoveredNodeIds.has(character.id)) {
+          (character.ownedElementIds || []).forEach(elementId => {
+            addEdge(character.id, elementId, 'ownership', {
+              ownerName: character.name,
+              ownerTier: character.tier
+            });
+          });
+        }
+      });
+    }
+    
+    // Create requirement edges (Puzzle -> Element)
+    if (relationshipTypes.includes('requirement')) {
+      data.puzzles.forEach(puzzle => {
+        if (discoveredNodeIds.has(puzzle.id)) {
+          (puzzle.puzzleElementIds || []).forEach(elementId => {
+            addEdge(puzzle.id, elementId, 'requirement', {
+              puzzleName: puzzle.name,
+              puzzleTiming: puzzle.timing
+            });
+          });
+        }
+      });
+    }
+    
+    // Create reward edges (Puzzle -> Element)
+    if (relationshipTypes.includes('reward')) {
+      data.puzzles.forEach(puzzle => {
+        if (discoveredNodeIds.has(puzzle.id)) {
+          (puzzle.rewardIds || []).forEach(elementId => {
+            addEdge(puzzle.id, elementId, 'reward', {
+              puzzleName: puzzle.name,
+              puzzleTiming: puzzle.timing
+            });
+          });
+        }
+      });
+    }
+    
+    // Create timeline edges (Element -> Timeline)
+    if (relationshipTypes.includes('timeline')) {
+      data.elements.forEach(element => {
+        if (discoveredNodeIds.has(element.id) && element.timelineEventId) {
+          addEdge(element.id, element.timelineEventId, 'timeline', {
+            elementName: element.name
+          });
+        }
+      });
+      
+      // Also create edges from Timeline -> Character for character involvement
+      data.timeline.forEach(event => {
+        if (discoveredNodeIds.has(event.id)) {
+          (event.charactersInvolvedIds || []).forEach(charId => {
+            addEdge(event.id, charId, 'timeline', {
+              eventTitle: event.name || `Event on ${event.date}`,
+              eventDate: event.date
+            });
+          });
+        }
+      });
+    }
+    
+    console.log(`Created ${edges.length} edges between ${discoveredNodeIds.size} discovered nodes`);
+    return edges;
   }
 
   /**
