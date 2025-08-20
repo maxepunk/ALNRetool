@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useEffect, useState } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -60,6 +60,8 @@ const nodeTypes: NodeTypes = {
 // Use our custom edge types for different relationship types
 const edgeTypes: EdgeTypes = customEdgeTypes;
 
+import type { DepthMetadata } from '@/lib/graph/types';
+
 interface GraphViewProps {
   characters: Character[];
   elements: Element[];
@@ -68,7 +70,7 @@ interface GraphViewProps {
   viewType?: ViewType;
   onNodeClick?: (node: Node) => void;
   onSelectionChange?: (params: OnSelectionChangeParams) => void;
-  onGraphDataChange?: (data: { nodes: Node[]; edges: any[] }) => void;
+  onGraphDataChange?: (data: { nodes: Node[]; edges: any[]; depthMetadata?: DepthMetadata }) => void;
   // View-specific options
   viewOptions?: {
     characterId?: string; // For character-journey view
@@ -148,6 +150,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
       case 'character-journey':
         // Use full connection web if specified, otherwise use filtered journey
         if (viewOptions.viewMode === 'full-web' && viewOptions.characterId) {
+          console.log('📍 GraphView: Building full web with expansionDepth:', viewOptions.expansionDepth);
           graph = buildFullConnectionGraph(notionData, viewOptions.characterId, {
             maxDepth: viewOptions.expansionDepth || 3,  // Reduced default from 10 to 3 hops
             maxNodes: 250
@@ -239,12 +242,13 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
     onSelectionChange,
   });
   
-  // Pass nodes and edges to parent for animation context
+  // Pass nodes, edges, and depth metadata to parent for animation context and UI feedback
   useEffect(() => {
     if (onGraphDataChange && nodes.length > 0) {
-      onGraphDataChange({ nodes, edges });
+      console.log('🎯 GraphView: Calling onGraphDataChange with depthMetadata:', graphData.depthMetadata);
+      onGraphDataChange({ nodes, edges, depthMetadata: graphData.depthMetadata });
     }
-  }, [nodes, edges, onGraphDataChange]);
+  }, [nodes, edges, graphData.depthMetadata, onGraphDataChange]);
   
   
   // Memoize nodeTypes and edgeTypes to prevent React Flow re-initialization
@@ -268,137 +272,123 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   }, []);
   
   return (
-    <div className="w-full h-full relative bg-gray-50">
-      {/* Graph Controls for Zoom and Layout */}
-      <GraphControls />
-      
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={handleConnect}
-        onNodeClick={handleNodeClick}
-        onNodeMouseEnter={handleNodeMouseEnter}
-        onNodeMouseLeave={handleNodeMouseLeave}
-        onSelectionChange={handleSelectionChange}
-        nodeTypes={memoizedNodeTypes}
-        edgeTypes={memoizedEdgeTypes}
-        fitView
-        attributionPosition="bottom-left"
-        style={{ width: '100%', height: '100%' }}
-      >
-        {/* SVG Marker Definitions for Edge Arrows */}
-        <svg style={{ position: 'absolute', width: 0, height: 0 }}>
-          <defs>
-            <marker
-              id="arrowclosed"
-              viewBox="0 0 20 20"
-              refX="19"
-              refY="10"
-              markerWidth="20"
-              markerHeight="20"
-              orient="auto"
-            >
-              <path
-                d="M 2 2 L 18 10 L 2 18 Z"
-                fill="currentColor"
-                stroke="currentColor"
-                strokeWidth="1"
-              />
-            </marker>
-            <marker
-              id="arrow"
-              viewBox="0 0 20 20"
-              refX="19"
-              refY="10"
-              markerWidth="15"
-              markerHeight="15"
-              orient="auto"
-            >
-              <path
-                d="M 2 2 L 18 10 L 2 18"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              />
-            </marker>
-          </defs>
-        </svg>
+    <GraphAnimationProvider edges={edges}>
+      <div className="w-full h-full relative bg-gray-50">
+        {/* Graph Controls for Zoom and Layout */}
+        <GraphControls />
         
-        <Background 
-          variant={BackgroundVariant.Dots} 
-          gap={12} 
-          size={1} 
-          color="#e5e7eb"
-        />
-        <Controls />
-        <MiniMap 
-          nodeColor={nodeColor}
-          nodeStrokeWidth={3}
-          pannable
-          zoomable
-        />
-      </ReactFlow>
-      
-      {/* Stats overlay */}
-      <div className="absolute top-5 right-5 bg-white rounded-lg px-4 py-3 shadow-lg flex gap-5 z-10 text-sm">
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-500 font-medium">Nodes:</span>
-          <span className="text-gray-900 font-semibold">
-            {nodes.length}
-            {(filterState.searchTerm || filterState.selectedActs.size > 0 || filterState.selectedPuzzleId) && 
-              <span className="text-gray-400">/{graphData.nodes.length}</span>
-            }
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-500 font-medium">Edges:</span>
-          <span className="text-gray-900 font-semibold">
-            {edges.length}
-            {(filterState.searchTerm || filterState.selectedActs.size > 0 || filterState.selectedPuzzleId) && 
-              <span className="text-gray-400">/{graphData.edges.length}</span>
-            }
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-gray-500 font-medium">View:</span>
-          <span className="text-gray-900 font-semibold">{viewType}</span>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={handleConnect}
+          onNodeClick={handleNodeClick}
+          onNodeMouseEnter={handleNodeMouseEnter}
+          onNodeMouseLeave={handleNodeMouseLeave}
+          onSelectionChange={handleSelectionChange}
+          nodeTypes={memoizedNodeTypes}
+          edgeTypes={memoizedEdgeTypes}
+          fitView
+          attributionPosition="bottom-left"
+          style={{ width: '100%', height: '100%' }}
+        >
+          {/* SVG Marker Definitions for Edge Arrows */}
+          <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+            <defs>
+              <marker
+                id="arrowclosed"
+                viewBox="0 0 20 20"
+                refX="19"
+                refY="10"
+                markerWidth="20"
+                markerHeight="20"
+                orient="auto"
+              >
+                <path
+                  d="M 2 2 L 18 10 L 2 18 Z"
+                  fill="currentColor"
+                  stroke="currentColor"
+                  strokeWidth="1"
+                />
+              </marker>
+              <marker
+                id="arrow"
+                viewBox="0 0 20 20"
+                refX="19"
+                refY="10"
+                markerWidth="15"
+                markerHeight="15"
+                orient="auto"
+              >
+                <path
+                  d="M 2 2 L 18 10 L 2 18"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                />
+              </marker>
+            </defs>
+          </svg>
+          
+          <Background 
+            variant={BackgroundVariant.Dots} 
+            gap={12} 
+            size={1} 
+            color="#e5e7eb"
+          />
+          <Controls />
+          <MiniMap 
+            nodeColor={nodeColor}
+            nodeStrokeWidth={3}
+            pannable
+            zoomable
+          />
+        </ReactFlow>
+        
+        {/* Stats overlay */}
+        <div className="absolute top-5 right-5 bg-white rounded-lg px-4 py-3 shadow-lg flex gap-5 z-10 text-sm">
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-500 font-medium">Nodes:</span>
+            <span className="text-gray-900 font-semibold">
+              {nodes.length}
+              {(filterState.searchTerm || filterState.selectedActs.size > 0 || filterState.selectedPuzzleId) && 
+                <span className="text-gray-400">/{graphData.nodes.length}</span>
+              }
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-500 font-medium">Edges:</span>
+            <span className="text-gray-900 font-semibold">
+              {edges.length}
+              {(filterState.searchTerm || filterState.selectedActs.size > 0 || filterState.selectedPuzzleId) && 
+                <span className="text-gray-400">/{graphData.edges.length}</span>
+              }
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-gray-500 font-medium">View:</span>
+            <span className="text-gray-900 font-semibold">{viewType}</span>
+          </div>
         </div>
       </div>
-    </div>
+    </GraphAnimationProvider>
   );
 };
 
 /**
  * GraphView component wrapped with necessary providers
  * ReactFlowProvider is needed for React Flow hooks
- * GraphAnimationProvider manages unified animation state
+ * GraphAnimationProvider (now inside GraphViewInner) manages unified animation state
  * GraphErrorBoundary catches and handles rendering errors
  */
 const GraphView: React.FC<GraphViewProps> = (props) => {
   return (
     <GraphErrorBoundary>
       <ReactFlowProvider>
-        <GraphViewWithAnimation {...props} />
+        <GraphViewInner {...props} />
       </ReactFlowProvider>
     </GraphErrorBoundary>
-  );
-};
-
-/**
- * Intermediate component that provides animation context
- * This needs to be inside ReactFlowProvider to access nodes/edges
- */
-const GraphViewWithAnimation: React.FC<GraphViewProps> = (props) => {
-  // This component will wrap GraphViewInner with GraphAnimationProvider
-  // We need to render GraphViewInner first to get nodes/edges, then provide them to the context
-  const [graphData, setGraphData] = useState<{ nodes: Node[]; edges: any[] }>({ nodes: [], edges: [] });
-  
-  return (
-    <GraphAnimationProvider nodes={graphData.nodes} edges={graphData.edges}>
-      <GraphViewInner {...props} onGraphDataChange={setGraphData} />
-    </GraphAnimationProvider>
   );
 };
 

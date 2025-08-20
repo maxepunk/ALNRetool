@@ -17,6 +17,7 @@ import { useFilterStore } from '@/stores/filterStore';
 // Import all sub-components
 import { SidebarNavigation } from '../sidebar/SidebarNavigation';
 import { SidebarSearch } from '../sidebar/SidebarSearch';
+import { GraphDepthControl } from '../sidebar/GraphDepthControl';
 import { PuzzleFilters } from '../sidebar/PuzzleFilters';
 import { CharacterFilters } from '../sidebar/CharacterFilters';
 import { ContentFilters } from '../sidebar/ContentFilters';
@@ -155,6 +156,17 @@ export default function Sidebar() {
             transition={{ delay: 0.1 }}
           >
             <SidebarSearch isOpen={isOpen} />
+          </motion.div>
+          
+          <Separator className="my-2 opacity-50" />
+          
+          {/* Graph Depth Control - Universal for all views */}
+          <motion.div
+            className="px-3 py-2"
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.12 }}
+          >
+            <GraphDepthControl isOpen={isOpen} />
           </motion.div>
           
           <Separator className="my-2 opacity-50" />

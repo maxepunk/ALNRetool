@@ -16,8 +16,6 @@ import {
   Menu, 
   X, 
   PanelLeft,
-  Sun,
-  Moon,
   Search,
   Bell,
   User
@@ -32,12 +30,6 @@ export default function AppLayout() {
   const [headerMinimized, setHeaderMinimized] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isNavigationPending] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
-    }
-    return false
-  })
   
   const location = useLocation()
   const isOnline = useOnlineStatus()
@@ -82,25 +74,12 @@ export default function AppLayout() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Apply dark mode
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [isDarkMode])
-
   // Close mobile menu on navigation
   useEffect(() => {
     if (isMobile) {
       setLeftSidebarOpen(false)
     }
   }, [location, isMobile])
-
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode)
-  }
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -250,39 +229,6 @@ export default function AppLayout() {
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>3 new notifications</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            
-            {/* Dark mode toggle */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleDarkMode}
-                    aria-label={isDarkMode ? "Switch to light mode" : "Switch to dark mode"}
-                    className="text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-                  >
-                    <motion.div
-                      initial={{ rotate: 0, scale: 1 }}
-                      animate={{ 
-                        rotate: isDarkMode ? 360 : 0,
-                        scale: isDarkMode ? [1, 1.2, 1] : [1, 0.8, 1]
-                      }}
-                      transition={{ 
-                        duration: 0.5, 
-                        ease: "easeInOut",
-                        scale: { duration: 0.3 }
-                      }}
-                    >
-                      {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
-                    </motion.div>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>{isDarkMode ? "Light mode" : "Dark mode"}</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

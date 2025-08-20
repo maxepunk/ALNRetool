@@ -230,11 +230,18 @@ export class GraphBuilder implements IGraphBuilder {
       timeline: data.timeline.length
     });
     const { maxDepth = 10, maxNodes = 250, expandedNodes = new Set() } = options;
+    console.log('🎯 ACTUAL maxDepth being used:', maxDepth);
     
     // Initialize collections for BFS
     const visitedNodes = new Set<string>();
     const nodesToInclude = new Set<string>();
     const nodeDistances = new Map<string, number>();
+    
+    // Initialize depth tracking for metadata
+    const depthDistribution = new Map<number, Set<string>>();
+    for (let i = 0; i <= maxDepth; i++) {
+      depthDistribution.set(i, new Set<string>());
+    }
     
     // Queue for BFS: [nodeId, distance, entityType]
     type QueueItem = [string, number, 'character' | 'element' | 'puzzle' | 'timeline'];
@@ -256,6 +263,7 @@ export class GraphBuilder implements IGraphBuilder {
     visitedNodes.add(characterId);
     nodesToInclude.add(characterId);
     nodeDistances.set(characterId, 0);
+    depthDistribution.get(0)!.add(characterId);
     
     // Build relationship maps for efficient traversal
     const elementOwners = new Map<string, string[]>();
@@ -300,27 +308,119 @@ export class GraphBuilder implements IGraphBuilder {
       }
     });
     
-    // BFS traversal
-    let nodesProcessed = 0;
-    console.log('🚀 Starting BFS traversal with queue:', queue.length, 'items');
-    console.log('📊 Relationship maps built:', {
-      elementOwners: elementOwners.size,
-      puzzleRequirements: puzzleRequirements.size,
-      puzzleRewards: puzzleRewards.size,
-      elementPuzzles: elementPuzzles.size,
-      timelineCharacters: timelineCharacters.size,
-      elementTimelines: elementTimelines.size
+    // BFS traversal - first pass to discover ALL reachable nodes
+    let allReachableNodes = new Set<string>();
+    let maxReachableDepth = 0;
+    const fullDepthDistribution = new Map<number, Set<string>>();
+    
+    // Clone queue for full traversal
+    const fullQueue: QueueItem[] = [[characterId, 0, 'character']];
+    const fullVisited = new Set<string>([characterId]);
+    allReachableNodes.add(characterId);
+    
+    // Do a complete BFS to find all reachable nodes
+    while (fullQueue.length > 0) {
+      const [currentId, distance, entityType] = fullQueue.shift()!;
+      maxReachableDepth = Math.max(maxReachableDepth, distance);
+      
+      if (!fullDepthDistribution.has(distance)) {
+        fullDepthDistribution.set(distance, new Set<string>());
+      }
+      fullDepthDistribution.get(distance)!.add(currentId);
+      
+      const nextDistance = distance + 1;
+      
+      // Process based on entity type (simplified version for discovery)
+      switch (entityType) {
+        case 'character': {
+          const char = data.characters.find(c => c.id === currentId);
+          if (char) {
+            (char.ownedElementIds || []).forEach(elemId => {
+              if (!fullVisited.has(elemId)) {
+                fullVisited.add(elemId);
+                allReachableNodes.add(elemId);
+                fullQueue.push([elemId, nextDistance, 'element']);
+              }
+            });
+            data.timeline.forEach(event => {
+              if (event.charactersInvolvedIds?.includes(currentId) && !fullVisited.has(event.id)) {
+                fullVisited.add(event.id);
+                allReachableNodes.add(event.id);
+                fullQueue.push([event.id, nextDistance, 'timeline']);
+              }
+            });
+          }
+          break;
+        }
+        case 'element': {
+          const puzzles = elementPuzzles.get(currentId) || [];
+          puzzles.forEach(puzzleId => {
+            if (!fullVisited.has(puzzleId)) {
+              fullVisited.add(puzzleId);
+              allReachableNodes.add(puzzleId);
+              fullQueue.push([puzzleId, nextDistance, 'puzzle']);
+            }
+          });
+          const timelineId = elementTimelines.get(currentId);
+          if (timelineId && !fullVisited.has(timelineId)) {
+            fullVisited.add(timelineId);
+            allReachableNodes.add(timelineId);
+            fullQueue.push([timelineId, nextDistance, 'timeline']);
+          }
+          const owners = elementOwners.get(currentId) || [];
+          owners.forEach(ownerId => {
+            if (!fullVisited.has(ownerId)) {
+              fullVisited.add(ownerId);
+              allReachableNodes.add(ownerId);
+              fullQueue.push([ownerId, nextDistance, 'character']);
+            }
+          });
+          break;
+        }
+        case 'puzzle': {
+          const puzzle = data.puzzles.find(p => p.id === currentId);
+          if (puzzle) {
+            [...(puzzle.puzzleElementIds || []), ...(puzzle.rewardIds || [])].forEach(elemId => {
+              if (!fullVisited.has(elemId)) {
+                fullVisited.add(elemId);
+                allReachableNodes.add(elemId);
+                fullQueue.push([elemId, nextDistance, 'element']);
+              }
+            });
+          }
+          break;
+        }
+        case 'timeline': {
+          const event = data.timeline.find(t => t.id === currentId);
+          if (event) {
+            (event.charactersInvolvedIds || []).forEach(charId => {
+              if (!fullVisited.has(charId)) {
+                fullVisited.add(charId);
+                allReachableNodes.add(charId);
+                fullQueue.push([charId, nextDistance, 'character']);
+              }
+            });
+          }
+          break;
+        }
+      }
+    }
+    
+    console.log('📊 Full network discovered:', {
+      totalReachableNodes: allReachableNodes.size,
+      maxReachableDepth,
+      depthDistribution: Array.from(fullDepthDistribution.entries()).map(([d, nodes]) => 
+        `Depth ${d}: ${nodes.size} nodes`
+      )
     });
+    
+    // Now do the limited BFS traversal
+    let nodesProcessed = 0;
+    console.log('🚀 Starting limited BFS traversal with maxDepth:', maxDepth);
     
     while (queue.length > 0 && nodesProcessed < maxNodes) {
       const [currentId, distance, entityType] = queue.shift()!;
       console.log(`⏳ Processing: ${entityType} ${currentId} at distance ${distance}`);
-      
-      // Check depth limit
-      if (distance >= maxDepth) {
-        console.log(`  ⛔ Skipping - reached max depth ${maxDepth}`);
-        continue;
-      }
       
       // Progressive loading: Skip if node not expanded (unless within initial depth)
       if (distance > 2 && expandedNodes.size > 0 && !expandedNodes.has(currentId)) {
@@ -343,20 +443,22 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add owned elements
           (char.ownedElementIds || []).forEach(elemId => {
-            if (!visitedNodes.has(elemId)) {
+            if (!visitedNodes.has(elemId) && nextDistance <= maxDepth) {
               visitedNodes.add(elemId);
               nodesToInclude.add(elemId);
               nodeDistances.set(elemId, nextDistance);
+              depthDistribution.get(nextDistance)?.add(elemId);
               queue.push([elemId, nextDistance, 'element']);
             }
           });
           
           // Add timeline events character participates in
           data.timeline.forEach(event => {
-            if (event.charactersInvolvedIds?.includes(currentId) && !visitedNodes.has(event.id)) {
+            if (event.charactersInvolvedIds?.includes(currentId) && !visitedNodes.has(event.id) && nextDistance <= maxDepth) {
               visitedNodes.add(event.id);
               nodesToInclude.add(event.id);
               nodeDistances.set(event.id, nextDistance);
+              depthDistribution.get(nextDistance)?.add(event.id);
               queue.push([event.id, nextDistance, 'timeline']);
             }
           });
@@ -375,30 +477,33 @@ export class GraphBuilder implements IGraphBuilder {
           const puzzles = elementPuzzles.get(currentId) || [];
           console.log(`     Connected puzzles: ${puzzles.length}`);
           puzzles.forEach(puzzleId => {
-            if (!visitedNodes.has(puzzleId)) {
+            if (!visitedNodes.has(puzzleId) && nextDistance <= maxDepth) {
               visitedNodes.add(puzzleId);
               nodesToInclude.add(puzzleId);
               nodeDistances.set(puzzleId, nextDistance);
+              depthDistribution.get(nextDistance)?.add(puzzleId);
               queue.push([puzzleId, nextDistance, 'puzzle']);
             }
           });
           
           // Add timeline event for this element
           const timelineId = elementTimelines.get(currentId);
-          if (timelineId && !visitedNodes.has(timelineId)) {
+          if (timelineId && !visitedNodes.has(timelineId) && nextDistance <= maxDepth) {
             visitedNodes.add(timelineId);
             nodesToInclude.add(timelineId);
             nodeDistances.set(timelineId, nextDistance);
+            depthDistribution.get(nextDistance)?.add(timelineId);
             queue.push([timelineId, nextDistance, 'timeline']);
           }
           
           // Add other characters who own this element
           const owners = elementOwners.get(currentId) || [];
           owners.forEach(ownerId => {
-            if (!visitedNodes.has(ownerId)) {
+            if (!visitedNodes.has(ownerId) && nextDistance <= maxDepth) {
               visitedNodes.add(ownerId);
               nodesToInclude.add(ownerId);
               nodeDistances.set(ownerId, nextDistance);
+              depthDistribution.get(nextDistance)?.add(ownerId);
               queue.push([ownerId, nextDistance, 'character']);
             }
           });
@@ -411,10 +516,11 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add all requirement and reward elements
           [...(puzzle.puzzleElementIds || []), ...(puzzle.rewardIds || [])].forEach(elemId => {
-            if (!visitedNodes.has(elemId)) {
+            if (!visitedNodes.has(elemId) && nextDistance <= maxDepth) {
               visitedNodes.add(elemId);
               nodesToInclude.add(elemId);
               nodeDistances.set(elemId, nextDistance);
+              depthDistribution.get(nextDistance)?.add(elemId);
               queue.push([elemId, nextDistance, 'element']);
             }
           });
@@ -427,10 +533,11 @@ export class GraphBuilder implements IGraphBuilder {
           
           // Add all involved characters
           (event.charactersInvolvedIds || []).forEach(charId => {
-            if (!visitedNodes.has(charId)) {
+            if (!visitedNodes.has(charId) && nextDistance <= maxDepth) {
               visitedNodes.add(charId);
               nodesToInclude.add(charId);
               nodeDistances.set(charId, nextDistance);
+              depthDistribution.get(nextDistance)?.add(charId);
               queue.push([charId, nextDistance, 'character']);
             }
           });
@@ -550,7 +657,23 @@ export class GraphBuilder implements IGraphBuilder {
       hasPositions: graphWithLayout.nodes[0]?.position ? true : false
     });
     
-    return graphWithLayout;
+    // Create depth metadata
+    const depthMetadata = {
+      depthDistribution: new Map(Array.from(depthDistribution.entries()).map(([depth, nodes]) => 
+        [depth, nodes.size]
+      )),
+      maxReachableDepth,
+      totalReachableNodes: allReachableNodes.size,
+      isCompleteNetwork: nodesToInclude.size === allReachableNodes.size,
+      nodesAtCurrentDepth: nodesToInclude.size,
+      currentDepthLimit: maxDepth
+    };
+    
+    // Add metadata to the graph
+    return {
+      ...graphWithLayout,
+      depthMetadata
+    };
   }
 
   /**

@@ -190,17 +190,17 @@ export const charactersApi = {
   /**
    * Fetch all characters (handles pagination internally)
    */
-  listAll: async (): Promise<Character[]> => {
+  listAll: async (filters?: CharacterFilterParams): Promise<Character[]> => {
     const allCharacters: Character[] = [];
     let cursor: string | undefined;
     let hasMore = true;
     let pageCount = 0;
 
-    console.log('[charactersApi.listAll] Starting to fetch all characters');
+    console.log('[charactersApi.listAll] Starting to fetch all characters', filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
-      const response = await charactersApi.list({ limit: 100, cursor });
+      const response = await charactersApi.list({ ...filters, limit: 100, cursor });
       console.log(`[charactersApi.listAll] Page ${pageCount}: ${response.data.length} items, hasMore: ${response.hasMore}`);
       
       allCharacters.push(...response.data);
@@ -241,19 +241,19 @@ export const elementsApi = {
   /**
    * Fetch all elements (handles pagination internally)
    */
-  listAll: async (): Promise<Element[]> => {
+  listAll: async (filters?: ElementFilterParams): Promise<Element[]> => {
     const allElements: Element[] = [];
     let cursor: string | undefined;
     let hasMore = true;
     let pageCount = 0;
 
-    console.log('[elementsApi.listAll] Starting to fetch all elements');
+    console.log('[elementsApi.listAll] Starting to fetch all elements', filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
       console.log(`[elementsApi.listAll] Fetching page ${pageCount}, cursor: ${cursor || 'none'}`);
       
-      const response = await elementsApi.list({ limit: 100, cursor });
+      const response = await elementsApi.list({ ...filters, limit: 100, cursor });
       console.log(`[elementsApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
       
       allElements.push(...response.data);
@@ -312,13 +312,13 @@ export const puzzlesApi = {
   /**
    * Fetch all puzzles (handles pagination internally)
    */
-  listAll: async (): Promise<Puzzle[]> => {
+  listAll: async (filters?: PuzzleFilterParams): Promise<Puzzle[]> => {
     const allPuzzles: Puzzle[] = [];
     let cursor: string | undefined;
     let hasMore = true;
 
     while (hasMore) {
-      const response = await puzzlesApi.list({ limit: 100, cursor });
+      const response = await puzzlesApi.list({ ...filters, limit: 100, cursor });
       allPuzzles.push(...response.data);
       cursor = response.nextCursor || undefined;
       hasMore = response.hasMore;
@@ -356,19 +356,19 @@ export const timelineApi = {
   /**
    * Fetch all timeline events (handles pagination internally)
    */
-  listAll: async (): Promise<TimelineEvent[]> => {
+  listAll: async (filters?: PaginationParams): Promise<TimelineEvent[]> => {
     const allEvents: TimelineEvent[] = [];
     let cursor: string | undefined;
     let hasMore = true;
     let pageCount = 0;
 
-    console.log('[timelineApi.listAll] Starting to fetch all timeline events');
+    console.log('[timelineApi.listAll] Starting to fetch all timeline events', filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
       console.log(`[timelineApi.listAll] Fetching page ${pageCount}, cursor: ${cursor || 'none'}`);
       
-      const response = await timelineApi.list({ limit: 100, cursor });
+      const response = await timelineApi.list({ ...filters, limit: 100, cursor });
       console.log(`[timelineApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
       
       allEvents.push(...response.data);
@@ -436,25 +436,39 @@ export const cacheApi = {
 };
 
 /**
+ * Combined filter parameters for synthesized endpoint
+ */
+export interface SynthesizedFilterParams {
+  // Element filters
+  elementStatus?: string;
+  elementLastEdited?: string;
+  
+  // Puzzle filters (limited by Notion API)
+  puzzleLastEdited?: string;
+}
+
+/**
  * Synthesized data API - returns all entities with bidirectional relationships
  */
 export const synthesizedApi = {
   /**
    * Fetch all entities with synthesized bidirectional relationships
    */
-  getAll: async (): Promise<{
+  getAll: async (filters?: SynthesizedFilterParams): Promise<{
     elements: Element[];
     puzzles: Puzzle[];
     totalElements: number;
     totalPuzzles: number;
   }> => {
-    console.log('[synthesizedApi.getAll] Fetching synthesized data...');
+    const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : '';
+    console.log('[synthesizedApi.getAll] Fetching synthesized data...', filters ? `with filters: ${queryString}` : 'no filters');
+    
     const result = await fetcher<{
       elements: Element[];
       puzzles: Puzzle[];
       totalElements: number;
       totalPuzzles: number;
-    }>('/notion/synthesized');
+    }>(`/notion/synthesized${queryString}`);
     
     console.log(`[synthesizedApi.getAll] Complete. Elements: ${result.totalElements}, Puzzles: ${result.totalPuzzles}`);
     

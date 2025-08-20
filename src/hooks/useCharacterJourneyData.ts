@@ -3,7 +3,13 @@ import { useMemo } from 'react';
 import { charactersApi, synthesizedApi, timelineApi } from '@/services/api';
 import { useFilterStore } from '@/stores/filterStore';
 import { applyCharacterJourneyFilters } from '@/lib/filters';
+import { 
+  extractServerSideFilters, 
+  extractClientSideFilters,
+  createFilterCacheKey
+} from '@/lib/filters/filterClassifier';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
+import type { SynthesizedFilterParams } from '@/services/api';
 
 export interface CharacterJourneyData {
   characters: Character[];
@@ -15,7 +21,11 @@ export interface CharacterJourneyData {
 /**
  * Hook to fetch all data needed for CharacterJourneyView
  * Combines synthesized data (for bidirectional relationships) with characters and timeline
- * Now applies filters from filterStore to the fetched data
+ * 
+ * NEW: Implements hybrid filtering approach
+ * - Server-side filters are passed to API and included in cache key
+ * - Client-side filters are applied post-fetch for instant UI updates
+ * - This reduces data transfer and improves cache efficiency
  */
 export function useCharacterJourneyData() {
   // Get filters from store
@@ -24,22 +34,49 @@ export function useCharacterJourneyData() {
   const puzzleFilters = useFilterStore(state => state.puzzleFilters);
   const contentFilters = useFilterStore(state => state.contentFilters);
   
-  // Fetch base data
+  // Extract server-side and client-side filters
+  const serverFilters = useMemo(() => 
+    extractServerSideFilters(characterFilters, puzzleFilters, contentFilters),
+    [characterFilters, puzzleFilters, contentFilters]
+  );
+  
+  // Create cache key from server-side filters
+  const filterCacheKey = useMemo(() => 
+    createFilterCacheKey(serverFilters),
+    [serverFilters]
+  );
+  
+  // Prepare synthesized API filters
+  const synthesizedFilters: SynthesizedFilterParams | undefined = useMemo(() => {
+    const hasFilters = serverFilters.elements.status || serverFilters.elements.lastEdited;
+    if (!hasFilters) return undefined;
+    
+    return {
+      elementStatus: serverFilters.elements.status,
+      elementLastEdited: serverFilters.elements.lastEdited,
+      // Puzzle filters are limited by Notion API
+      puzzleLastEdited: serverFilters.puzzles.lastEdited,
+    };
+  }, [serverFilters]);
+  
+  // Fetch data with server-side filters applied
   const query = useQuery({
-    queryKey: ['characterJourney', 'all-data'],
+    // Include server-side filters in cache key for granular caching
+    queryKey: ['characterJourney', 'hybrid-filtered', filterCacheKey],
     queryFn: async (): Promise<CharacterJourneyData> => {
-      console.log('[useCharacterJourneyData] Fetching all data for character journey...');
+      console.log('[useCharacterJourneyData] Fetching with hybrid filtering...');
+      console.log('[useCharacterJourneyData] Server-side filters:', serverFilters);
       
-      // Fetch all data in parallel
+      // Fetch data with server-side filters applied
       const [synthesized, characters, timeline] = await Promise.all([
-        synthesizedApi.getAll(),
-        charactersApi.listAll(),
-        timelineApi.listAll(),
+        synthesizedApi.getAll(synthesizedFilters),
+        charactersApi.listAll(serverFilters.characters),
+        timelineApi.listAll(), // Timeline doesn't have server-side filters yet
       ]);
       
-      console.log(`[useCharacterJourneyData] Data fetched:
-        - Characters: ${characters.length}
-        - Elements: ${synthesized.elements.length}
+      console.log(`[useCharacterJourneyData] Server-filtered data fetched:
+        - Characters: ${characters.length} (after server filters)
+        - Elements: ${synthesized.elements.length} (after server filters)
         - Puzzles: ${synthesized.puzzles.length}
         - Timeline: ${timeline.length}`);
       
@@ -56,19 +93,37 @@ export function useCharacterJourneyData() {
     retry: 2,
   });
   
-  // Apply filters to the fetched data
+  // Apply client-side filters to the server-filtered data
   const filteredData = useMemo(() => {
     if (!query.data) return undefined;
     
-    // Apply all filters
-    const filtered = applyCharacterJourneyFilters(query.data, {
+    // Extract client-side only filters
+    const clientFilters = extractClientSideFilters(
       searchTerm,
       characterFilters,
       puzzleFilters,
-      contentFilters,
+      contentFilters
+    );
+    
+    // Apply client-side filters (complex filters that require cross-entity data)
+    const filtered = applyCharacterJourneyFilters(query.data, {
+      searchTerm: clientFilters.searchTerm,
+      characterFilters: {
+        ...characterFilters,
+        // These are already applied server-side, so clear them for client filtering
+        selectedTiers: new Set(),
+        characterType: 'all',
+      },
+      puzzleFilters,
+      contentFilters: {
+        ...contentFilters,
+        // These are already applied server-side, so clear them for client filtering
+        contentStatus: new Set(),
+        lastEditedRange: 'all',
+      },
     });
     
-    console.log(`[useCharacterJourneyData] Filters applied:
+    console.log(`[useCharacterJourneyData] Client-side filters applied:
       - Characters: ${query.data.characters.length} → ${filtered.characters.length}
       - Elements: ${query.data.elements.length} → ${filtered.elements.length}
       - Puzzles: ${query.data.puzzles.length} → ${filtered.puzzles.length}

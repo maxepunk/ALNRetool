@@ -35,6 +35,9 @@ export interface FilterState {
   // Universal filters
   searchTerm: string;
   
+  // Graph view settings (universal across views)
+  connectionDepth: number;
+  
   // View-specific filters
   puzzleFilters: PuzzleFilters;
   characterFilters: CharacterFilters;
@@ -46,6 +49,9 @@ export interface FilterState {
   // Universal filter actions
   setSearchTerm: (term: string) => void;
   clearSearch: () => void;
+  
+  // Graph view settings actions
+  setConnectionDepth: (depth: number) => void;
   
   // Puzzle filter actions
   toggleAct: (act: string) => void;
@@ -91,6 +97,7 @@ export const useFilterStore = create<FilterStore>()(
       (set, get) => ({
         // Initial state
         searchTerm: '',
+        connectionDepth: 3, // Default to 3 hops
         puzzleFilters: {
           selectedActs: new Set(),
           selectedPuzzleId: null,
@@ -113,6 +120,9 @@ export const useFilterStore = create<FilterStore>()(
         // Universal filter actions
         setSearchTerm: (term) => set({ searchTerm: term }),
         clearSearch: () => set({ searchTerm: '' }),
+
+        // Graph view settings actions
+        setConnectionDepth: (depth) => set({ connectionDepth: depth }),
 
         // Puzzle filter actions
         toggleAct: (act) => set((state) => {

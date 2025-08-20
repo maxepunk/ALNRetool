@@ -21,7 +21,8 @@ import { useFilterStore } from '@/stores/filterStore';
 import { normalizeTier, getTierBadgeVariant } from '@/lib/utils/tierUtils';
 import type { Node } from '@xyflow/react';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
-import { Users, Share2 } from 'lucide-react';
+import type { DepthMetadata } from '@/lib/graph/types';
+import { Users, Share2, Info } from 'lucide-react';
 import '@xyflow/react/dist/style.css';
 
 export default function CharacterJourneyView() {
@@ -33,11 +34,13 @@ export default function CharacterJourneyView() {
   const characterFilters = useFilterStore(state => state.characterFilters);
   const selectCharacter = useFilterStore(state => state.selectCharacter);
   const setHighlightShared = useFilterStore(state => state.setHighlightShared);
+  const connectionDepth = useFilterStore(state => state.connectionDepth);
+  console.log('🔥 CharacterJourneyView: connectionDepth from store:', connectionDepth);
   
   // View-specific state only (not filters)
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [viewMode, setViewMode] = useState<'filtered' | 'full-web'>('filtered');
-  const [expansionDepth, setExpansionDepth] = useState<number>(3);
+  const [depthMetadata, setDepthMetadata] = useState<DepthMetadata | undefined>(undefined);
   
   // Use store as primary source, URL as secondary
   const characterId = characterFilters.selectedCharacterId || urlCharacterId;
@@ -117,6 +120,22 @@ export default function CharacterJourneyView() {
     setSelectedNode(null);
   }, []);
 
+  // Handle graph data change including depth metadata
+  const handleGraphDataChange = useCallback((data: { nodes: Node[]; edges: any[]; depthMetadata?: DepthMetadata }) => {
+    console.log('📊 CharacterJourneyView: handleGraphDataChange called with:', {
+      nodes: data.nodes.length,
+      edges: data.edges.length,
+      hasDepthMetadata: !!data.depthMetadata,
+      depthMetadata: data.depthMetadata
+    });
+    if (data.depthMetadata) {
+      setDepthMetadata(data.depthMetadata);
+      console.log('✅ Depth metadata set in state:', data.depthMetadata);
+    } else {
+      console.log('⚠️ No depth metadata in callback data');
+    }
+  }, []);
+
   // Loading state
   if (isLoading) {
     return (
@@ -156,7 +175,7 @@ export default function CharacterJourneyView() {
               Please select a character from the sidebar to explore their ownership paths and story journey.
             </p>
             <p className="text-xs text-muted-foreground">
-              Use the character selector in the sidebar&apos;s Character Filters section to choose a character.
+              Use the character selector in the sidebar&#39;s Character Filters section to choose a character.
             </p>
           </div>
         </Card>
@@ -210,25 +229,28 @@ export default function CharacterJourneyView() {
               </Button>
             </div>
 
-            {/* Show depth control for Full Web mode */}
-            {viewMode === 'full-web' && (
+            {/* Show depth metadata feedback for Full Web mode */}
+            {viewMode === 'full-web' && depthMetadata && (
               <div className="flex items-center gap-2">
-                <Label htmlFor="depth-select" className="text-sm">
-                  Connection Depth:
-                </Label>
-                <select
-                  id="depth-select"
-                  value={expansionDepth}
-                  onChange={(e) => setExpansionDepth(parseInt(e.target.value))}
-                  className="h-7 px-2 text-sm border rounded"
-                >
-                  <option value="1">1 hop (immediate connections)</option>
-                  <option value="2">2 hops (close network)</option>
-                  <option value="3">3 hops (extended network)</option>
-                  <option value="4">4 hops (broad network)</option>
-                  <option value="5">5 hops (wide network)</option>
-                </select>
+                {depthMetadata.isCompleteNetwork ? (
+                  <Badge variant="secondary" className="text-xs bg-green-50 text-green-700 border-green-200">
+                    <Info className="h-3 w-3 mr-1" />
+                    Complete network shown ({depthMetadata.totalReachableNodes} nodes)
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                    <Info className="h-3 w-3 mr-1" />
+                    Showing {depthMetadata.nodesAtCurrentDepth} of {depthMetadata.totalReachableNodes} nodes (depth {connectionDepth})
+                  </Badge>
+                )}
               </div>
+            )}
+            
+            {/* Fallback if no metadata yet */}
+            {viewMode === 'full-web' && !depthMetadata && (
+              <Badge variant="outline" className="text-xs">
+                Depth: {connectionDepth} hop{connectionDepth !== 1 ? 's' : ''}
+              </Badge>
             )}
 
             {/* Show highlight shared control */}
@@ -266,10 +288,11 @@ export default function CharacterJourneyView() {
             timeline={data.timeline}
             viewType="character-journey"
             onNodeClick={handleNodeClick}
+            onGraphDataChange={handleGraphDataChange}
             viewOptions={{
               characterId: characterId,
               viewMode: viewMode,
-              expansionDepth: expansionDepth,
+              expansionDepth: connectionDepth,
               characterFilters: characterFilters
             }}
           />

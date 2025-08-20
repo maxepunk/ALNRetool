@@ -43,6 +43,7 @@ export default function PuzzleFocusView() {
   const puzzleFilters = useFilterStore(state => state.puzzleFilters);
   const characterFilters = useFilterStore(state => state.characterFilters);
   const contentFilters = useFilterStore(state => state.contentFilters);
+  const connectionDepth = useFilterStore(state => state.connectionDepth);
   const setActiveView = useFilterStore(state => state.setActiveView);
   
   // Set active view on mount
@@ -314,6 +315,10 @@ export default function PuzzleFocusView() {
               viewType="puzzle-focus"
               onNodeClick={handleNodeClick}
               onSelectionChange={handleSelectionChange}
+              viewOptions={{
+                puzzleId: puzzleFilters.selectedPuzzleId,
+                expansionDepth: connectionDepth
+              }}
             />
           </div>
           

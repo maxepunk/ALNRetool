@@ -218,12 +218,25 @@ export interface GraphEdge extends Omit<Edge, 'data'> {
 }
 
 /**
+ * Depth metadata for connection graphs
+ */
+export interface DepthMetadata {
+  depthDistribution: Map<number, number>; // depth level -> node count at that depth
+  maxReachableDepth: number; // Maximum depth in the complete network
+  totalReachableNodes: number; // Total nodes in the complete connected component
+  isCompleteNetwork: boolean; // Whether current depth includes all reachable nodes
+  nodesAtCurrentDepth: number; // Nodes included with current depth setting
+  currentDepthLimit: number; // The depth limit used to generate this graph
+}
+
+/**
  * Complete graph data structure
  */
 export interface GraphData {
   nodes: GraphNode[];
   edges: GraphEdge[];
   integrityReport?: DataIntegrityReport;
+  depthMetadata?: DepthMetadata; // Metadata about depth distribution
   metadata?: {
     metrics?: {
       startTime: number;
