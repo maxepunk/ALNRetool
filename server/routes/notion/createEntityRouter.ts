@@ -1,6 +1,6 @@
 /**
  * Generic router factory for Notion entity endpoints
- * Creates consistent REST endpoints with caching and error handling
+ * Creates consistent REST endpoints with caching, error handling, and inverse relations
  */
 
 import { Router } from 'express';
@@ -9,6 +9,26 @@ import { handleCachedNotionRequest } from './base.js';
 import { notion } from '../../services/notion.js';
 import { cacheService } from '../../services/cache.js';
 import type { NotionPage } from '../../../src/types/notion/raw.js';
+
+/**
+ * Configuration for inverse relation updates
+ */
+export interface InverseRelation {
+  /** The field on the current entity that contains related IDs */
+  sourceField: string;
+  
+  /** The target database ID to update */
+  targetDatabaseId: string;
+  
+  /** The field on the target entity to update */
+  targetField: string;
+  
+  /** Type of relation: 'many-to-many' | 'one-to-many' */
+  relationType: 'many-to-many' | 'one-to-many';
+  
+  /** Whether to sync adds and removes bidirectionally */
+  bidirectional: boolean;
+}
 
 export interface EntityRouterConfig<T> {
   /** Notion database ID for this entity type */
@@ -25,6 +45,94 @@ export interface EntityRouterConfig<T> {
   
   /** Optional function to build Notion filters from query params */
   buildFilters?: (params: any) => any;
+  
+  /** Optional inverse relations to maintain */
+  inverseRelations?: InverseRelation[];
+}
+
+/**
+ * Updates inverse relations when an entity is modified
+ */
+async function updateInverseRelations<T>(
+  entityId: string,
+  oldData: any,
+  newData: any,
+  relations: InverseRelation[]
+): Promise<void> {
+  for (const relation of relations) {
+    const oldIds = new Set(oldData?.[relation.sourceField] || []);
+    const newIds = new Set(newData?.[relation.sourceField] || []);
+    
+    // Find added and removed IDs
+    const addedIds = Array.from(newIds).filter(id => !oldIds.has(id));
+    const removedIds = Array.from(oldIds).filter(id => !newIds.has(id));
+    
+    if (!relation.bidirectional) {
+      continue;
+    }
+    
+    // Update added relations
+    for (const targetId of addedIds) {
+      try {
+        // Get current target entity
+        const targetPage = await notion.pages.retrieve({ 
+          page_id: targetId 
+        }) as NotionPage;
+        
+        const targetProp = targetPage.properties[relation.targetField];
+        const currentRelatedIds = (targetProp && 'relation' in targetProp) ? targetProp.relation : [];
+        const currentIds = currentRelatedIds.map((r: any) => r.id);
+        
+        // Add this entity if not already present
+        if (!currentIds.includes(entityId)) {
+          await notion.pages.update({
+            page_id: targetId,
+            properties: {
+              [relation.targetField]: {
+                relation: [...currentRelatedIds, { id: entityId }]
+              }
+            }
+          });
+          
+          // Invalidate target cache
+          cacheService.invalidatePattern(`*_${targetId}`);
+        }
+      } catch (error) {
+        console.error(`Failed to update inverse relation for ${targetId}:`, error);
+      }
+    }
+    
+    // Update removed relations
+    for (const targetId of removedIds) {
+      try {
+        // Get current target entity
+        const targetPage = await notion.pages.retrieve({ 
+          page_id: targetId 
+        }) as NotionPage;
+        
+        const targetProp = targetPage.properties[relation.targetField];
+        const currentRelatedIds = (targetProp && 'relation' in targetProp) ? targetProp.relation : [];
+        const filteredIds = currentRelatedIds.filter((r: any) => r.id !== entityId);
+        
+        // Remove this entity if present
+        if (filteredIds.length !== currentRelatedIds.length) {
+          await notion.pages.update({
+            page_id: targetId,
+            properties: {
+              [relation.targetField]: {
+                relation: filteredIds
+              }
+            }
+          });
+          
+          // Invalidate target cache
+          cacheService.invalidatePattern(`*_${targetId}`);
+        }
+      } catch (error) {
+        console.error(`Failed to update inverse relation for ${targetId}:`, error);
+      }
+    }
+  }
 }
 
 /**
@@ -72,8 +180,22 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
   // PUT /:id - Update entity (if mapper provided)
   if (config.toNotionProps) {
     router.put('/:id', asyncHandler(async (req, res) => {
-      const properties = config.toNotionProps!(req.body);
+      let oldData: any = null;
       
+      // Get old data if we have inverse relations
+      if (config.inverseRelations && config.inverseRelations.length > 0) {
+        try {
+          const oldPage = await notion.pages.retrieve({ 
+            page_id: req.params.id 
+          }) as NotionPage;
+          oldData = config.transform(oldPage);
+        } catch (error) {
+          console.error('Failed to retrieve old data for inverse relations:', error);
+        }
+      }
+      
+      // Update the entity
+      const properties = config.toNotionProps!(req.body);
       const response = await notion.pages.update({
         page_id: req.params.id,
         properties
@@ -81,9 +203,31 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       
       const transformed = config.transform(response);
       
-      // Invalidate caches for this entity
+      // Update inverse relations if configured
+      if (config.inverseRelations && oldData) {
+        await updateInverseRelations(
+          req.params.id,
+          oldData,
+          transformed,
+          config.inverseRelations
+        );
+      }
+      
+      // Invalidate caches for this entity and related patterns
       cacheService.invalidatePattern(config.entityName);
       cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
+      
+      // If we have inverse relations, invalidate those entity types too
+      if (config.inverseRelations) {
+        for (const relation of config.inverseRelations) {
+          // Extract entity name from the target database ID pattern
+          const targetEntityName = relation.targetDatabaseId.includes('element') ? 'elements' :
+                                   relation.targetDatabaseId.includes('puzzle') ? 'puzzles' :
+                                   relation.targetDatabaseId.includes('character') ? 'characters' : 
+                                   'unknown';
+          cacheService.invalidatePattern(targetEntityName);
+        }
+      }
       
       res.json(transformed);
     }));

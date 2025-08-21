@@ -276,3 +276,218 @@ export function transformTimelineEvent(page: NotionPage): TimelineEvent {
     lastEditedTime: page.last_edited_time
   };
 }
+/**
+ * Convert Element entity to Notion properties for updates
+ */
+export function elementToNotionProps(element: Partial<Element>): any {
+  const properties: any = {};
+  
+  if (element.name !== undefined) {
+    properties['Name'] = {
+      title: [{ text: { content: element.name } }]
+    };
+  }
+  
+  if (element.descriptionText !== undefined) {
+    properties['Description/Text'] = {
+      rich_text: [{ text: { content: element.descriptionText } }]
+    };
+  }
+  
+  if (element.basicType !== undefined) {
+    properties['Basic Type'] = {
+      select: { name: element.basicType }
+    };
+  }
+  
+  if (element.status !== undefined) {
+    properties['Status'] = {
+      status: { name: element.status }
+    };
+  }
+  
+  if (element.firstAvailable !== undefined) {
+    properties['First Available'] = {
+      select: { name: element.firstAvailable }
+    };
+  }
+  
+  if (element.narrativeThreads !== undefined) {
+    properties['Narrative Threads'] = {
+      multi_select: element.narrativeThreads.map(thread => ({ name: thread }))
+    };
+  }
+  
+  if (element.productionNotes !== undefined) {
+    properties['Production/Puzzle Notes'] = {
+      rich_text: [{ text: { content: element.productionNotes } }]
+    };
+  }
+  
+  if (element.contentLink !== undefined) {
+    properties['Content Link'] = {
+      url: element.contentLink
+    };
+  }
+  
+  // Handle relation fields
+  if (element.ownerId !== undefined) {
+    properties['Owner'] = {
+      relation: element.ownerId ? [{ id: element.ownerId }] : []
+    };
+  }
+  
+  if (element.containerId !== undefined) {
+    properties['Container'] = {
+      relation: element.containerId ? [{ id: element.containerId }] : []
+    };
+  }
+  
+  if (element.contentIds !== undefined) {
+    properties['Contents'] = {
+      relation: element.contentIds.map(id => ({ id }))
+    };
+  }
+  
+  if (element.timelineEventId !== undefined) {
+    properties['Timeline Event'] = {
+      relation: element.timelineEventId ? [{ id: element.timelineEventId }] : []
+    };
+  }
+  
+  if (element.requiredForPuzzleIds !== undefined) {
+    properties['Required for puzzles'] = {
+      relation: element.requiredForPuzzleIds.map(id => ({ id }))
+    };
+  }
+  
+  if (element.rewardedByPuzzleIds !== undefined) {
+    properties['Rewarded by puzzles'] = {
+      relation: element.rewardedByPuzzleIds.map(id => ({ id }))
+    };
+  }
+  
+  if (element.containerPuzzleId !== undefined) {
+    properties['Container Puzzle'] = {
+      relation: element.containerPuzzleId ? [{ id: element.containerPuzzleId }] : []
+    };
+  }
+  
+  return properties;
+}
+
+/**
+ * Convert Puzzle entity to Notion properties for updates
+ */
+export function puzzleToNotionProps(puzzle: Partial<Puzzle>): any {
+  const properties: any = {};
+  
+  if (puzzle.name !== undefined) {
+    properties['Puzzle'] = {
+      title: [{ text: { content: puzzle.name } }]
+    };
+  }
+  
+  if (puzzle.descriptionSolution !== undefined) {
+    properties['Description/Solution'] = {
+      rich_text: [{ text: { content: puzzle.descriptionSolution } }]
+    };
+  }
+  
+  if (puzzle.assetLink !== undefined) {
+    properties['Asset Link'] = {
+      url: puzzle.assetLink
+    };
+  }
+  
+  // Handle relation fields
+  if (puzzle.puzzleElementIds !== undefined) {
+    properties['Puzzle Elements'] = {
+      relation: puzzle.puzzleElementIds.map((id: string) => ({ id }))
+    };
+  }
+  
+  if (puzzle.lockedItemId !== undefined) {
+    properties['Locked Item'] = {
+      relation: puzzle.lockedItemId ? [{ id: puzzle.lockedItemId }] : []
+    };
+  }
+  
+  if (puzzle.rewardIds !== undefined) {
+    properties['rewardElements'] = {
+      relation: puzzle.rewardIds.map((id: string) => ({ id }))
+    };
+  }
+  
+  if (puzzle.parentItemId !== undefined) {
+    properties['Parent Item'] = {
+      relation: puzzle.parentItemId ? [{ id: puzzle.parentItemId }] : []
+    };
+  }
+  
+  if (puzzle.subPuzzleIds !== undefined) {
+    properties['Sub-puzzles'] = {
+      relation: puzzle.subPuzzleIds.map((id: string) => ({ id }))
+    };
+  }
+  
+  return properties;
+}
+
+/**
+ * Convert Character entity to Notion properties for updates
+ */
+export function characterToNotionProps(character: Partial<Character>): any {
+  const properties: any = {};
+  
+  if (character.name !== undefined) {
+    properties['Name'] = {
+      title: [{ text: { content: character.name } }]
+    };
+  }
+  
+  if (character.tier !== undefined) {
+    properties['Tier'] = {
+      select: { name: character.tier }
+    };
+  }
+  
+  if (character.primaryAction !== undefined) {
+    properties['Primary Action'] = {
+      rich_text: [{ text: { content: character.primaryAction } }]
+    };
+  }
+  
+  if (character.characterLogline !== undefined) {
+    properties['Character Logline'] = {
+      rich_text: [{ text: { content: character.characterLogline } }]
+    };
+  }
+  
+  if (character.overview !== undefined) {
+    properties['Overview & Key Relationships'] = {
+      rich_text: [{ text: { content: character.overview } }]
+    };
+  }
+  
+  if (character.emotionTowardsCEO !== undefined) {
+    properties['Emotion towards CEO & others'] = {
+      rich_text: [{ text: { content: character.emotionTowardsCEO } }]
+    };
+  }
+  
+  // Handle relation fields
+  if (character.characterPuzzleIds !== undefined) {
+    properties['Character Puzzles'] = {
+      relation: character.characterPuzzleIds.map((id: string) => ({ id }))
+    };
+  }
+  
+  if (character.eventIds !== undefined) {
+    properties['Events'] = {
+      relation: character.eventIds.map((id: string) => ({ id }))
+    };
+  }
+  
+  return properties;
+}
