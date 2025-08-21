@@ -75,11 +75,14 @@ OK
 ### Character Endpoints
 
 #### GET /api/notion/characters
-Fetch all characters from Notion database.
+Fetch all characters from Notion database with optional filtering.
 
 **Query Parameters**:
 - `cursor` (string, optional): Pagination cursor
 - `limit` (number, optional): Results per page (max 100, default 100)
+- `tiers` (string, optional): Comma-separated list of tiers to filter (e.g., "Main,Supporting")
+- `type` (string, optional): Character type filter - `all`, `players`, or `npcs`
+- `lastEdited` (string, optional): Filter by last edited time (e.g., "7d" for last 7 days)
 
 **Response**:
 ```json
@@ -155,11 +158,13 @@ Update a character's properties.
 ### Element Endpoints
 
 #### GET /api/notion/elements
-Fetch all story elements.
+Fetch all story elements with optional filtering.
 
 **Query Parameters**:
 - `cursor` (string, optional): Pagination cursor
 - `limit` (number, optional): Results per page (max 100, default 100)
+- `status` (string, optional): Comma-separated list of statuses to filter
+- `lastEdited` (string, optional): Filter by last edited time (e.g., "7d" for last 7 days)
 
 **Response**:
 ```json
@@ -205,11 +210,13 @@ Update an element's properties.
 ### Puzzle Endpoints
 
 #### GET /api/notion/puzzles
-Fetch all puzzles.
+Fetch all puzzles with optional filtering.
 
 **Query Parameters**:
 - `cursor` (string, optional): Pagination cursor
 - `limit` (number, optional): Results per page (max 100, default 100)
+- `lastEdited` (string, optional): Filter by last edited time (e.g., "7d" for last 7 days)
+- Note: Acts/timing and status filtering must be done client-side due to Notion API limitations
 
 **Response**:
 ```json
@@ -324,56 +331,52 @@ This endpoint returns all characters, elements, and puzzles with their relations
 ### Cache Management Endpoints
 
 #### GET /api/cache/stats
-Get cache statistics.
+Get detailed cache statistics including hit rate and memory usage.
 
 **Response**:
 ```json
 {
-  "keys": 12,
   "hits": 245,
   "misses": 23,
-  "ksize": 1024,
-  "vsize": 524288,
-  "cachedEndpoints": [
-    "/api/notion/characters",
-    "/api/notion/elements",
-    "/api/notion/puzzles"
-  ]
+  "hitRate": "91.42%",
+  "totalKeys": 12,
+  "keySizeBytes": 1024,
+  "valueSizeBytes": 524288,
+  "totalSizeBytes": 525312,
+  "timestamp": "2025-01-20T12:00:00.000Z"
 }
 ```
 
 #### POST /api/cache/clear
-Clear all cached data.
+Clear all cached data (requires admin authentication in production).
 
-**Request Body** (optional):
-```json
-{
-  "pattern": "characters*"  // Optional pattern to clear specific keys
-}
+**Headers** (required in production):
+```http
+X-Admin-Key: your-admin-key
 ```
 
 **Response**:
 ```json
 {
   "message": "Cache cleared successfully",
-  "keysCleared": 12
+  "clearedKeys": 12,
+  "timestamp": "2025-01-20T12:00:00.000Z"
 }
 ```
 
-#### POST /api/cache/warm
-Pre-warm the cache by fetching all entities.
+#### POST /api/cache/clear/:endpoint
+Clear cache for a specific endpoint pattern.
+
+**Parameters**:
+- `endpoint`: One of `characters`, `elements`, `puzzles`, `timeline`
 
 **Response**:
 ```json
 {
-  "message": "Cache warmed successfully",
-  "endpoints": [
-    "/api/notion/characters",
-    "/api/notion/elements",
-    "/api/notion/puzzles",
-    "/api/notion/timeline"
-  ],
-  "totalCached": 4
+  "message": "Cache cleared for characters",
+  "pattern": "characters:*",
+  "clearedKeys": 5,
+  "timestamp": "2025-01-20T12:00:00.000Z"
 }
 ```
 

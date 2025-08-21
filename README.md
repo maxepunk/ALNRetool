@@ -4,12 +4,13 @@ A modern web-based visualization and editing tool for "About Last Night," a murd
 
 ## 🚀 Current Status
 
-- **Version**: Sprint 2 (~75% Complete)
+- **Version**: Sprint 2 (Complete) - Moving to Sprint 3
 - **Production Ready**: ❌ Not yet (targeting Sprint 4)
-- **Core Features**: ✅ Working
-- **Graph Visualization**: ✅ Implemented
-- **Two-way Notion Sync**: ✅ Implemented
-- **Character Journey**: 🚧 In Progress
+- **Core Features**: ✅ Fully Working
+- **Graph Visualization**: ✅ Complete with React Flow
+- **Two-way Notion Sync**: ✅ Fully Implemented
+- **Filtering System**: ✅ Advanced multi-dimensional filters
+- **Character Journey**: 🚧 In Progress (Sprint 3)
 
 ## ✨ Features
 
@@ -18,36 +19,50 @@ A modern web-based visualization and editing tool for "About Last Night," a murd
 - **Multi-view System**: 
   - Content Status View (default)
   - Puzzle Focus View 
-  - Character Journey View (partial)
+  - Character Journey View
+  - Node Connections View
 - **Real-time Notion Integration**: Two-way sync with Notion databases
-- **Detail Panel**: Interactive editing with optimistic updates
-- **Advanced Filtering**: Filter by puzzle chains, character stories, narrative threads
+- **Detail Panel**: Interactive editing with optimistic updates and field validation
+- **Advanced Filtering System**:
+  - Character-based filtering with story/faction/tier support
+  - Puzzle filtering by chains, complexity, and tier
+  - Content filters for narrative threads and clue types
+  - Graph depth control for connection visualization
+  - Active filters summary display
 - **Smart Layout Engine**: Pure Dagre layout with semantic edge positioning
 - **Visual Enhancements**: Glassmorphism effects, smooth animations, skeleton loading
 - **Performance Optimizations**: Request batching, 5-minute cache TTL, React Query
+- **Sidebar Navigation**: Collapsible sidebar with search and filters
+- **Error Boundaries**: Comprehensive error handling and recovery
+- **Zustand State Management**: For filters and UI state
 
 ### In Development 🚧
-- Character journey timeline visualization
-- Additional mutation operations
+- Character journey timeline enhancements
+- Additional mutation operations for batch updates
 - Production deployment configuration
+- Performance monitoring and analytics
 
 ## 🛠️ Tech Stack
 
 ### Frontend
 - **React 18** with TypeScript
 - **Vite** for fast development and optimized builds
-- **React Flow** for graph visualization
-- **TanStack Query** for server state management
+- **React Flow** (@xyflow/react) for graph visualization
+- **TanStack Query v5** for server state management
 - **Tailwind CSS v4** with PostCSS
 - **shadcn/ui** component library
+- **Zustand** for client state management
 - **Dagre** for graph layout algorithms
+- **Framer Motion** for animations
+- **Lucide React** for icons
 
 ### Backend
-- **Express.js** API server
-- **Notion SDK** for database integration
-- **node-cache** for response caching
-- **Rate limiting** and API key authentication
+- **Express.js v5** API server
+- **Notion SDK v4** for database integration
+- **node-cache** for response caching (5-minute TTL)
+- **Rate limiting** with express-rate-limit
 - **TypeScript** with CommonJS output
+- **Bottleneck** for API request throttling
 
 ## 📦 Installation
 
@@ -138,25 +153,39 @@ ALNRetool/
 ├── src/                    # Frontend source code
 │   ├── components/         # React components
 │   │   ├── graph/         # Graph visualization components
+│   │   │   ├── nodes/     # Custom node types (Puzzle, Character, Element, Timeline)
+│   │   │   └── edges/     # Custom edge types
 │   │   ├── detail-panel/  # Entity detail panels
-│   │   ├── nodes/         # Custom node components
+│   │   │   └── field-editors/ # Field-specific editors
+│   │   ├── sidebar/       # Sidebar navigation and filters
+│   │   ├── layout/        # Layout components
 │   │   └── ui/            # shadcn/ui components
 │   ├── hooks/             # Custom React hooks
+│   │   ├── generic/       # Reusable hook patterns
+│   │   ├── mutations/     # Mutation hooks
+│   │   └── detail-panel/  # Detail panel specific
 │   ├── lib/               # Core libraries
-│   │   └── graph/         # Graph transformation system
-│   │       ├── modules/   # Modular transformers
-│   │       └── layout/    # Layout algorithms
+│   │   ├── graph/         # Graph transformation system
+│   │   │   ├── modules/   # Modular transformers
+│   │   │   │   └── transformers/ # Entity-specific transformers
+│   │   │   └── layout/    # Layout algorithms (Dagre, Force)
+│   │   ├── filters/       # Filter system
+│   │   └── utils/         # Utility functions
+│   ├── stores/            # Zustand state stores
 │   ├── services/          # API and data services
 │   ├── types/             # TypeScript type definitions
+│   │   ├── notion/        # Notion-specific types
+│   │   └── api/           # API response types
 │   └── views/             # Page-level components
 ├── server/                # Backend source code
 │   ├── middleware/        # Express middleware
 │   ├── routes/            # API route handlers
+│   │   └── notion/        # Notion-specific routes
 │   ├── services/          # Business logic
-│   └── types/             # Server type definitions
-├── scripts/               # Utility scripts
+│   └── utils/             # Server utilities
+├── scripts/               # Debug and test scripts
 ├── docs/                  # Documentation
-└── tests/                 # Test files
+└── tests/                 # Test configuration
 ```
 
 ## 🔌 API Endpoints

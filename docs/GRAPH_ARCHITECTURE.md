@@ -23,6 +23,9 @@ src/lib/graph/
 ├── index.ts                      # Public API facade
 ├── types.ts                      # TypeScript type definitions
 ├── relationships.ts              # Relationship mapping utilities
+├── guards.ts                     # Type guards for runtime validation
+├── patterns.ts                   # Graph pattern detection
+├── layouts.ts                    # Layout type definitions
 ├── layout/
 │   ├── dagre.ts                 # Pure Dagre layout implementation
 │   └── force.ts                 # D3-force layout (experimental)
@@ -32,10 +35,17 @@ src/lib/graph/
     ├── GraphBuilder.ts          # Node/edge assembly
     ├── EdgeBuilder.ts           # Smart edge creation
     ├── ErrorHandler.ts          # Error management
+    ├── GraphUtilities.ts        # Utility functions
     ├── LayoutOrchestrator.ts    # Layout coordination
     ├── LayoutQualityMetrics.ts  # Quality measurement
+    ├── MetricsCalculator.ts      # Performance metrics
     ├── VirtualEdgeInjector.ts   # Virtual edge handling
-    └── ElementClusterer.ts      # Post-layout clustering
+    ├── ElementClusterer.ts      # Post-layout clustering
+    └── transformers/
+        ├── CharacterTransformer.ts  # Character-specific logic
+        ├── ElementTransformer.ts    # Element-specific logic
+        ├── PuzzleTransformer.ts     # Puzzle-specific logic
+        └── TimelineTransformer.ts   # Timeline-specific logic
 ```
 
 ## Module Responsibilities
@@ -532,35 +542,135 @@ class ErrorHandler {
 - Render performance
 - Large dataset handling
 
+## Filtering System
+
+### Filter Store (Zustand)
+```typescript
+interface FilterState {
+  // Character filters
+  selectedCharacters: Set<string>;
+  characterType: 'all' | 'players' | 'npcs';
+  characterStories: Set<string>;
+  characterFactions: Set<string>;
+  characterTiers: Set<string>;
+  
+  // Puzzle filters
+  puzzleChains: Set<string>;
+  puzzleComplexity: number[];
+  puzzleTiers: Set<string>;
+  
+  // Content filters
+  narrativeThreads: Set<string>;
+  clueTypes: Set<string>;
+  
+  // Graph filters
+  graphDepth: number;
+  showIsolatedNodes: boolean;
+  
+  // Search
+  searchQuery: string;
+}
+```
+
+### Filter Components
+```
+src/components/sidebar/
+├── SidebarNavigation.tsx       # Main navigation
+├── SidebarSearch.tsx            # Search input
+├── CharacterFilters.tsx        # Character-specific filters
+├── PuzzleFilters.tsx            # Puzzle-specific filters
+├── ContentFilters.tsx           # Content filters
+├── NodeConnectionsFilters.tsx  # Connection depth control
+├── GraphDepthControl.tsx        # Graph traversal depth
+├── ActiveFiltersSummary.tsx    # Active filter badges
+├── DepthIndicator.tsx           # Visual depth indicator
+└── ThemeToggle.tsx              # Dark/light mode toggle
+```
+
+### Filter Application
+Filters are applied at multiple levels:
+1. **Server-side**: Basic filtering via query parameters (tiers, type, lastEdited)
+2. **Client-side**: Complex filtering in React Query hooks
+3. **Graph-level**: Node/edge visibility in React Flow
+
+## State Management
+
+### Zustand Stores
+```typescript
+// Filter Store
+const useFilterStore = create((set) => ({
+  selectedCharacters: new Set(),
+  toggleCharacter: (id) => set((state) => {
+    const newSet = new Set(state.selectedCharacters);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    return { selectedCharacters: newSet };
+  }),
+  clearFilters: () => set(initialState)
+}));
+
+// UI Store
+const useUIStore = create((set) => ({
+  sidebarOpen: true,
+  detailPanelOpen: false,
+  selectedNode: null,
+  toggleSidebar: () => set((state) => ({ 
+    sidebarOpen: !state.sidebarOpen 
+  }))
+}));
+
+// Graph Store
+const useGraphStore = create((set) => ({
+  nodes: [],
+  edges: [],
+  selectedNodeIds: new Set(),
+  setNodes: (nodes) => set({ nodes }),
+  setEdges: (edges) => set({ edges })
+}));
+```
+
 ## Future Enhancements
+
+### In Progress
+1. **Character Journey Timeline**
+   - Visual timeline component
+   - Interactive event markers
+   - Relationship progression tracking
+
+2. **Batch Operations**
+   - Multi-entity updates
+   - Bulk relationship management
+   - Mass property editing
 
 ### Planned Features
 1. **Alternative Layouts**
-   - Force-directed layout
-   - Hierarchical layout
-   - Circular layout
-   - Grid layout
+   - Hierarchical layout for puzzle chains
+   - Circular layout for character relationships
+   - Timeline layout for chronological view
 
 2. **Advanced Interactions**
-   - Multi-select operations
-   - Bulk editing
-   - Drag-and-drop reordering
-   - Context menus
+   - Multi-select with modifier keys
+   - Bulk editing with property inspector
+   - Drag-and-drop relationship creation
+   - Right-click context menus
 
 3. **Visual Improvements**
-   - Animated transitions
-   - 3D visualization option
-   - Custom node shapes
-   - Theme customization
+   - Smooth animated transitions
+   - Custom node shapes per entity type
+   - Theme customization system
+   - Color-coded relationship lines
 
 4. **Performance**
    - WebWorker for layout calculation
-   - GPU acceleration
-   - Incremental layout updates
-   - Level-of-detail rendering
+   - Virtual scrolling for large graphs
+   - Progressive rendering
+   - Memoized filter calculations
 
-5. **Analytics**
+5. **Analytics Dashboard**
    - Graph complexity metrics
-   - User interaction tracking
-   - Performance monitoring
-   - Layout quality reporting
+   - User interaction heatmaps
+   - Performance monitoring dashboard
+   - Layout quality reports

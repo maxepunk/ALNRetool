@@ -47,7 +47,6 @@ export function FeatureFlagAdmin() {
 
   const flagGroups = {
     'Phase 2: DetailPanel': [
-      'USE_REFACTORED_DETAIL_PANEL',
       'USE_NEW_FIELD_EDITORS',
       'USE_ENTITY_FORM_HOOK',
     ],

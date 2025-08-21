@@ -7,7 +7,6 @@
 
 export interface FeatureFlags {
   // Phase 2: DetailPanel refactoring
-  USE_REFACTORED_DETAIL_PANEL: boolean;
   USE_NEW_FIELD_EDITORS: boolean;
   USE_ENTITY_FORM_HOOK: boolean;
   
@@ -33,7 +32,6 @@ export interface FeatureFlags {
 
 // Default flag values (all false for gradual rollout)
 const defaultFlags: FeatureFlags = {
-  USE_REFACTORED_DETAIL_PANEL: false,
   USE_NEW_FIELD_EDITORS: false,
   USE_ENTITY_FORM_HOOK: false,
   USE_GENERIC_NOTION_HOOKS: false,

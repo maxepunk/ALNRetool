@@ -277,7 +277,7 @@ const GraphViewInner: React.FC<GraphViewProps> = ({
   
   return (
     <GraphAnimationProvider edges={edges}>
-      <div className="w-full h-full relative bg-gray-50">
+      <div className="w-full h-full relative bg-gray-50" style={{ minHeight: '400px' }}>
         {/* Graph Controls for Zoom and Layout */}
         <GraphControls />
         

@@ -209,6 +209,14 @@ export function toNotionElementProperties(updates: Partial<Element>) {
   if (updates.associatedCharacterIds !== undefined) {
     properties['Associated characters'] = toNotionRelation(updates.associatedCharacterIds);
   }
+  
+  // Array fields (narrative threads)
+  if (updates.narrativeThreads !== undefined) {
+    properties['Narrative threads'] = toNotionMultiSelect(updates.narrativeThreads);
+  }
+  
+  // Note: filesMedia is handled differently - files need to be uploaded via separate API
+  // Note: sfPatterns, puzzleChain, isContainer are computed fields - not writable
 
   return properties;
 }
