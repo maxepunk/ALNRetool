@@ -20,6 +20,7 @@ import type {
   TimelineEvent,
 } from '@/types/notion/app';
 import { requestBatcher } from './requestBatcher';
+import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 
 // Get API base URL from environment or use relative path in production
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
@@ -82,6 +83,7 @@ async function fetcherImpl<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    ...cacheVersionManager.getRequestHeaders(), // Add cache version headers
   };
 
   // Only send API key header if we have one (for local dev)
@@ -109,6 +111,9 @@ async function fetcherImpl<T>(
     );
   }
 
+  // Process cache version headers
+  cacheVersionManager.processResponseHeaders(response.headers);
+  
   const data = await response.json();
 
   // Handle error responses

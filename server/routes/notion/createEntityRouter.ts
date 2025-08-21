@@ -163,6 +163,7 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     
     if (cached) {
       res.setHeader('X-Cache-Hit', 'true');
+      res.setHeader('X-Cache-Version', cacheService.getVersion());
       return res.json(cached);
     }
     
@@ -174,6 +175,7 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     cacheService.set(cacheKey, transformed);
     
     res.setHeader('X-Cache-Hit', 'false');
+    res.setHeader('X-Cache-Version', cacheService.getVersion());
     res.json(transformed);
   }));
   
@@ -214,21 +216,33 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       }
       
       // Invalidate caches for this entity and related patterns
-      cacheService.invalidatePattern(config.entityName);
-      cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
+      await cacheService.invalidateEntity(config.entityName, req.params.id);
       
       // If we have inverse relations, invalidate those entity types too
       if (config.inverseRelations) {
+        const relatedEntities: Array<{ type: string; ids: string[] }> = [];
+        
         for (const relation of config.inverseRelations) {
           // Extract entity name from the target database ID pattern
           const targetEntityName = relation.targetDatabaseId.includes('element') ? 'elements' :
                                    relation.targetDatabaseId.includes('puzzle') ? 'puzzles' :
                                    relation.targetDatabaseId.includes('character') ? 'characters' : 
                                    'unknown';
-          cacheService.invalidatePattern(targetEntityName);
+          
+          // Collect related IDs for batch invalidation
+          const relatedIds = transformed[relation.sourceField as keyof typeof transformed] as string[] || [];
+          if (relatedIds.length > 0) {
+            relatedEntities.push({ type: targetEntityName, ids: relatedIds });
+          }
+        }
+        
+        // Batch invalidate related entities
+        if (relatedEntities.length > 0) {
+          await cacheService.invalidateRelated(config.entityName, req.params.id, relatedEntities);
         }
       }
       
+      res.setHeader('X-Cache-Version', cacheService.getVersion());
       res.json(transformed);
     }));
   }

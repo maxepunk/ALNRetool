@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import AppRouter from './router/AppRouter';
 import { FeatureFlagAdmin } from './components/FeatureFlagAdmin';
+import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 
 // Create a client instance
 const queryClient = new QueryClient({
@@ -16,6 +17,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Initialize cache version manager with query client
+cacheVersionManager.initialize(queryClient);
 
 function App() {
   return (

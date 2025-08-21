@@ -35,6 +35,7 @@ export async function handleCachedNotionRequest<T>(
     const cachedResponse = cacheService.get<APIResponse<T>>(cacheKey);
     if (cachedResponse) {
       res.setHeader('X-Cache-Hit', 'true');
+      res.setHeader('X-Cache-Version', cacheService.getVersion());
       res.json(cachedResponse);
       return;
     }
@@ -51,6 +52,7 @@ export async function handleCachedNotionRequest<T>(
 
   cacheService.set(cacheKey, response);
   res.setHeader('X-Cache-Hit', 'false');
+  res.setHeader('X-Cache-Version', cacheService.getVersion());
   res.json(response);
 }
 

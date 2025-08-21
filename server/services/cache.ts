@@ -1,4 +1,5 @@
 import NodeCache from 'node-cache';
+import { CacheCoordinator } from './CacheCoordinator';
 
 export interface CacheStats {
   hits: number;
@@ -28,6 +29,7 @@ export interface CacheStats {
  */
 export class CacheService {
   private cache: NodeCache;
+  private coordinator: CacheCoordinator;
   private readonly DEFAULT_TTL = 300; // 5 minutes
   private readonly MAX_KEYS = 1000;
   private readonly CHECK_PERIOD = 600; // 10 minutes
@@ -40,6 +42,7 @@ export class CacheService {
       deleteOnExpire: true,
       useClones: false, // Performance optimization
     });
+    this.coordinator = CacheCoordinator.getInstance(this.cache);
   }
 
   /**
@@ -172,6 +175,61 @@ export class CacheService {
     });
     
     return deletedCount;
+  }
+
+  /**
+   * Get cache version for validation
+   */
+  getVersion(): string {
+    return this.coordinator.getVersion();
+  }
+
+  /**
+   * Validate client cache version
+   */
+  validateVersion(clientVersion: string): boolean {
+    return this.coordinator.validateVersion(clientVersion);
+  }
+
+  /**
+   * Invalidate entity and related caches
+   */
+  async invalidateEntity(entityType: string, entityId: string): Promise<void> {
+    await this.coordinator.invalidateEntity(entityType, entityId);
+  }
+
+  /**
+   * Invalidate related entities
+   */
+  async invalidateRelated(
+    entityType: string,
+    entityId: string,
+    relatedEntities: Array<{ type: string; ids: string[] }>
+  ): Promise<void> {
+    await this.coordinator.invalidateRelated(entityType, entityId, relatedEntities);
+  }
+
+  /**
+   * Get cache metadata for monitoring
+   */
+  getCacheMetadata() {
+    return this.coordinator.getMetadata();
+  }
+
+  /**
+   * Batch invalidate multiple entities
+   */
+  async batchInvalidate(
+    invalidations: Array<{ entityType: string; entityId: string }>
+  ): Promise<void> {
+    await this.coordinator.batchInvalidate(invalidations);
+  }
+
+  /**
+   * Get entity-specific version
+   */
+  getEntityVersion(entityType: string, entityId: string): string | undefined {
+    return this.coordinator.getEntityVersion(entityType, entityId);
   }
 }
 
