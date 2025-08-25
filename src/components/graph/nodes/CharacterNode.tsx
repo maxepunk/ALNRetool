@@ -34,7 +34,7 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
     <div className="flex gap-1">
       {entity.tier && (
         <Badge 
-          variant={tier === 'main' ? 'default' : tier === 'supporting' ? 'secondary' : 'outline'}
+          variant={tier === 'core' ? 'default' : tier === 'secondary' ? 'secondary' : 'outline'}
           className="text-[10px] px-1 py-0 h-4"
         >
           {entity.tier}
@@ -88,6 +88,7 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
       title={entity.name}
       icon={icon}
       selected={selected}
+      highlighted={metadata.searchMatch}
       headerSlot={badges}
       footerSlot={stats}
     >
