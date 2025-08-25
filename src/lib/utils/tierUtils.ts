@@ -1,5 +1,6 @@
 /**
  * Utility functions for tier normalization and handling
+ * Streamlined to only include functions actually used in the codebase
  */
 
 export type NormalizedTier = 'Core' | 'Secondary' | 'Tertiary';
@@ -31,13 +32,6 @@ export function normalizeTier(tier: string | undefined | null): NormalizedTier {
 }
 
 /**
- * Get tier display name for UI
- */
-export function getTierDisplayName(tier: NormalizedTier): string {
-  return tier; // Already in display format
-}
-
-/**
  * Get tier badge variant for UI components
  */
 export function getTierBadgeVariant(tier: string | undefined | null): "default" | "secondary" | "outline" {
@@ -51,48 +45,4 @@ export function getTierBadgeVariant(tier: string | undefined | null): "default" 
     default:
       return 'outline';
   }
-}
-
-/**
- * Get tier color classes for styling
- */
-export function getTierColorClasses(tier: string | undefined | null): string {
-  const normalized = normalizeTier(tier);
-  switch (normalized) {
-    case 'Core':
-      return 'bg-gradient-to-br from-amber-500/20 to-yellow-500/20 border-amber-400';
-    case 'Secondary':
-      return 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 border-blue-400';
-    case 'Tertiary':
-    default:
-      return 'bg-gradient-to-br from-gray-500/20 to-slate-500/20 border-gray-400';
-  }
-}
-
-/**
- * Get tier icon name for Lucide icons
- */
-export function getTierIconName(tier: string | undefined | null): 'Crown' | 'Star' | 'Circle' {
-  const normalized = normalizeTier(tier);
-  switch (normalized) {
-    case 'Core':
-      return 'Crown';
-    case 'Secondary':
-      return 'Star';
-    case 'Tertiary':
-    default:
-      return 'Circle';
-  }
-}
-
-/**
- * Check if a character's tier matches the filter criteria
- */
-export function matchesTierFilter(
-  characterTier: string | undefined | null,
-  selectedTiers: Set<NormalizedTier>
-): boolean {
-  if (selectedTiers.size === 0) return true; // No filter applied
-  const normalized = normalizeTier(characterTier);
-  return selectedTiers.has(normalized);
 }
