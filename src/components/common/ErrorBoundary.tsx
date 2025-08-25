@@ -7,7 +7,7 @@ import { Component, type ReactNode } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { AlertCircle, WifiOff, Database, Shield, Bug } from 'lucide-react'
-import { logger } from '@/lib/graph/utils/Logger'
+// Logger removed in Phase 3
 
 
 interface Props {
@@ -33,7 +33,7 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: { componentStack: string }) {
-    logger.error('Error caught by boundary:', { errorInfo }, error)
+    console.error('Error caught by boundary:', { errorInfo }, error)
     this.setState({ errorInfo })
   }
 

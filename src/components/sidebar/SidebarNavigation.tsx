@@ -1,32 +1,11 @@
 /**
  * SidebarNavigation Component
- * Dynamic navigation using ViewRegistry
+ * Dynamic navigation for view switching
  */
 
-import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { 
-  Network, 
-  Users, 
-  CheckSquare, 
-  Clock,
-  Share2,
-  FileText
-} from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
-import { viewRegistry } from '@/contexts/ViewContext';
-import { RouteUtils } from '@/components/generated/RouteGenerator';
-
-// Icon mapping for view types
-const iconMap: Record<string, LucideIcon> = {
-  'puzzle-focus': Network,
-  'character-journey': Users,
-  'node-connections': Share2,
-  'content-status': CheckSquare,
-  'timeline': Clock,
-  'default': FileText
-};
+import { Network, Puzzle, Users, Clock, Star } from 'lucide-react';
 
 interface SidebarNavigationProps {
   isOpen: boolean;
@@ -35,20 +14,44 @@ interface SidebarNavigationProps {
 export function SidebarNavigation({ isOpen }: SidebarNavigationProps) {
   const location = useLocation();
   
-  // Generate navigation items from ViewRegistry
-  const navItems = useMemo(() => {
-    const views = viewRegistry.getAll();
-    return views.map(view => {
-      const route = RouteUtils.getRouteForView(view.id);
-      return {
-        id: view.id,
-        path: route?.path || `/${view.id}`,
-        label: view.ui?.title || view.name,
-        icon: iconMap[view.id] || iconMap.default,
-        description: view.ui?.description || view.description || ''
-      };
-    });
-  }, []);
+  // View navigation items based on viewConfigs
+  const navItems = [
+    {
+      id: 'full-graph',
+      path: '/graph/full-graph',
+      label: 'Full Graph',
+      icon: Network,
+      description: 'Complete view of all entities and relationships'
+    },
+    {
+      id: 'puzzles-only',
+      path: '/graph/puzzles-only',
+      label: 'Puzzle Network',
+      icon: Puzzle,
+      description: 'Focus on puzzle dependencies and rewards'
+    },
+    {
+      id: 'character-relations',
+      path: '/graph/character-relations',
+      label: 'Character Relationships',
+      icon: Users,
+      description: 'Character and element connections'
+    },
+    {
+      id: 'timeline-flow',
+      path: '/graph/timeline-flow',
+      label: 'Timeline',
+      icon: Clock,
+      description: 'Chronological event flow'
+    },
+    {
+      id: 'core-experience',
+      path: '/graph/core-experience',
+      label: 'Core Experience',
+      icon: Star,
+      description: 'Essential puzzles and characters only'
+    }
+  ];
 
   return (
     <nav 

@@ -238,6 +238,7 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
       title={entity.name}
       icon={getIcon()}
       selected={selected}
+      highlighted={metadata.searchMatch}
       className={cardClassName}
       headerSlot={headerSlot}
       footerSlot={footerSlot}

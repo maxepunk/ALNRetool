@@ -13,8 +13,7 @@ import {
   applyHierarchicalLayout,
   LAYOUT_PRESETS,
 } from '@/lib/graph/layouts';
-import { ForceLayoutAlgorithm } from '@/lib/graph/layout/algorithms';
-import { TraversalEngine } from '@/lib/graph/modules/TraversalEngine';
+// ForceLayoutAlgorithm and TraversalEngine removed in Phase 3
 import type { GraphData, GraphNode, GraphEdge, LayoutConfig } from '@/lib/graph/types';
 
 
@@ -131,13 +130,8 @@ export function useGraphLayout({
           break;
           
         case 'force':
-          const traversalEngine = new TraversalEngine();
-          const forceLayout = new ForceLayoutAlgorithm(traversalEngine);
-          const forceResult = forceLayout.apply({ 
-            nodes: nodes as GraphNode[], 
-            edges: edges as GraphEdge[] 
-          });
-          layoutedNodes = forceResult.nodes;
+          // Force layout removed in Phase 3 - fallback to dagre
+          layoutedNodes = applyDagreLayout(nodes as GraphNode[], edges as GraphEdge[], layoutConfig);
           break;
           
         default:

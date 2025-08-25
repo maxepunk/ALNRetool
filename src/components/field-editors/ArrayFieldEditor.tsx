@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { FieldEditorProps } from './types';
+import { createArrayItemValidator, formatErrorMessage } from '@/utils/fieldValidation';
 
 interface ArrayFieldEditorProps extends FieldEditorProps {
   allowDuplicates?: boolean;
@@ -40,28 +41,25 @@ export const ArrayFieldEditor: React.FC<ArrayFieldEditorProps> = ({
   // Parse value into array
   const items = Array.isArray(value) ? value : [];
 
+  // Create standardized validator
+  const itemValidator = createArrayItemValidator(
+    allowDuplicates,
+    maxItems,
+    validateItem
+  );
+
+  // Format error message consistently
+  const displayError = error ? formatErrorMessage(error) : undefined;
+
   // Handle add new item
   const handleAdd = useCallback(() => {
     const trimmedValue = newItem.trim();
     
-    if (!trimmedValue) {
-      setItemError('Value cannot be empty');
+    // Use standardized validation
+    const validationError = itemValidator(trimmedValue, items);
+    if (validationError) {
+      setItemError(validationError);
       return;
-    }
-
-    // Check for duplicates
-    if (!allowDuplicates && items.includes(trimmedValue)) {
-      setItemError('This value already exists');
-      return;
-    }
-
-    // Validate item if validator provided
-    if (validateItem) {
-      const error = validateItem(trimmedValue);
-      if (error) {
-        setItemError(error);
-        return;
-      }
     }
 
     // Check max items
@@ -341,9 +339,9 @@ export const ArrayFieldEditor: React.FC<ArrayFieldEditorProps> = ({
           {itemError}
         </p>
       )}
-      {error && (
+      {displayError && (
         <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1">
-          {error}
+          {displayError}
         </p>
       )}
     </div>

@@ -414,7 +414,7 @@ export function puzzleToNotionProps(puzzle: Partial<Puzzle>): any {
   }
   
   if (puzzle.rewardIds !== undefined) {
-    properties['rewardElements'] = {
+    properties['Rewards'] = {
       relation: puzzle.rewardIds.map((id: string) => ({ id }))
     };
   }

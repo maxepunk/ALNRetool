@@ -21,7 +21,7 @@
  * ```
  */
 
-import { logger as graphLogger } from '@/lib/graph/utils/Logger'
+// Logger removed in Phase 3
 
 /**
  * Sensitive data patterns for automatic redaction
@@ -121,8 +121,8 @@ export function redactObject(obj: any): any {
  * @example
  * ```typescript
  * const logger = new BrowserLogger();
- * logger.info('Application started');
- * logger.error('Database connection failed', { host: 'localhost' });
+ * console.info('Application started');
+ * console.error('Database connection failed', { host: 'localhost' });
  * ```
  */
 class BrowserLogger {
@@ -142,7 +142,7 @@ class BrowserLogger {
    */
   error(message: string, ...args: any[]) {
     if (this.isDevelopment || typeof import.meta === 'undefined') {
-      graphLogger.error(`[ERROR]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
+      console.error(`[ERROR]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
     }
   }
   
@@ -156,7 +156,7 @@ class BrowserLogger {
    */
   warn(message: string, ...args: any[]) {
     if (this.isDevelopment || typeof import.meta === 'undefined') {
-      graphLogger.warn(`[WARN]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
+      console.warn(`[WARN]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
     }
   }
   
@@ -171,7 +171,7 @@ class BrowserLogger {
    */
   info(message: string, ...args: any[]) {
     if (this.isDevelopment || typeof import.meta === 'undefined') {
-      graphLogger.info(`[INFO]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
+      console.info(`[INFO]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
     }
   }
   
@@ -197,11 +197,11 @@ class BrowserLogger {
    * @param {string} message - The verbose message to log
    * @param {...any} args - Additional arguments to log
    * 
-   * @flow Delegates to graphLogger.debug with [VERBOSE] prefix
+   * @flow Delegates to console.debug with [VERBOSE] prefix
    */
   verbose(message: string, ...args: any[]) {
     if (this.isDevelopment || typeof import.meta === 'undefined') {
-      graphLogger.debug(`[VERBOSE]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
+      console.debug(`[VERBOSE]: ${redactSensitiveData(message)}`, undefined, ...args.map(redactObject));
     }
   }
 }

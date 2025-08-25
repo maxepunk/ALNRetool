@@ -794,6 +794,10 @@ export interface NodeMetadata {
   tier?: string; // Node tier for grouping
   timestamp?: number; // Unix timestamp for timeline ordering
   time?: number; // Alternative time representation
+  // Search highlighting
+  searchMatch?: boolean; // Whether this node matches current search term
+  // Connection depth focus
+  isFocused?: boolean; // Whether this node is the focused node for connection depth filtering
 }
 
 /**
@@ -1394,60 +1398,8 @@ export interface GraphMetrics {
   relationshipCounts: Record<RelationshipType, number>;
 }
 
-/**
- * Contract for entity transformation
- */
-export interface EntityTransformer<T = any> {
-  transformCharacters(characters: Character[]): GraphNode<Character>[];
-  transformElements(elements: Element[]): GraphNode<Element>[];
-  transformPuzzles(puzzles: Puzzle[]): GraphNode<Puzzle>[];
-  transformTimeline(timeline: TimelineEvent[]): GraphNode<TimelineEvent>[];
-  transformEntities(data: NotionData, excludeTypes?: EntityType[]): GraphNode<T>[];
-}
-
-/**
- * Contract for graph building
- */
-export interface GraphBuilder {
-  buildGraphData(data: NotionData, options?: BuildGraphOptions): GraphData;
-  buildPuzzleFocusGraph(data: NotionData): GraphData;
-  buildCharacterJourneyGraph(data: NotionData): GraphData;
-  buildContentStatusGraph(data: NotionData): GraphData;
-}
-
-/**
- * Contract for layout orchestration
- */
-export interface LayoutOrchestrator {
-  applyLayout(graph: GraphData, config?: LayoutConfig): GraphData;
-  applyDagreLayout(graph: GraphData, config?: LayoutConfig): GraphData;
-  applyPureDagreLayout(graph: GraphData, config?: LayoutConfig): GraphData;
-  getLayoutForView(viewType: ViewType): LayoutConfig;
-}
-
-/**
- * Contract for metrics calculation
- */
-export interface MetricsCalculator {
-  calculateMetrics(graph: GraphData): GraphMetrics;
-  calculateNodeMetrics(nodes: GraphNode[]): Partial<GraphMetrics>;
-  calculateEdgeMetrics(edges: GraphEdge[]): Partial<GraphMetrics>;
-  calculateConnectivity(graph: GraphData): Partial<GraphMetrics>;
-}
-
-/**
- * Contract for utility functions
- */
-export interface GraphUtilities {
-  findNodeById(nodes: GraphNode[], id: string): GraphNode | undefined;
-  findEdgeById(edges: GraphEdge[], id: string): GraphEdge | undefined;
-  getConnectedNodes(node: GraphNode, graph: GraphData): GraphNode[];
-  getNodeDegree(node: GraphNode, edges: GraphEdge[]): number;
-  detectCycles(graph: GraphData): string[][];
-  topologicalSort(graph: GraphData): GraphNode[];
-  findOrphans(graph: GraphData): GraphNode[];
-  mergeGraphs(...graphs: GraphData[]): GraphData;
-}
+// Removed unused contract interfaces for deleted modules
+// Direct implementations are now used instead of these abstractions
 
 /**
  * Type guards for runtime validation

@@ -18,6 +18,7 @@ interface DiamondCardProps extends Partial<NodeProps> {
   icon?: ReactNode;
   className?: string;
   selected?: boolean;
+  highlighted?: boolean;  // For search highlighting
   showHandles?: boolean;
   handlePositions?: {
     source?: Position;
@@ -102,6 +103,7 @@ const DiamondCard = memo(({
   icon,
   className,
   selected = false,
+  highlighted = false,
   showHandles = true,
   handlePositions = {
     source: Position.Right,
@@ -143,7 +145,8 @@ const DiamondCard = memo(({
             'border-2',
             complexityTheme.border,
             complexityTheme.glow,
-            selected && 'ring-4 ring-amber-500/50 ring-offset-2 ring-offset-transparent'
+            selected && 'ring-4 ring-amber-500/50 ring-offset-2 ring-offset-transparent',
+            highlighted && 'ring-4 ring-yellow-400/80 ring-offset-2 ring-offset-transparent shadow-yellow-300/50'
           )}
           style={{
             transform: 'rotate(45deg)',

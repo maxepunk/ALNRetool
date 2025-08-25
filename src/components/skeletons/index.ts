@@ -1,5 +1,16 @@
-export { PuzzleSkeleton } from './PuzzleSkeleton'
-export { CharacterSkeleton } from './CharacterSkeleton'
-export { ElementSkeleton } from './ElementSkeleton'
-export { TimelineSkeleton } from './TimelineSkeleton'
-// LoadingSkeleton is deprecated - use components from shadcn/ui directly
+/**
+ * Skeleton Component Exports
+ * 
+ * Export all skeleton components for loading states
+ * Now using a unified EntitySkeleton component with convenience exports
+ */
+
+export { 
+  EntitySkeleton,
+  CharacterSkeleton,
+  ElementSkeleton,
+  PuzzleSkeleton,
+  TimelineSkeleton,
+  type SkeletonVariant,
+  type EntityType as SkeletonEntityType
+} from './EntitySkeleton';

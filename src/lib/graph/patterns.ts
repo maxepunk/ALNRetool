@@ -78,7 +78,7 @@
  */
 
 import type { SFMetadata } from './types';
-import { logger } from './utils/Logger'
+
 
 
 // ============================================================================
@@ -380,7 +380,7 @@ function extractValueRating(text: string): number | undefined {
   
   // Validate range
   if (value < 1 || value > 5) {
-    logger.warn(`SF_ValueRating out of range (1-5): ${value}`);
+    console.warn(`SF_ValueRating out of range (1-5): ${value}`);
     return undefined;
   }
   
@@ -450,7 +450,7 @@ function extractMemoryType(text: string): 'Personal' | 'Business' | 'Technical' 
     return type;
   }
   
-  logger.warn(`Unknown SF_MemoryType: ${match[1]}`);
+  console.warn(`Unknown SF_MemoryType: ${match[1]}`);
   return undefined;
 }
 
@@ -520,7 +520,7 @@ function extractGroup(text: string): { name: string; multiplier?: number } | und
     if (!isNaN(multiplier) && multiplier >= 1 && multiplier <= 10) {
       result.multiplier = multiplier;
     } else {
-      logger.warn(`Invalid group multiplier: ${match[2]}`);
+      console.warn(`Invalid group multiplier: ${match[2]}`);
     }
   }
   

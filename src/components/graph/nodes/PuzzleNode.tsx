@@ -55,6 +55,7 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
       title={entity.name}
       icon={<PuzzleIcon className="h-5 w-5" />}
       selected={selected}
+      highlighted={metadata.searchMatch}
       statuses={statuses}
       requirementsCount={entity.puzzleElementIds?.length || 0}
       rewardsCount={entity.rewardIds?.length || 0}

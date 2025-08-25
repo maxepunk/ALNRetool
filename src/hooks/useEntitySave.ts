@@ -1,14 +1,34 @@
 /**
- * Shared hook for handling entity saves across all views
+ * Entity Save Hook
  * 
- * This provides a unified interface for saving any entity type,
+ * Shared hook for handling entity saves across all views.
+ * Provides a unified interface for saving any entity type,
  * abstracting away the individual mutation hooks and entity type detection.
  * 
- * Benefits:
+ * @module hooks/useEntitySave
+ * 
+ * **Architecture:**
  * - Single responsibility: Views don't need to know about multiple hooks
  * - DRY: Entity type detection logic in one place
  * - Consistent: All views use the same save handler
- * - Testable: One hook to test instead of three implementations
+ * - Testable: One hook to test instead of multiple implementations
+ * 
+ * **Features:**
+ * - Automatic entity type detection
+ * - Unified error handling
+ * - Consolidated loading states
+ * - TypeScript type safety
+ * 
+ * **Usage:**
+ * ```typescript
+ * const { handleEntitySave, isSaving, error } = useEntitySave();
+ * 
+ * // Save with automatic type detection
+ * await handleEntitySave(updates, entity);
+ * 
+ * // Save with explicit type
+ * await handleEntitySave(updates, null, 'element');
+ * ```
  */
 
 import { useCallback } from 'react';
@@ -19,15 +39,47 @@ import {
   useUpdateTimelineEvent 
 } from '@/hooks/mutations';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
-import { logger } from '@/lib/graph/utils/Logger';
 
+/**
+ * Union type for all entity types.
+ * @typedef {Character | Element | Puzzle | TimelineEvent} Entity
+ */
 type Entity = Character | Element | Puzzle | TimelineEvent;
+
+/**
+ * Entity type discriminator.
+ * @typedef {'character' | 'element' | 'puzzle' | 'timeline'} EntityType
+ */
 type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
 
 /**
- * Hook that provides a unified entity save handler
+ * Hook that provides a unified entity save handler.
+ * Automatically detects entity type and routes to appropriate mutation.
  * 
- * @returns A function that saves any entity type with automatic type detection
+ * @function useEntitySave
+ * @returns {Object} Save handler and status
+ * @returns {Function} returns.handleEntitySave - Unified save function
+ * @returns {boolean} returns.isSaving - Any mutation in progress
+ * @returns {Error|null} returns.error - Any mutation error
+ * 
+ * **Type Detection:**
+ * - Characters: Have 'tier' property
+ * - Puzzles: Have 'descriptionSolution' property
+ * - Elements: Have 'descriptionText' (but not 'descriptionSolution')
+ * - Timeline: Have 'date' and 'charactersInvolvedIds'
+ * 
+ * @example
+ * // In DetailPanel or any component
+ * const { handleEntitySave, isSaving } = useEntitySave();
+ * 
+ * const onSave = async () => {
+ *   try {
+ *     await handleEntitySave(formData, selectedEntity);
+ *     toast.success('Saved successfully');
+ *   } catch (error) {
+ *     toast.error('Save failed');
+ *   }
+ * };
  */
 export function useEntitySave() {
   // Get all mutation hooks
@@ -36,7 +88,16 @@ export function useEntitySave() {
   const updateElement = useUpdateElement();
   const updateTimeline = useUpdateTimelineEvent();
 
-  // Create unified save handler
+  /**
+   * Unified save handler for all entity types.
+   * Detects entity type and routes to correct mutation.
+   * 
+   * @param {Partial<Entity>} updates - Fields to update
+   * @param {Entity|null} [entity] - Original entity for type detection
+   * @param {EntityType} [entityType] - Explicit type override
+   * @returns {Promise<void>}
+   * @throws {Error} If entity ID missing or type cannot be determined
+   */
   const handleEntitySave = useCallback(async (
     updates: Partial<Entity>,
     entity?: Entity | null,
@@ -44,7 +105,7 @@ export function useEntitySave() {
   ): Promise<void> => {
     // Log in dev mode
     if (import.meta.env.DEV) {
-      logger.debug('Saving entity updates:', undefined, { updates, entityType });
+      console.debug('Saving entity updates:', undefined, { updates, entityType });
     }
 
     // Get entity ID and type
@@ -95,10 +156,10 @@ export function useEntitySave() {
       }
       
       if (import.meta.env.DEV) {
-        logger.debug('Entity saved successfully:', undefined, { entityId, type });
+        console.debug('Entity saved successfully:', undefined, { entityId, type });
       }
     } catch (error) {
-      logger.error('Failed to save entity:', undefined, error instanceof Error ? error : new Error(String(error)));
+      console.error('Failed to save entity:', undefined, error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
   }, [updateCharacter, updatePuzzle, updateElement, updateTimeline]);
@@ -120,7 +181,24 @@ export function useEntitySave() {
 }
 
 /**
- * Detect entity type from entity object
+ * Detect entity type from entity object.
+ * Uses unique properties to identify entity type.
+ * 
+ * @function detectEntityType
+ * @param {Partial<Entity>} entity - Entity object to analyze
+ * @returns {EntityType|null} Detected type or null
+ * 
+ * **Detection Rules:**
+ * - Character: Has 'tier' property
+ * - Puzzle: Has 'descriptionSolution' property
+ * - Element: Has 'descriptionText' but not 'descriptionSolution'
+ * - Timeline: Has both 'date' and 'charactersInvolvedIds'
+ * 
+ * @example
+ * detectEntityType({ tier: 'Core', name: 'Alice' }) // 'character'
+ * detectEntityType({ descriptionSolution: '...' }) // 'puzzle'
+ * detectEntityType({ descriptionText: '...' }) // 'element'
+ * detectEntityType({ date: '2024-01-01', charactersInvolvedIds: [] }) // 'timeline'
  */
 function detectEntityType(entity: Partial<Entity>): EntityType | null {
   if (!entity || typeof entity !== 'object') return null;

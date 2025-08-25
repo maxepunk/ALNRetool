@@ -1,6 +1,34 @@
 /**
- * Functions to convert app types back to Notion properties
- * Used for updating Notion pages via the API
+ * Notion Property Mappers
+ * 
+ * Functions to convert application entity types back to Notion API property format.
+ * Handles transformation from our normalized app types to Notion's property schema.
+ * 
+ * @module server/services/notionPropertyMappers
+ * 
+ * **Architecture:**
+ * - Type-safe property conversion
+ * - Preserves SF_ patterns in element descriptions
+ * - Handles all Notion property types (title, rich_text, select, relation, etc.)
+ * - Entity-specific converters for each database
+ * 
+ * **Usage:**
+ * ```typescript
+ * const properties = toNotionProperties('elements', {
+ *   name: 'Updated Name',
+ *   status: 'Active'
+ * });
+ * // Returns Notion-formatted properties ready for API
+ * ```
+ * 
+ * **Property Type Mapping:**
+ * - string → title/rich_text
+ * - string → select (single option)
+ * - string[] → multi_select
+ * - string[] → relation (IDs)
+ * - Date/string → date
+ * - string → url
+ * - File[] → files (external URLs)
  */
 
 import type {
@@ -10,7 +38,18 @@ import type {
   TimelineEvent,
 } from '../../src/types/notion/app.js';
 
-// Helper functions for property types
+/**
+ * Convert plain text to Notion title property format.
+ * Title properties are used for primary identifiers (Name fields).
+ * 
+ * @function toNotionTitle
+ * @param {string} text - Plain text to convert
+ * @returns {Object} Notion title property object
+ * 
+ * @example
+ * toNotionTitle('My Item Name')
+ * // Returns: { title: [{ type: 'text', text: { content: 'My Item Name' } }] }
+ */
 function toNotionTitle(text: string) {
   return {
     title: [
@@ -22,6 +61,18 @@ function toNotionTitle(text: string) {
   };
 }
 
+/**
+ * Convert plain text to Notion rich text property format.
+ * Rich text properties support formatting and are used for descriptions, notes, etc.
+ * 
+ * @function toNotionRichText
+ * @param {string} text - Plain text to convert
+ * @returns {Object} Notion rich text property object
+ * 
+ * @example
+ * toNotionRichText('Description text')
+ * // Returns: { rich_text: [{ type: 'text', text: { content: 'Description text' } }] }
+ */
 function toNotionRichText(text: string) {
   return {
     rich_text: [
@@ -33,50 +84,161 @@ function toNotionRichText(text: string) {
   };
 }
 
+/**
+ * Convert a value to Notion select property format.
+ * Select properties are single-choice dropdowns.
+ * 
+ * @function toNotionSelect
+ * @param {string | null} value - Selected option or null
+ * @returns {Object} Notion select property object
+ * 
+ * @example
+ * toNotionSelect('Active')
+ * // Returns: { select: { name: 'Active' } }
+ */
 function toNotionSelect(value: string | null) {
   return {
     select: value ? { name: value } : null,
   };
 }
 
+/**
+ * Convert array to Notion multi-select property format.
+ * Multi-select properties are multiple-choice tags.
+ * 
+ * @function toNotionMultiSelect
+ * @param {string[]} values - Array of selected options
+ * @returns {Object} Notion multi-select property object
+ * 
+ * @example
+ * toNotionMultiSelect(['Tag1', 'Tag2'])
+ * // Returns: { multi_select: [{ name: 'Tag1' }, { name: 'Tag2' }] }
+ */
 function toNotionMultiSelect(values: string[]) {
   return {
     multi_select: values.map(v => ({ name: v })),
   };
 }
 
+/**
+ * Convert entity IDs to Notion relation property format.
+ * Relations link to other database items.
+ * 
+ * @function toNotionRelation
+ * @param {string[]} ids - Array of Notion page IDs
+ * @returns {Object} Notion relation property object
+ * 
+ * @example
+ * toNotionRelation(['abc123', 'def456'])
+ * // Returns: { relation: [{ id: 'abc123' }, { id: 'def456' }] }
+ */
 function toNotionRelation(ids: string[]) {
   return {
     relation: ids.map(id => ({ id })),
   };
 }
 
+/**
+ * Convert status string to Notion status property format.
+ * Status properties are workflow states with colors.
+ * 
+ * @function toNotionStatus
+ * @param {string} status - Status name
+ * @returns {Object} Notion status property object
+ */
 function toNotionStatus(status: string) {
   return {
     status: { name: status },
   };
 }
 
+/**
+ * Convert date string to Notion date property format.
+ * Supports ISO 8601 date strings.
+ * 
+ * @function toNotionDate
+ * @param {string | null} date - ISO date string or null
+ * @returns {Object} Notion date property object
+ */
 function toNotionDate(date: string | null) {
   return {
     date: date ? { start: date } : null,
   };
 }
 
+/**
+ * Convert URL string to Notion URL property format.
+ * 
+ * @function toNotionUrl
+ * @param {string | null} url - URL string or null
+ * @returns {Object} Notion URL property object
+ */
 function toNotionUrl(url: string | null) {
   return {
     url: url || null,
   };
 }
 
-// Preserve SF_ patterns in element descriptions
+/**
+ * Convert file array to Notion files property format.
+ * Files are stored as external URLs in Notion.
+ * 
+ * @function toNotionFiles
+ * @param {Array} files - Array of file objects with name and URL
+ * @returns {Object} Notion files property object
+ * 
+ * @example
+ * toNotionFiles([{ name: 'image.png', url: 'https://example.com/image.png' }])
+ */
+function toNotionFiles(files: Array<{ name: string; url: string }>) {
+  return {
+    files: files.map(file => ({
+      type: 'external',
+      name: file.name,
+      external: {
+        url: file.url,
+      },
+    })),
+  };
+}
+
+/**
+ * Preserve SF_ patterns in element descriptions.
+ * SF_ patterns are semantic markers used for puzzle connections.
+ * This function ensures they remain intact during updates.
+ * 
+ * @function preserveSFPatterns
+ * @param {string} description - Description containing SF_ patterns
+ * @returns {string} Description with patterns preserved
+ * 
+ * @example
+ * preserveSFPatterns('Contains SF_KEY_001 and SF_LOCK_002')
+ * // Returns unchanged: 'Contains SF_KEY_001 and SF_LOCK_002'
+ */
 function preserveSFPatterns(description: string): string {
   // This function ensures SF_ patterns remain intact
   // The patterns are already in the description, just return it
   return description;
 }
 
-// Entity-specific converters
+/**
+ * Main converter function that routes to entity-specific converters.
+ * Transforms app entity updates to Notion property format.
+ * 
+ * @function toNotionProperties
+ * @param {string} entityType - Type of entity ('characters', 'elements', 'puzzles', 'timeline')
+ * @param {Partial} updates - Partial entity object with fields to update
+ * @returns {Record<string, any>} Notion-formatted properties object
+ * @throws {Error} If entityType is unknown
+ * 
+ * @example
+ * const props = toNotionProperties('elements', {
+ *   name: 'Updated Element',
+ *   status: 'Complete',
+ *   requiredForPuzzleIds: ['puzzle-1', 'puzzle-2']
+ * });
+ * // Returns Notion properties ready for API update
+ */
 export function toNotionProperties(
   entityType: 'characters' | 'elements' | 'puzzles' | 'timeline',
   updates: Partial<Character | Element | Puzzle | TimelineEvent>
@@ -95,6 +257,28 @@ export function toNotionProperties(
   }
 }
 
+/**
+ * Convert Character entity updates to Notion properties.
+ * Maps Character fields to Notion database columns.
+ * 
+ * @function toNotionCharacterProperties
+ * @param {Partial<Character>} updates - Character fields to update
+ * @returns {Record<string, any>} Notion properties for Character database
+ * 
+ * **Field Mappings:**
+ * - name → Name (title)
+ * - type → Player or NPC (select)
+ * - tier → Tier (select)
+ * - primaryAction → Primary action (rich_text)
+ * - characterLogline → Character logline (rich_text)
+ * - overview → Overview (rich_text)
+ * - emotionTowardsCEO → Emotion towards CEO (rich_text)
+ * - ownedElementIds → Owned elements (relation)
+ * - associatedElementIds → Associated elements (relation)
+ * - characterPuzzleIds → Character puzzles (relation)
+ * - eventIds → Events (relation)
+ * - connections → Character Connections (relation)
+ */
 export function toNotionCharacterProperties(updates: Partial<Character>) {
   const properties: Record<string, any> = {};
 
@@ -151,6 +335,34 @@ export function toNotionCharacterProperties(updates: Partial<Character>) {
   return properties;
 }
 
+/**
+ * Convert Element entity updates to Notion properties.
+ * Maps Element fields to Notion database columns.
+ * Preserves SF_ patterns in descriptions for puzzle connectivity.
+ * 
+ * @function toNotionElementProperties
+ * @param {Partial<Element>} updates - Element fields to update
+ * @returns {Record<string, any>} Notion properties for Element database
+ * 
+ * **Field Mappings:**
+ * - name → Name (title)
+ * - descriptionText → Description (rich_text, SF_ patterns preserved)
+ * - basicType → Basic Type (select)
+ * - status → Status (status)
+ * - firstAvailable → First Available (select)
+ * - productionNotes → Production Notes (rich_text)
+ * - contentLink → Content Link (url)
+ * - ownerId → Owner (relation, single)
+ * - containerId → Container (relation, single)
+ * - contentIds → Contents (relation, multiple)
+ * - requiredForPuzzleIds → Required For (Puzzle) (relation)
+ * - rewardedByPuzzleIds → Rewarded by (Puzzle) (relation)
+ * - associatedCharacterIds → Associated characters (relation)
+ * - narrativeThreads → Narrative threads (multi_select)
+ * - filesMedia → Files & media (files)
+ * 
+ * **Note:** sfPatterns, puzzleChain, isContainer are computed fields (read-only)
+ */
 export function toNotionElementProperties(updates: Partial<Element>) {
   const properties: Record<string, any> = {};
 
@@ -215,12 +427,34 @@ export function toNotionElementProperties(updates: Partial<Element>) {
     properties['Narrative threads'] = toNotionMultiSelect(updates.narrativeThreads);
   }
   
-  // Note: filesMedia is handled differently - files need to be uploaded via separate API
+  // Files field
+  if (updates.filesMedia !== undefined) {
+    properties['Files & media'] = toNotionFiles(updates.filesMedia);
+  }
+  
   // Note: sfPatterns, puzzleChain, isContainer are computed fields - not writable
 
   return properties;
 }
 
+/**
+ * Convert Puzzle entity updates to Notion properties.
+ * Maps Puzzle fields to Notion database columns.
+ * 
+ * @function toNotionPuzzleProperties
+ * @param {Partial<Puzzle>} updates - Puzzle fields to update
+ * @returns {Record<string, any>} Notion properties for Puzzle database
+ * 
+ * **Field Mappings:**
+ * - name → Name (title)
+ * - descriptionSolution → Description/Solution (rich_text)
+ * - assetLink → Asset Link (url)
+ * - puzzleElementIds → Puzzle elements (relation)
+ * - lockedItemId → Locked item (relation, single)
+ * - rewardIds → Rewards (relation, multiple)
+ * - parentItemId → Parent item (relation, single)
+ * - subPuzzleIds → Sub-puzzles (relation, multiple)
+ */
 export function toNotionPuzzleProperties(updates: Partial<Puzzle>) {
   const properties: Record<string, any> = {};
 
@@ -260,6 +494,21 @@ export function toNotionPuzzleProperties(updates: Partial<Puzzle>) {
   return properties;
 }
 
+/**
+ * Convert TimelineEvent entity updates to Notion properties.
+ * Maps TimelineEvent fields to Notion database columns.
+ * 
+ * @function toNotionTimelineProperties
+ * @param {Partial<TimelineEvent>} updates - Timeline event fields to update
+ * @returns {Record<string, any>} Notion properties for Timeline database
+ * 
+ * **Field Mappings:**
+ * - description → Description (title)
+ * - date → Date (date)
+ * - notes → Notes (rich_text)
+ * - charactersInvolvedIds → Characters involved (relation)
+ * - memoryEvidenceIds → Memory/Evidence (relation)
+ */
 export function toNotionTimelineProperties(updates: Partial<TimelineEvent>) {
   const properties: Record<string, any> = {};
 

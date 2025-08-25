@@ -73,7 +73,7 @@ export function Popover({ children, open: controlledOpen, onOpenChange }: Popove
       // Delay to prevent immediate close on open
       const timer = setTimeout(() => {
         document.addEventListener('mousedown', handleClickOutside)
-      }, 0)
+      }, 100) // Increased delay to prevent immediate close
       return () => {
         clearTimeout(timer)
         document.removeEventListener('mousedown', handleClickOutside)
@@ -100,7 +100,7 @@ export function PopoverTrigger({
   
   const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault()
-    e.stopPropagation()
+    // Removed stopPropagation as it might interfere with event handling
     setOpen(!open)
     props.onClick?.(e)
   }

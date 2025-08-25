@@ -98,6 +98,7 @@ const TimelineNode = memo(({ data, selected }: NodeProps) => {
       title={entity.description || 'Timeline Event'}
       icon={<Calendar className="h-5 w-5" />}
       selected={selected}
+      highlighted={metadata.searchMatch}
       headerSlot={badges}
       footerSlot={stats}
       handlePositions={handlePositions}

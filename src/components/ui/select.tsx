@@ -68,10 +68,7 @@ function SelectTrigger({
 }
 
 // Simple pass-through component for SelectValue
-function SelectValue({ 
-  placeholder,
-  ...props 
-}: React.HTMLAttributes<HTMLSpanElement> & { placeholder?: string }) {
+function SelectValue(_props: React.HTMLAttributes<HTMLSpanElement> & { placeholder?: string }) {
   return null // Native select handles this internally
 }
 
@@ -90,8 +87,7 @@ function SelectItem({
 
 // Container for options - just passes through children
 function SelectContent({ 
-  children,
-  ...props 
+  children
 }: React.HTMLAttributes<HTMLDivElement>) {
   return <>{children}</>
 }

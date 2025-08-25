@@ -1,5 +1,5 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
-import { logger } from '@/lib/graph/utils/Logger'
+
 
 
 /**
@@ -23,7 +23,7 @@ export const QUERY_RETRY_DELAY = (attemptIndex: number) =>
 const queryCache = new QueryCache({
   onError: (error, query) => {
     // Global error handler for all queries
-    logger.error('Query error:', {
+    console.error('Query error:', {
       queryKey: JSON.stringify(query.queryKey),
     }, error instanceof Error ? error : undefined)
     // In production, this would trigger error reporting/monitoring
@@ -40,7 +40,7 @@ const queryCache = new QueryCache({
 const mutationCache = new MutationCache({
   onError: (error, _variables, _context, mutation) => {
     // Global error handler for all mutations
-    logger.error('Mutation cache error:', {
+    console.error('Mutation cache error:', {
       mutationKey: JSON.stringify(mutation.options.mutationKey),
     }, error instanceof Error ? error : undefined)
   },
@@ -87,7 +87,7 @@ export const queryClient = new QueryClient({
       
       // Handle errors globally
       onError: (error) => {
-        logger.error('Mutation error:', undefined, error)
+        console.error('Mutation error:', undefined, error)
         // In production, this would trigger error reporting
       },
     },

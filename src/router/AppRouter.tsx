@@ -5,12 +5,12 @@
  * Phase 3B: Integration with ViewComponentFactory system
  */
 
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import React, { useEffect } from 'react'
 import AppLayout from '@/components/layout/AppLayout'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 import NotFound from '@/components/common/NotFound'
-import { useGeneratedRoutes } from '@/components/generated/RouteGenerator'
+import GraphView from '@/components/graph/GraphView'
 import { useFilterStore } from '@/stores/filterStore'
 
 /**
@@ -52,21 +52,14 @@ export default function AppRouter() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [filterStore]);
   
-  // Generate routes from ViewRegistry using the new hook
-  const routes = useGeneratedRoutes({
-    includeErrorBoundaries: true,
-    includeLoadingStates: true,
-    fallbackComponent: NotFound,
-    // Remove defaultRedirectPath to use automatic generation which handles parameters properly
-    // defaultRedirectPath: "/puzzle-focus"
-  });
-  
+  // Dynamic routing for view configurations
   return (
     <ErrorBoundary>
       <Routes>
         <Route path="/" element={<AppLayout />}>
-          {/* Spread the array of route elements directly */}
-          {routes}
+          <Route index element={<Navigate to="/graph/full-graph" replace />} />
+          <Route path="graph/:viewType?" element={<GraphView />} />
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
     </ErrorBoundary>

@@ -24,6 +24,7 @@ interface BaseNodeCardProps extends Partial<NodeProps> {
   children?: ReactNode;
   className?: string;
   selected?: boolean;
+  highlighted?: boolean;  // For search highlighting
   showHandles?: boolean;
   handlePositions?: {
     source?: Position;
@@ -101,6 +102,7 @@ const BaseNodeCard = memo(({
   children,
   className,
   selected = false,
+  highlighted = false,
   showHandles = true,
   handlePositions = {
     source: Position.Right,
@@ -125,6 +127,7 @@ const BaseNodeCard = memo(({
           theme.hover,
           theme.glow,
           selected && theme.selected,
+          highlighted && 'ring-2 ring-yellow-400/80 ring-offset-2 bg-yellow-50/90',
           // Glassmorphism effects
           'backdrop-blur-sm backdrop-saturate-150',
           'shadow-lg hover:shadow-xl',

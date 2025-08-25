@@ -2,7 +2,38 @@
  * Unified Field Editor Component
  * 
  * Automatically selects the appropriate field editor based on field type
- * and provides consistent styling and behavior across all field types
+ * and provides consistent styling and behavior across all field types.
+ * Central routing component that delegates to specialized field editors.
+ * 
+ * @module components/field-editors/FieldEditor
+ * 
+ * **Architecture:**
+ * - Type-based routing to specialized editors
+ * - Consistent validation and error display
+ * - Focus management and animations
+ * - Read-only field support
+ * - Required field indicators
+ * 
+ * **Supported Field Types:**
+ * - text: Single-line text input
+ * - textarea: Multi-line text input
+ * - select: Single selection dropdown
+ * - multiselect: Multiple selection with badges
+ * - checkbox: Boolean toggle
+ * - number: Numeric input
+ * - url: URL validation input
+ * - email: Email validation input
+ * - relation: Entity relationship selector
+ * - array: Dynamic array editor
+ * - files: File upload/display
+ * 
+ * **Features:**
+ * - Automatic field type detection
+ * - Validation error display
+ * - Helper text support
+ * - Focus state animations
+ * - Disabled/readonly states
+ * - Required field indicators
  */
 
 import React from 'react';
@@ -24,6 +55,22 @@ import { ArrayFieldEditor } from './ArrayFieldEditor';
 import { FilesFieldEditor } from './FilesFieldEditor';
 import type { FieldEditorProps } from './types';
 
+/**
+ * Main FieldEditor component that routes to appropriate field type editor.
+ * Acts as a factory component selecting the right editor based on field.type.
+ * 
+ * @component
+ * @param {FieldEditorProps} props - Field editor configuration
+ * @returns {JSX.Element | null} Appropriate field editor component
+ * 
+ * @example
+ * <FieldEditor
+ *   field={{ key: 'name', type: 'text', label: 'Name' }}
+ *   value={entity.name}
+ *   onChange={(value) => handleChange('name', value)}
+ *   error={errors.name}
+ * />
+ */
 export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
   const {
     field,
@@ -37,10 +84,13 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
     entityType,
   } = props;
 
-  // Format error message consistently
-  const displayError = error ? (typeof error === 'string' ? error : error.message) : undefined;
+  /**
+   * Format error message for consistent display.
+   * Handles both string and Error object formats.
+   */
+  const displayError = error ? (typeof error === 'string' ? error : (error as any).message) : undefined;
 
-  // Handle different field types
+  // Handle different field types with type-specific renderers
   switch (field.type) {
     case 'text':
       return (

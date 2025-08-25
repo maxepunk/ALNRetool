@@ -10,7 +10,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { useAllCharacters } from '@/hooks/useCharacters';
+import { useAllEntityData } from '@/hooks/generic/useEntityData';
+import { charactersApi } from '@/services/api';
+import { queryKeys } from '@/lib/queryKeys';
 import { normalizeTier, getTierBadgeVariant } from '@/lib/utils/tierUtils';
 import { useFilterStore } from '@/stores/filterStore';
 import type { Character } from '@/types/notion/app';
@@ -22,7 +24,7 @@ interface CharacterSelectorProps {
 export function CharacterSelector({ className }: CharacterSelectorProps) {
   const navigate = useNavigate();
   const { characterId } = useParams<{ characterId?: string }>();
-  const { data: characters, isLoading } = useAllCharacters();
+  const { data: characters, isLoading } = useAllEntityData(charactersApi, queryKeys.characters());
   
   // Get character selection from filter store
   const selectedCharacterId = useFilterStore(state => state.characterFilters.selectedCharacterId);

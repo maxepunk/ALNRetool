@@ -1,26 +1,26 @@
 /**
- * Relation Field Editor with Search and Multi-select
+ * Relation Field Editor - Simplified UI
  * 
- * Supports both single and multiple relation selection with:
- * - Search/filter functionality
- * - Add/remove capabilities
- * - Entity type awareness
- * - Loading states
+ * Uses a consistent UI pattern similar to basic field types:
+ * - Select dropdown for single relations
+ * - Badge-based multi-select for multiple relations
+ * - Simple and intuitive interface
  */
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
-import { X, Search, Plus, Check, ChevronDown } from 'lucide-react';
+import React, { useMemo, useCallback } from 'react';
+import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { FieldEditorProps } from './types';
+import { formatErrorMessage } from '@/utils/fieldValidation';
 import type {
   Character,
   Element,
@@ -31,8 +31,6 @@ import type {
 // Extended props for relation fields
 interface RelationFieldEditorProps extends FieldEditorProps {
   entityType?: 'character' | 'element' | 'puzzle' | 'timeline';
-  searchable?: boolean;
-  allowCreate?: boolean;
   multiple?: boolean; // true for relation, false for relation-single
 }
 
@@ -93,16 +91,13 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   isFocused,
   allEntities,
   entityType,
-  searchable = true,
-  allowCreate = false,
   multiple = true,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
   // Determine if this is a multi-relation or single-relation field
   const isMultiple = field.type === 'relation' || multiple;
+
+  // Format error message consistently
+  const displayError = error ? formatErrorMessage(error) : undefined;
   
   // Parse value into array of IDs
   const selectedIds = useMemo(() => {
@@ -116,44 +111,30 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   }, [value, isMultiple]);
 
   // Get available entities for selection
+  const targetType = (field as any).entityType || entityType;
   const availableEntities = useMemo(() => {
-    const targetType = (field as any).entityType || entityType;
     return getEntitiesOfType(allEntities, targetType);
-  }, [allEntities, entityType, field]);
-
-  // Filter entities based on search - memoized for performance
-  const filteredEntities = useMemo(() => {
-    if (!searchTerm) return availableEntities;
-    
-    const term = searchTerm.toLowerCase();
-    return availableEntities.filter(entity => {
-      const name = entity.name || entity.description || '';
-      return name.toLowerCase().includes(term);
-    });
-  }, [availableEntities, searchTerm]);
+  }, [allEntities, targetType]);
 
   // Get selected entities
   const selectedEntities = useMemo(() => {
-    const targetType = (field as any).entityType || entityType;
     return selectedIds
       .map(id => findEntityById(id, allEntities, targetType))
       .filter(Boolean);
-  }, [selectedIds, allEntities, entityType, field]);
+  }, [selectedIds, allEntities, targetType]);
 
   // Handle entity selection
   const handleSelect = useCallback((entityId: string) => {
     if (disabled || field.readOnly) return;
 
     if (isMultiple) {
-      // Multi-select: toggle selection
-      const newIds = selectedIds.includes(entityId)
-        ? selectedIds.filter(id => id !== entityId)
-        : [...selectedIds, entityId];
-      onChange(newIds);
+      // Multi-select: add if not already selected
+      if (!selectedIds.includes(entityId)) {
+        onChange([...selectedIds, entityId]);
+      }
     } else {
       // Single-select: replace selection
       onChange(entityId);
-      setIsOpen(false);
     }
   }, [selectedIds, onChange, disabled, field.readOnly, isMultiple]);
 
@@ -169,18 +150,10 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
     }
   }, [selectedIds, onChange, disabled, field.readOnly, isMultiple]);
 
-  // Handle clear all
-  const handleClearAll = useCallback(() => {
-    if (disabled || field.readOnly) return;
-    onChange(isMultiple ? [] : null);
-  }, [onChange, disabled, field.readOnly, isMultiple]);
-
-  // Focus search when popover opens
-  useEffect(() => {
-    if (isOpen && searchInputRef.current) {
-      setTimeout(() => searchInputRef.current?.focus(), 100);
-    }
-  }, [isOpen]);
+  // Get unselected entities for the dropdown
+  const unselectedEntities = useMemo(() => {
+    return availableEntities.filter(entity => !selectedIds.includes(entity.id));
+  }, [availableEntities, selectedIds]);
 
   // Render read-only state
   if (field.readOnly) {
@@ -190,17 +163,19 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
           {field.label}
           <span className="text-muted-foreground text-xs ml-2">(computed)</span>
         </Label>
-        <div className="flex flex-wrap gap-2">
+        <div className="min-h-[2.5rem] p-2 bg-white/5 border border-white/10 rounded-md">
           {selectedEntities.length > 0 ? (
-            selectedEntities.map((entity) => (
-              <Badge
-                key={entity.id}
-                variant="secondary"
-                className="text-xs cursor-default opacity-80"
-              >
-                {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
-              </Badge>
-            ))
+            <div className="flex flex-wrap gap-2">
+              {selectedEntities.map((entity) => (
+                <Badge
+                  key={entity.id}
+                  variant="secondary"
+                  className="text-xs cursor-default opacity-80"
+                >
+                  {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
+                </Badge>
+              ))}
+            </div>
           ) : (
             <span className="text-muted-foreground text-sm">No relationships</span>
           )}
@@ -224,7 +199,7 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
       </Label>
 
       {/* Selected items display */}
-      <div className="min-h-[2.5rem] p-2 bg-white/5 border border-white/10 rounded-md">
+      {selectedEntities.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {selectedEntities.map((entity) => (
             <Badge
@@ -235,122 +210,53 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
               <span className="mr-1">
                 {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
               </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-4 w-4 p-0 hover:bg-transparent"
+              <button
                 onClick={() => handleRemove(entity.id)}
                 disabled={disabled}
+                className="ml-1 hover:bg-white/20 rounded p-0.5 transition-colors disabled:opacity-50"
                 aria-label={`Remove ${entity.name || entity.description || entity.id}`}
               >
                 <X className="h-3 w-3" />
-              </Button>
+              </button>
             </Badge>
           ))}
-          
-          {selectedEntities.length === 0 && (
-            <span className="text-muted-foreground text-sm">
-              {field.placeholder || `Select ${field.label.toLowerCase()}...`}
-            </span>
-          )}
         </div>
-      </div>
+      )}
 
-      {/* Search and select popover */}
-      {searchable && (
-        <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger>
-            <Button
-              variant="outline"
-              className="w-full justify-between bg-white/5 border-white/10 hover:bg-white/10"
-              disabled={disabled}
-            >
-              <span className="flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                {isMultiple ? 'Add items' : 'Select item'}
-              </span>
-              <ChevronDown className="h-4 w-4 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          
-          <PopoverContent className="w-80 p-2 bg-gray-900/95 border-white/20" align="start">
-            {/* Search input */}
-            <div className="flex items-center gap-2 p-2">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                placeholder={`Search ${field.label.toLowerCase()}...`}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-8 flex-1"
-                aria-label={`Search ${field.label}`}
-                aria-describedby={`${field.key}-search-description`}
-              />
-            </div>
-            
-            {/* Entity list */}
-            <div className="max-h-60 overflow-y-auto" role="listbox" aria-label={`${field.label} options`}>
-              {filteredEntities.length > 0 ? (
-                <div className="space-y-1 p-1">
-                  {filteredEntities.map((entity) => {
-                    const isSelected = selectedIds.includes(entity.id);
-                    return (
-                      <button
-                        key={entity.id}
-                        onClick={() => handleSelect(entity.id)}
-                        className={cn(
-                          "w-full text-left px-2 py-1.5 rounded text-sm",
-                          "hover:bg-accent hover:text-accent-foreground",
-                          "flex items-center justify-between",
-                          isSelected && "bg-accent/50"
-                        )}
-                        aria-selected={isSelected}
-                        aria-label={`${isSelected ? 'Deselect' : 'Select'} ${entity.name || entity.description || entity.id}`}
-                        role="option"
-                      >
-                        <span className="truncate">
-                          {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
-                        </span>
-                        {isSelected && <Check className="h-3 w-3 ml-2 flex-shrink-0" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-4 text-sm text-muted-foreground">
-                  {searchTerm ? 'No matches found' : 'No items available'}
-                </div>
-              )}
-            </div>
+      {/* Select dropdown for adding new items */}
+      {(isMultiple || selectedEntities.length === 0) && unselectedEntities.length > 0 && (
+        <Select
+          value=""
+          onValueChange={handleSelect}
+          disabled={disabled}
+        >
+          <SelectTrigger className="bg-white/5 border-white/10 focus:border-white/20">
+            <SelectValue placeholder={
+              isMultiple 
+                ? `Add ${field.label.toLowerCase()}...` 
+                : field.placeholder || `Select ${field.label.toLowerCase()}...`
+            } />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="" disabled>
+              {isMultiple 
+                ? `Add ${field.label.toLowerCase()}...` 
+                : field.placeholder || `Select ${field.label.toLowerCase()}...`}
+            </SelectItem>
+            {unselectedEntities.map((entity) => (
+              <SelectItem key={entity.id} value={entity.id}>
+                {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
-            {/* Actions */}
-            {(selectedIds.length > 0 || allowCreate) && (
-              <div className="border-t pt-2 px-2 flex gap-2">
-                {selectedIds.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={handleClearAll}
-                    className="flex-1"
-                  >
-                    Clear all
-                  </Button>
-                )}
-                {allowCreate && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1"
-                    disabled
-                  >
-                    <Plus className="h-3 w-3 mr-1" />
-                    Create new
-                  </Button>
-                )}
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
+      {/* Empty state for single relation when one is selected */}
+      {!isMultiple && selectedEntities.length > 0 && unselectedEntities.length === 0 && (
+        <div className="text-sm text-muted-foreground">
+          All available options are selected
+        </div>
       )}
 
       {/* Helper text */}
@@ -359,9 +265,9 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
       )}
 
       {/* Error message */}
-      {error && (
+      {displayError && (
         <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1">
-          {error}
+          {displayError}
         </p>
       )}
     </div>

@@ -45,7 +45,7 @@
 
 import dagre from 'dagre';
 import type { GraphNode, GraphEdge, LayoutConfig, EntityType } from './types';
-import { logger } from './utils/Logger'
+
 
 
 // ============================================================================
@@ -468,7 +468,7 @@ export function applyDagreLayout(
   
   // Early return if no nodes
   if (nodes.length === 0) {
-    logger.warn('No nodes provided to dagre layout');
+    console.warn('No nodes provided to dagre layout');
     return [];
   }
   
@@ -490,12 +490,12 @@ export function applyDagreLayout(
   let invalidEdgeCount = 0;
   edges.forEach(edge => {
     if (!validNodeIds.has(edge.source)) {
-      logger.warn(`Edge source not found in nodes: ${edge.source}`);
+      console.warn(`Edge source not found in nodes: ${edge.source}`);
       invalidEdgeCount++;
       return;
     }
     if (!validNodeIds.has(edge.target)) {
-      logger.warn(`Edge target not found in nodes: ${edge.target}`);
+      console.warn(`Edge target not found in nodes: ${edge.target}`);
       invalidEdgeCount++;
       return;
     }
@@ -507,19 +507,19 @@ export function applyDagreLayout(
   });
   
   if (invalidEdgeCount > 0) {
-    logger.warn(`Skipped ${invalidEdgeCount} invalid edges in dagre layout`);
+    console.warn(`Skipped ${invalidEdgeCount} invalid edges in dagre layout`);
   }
   
   // Run layout algorithm
   try {
     // Add safety check before layout
     if (dagreGraph.nodeCount() === 0) {
-      logger.warn('No nodes in graph, skipping dagre layout');
+      console.warn('No nodes in graph, skipping dagre layout');
       return applyFallbackLayout(nodes);
     }
     dagre.layout(dagreGraph);
   } catch (error) {
-    logger.error('Dagre layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
+    console.error('Dagre layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
     // Fall back to simple grid layout
     return applyFallbackLayout(nodes);
   }
@@ -529,7 +529,7 @@ export function applyDagreLayout(
     const dagreNode = dagreGraph.node(node.id);
     
     if (!dagreNode) {
-      logger.warn(`Node ${node.id} not found in Dagre graph`);
+      console.warn(`Node ${node.id} not found in Dagre graph`);
       return node;
     }
     
@@ -656,18 +656,18 @@ export function applyHierarchicalLayout(
     });
   });
   
-  logger.debug(`Added ${nodesAdded} nodes to dagre graph`);
+  console.debug(`Added ${nodesAdded} nodes to dagre graph`);
   
   // Add edges - only if both source and target exist
   let invalidEdgeCount = 0;
   edges.forEach(edge => {
     if (!validNodeIds.has(edge.source)) {
-      logger.warn(`Hierarchical edge source not found: ${edge.source}`);
+      console.warn(`Hierarchical edge source not found: ${edge.source}`);
       invalidEdgeCount++;
       return;
     }
     if (!validNodeIds.has(edge.target)) {
-      logger.warn(`Hierarchical edge target not found: ${edge.target}`);
+      console.warn(`Hierarchical edge target not found: ${edge.target}`);
       invalidEdgeCount++;
       return;
     }
@@ -678,12 +678,12 @@ export function applyHierarchicalLayout(
   });
   
   if (invalidEdgeCount > 0) {
-    logger.warn(`Skipped ${invalidEdgeCount} invalid edges in hierarchical layout`);
+    console.warn(`Skipped ${invalidEdgeCount} invalid edges in hierarchical layout`);
   }
   
   // Check if we have any nodes before running layout
   if (nodesAdded === 0) {
-    logger.warn('No nodes added to dagre graph, returning empty layout');
+    console.warn('No nodes added to dagre graph, returning empty layout');
     return nodes;
   }
   
@@ -691,13 +691,13 @@ export function applyHierarchicalLayout(
   try {
     // Add safety check before layout
     if (dagreGraph.nodeCount() === 0) {
-      logger.warn('No nodes in hierarchical graph, skipping dagre layout');
+      console.warn('No nodes in hierarchical graph, skipping dagre layout');
       return applyFallbackLayout(nodes);
     }
     dagre.layout(dagreGraph);
   } catch (error) {
-    logger.error('Hierarchical layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
-    logger.error('Graph state:', undefined, new Error(`nodeCount: ${dagreGraph.nodeCount()}, edgeCount: ${dagreGraph.edgeCount()}`));
+    console.error('Hierarchical layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
+    console.error('Graph state:', undefined, new Error(`nodeCount: ${dagreGraph.nodeCount()}, edgeCount: ${dagreGraph.edgeCount()}`));
     return applyDagreLayout(nodes, edges, config); // Fall back to standard layout
   }
   
@@ -794,7 +794,7 @@ export function applyPuzzleChainGrouping(
     }
     dagre.layout(dagreGraph);
   } catch (error) {
-    logger.error('Puzzle chain grouping layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
+    console.error('Puzzle chain grouping layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
     return applyDagreLayout(nodes, edges, config);
   }
   

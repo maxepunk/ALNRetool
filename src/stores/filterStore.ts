@@ -4,6 +4,35 @@
  * Manages all filter state including search, acts, puzzles, characters, and view-specific filters.
  * Persists to sessionStorage for maintaining state across page refreshes.
  * Provides route-aware filter presets and computed values.
+ * 
+ * @module stores/filterStore
+ * 
+ * **Architecture:**
+ * - Zustand store with persistence middleware
+ * - Session storage for cross-refresh state
+ * - URL synchronization for shareable filters
+ * - View-specific filter segregation
+ * - Computed values for filter status
+ * 
+ * **Features:**
+ * - Universal search across all entities
+ * - View-specific filter sets
+ * - Connection depth control for graph
+ * - Filter presets for common queries
+ * - Active filter counting and display
+ * - URL state synchronization
+ * 
+ * **Performance:**
+ * - Memoized computed values
+ * - Selective re-renders via subscribeWithSelector
+ * - Batched state updates
+ * 
+ * **Usage:**
+ * ```typescript
+ * const { searchTerm, setSearchTerm } = useFilterStore();
+ * const hasFilters = useFilterStore(state => state.hasActiveFilters());
+ * const puzzleFilters = useFilterStore(state => state.puzzleFilters);
+ * ```
  */
 
 import { create } from 'zustand';
@@ -11,13 +40,30 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { urlToFilterState, filterStateToUrl, updateBrowserUrl } from '@/utils/urlState';
 
-// Filter types for different views
+/**
+ * Puzzle-specific filter configuration.
+ * @interface PuzzleFilters
+ * 
+ * @property {Set<string>} selectedActs - Active act filters (Act1, Act2, etc.)
+ * @property {string|null} selectedPuzzleId - Currently focused puzzle ID
+ * @property {'all'|'completed'|'incomplete'} completionStatus - Completion filter
+ */
 export interface PuzzleFilters {
   selectedActs: Set<string>;
   selectedPuzzleId: string | null;
   completionStatus: 'all' | 'completed' | 'incomplete';
 }
 
+/**
+ * Character-specific filter configuration.
+ * @interface CharacterFilters
+ * 
+ * @property {Set} selectedTiers - Character tier filters (Core/Secondary/Tertiary)
+ * @property {Set} ownershipStatus - Ownership status filters
+ * @property {'all'|'Player'|'NPC'} characterType - Character type filter
+ * @property {string|null} selectedCharacterId - Currently focused character
+ * @property {boolean} highlightShared - Highlight shared ownership elements
+ */
 export interface CharacterFilters {
   selectedTiers: Set<'Core' | 'Secondary' | 'Tertiary'>;
   ownershipStatus: Set<'Owned' | 'Accessible' | 'Shared' | 'Locked'>;
@@ -26,17 +72,44 @@ export interface CharacterFilters {
   highlightShared: boolean;
 }
 
+/**
+ * Content status filter configuration.
+ * @interface ContentFilters
+ * 
+ * @property {Set} contentStatus - Content workflow status filters
+ * @property {boolean|null} hasIssues - Filter for content with issues
+ * @property {'today'|'week'|'month'|'all'} lastEditedRange - Time range filter
+ */
 export interface ContentFilters {
   contentStatus: Set<'draft' | 'review' | 'approved' | 'published'>;
   hasIssues: boolean | null;
   lastEditedRange: 'today' | 'week' | 'month' | 'all';
 }
 
+/**
+ * Node connections view filter configuration.
+ * @interface NodeConnectionsFilters
+ * 
+ * @property {'character'|'puzzle'|'element'|'timeline'} nodeType - Node type focus
+ * @property {string|null} selectedNodeId - Selected node for connection analysis
+ */
 export interface NodeConnectionsFilters {
   nodeType: 'character' | 'puzzle' | 'element' | 'timeline';
   selectedNodeId: string | null;
 }
 
+/**
+ * Complete filter state interface.
+ * @interface FilterState
+ * 
+ * @property {string} searchTerm - Universal search term
+ * @property {number} connectionDepth - Graph traversal depth (hops)
+ * @property {PuzzleFilters} puzzleFilters - Puzzle view filters
+ * @property {CharacterFilters} characterFilters - Character view filters
+ * @property {ContentFilters} contentFilters - Content status filters
+ * @property {NodeConnectionsFilters|null} nodeConnectionsFilters - Node analysis filters
+ * @property {string|null} activeView - Currently active view for context
+ */
 export interface FilterState {
   // Universal filters
   searchTerm: string;
@@ -52,7 +125,14 @@ export interface FilterState {
   
   // Current active view (for route-aware filtering)
   activeView: 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections' | 'timeline' | 'full-network' | null;
-}export interface FilterActions {
+}
+
+/**
+ * Filter action methods interface.
+ * All methods for manipulating filter state.
+ * @interface FilterActions
+ */
+export interface FilterActions {
   // Universal filter actions
   setSearchTerm: (term: string) => void;
   clearSearch: () => void;
@@ -96,17 +176,63 @@ export interface FilterState {
   hydrateFromUrl: (urlParams: URLSearchParams) => void;
   syncToUrl: (replace?: boolean) => void;
   getUrlParams: () => URLSearchParams;
+  
+  // Generic filter methods (for new generic FilterPanel)
+  getFilter: (key: string) => any;
+  setFilter: (key: string, value: any) => void;
 }
 
-// Computed values
+/**
+ * Computed filter values interface.
+ * Methods that derive information from filter state.
+ * @interface FilterComputedValues
+ * 
+ * @property {Function} hasActiveFilters - Check if any filters are active
+ * @property {Function} activeFilterCount - Count total active filters
+ * @property {Function} getActiveFiltersForView - Get filter descriptions for current view
+ */
 export interface FilterComputedValues {
   hasActiveFilters: () => boolean;
   activeFilterCount: () => number;
   getActiveFiltersForView: () => string[];
-}type FilterStore = FilterState & FilterActions & FilterComputedValues;
+}
 
 /**
- * Main filter store with persistence and computed values
+ * Complete filter store type combining state, actions, and computed values.
+ * @typedef {FilterState & FilterActions & FilterComputedValues} FilterStore
+ */
+type FilterStore = FilterState & FilterActions & FilterComputedValues;
+
+/**
+ * Main filter store with persistence and computed values.
+ * Uses Zustand with persistence middleware for session storage.
+ * 
+ * @constant useFilterStore
+ * @type {StoreApi<FilterStore>}
+ * 
+ * **Persistence:**
+ * - Stored in sessionStorage as 'aln-filter-store'
+ * - Survives page refreshes within session
+ * - Cleared on browser/tab close
+ * 
+ * **Performance Optimizations:**
+ * - subscribeWithSelector for granular subscriptions
+ * - Computed values prevent unnecessary recalculations
+ * - Set operations for efficient collection management
+ * 
+ * @example
+ * // Basic usage
+ * const searchTerm = useFilterStore(state => state.searchTerm);
+ * const setSearchTerm = useFilterStore(state => state.setSearchTerm);
+ * 
+ * // Computed values
+ * const hasFilters = useFilterStore(state => state.hasActiveFilters());
+ * 
+ * // Selective subscription
+ * const puzzleActs = useFilterStore(
+ *   state => state.puzzleFilters.selectedActs,
+ *   shallow
+ * );
  */
 export const useFilterStore = create<FilterStore>()(
   subscribeWithSelector(
@@ -374,6 +500,103 @@ export const useFilterStore = create<FilterStore>()(
         getUrlParams: () => {
           const state = get();
           return filterStateToUrl(state);
+        },
+        
+        // Generic filter methods (for new generic FilterPanel)
+        getFilter: (key: string) => {
+          const state = get();
+          switch (key) {
+            // Character filters
+            case 'tiers':
+              return Array.from(state.characterFilters.selectedTiers);
+            case 'characterTypes':
+              return state.characterFilters.characterType;
+            
+            // Puzzle filters  
+            case 'acts':
+              return Array.from(state.puzzleFilters.selectedActs);
+            case 'completionStatus':
+              return state.puzzleFilters.completionStatus;
+              
+            // Graph depth
+            case 'depth':
+              return state.connectionDepth;
+              
+            // Search
+            case 'search':
+              return state.searchTerm;
+              
+            default:
+              return null;
+          }
+        },
+        
+        setFilter: (key: string, value: any) => {
+          const state = get();
+          switch (key) {
+            // Character filters
+            case 'tiers':
+              if (Array.isArray(value)) {
+                set({
+                  characterFilters: {
+                    ...state.characterFilters,
+                    selectedTiers: new Set(value)
+                  }
+                });
+              }
+              break;
+              
+            case 'characterTypes':
+              if (typeof value === 'string') {
+                set({
+                  characterFilters: {
+                    ...state.characterFilters,
+                    characterType: value as 'all' | 'Player' | 'NPC'
+                  }
+                });
+              }
+              break;
+            
+            // Puzzle filters
+            case 'acts':
+              if (Array.isArray(value)) {
+                set({
+                  puzzleFilters: {
+                    ...state.puzzleFilters,
+                    selectedActs: new Set(value)
+                  }
+                });
+              }
+              break;
+              
+            case 'completionStatus':
+              if (typeof value === 'string') {
+                set({
+                  puzzleFilters: {
+                    ...state.puzzleFilters,
+                    completionStatus: value as 'all' | 'completed' | 'incomplete'
+                  }
+                });
+              }
+              break;
+              
+            case 'depth':
+              if (typeof value === 'number') {
+                set({ connectionDepth: value });
+              }
+              break;
+              
+            // Search
+            case 'search':
+              if (typeof value === 'string') {
+                set({ searchTerm: value });
+              }
+              break;
+              
+            default:
+              console.warn(`Unknown filter key: ${key}`);
+              break;
+          }
         },
         
         // Computed values

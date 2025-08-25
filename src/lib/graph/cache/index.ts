@@ -82,7 +82,7 @@ export type { CacheConfig, CacheMetrics } from './LayoutCache';
 
 // Create a singleton instance with production-ready configuration
 import { LayoutCache } from './LayoutCache';
-import { logger } from '../utils/Logger'
+
 
 
 /**
@@ -123,7 +123,7 @@ export const layoutCache = new LayoutCache({
   enableMetrics: import.meta.env?.PROD !== true,
   /** Memory pressure callback for proactive investigation cache management */
   onMemoryPressure: () => {
-    logger.warn('Layout cache memory pressure detected, evicting entries');
+    console.warn('Layout cache memory pressure detected, evicting entries');
   }
 });
 

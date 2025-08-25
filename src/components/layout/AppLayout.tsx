@@ -11,7 +11,7 @@ import { useLastSyncTime } from '@/hooks/useLastSyncTime'
 import Breadcrumbs from '@/components/common/Breadcrumbs'
 import ConnectionStatus from '@/components/common/ConnectionStatus'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
-import Sidebar from '@/components/layout/SidebarRefactored'
+import Sidebar from '@/components/layout/Sidebar'
 import { 
   Menu, 
   X, 

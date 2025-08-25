@@ -1,8 +1,37 @@
 /**
- * Refactored Detail Panel Component
+ * Detail Panel Component
  * 
- * Uses the comprehensive field registry and modular field editors
- * to enable editing of ALL fields across all entity types
+ * Comprehensive entity editing panel with field validation and save functionality.
+ * Uses the field registry and modular field editors to enable editing
+ * of ALL fields across all entity types.
+ * 
+ * @module components/DetailPanel
+ * 
+ * **Architecture:**
+ * - Field registry-based configuration
+ * - Modular field editors by type
+ * - Optimistic updates with rollback
+ * - Real-time validation
+ * - Collapsible sections for organization
+ * 
+ * **Features:**
+ * - Edit all entity types (Character, Element, Puzzle, Timeline)
+ * - Field-level validation
+ * - Dirty state tracking
+ * - Save animations and feedback
+ * - Error handling
+ * - Responsive layout
+ * 
+ * **Usage:**
+ * ```typescript
+ * <DetailPanelRefactored
+ *   entity={selectedEntity}
+ *   entityType="element"
+ *   onClose={handleClose}
+ *   onSave={handleSave}
+ *   allEntities={entities}
+ * />
+ * ```
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
@@ -11,9 +40,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-// Removed unused animation imports
 import { useGraphAnimation } from '@/contexts/GraphAnimationContext';
 import { FieldEditor } from '@/components/field-editors';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { getFieldsByCategory } from '@/config/fieldRegistry';
 import type {
   Character,
@@ -28,13 +57,25 @@ import {
   useUpdateTimelineEvent,
   validateUpdates,
 } from '@/hooks/mutations';
-import { logger } from '@/lib/graph/utils/Logger'
+import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
 
-
-// Entity type union
+/**
+ * Union type for all entity types.
+ * @typedef {Character | Element | Puzzle | TimelineEvent} Entity
+ */
 type Entity = Character | Element | Puzzle | TimelineEvent;
 
-// Collapsible section component
+/**
+ * Props for CollapsibleSection component.
+ * @interface SectionProps
+ * 
+ * @property {string} title - Section heading
+ * @property {React.ReactNode} children - Section content
+ * @property {boolean} [defaultOpen=true] - Initial expansion state
+ * @property {Function} [onMouseEnter] - Mouse enter handler
+ * @property {Function} [onMouseLeave] - Mouse leave handler
+ * @property {string} [badge] - Optional badge text
+ */
 interface SectionProps {
   title: string;
   children: React.ReactNode;
@@ -44,6 +85,19 @@ interface SectionProps {
   badge?: string;
 }
 
+/**
+ * Collapsible section component for organizing fields.
+ * Provides expand/collapse functionality with visual indicators.
+ * 
+ * @component
+ * @param {SectionProps} props - Section configuration
+ * @returns {JSX.Element} Collapsible section with title and content
+ * 
+ * @example
+ * <CollapsibleSection title="Basic Fields" badge="3">
+ *   {basicFields}
+ * </CollapsibleSection>
+ */
 const CollapsibleSection: React.FC<SectionProps> = ({ 
   title, 
   children, 
@@ -79,6 +133,23 @@ const CollapsibleSection: React.FC<SectionProps> = ({
   );
 };
 
+/**
+ * Props for the main DetailPanel component.
+ * @interface DetailPanelProps
+ * 
+ * @property {Entity|null} entity - Entity being edited
+ * @property {'character'|'element'|'puzzle'|'timeline'} entityType - Type of entity
+ * @property {Function} onClose - Callback when panel is closed
+ * @property {Function} [onSave] - Optional custom save handler
+ * @property {boolean} [isLoading] - Loading state from external source
+ * @property {boolean} [isSaving] - Saving state from external source
+ * @property {string|null} [error] - Error message from external source
+ * @property {Object} [allEntities] - All entities for relationship fields
+ * @property {Character[]} [allEntities.characters] - All character entities
+ * @property {Element[]} [allEntities.elements] - All element entities
+ * @property {Puzzle[]} [allEntities.puzzles] - All puzzle entities
+ * @property {TimelineEvent[]} [allEntities.timeline] - All timeline entities
+ */
 interface DetailPanelProps {
   entity: Entity | null;
   entityType: 'character' | 'element' | 'puzzle' | 'timeline';
@@ -95,6 +166,38 @@ interface DetailPanelProps {
   };
 }
 
+/**
+ * Main DetailPanel component for entity editing.
+ * Provides a comprehensive form interface with field validation,
+ * optimistic updates, and real-time saving capabilities.
+ * 
+ * @component
+ * @param {DetailPanelProps} props - Component configuration
+ * @returns {JSX.Element | null} Detail panel or null if no entity
+ * 
+ * **Features:**
+ * - Field registry-based dynamic form generation
+ * - Real-time validation with error feedback
+ * - Optimistic UI updates with rollback on error
+ * - Collapsible sections for field organization
+ * - Animation feedback for save/error states
+ * - Dirty state tracking with unsaved changes warning
+ * - Keyboard shortcuts (Ctrl+S to save)
+ * 
+ * **State Management:**
+ * - Local form state with controlled inputs
+ * - Validation errors tracked per field
+ * - Animation states for visual feedback
+ * - Mutation state from React Query hooks
+ * 
+ * @example
+ * <DetailPanelRefactored
+ *   entity={selectedEntity}
+ *   entityType="puzzle"
+ *   onClose={() => setSelectedEntity(null)}
+ *   allEntities={allEntities}
+ * />
+ */
 export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
   entity,
   entityType,
@@ -211,7 +314,13 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
     }
   }, [hasValidationError]);
 
-  // Handle field changes
+  /**
+   * Handle field value changes with validation.
+   * Updates form state and performs field-level validation.
+   * 
+   * @param {string} key - Field key from registry
+   * @param {any} value - New field value
+   */
   const handleFieldChange = useCallback((key: string, value: any) => {
     setFormData((prev) => ({
       ...prev,
@@ -219,15 +328,55 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
     }));
     setIsDirty(true);
     
-    // Clear validation error for this field
+    // Perform field-level validation
     setValidationErrors((prev) => {
       const newErrors = { ...prev };
-      delete newErrors[key];
+      delete newErrors[key]; // Clear existing error first
+      
+      // Get field configuration to determine validation rules
+      const allFields = [
+        ...Object.values(fieldsByCategory.basic || {}),
+        ...Object.values(fieldsByCategory.details || {}),
+        ...Object.values(fieldsByCategory.relations || {}),
+        ...Object.values(fieldsByCategory.metadata || {}),
+      ];
+      const fieldConfig = allFields.find(f => f.key === key);
+      
+      if (fieldConfig && fieldConfig.required && (!value || value === '')) {
+        newErrors[key] = 'This field is required';
+      } else if (fieldConfig) {
+        // Apply field type specific validation
+        let validationRules: any[] = [];
+        switch (fieldConfig.type) {
+          case 'text':
+            if (fieldConfig.required) validationRules = fieldValidationConfigs.text.required;
+            break;
+          case 'url':
+            validationRules = fieldValidationConfigs.url;
+            break;
+          case 'number':
+            validationRules = fieldValidationConfigs.number;
+            break;
+        }
+        
+        if (validationRules.length > 0) {
+          const validationResult = validateField(value, validationRules);
+          if (!validationResult.isValid && validationResult.error) {
+            newErrors[key] = validationResult.error;
+          }
+        }
+      }
+      
       return newErrors;
     });
-  }, []);
+  }, [fieldsByCategory]);
 
-  // Validate form
+  /**
+   * Validate entire form before saving.
+   * Checks required fields and applies type-specific validation.
+   * 
+   * @returns {boolean} True if form is valid
+   */
   const validateForm = useCallback((): boolean => {
     const errors: Record<string, string> = {};
     const allFields = [
@@ -273,7 +422,20 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
     return Object.keys(errors).length === 0;
   }, [fieldsByCategory, formData, entity]);
 
-  // Handle save
+  /**
+   * Save handler with validation and optimistic updates.
+   * Detects changes, validates, and saves via mutation or callback.
+   * 
+   * @async
+   * @returns {Promise<void>}
+   * 
+   * **Process:**
+   * 1. Validate form fields
+   * 2. Detect changed fields only
+   * 3. Apply business rule validation
+   * 4. Save via mutation (preferred) or onSave callback
+   * 5. Handle success/error states with animations
+   */
   const handleSave = useCallback(async () => {
     if (!validateForm()) {
       return;
@@ -311,18 +473,27 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
         });
         setIsDirty(false);
         setSaveSuccess(true);
+        // Reset mutation state to allow subsequent saves
+        mutation.reset();
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
       } else if (onSave) {
         await onSave(changes);
         setIsDirty(false);
         setSaveSuccess(true);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
       }
     } catch (error) {
-      logger.error('Failed to save changes:', undefined, error instanceof Error ? error : new Error(String(error)));
+      console.error('Failed to save changes:', undefined, error instanceof Error ? error : new Error(String(error)));
       setHasValidationError(true);
     }
   }, [formData, entity, mutation, onSave, validateForm, entityType]);
 
-  // Handle cancel
+  /**
+   * Cancel handler to reset form to original state.
+   * Discards all unsaved changes and clears validation errors.
+   */
   const handleCancel = useCallback(() => {
     if (entity) {
       setFormData({ ...entity });
@@ -335,7 +506,10 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
     return null;
   }
 
-  // Get entity display information
+  /**
+   * Get icon emoji for entity type.
+   * @returns {string} Entity type emoji
+   */
   const getEntityIcon = () => {
     switch (entityType) {
       case 'character':
@@ -351,6 +525,10 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
     }
   };
 
+  /**
+   * Get display name for entity type.
+   * @returns {string} Capitalized entity type name
+   */
   const getEntityTypeName = () => {
     return entityType.charAt(0).toUpperCase() + entityType.slice(1);
   };
@@ -393,7 +571,16 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <>
+          <ErrorBoundary
+            onRetry={() => {
+              // Reset form state on retry
+              setFormData({});
+              setValidationErrors({});
+              setIsDirty(false);
+              mutation?.reset();
+            }}
+            onClose={onClose}
+          >
             {/* Error display */}
             {error && (
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
@@ -521,12 +708,12 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
                 )}
               </div>
             </CollapsibleSection>
-          </>
+          </ErrorBoundary>
         )}
       </div>
 
-      {/* Footer with actions */}
-      {onSave && (
+      {/* Footer with actions - show if we have either onSave prop OR internal mutation */}
+      {(onSave || mutation) && (
         <div className="border-t border-white/10 p-4 flex gap-2">
           <Button
             variant="outline"

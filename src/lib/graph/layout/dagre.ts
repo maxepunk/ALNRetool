@@ -25,13 +25,7 @@
 
 import dagre from 'dagre';
 import type { GraphNode, GraphEdge } from '../types';
-import { 
-  calculateLayoutQuality, 
-  reportLayoutQuality
-} from '../modules/LayoutQualityMetrics';
-import { injectVirtualEdges } from '../modules/VirtualEdgeInjector';
-import { applyElementClustering, getNodeHeight } from '../modules/ElementClusterer';
-import { logger } from '../utils/Logger'
+// Module imports removed in Phase 3 - using simplified inline implementations
 
 
 /**
@@ -141,12 +135,12 @@ function calculateAdaptiveRankSeparation(
   // If we have high element density, increase rank separation
   if (avgElementsPerPuzzle > 5) {
     adaptiveRankSeparation = Math.max(400, adaptiveRankSeparation * 1.3);
-    logger.debug(`[Adaptive Spacing] High element density (${avgElementsPerPuzzle.toFixed(1)} per puzzle), increasing rank separation to ${adaptiveRankSeparation}`);
+    // logger.debug(`[Adaptive Spacing] High element density (${avgElementsPerPuzzle.toFixed(1)} per puzzle), increasing rank separation to ${adaptiveRankSeparation}`);
   } else if (avgElementsPerPuzzle > 3) {
     adaptiveRankSeparation = Math.max(350, adaptiveRankSeparation * 1.15);
-    logger.debug(`[Adaptive Spacing] Medium element density (${avgElementsPerPuzzle.toFixed(1)} per puzzle), increasing rank separation to ${adaptiveRankSeparation}`);
+    // logger.debug(`[Adaptive Spacing] Medium element density (${avgElementsPerPuzzle.toFixed(1)} per puzzle), increasing rank separation to ${adaptiveRankSeparation}`);
   } else {
-    logger.debug(`[Adaptive Spacing] Low element density (${avgElementsPerPuzzle.toFixed(1)} per puzzle), keeping rank separation at ${adaptiveRankSeparation}`);
+    // logger.debug(`[Adaptive Spacing] Low element density (${avgElementsPerPuzzle.toFixed(1)} per puzzle), keeping rank separation at ${adaptiveRankSeparation}`);
   }
   
   // Adaptive node separation based on rank density
@@ -157,18 +151,18 @@ function calculateAdaptiveRankSeparation(
   
   if (maxRankSize > 10) {
     adaptiveNodeSeparation = Math.min(60, adaptiveNodeSeparation * 0.7);
-    logger.debug(`[Adaptive Spacing] High rank density (max ${maxRankSize} nodes), reducing node separation to ${adaptiveNodeSeparation}`);
+    // logger.debug(`[Adaptive Spacing] High rank density (max ${maxRankSize} nodes), reducing node separation to ${adaptiveNodeSeparation}`);
   } else if (maxRankSize > 5) {
     adaptiveNodeSeparation = Math.min(80, adaptiveNodeSeparation * 0.85);
-    logger.debug(`[Adaptive Spacing] Medium rank density (max ${maxRankSize} nodes), reducing node separation to ${adaptiveNodeSeparation}`);
+    // logger.debug(`[Adaptive Spacing] Medium rank density (max ${maxRankSize} nodes), reducing node separation to ${adaptiveNodeSeparation}`);
   } else {
-    logger.debug(`[Adaptive Spacing] Low rank density (max ${maxRankSize} nodes), keeping node separation at ${adaptiveNodeSeparation}`);
+    // logger.debug(`[Adaptive Spacing] Low rank density (max ${maxRankSize} nodes), keeping node separation at ${adaptiveNodeSeparation}`);
   }
   
   // Apply element-specific tighter spacing if dynamic spacing is enabled
   if (config.dynamicSpacing && config.tightElementSpacing) {
     // This will be applied later in the layout process
-    logger.debug(`[Adaptive Spacing] Dynamic element spacing enabled: ${config.tightElementSpacing}px`);
+    // logger.debug(`[Adaptive Spacing] Dynamic element spacing enabled: ${config.tightElementSpacing}px`);
   }
   
   return {
@@ -221,12 +215,11 @@ export function applyPureDagreLayout(
   const config = { ...DEFAULT_OPTIONS, ...options };
   
   console.group('[Pure Dagre] Applying layout with natural flow');
-  logger.debug('Configuration:', undefined, config);
-  logger.debug('Input:', {  nodes: nodes.length, edges: edges.length  });
+  // logger.debug('Configuration:', undefined, config);
+  // logger.debug('Input:', {  nodes: nodes.length, edges: edges.length  });
   
-  // Inject virtual edges for dual-role element handling
-  const enhancedEdges = injectVirtualEdges(nodes, edges);
-  logger.debug('Enhanced edges (with virtual):', undefined, enhancedEdges.length);
+  // Virtual edge injection removed in Phase 3 - using direct edges
+  const enhancedEdges = edges;
 
   // Phase 4: Adaptive rank separation
   // Analyze node density to determine optimal rank separation
@@ -300,14 +293,14 @@ export function applyPureDagreLayout(
     }
   });
   
-  logger.debug(`Total edges added: ${edgeCount} (including ${virtualEdgeCount} virtual edges)`);
+  // logger.debug(`Total edges added: ${edgeCount} (including ${virtualEdgeCount} virtual edges)`);
   console.groupEnd();
 
   // Run Dagre layout
   try {
     dagre.layout(dagreGraph);
   } catch (error) {
-    logger.error('[Pure Dagre] Layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
+    // logger.error('[Pure Dagre] Layout failed:', undefined, error instanceof Error ? error : new Error(String(error)));
     return nodes; // Return original nodes on failure
   }
 
@@ -320,8 +313,8 @@ export function applyPureDagreLayout(
     const queensDagreNode = dagreGraph.node(queensNode.id);
     const collabDagreNode = dagreGraph.node(collabNode.id);
     
-    logger.debug(`Queens/Sudoku position: x=${queensDagreNode?.x}, y=${queensDagreNode?.y}`);
-    logger.debug(`Collab One Pagers position: x=${collabDagreNode?.x}, y=${collabDagreNode?.y}`);
+    // logger.debug(`Queens/Sudoku position: x=${queensDagreNode?.x}, y=${queensDagreNode?.y}`);
+    // logger.debug(`Collab One Pagers position: x=${collabDagreNode?.x}, y=${collabDagreNode?.y}`);
     
     // Check what edges are connected to these puzzles
     console.group('Edge Analysis for problematic puzzles');
@@ -330,12 +323,12 @@ export function applyPureDagreLayout(
     const queensIncoming = dagreGraph.inEdges(queensNode.id);
     const queensOutgoing = dagreGraph.outEdges(queensNode.id);
     
-    logger.debug(`Queens/Sudoku incoming edges (${queensIncoming?.length || 0}):`);
+    // logger.debug(`Queens/Sudoku incoming edges (${queensIncoming?.length || 0}):`);
     queensIncoming?.forEach(e => {
       dagreGraph.edge(e);
     });
     
-    logger.debug(`Queens/Sudoku outgoing edges (${queensOutgoing?.length || 0}):`);
+    // logger.debug(`Queens/Sudoku outgoing edges (${queensOutgoing?.length || 0}):`);
     queensOutgoing?.forEach(e => {
       dagreGraph.edge(e);
     });
@@ -344,12 +337,12 @@ export function applyPureDagreLayout(
     const collabIncoming = dagreGraph.inEdges(collabNode.id);
     const collabOutgoing = dagreGraph.outEdges(collabNode.id);
     
-    logger.debug(`Collab One Pagers incoming edges (${collabIncoming?.length || 0}):`);
+    // logger.debug(`Collab One Pagers incoming edges (${collabIncoming?.length || 0}):`);
     collabIncoming?.forEach(() => {
       // Edge debugging - variables removed for unused warning cleanup
     });
     
-    logger.debug(`Collab One Pagers outgoing edges (${collabOutgoing?.length || 0}):`);
+    // logger.debug(`Collab One Pagers outgoing edges (${collabOutgoing?.length || 0}):`);
     collabOutgoing?.forEach(() => {
       // Edge debugging - variables removed for unused warning cleanup
     });
@@ -358,10 +351,10 @@ export function applyPureDagreLayout(
     
     if (queensDagreNode && collabDagreNode) {
       if (queensDagreNode.x > collabDagreNode.x) {
-        logger.error(`❌ LAYOUT ERROR: Queens/Sudoku (x=${queensDagreNode.x}) is to the RIGHT of Collab One Pagers (x=${collabDagreNode.x})`);
-        logger.debug('This violates the dependency ordering despite the virtual edge!');
+        // logger.error(`❌ LAYOUT ERROR: Queens/Sudoku (x=${queensDagreNode.x}) is to the RIGHT of Collab One Pagers (x=${collabDagreNode.x})`);
+        // logger.debug('This violates the dependency ordering despite the virtual edge!');
       } else {
-        logger.debug(`✅ Correct ordering: Queens/Sudoku (x=${queensDagreNode.x}) is to the LEFT of Collab One Pagers (x=${collabDagreNode.x})`);
+        // logger.debug(`✅ Correct ordering: Queens/Sudoku (x=${queensDagreNode.x}) is to the LEFT of Collab One Pagers (x=${collabDagreNode.x})`);
       }
     }
   }
@@ -370,26 +363,21 @@ export function applyPureDagreLayout(
   // Extract and apply positions
   let positionedNodes = extractPositions(nodes, dagreGraph);
 
-  // Apply element clustering if enabled
-  if (config.clusterElements) {
-    positionedNodes = applyElementClustering(positionedNodes, edges, 0.6);
-  }
+  // Element clustering removed in Phase 3
 
   // Log some metrics about the layout
   const bounds = calculateBounds(positionedNodes);
-  logger.debug('[Pure Dagre] Layout complete:', undefined, {
-    nodesPositioned: positionedNodes.length,
-    bounds: {
-      width: Math.round(bounds.maxX - bounds.minX),
-      height: Math.round(bounds.maxY - bounds.minY),
-    },
-    dynamicSpacing: config.dynamicSpacing,
-    clusteringApplied: config.clusterElements,
-  });
+  // logger.debug('[Pure Dagre] Layout complete:', undefined, {
+  //   nodesPositioned: positionedNodes.length,
+  //   bounds: {
+  //     width: Math.round(bounds.maxX - bounds.minX),
+  //     height: Math.round(bounds.maxY - bounds.minY),
+  //   },
+  //   dynamicSpacing: config.dynamicSpacing,
+  //   clusteringApplied: config.clusterElements,
+  // });
   
-  // Calculate and report layout quality metrics
-  const qualityMetrics = calculateLayoutQuality(positionedNodes, edges);
-  reportLayoutQuality(qualityMetrics);
+  // Layout quality metrics removed in Phase 3
   
   console.groupEnd();
 
@@ -423,7 +411,7 @@ function createDagreGraph(
     // Use tighter spacing for elements when dynamic spacing is enabled
     // This will be the default, and we'll override for puzzles later
     nodeSeparation = config.tightElementSpacing;
-    logger.debug('[Dynamic Spacing] Using tight element spacing:', undefined, nodeSeparation);
+    // logger.debug('[Dynamic Spacing] Using tight element spacing:', undefined, nodeSeparation);
   }
   
   // Configure graph options for left-to-right flow
@@ -467,7 +455,7 @@ function extractPositions(
     const dagreNode = dagreGraph.node(node.id);
     
     if (!dagreNode) {
-      logger.warn(`[Pure Dagre] No position calculated for node ${node.id}`);
+      // logger.warn(`[Pure Dagre] No position calculated for node ${node.id}`);
       return node;
     }
     
@@ -518,6 +506,35 @@ function getNodeWidth(node: GraphNode): number {
   return baseWidths[entityType] || 160;
 }
 
+/**
+ * Calculate node height based on entity type
+ * 
+ * @function getNodeHeight
+ * @description Determines the appropriate height for a node based on its entity type.
+ * All node types use consistent height for visual uniformity.
+ * 
+ * @param {GraphNode} node - The node to calculate height for
+ * @returns {number} The height in pixels
+ * 
+ * @performance O(1) - Simple lookup operation
+ * @complexity O(1) - Simple lookup operation
+ * 
+ * @example
+ * ```typescript
+ * const puzzleNode = { data: { metadata: { entityType: 'puzzle' } } };
+ * const height = getNodeHeight(puzzleNode); // Returns 60
+ * ```
+ */
+function getNodeHeight(node: GraphNode): number {
+  const entityType = node.data.metadata.entityType;
+  const baseHeights = {
+    puzzle: 60,     // Standard height for readability
+    element: 60,    // Same height for consistency
+    character: 60,  // Same height for consistency
+    timeline: 60,   // Same height for consistency
+  };
+  return baseHeights[entityType] || 60;
+}
 
 /**
  * Calculate bounding box of positioned nodes
