@@ -1,6 +1,8 @@
 import React, { Component, type ReactNode } from 'react';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 interface Props {
   children: ReactNode;
@@ -32,7 +34,7 @@ export class GraphErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('Graph Error Boundary caught:', error, errorInfo);
+    logger.error('Graph Error Boundary caught:', { errorInfo }, error);
     this.setState({
       error,
       errorInfo
@@ -83,7 +85,7 @@ export class GraphErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
             
-            {process.env.NODE_ENV === 'development' && this.state.errorInfo && (
+            {import.meta.env?.DEV === true && this.state.errorInfo && (
               <details className="mt-6 text-xs">
                 <summary className="cursor-pointer text-gray-500 hover:text-gray-700">
                   Developer Details

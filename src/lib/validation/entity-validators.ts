@@ -52,7 +52,7 @@ export function validateElement(element: Partial<Element>): ValidationResult {
   }
 
   // SF_ pattern validation
-  if (element.descriptionText && element.descriptionText.includes('SF_')) {
+  if (element.descriptionText?.includes('SF_')) {
     const sfPattern = /SF_[A-Z]+:[0-9]+|SF_[A-Z]+/g;
     const matches = element.descriptionText.match(sfPattern);
     if (matches) {

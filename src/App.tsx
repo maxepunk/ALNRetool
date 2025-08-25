@@ -4,6 +4,8 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import AppRouter from './router/AppRouter';
 import { FeatureFlagAdmin } from './components/FeatureFlagAdmin';
 import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
+import { ViewContextProvider } from '@/contexts/ViewContext';
+import { GraphContextProvider } from '@/contexts/GraphContextProvider';
 
 // Create a client instance
 const queryClient = new QueryClient({
@@ -25,7 +27,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <AppRouter />
+        <GraphContextProvider>
+          <ViewContextProvider>
+            <AppRouter />
+          </ViewContextProvider>
+        </GraphContextProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />
       <FeatureFlagAdmin />

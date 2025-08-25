@@ -28,6 +28,8 @@ import {
   useUpdateTimelineEvent,
   validateUpdates,
 } from '@/hooks/mutations';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 // Entity type union
 type Entity = Character | Element | Puzzle | TimelineEvent;
@@ -315,7 +317,7 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
         setSaveSuccess(true);
       }
     } catch (error) {
-      console.error('Failed to save changes:', error);
+      logger.error('Failed to save changes:', undefined, error instanceof Error ? error : new Error(String(error)));
       setHasValidationError(true);
     }
   }, [formData, entity, mutation, onSave, validateForm, entityType]);
@@ -513,7 +515,7 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Last Modified:</span>
                     <span className="text-xs">
-                      {new Date(entity.lastEditedTime as string).toLocaleString()}
+                      {new Date(entity.lastEditedTime).toLocaleString()}
                     </span>
                   </div>
                 )}

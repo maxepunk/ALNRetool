@@ -125,7 +125,7 @@ describe('QueryClient Configuration', () => {
         defaults.mutations.onError(testError, undefined, undefined)
       }
       
-      expect(consoleErrorSpy).toHaveBeenCalledWith('Mutation error:', expect.any(Error))
+      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] Mutation error:', expect.any(Error))
       consoleErrorSpy.mockRestore()
     })
 

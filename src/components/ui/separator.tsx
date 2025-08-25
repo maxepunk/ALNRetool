@@ -1,23 +1,29 @@
-"use client"
-
 import * as React from "react"
-import * as SeparatorPrimitive from "@radix-ui/react-separator"
-
 import { cn } from "@/lib/utils"
+
+// Native HTML separator implementation to replace Radix UI
+// This fixes the React 18/19 compatibility issue
+
+interface SeparatorProps extends React.HTMLAttributes<HTMLDivElement> {
+  orientation?: "horizontal" | "vertical"
+  decorative?: boolean
+}
 
 function Separator({
   className,
   orientation = "horizontal",
   decorative = true,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: SeparatorProps) {
   return (
-    <SeparatorPrimitive.Root
-      data-slot="separator"
-      decorative={decorative}
-      orientation={orientation}
+    <div
+      role={decorative ? "none" : "separator"}
+      aria-orientation={decorative ? undefined : orientation}
       className={cn(
-        "bg-border shrink-0 data-[orientation=horizontal]:h-px data-[orientation=horizontal]:w-full data-[orientation=vertical]:h-full data-[orientation=vertical]:w-px",
+        "bg-border shrink-0",
+        orientation === "horizontal" 
+          ? "h-px w-full" 
+          : "h-full w-px",
         className
       )}
       {...props}

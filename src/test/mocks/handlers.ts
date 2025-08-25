@@ -8,6 +8,50 @@ import { mockTimeline } from './data/timeline'
 const API_BASE = 'http://localhost:3001/api'
 
 export const handlers = [
+  // CSRF Token endpoint - handle both absolute and relative URLs
+  http.get('/api/csrf-token', () => {
+    return HttpResponse.json({ token: 'test-csrf-token-12345' }, { status: 200 })
+  }),
+  http.get(`${API_BASE}/csrf-token`, () => {
+    return HttpResponse.json({ token: 'test-csrf-token-12345' }, { status: 200 })
+  }),
+
+  // Test endpoints for fetchWithCSRF tests - handle both absolute and relative URLs
+  http.post('/api/test', () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  http.post(`${API_BASE}/test`, () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  
+  http.put('/api/test', () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  http.put(`${API_BASE}/test`, () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  
+  http.patch('/api/test', () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  http.patch(`${API_BASE}/test`, () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  
+  http.delete('/api/test', () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  http.delete(`${API_BASE}/test`, () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  
+  http.get('/api/test', () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+  http.get(`${API_BASE}/test`, () => {
+    return HttpResponse.json({ success: true }, { status: 200 })
+  }),
+
   // Characters endpoint
   http.get(`${API_BASE}/notion/characters`, ({ request }) => {
     const url = new URL(request.url)

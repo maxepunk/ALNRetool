@@ -1,17 +1,20 @@
 import * as React from "react"
-import * as LabelPrimitive from "@radix-ui/react-label"
-
 import { cn } from "@/lib/utils"
+
+// Native HTML label implementation to replace Radix UI
+// This fixes the React 18/19 compatibility issue
+
+interface LabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {}
 
 function Label({
   className,
   ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+}: LabelProps) {
   return (
-    <LabelPrimitive.Root
-      data-slot="label"
+    <label
       className={cn(
-        "flex items-center gap-2 text-sm leading-none font-medium select-none group-data-[disabled=true]:pointer-events-none group-data-[disabled=true]:opacity-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+        "flex items-center gap-2 text-sm leading-none font-medium select-none",
+        "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
         className
       )}
       {...props}

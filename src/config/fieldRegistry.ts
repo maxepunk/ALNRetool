@@ -286,7 +286,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Required For Puzzles',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Required for puzzles',
+    notionProperty: 'Required For (Puzzle)',
     searchable: true,
     entityType: 'puzzle',
     inverseOf: { 
@@ -299,7 +299,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Rewarded By Puzzles',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Rewarded by puzzles',
+    notionProperty: 'Rewarded by (Puzzle)',
     searchable: true,
     entityType: 'puzzle',
     inverseOf: { 

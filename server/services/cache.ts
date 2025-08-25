@@ -1,5 +1,6 @@
 import NodeCache from 'node-cache';
 import { CacheCoordinator } from './CacheCoordinator';
+import { log } from '../utils/logger.js';
 
 export interface CacheStats {
   hits: number;
@@ -69,7 +70,10 @@ export class CacheService {
       const value = this.cache.get<T>(key);
       return value !== undefined ? value : null;
     } catch (error) {
-      console.error('Cache get error:', error);
+      log.error('Cache get error', {
+        key,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return null;
     }
   }
@@ -81,7 +85,10 @@ export class CacheService {
     try {
       return this.cache.set(key, value, ttl || this.DEFAULT_TTL);
     } catch (error) {
-      console.error('Cache set error:', error);
+      log.error('Cache set error', {
+        key,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return false;
     }
   }

@@ -1,38 +1,147 @@
 /**
  * Element Clustering Module
  * 
- * Applies post-layout clustering to group elements near their connected puzzles
- * with collision detection to prevent overlaps.
+ * Advanced post-layout optimization that groups elements near their connected puzzles
+ * while maintaining visual clarity through sophisticated collision detection and avoidance.
+ * 
+ * **Core Functionality:**
+ * - **Puzzle-Element Analysis**: Maps relationships between puzzles and their elements
+ * - **Collision-Aware Clustering**: Groups elements while preventing overlaps
+ * - **Spatial Optimization**: Compresses element spacing for better visual grouping
+ * - **Safe Positioning**: Finds optimal positions when conflicts occur
+ * 
+ * **Collision Detection System:**
+ * - Spatial bucketing for efficient overlap detection (O(log n) per check)
+ * - Y-range tracking with padding for visual separation
+ * - Safe position finding algorithm with multiple candidate evaluation
+ * - Occupied space registration and management
+ * 
+ * **Use Cases:**
+ * - Post-Dagre layout optimization
+ * - Improving element-puzzle visual relationships
+ * - Reducing visual scatter in complex graphs
+ * - Maintaining readability while maximizing grouping
+ * 
+ * @example
+ * ```typescript
+ * // Basic clustering
+ * const clusteredNodes = applyElementClustering(nodes, edges, 0.6);
+ * 
+ * // With custom configuration
+ * const config: ClusteringConfig = {
+ *   compressionFactor: 0.7,
+ *   padding: 15,
+ *   xBucketSize: 50
+ * };
+ * const optimizedNodes = applyElementClustering(nodes, edges, config.compressionFactor);
+ * 
+ * // Analyze results
+ * const stats = getClusteringStats(originalNodes, clusteredNodes);
+ * console.log(`Moved ${stats.movedNodes} nodes, avg movement: ${stats.averageMovement}px`);
+ * ```
+ * 
+ * @see applyElementClustering - Main clustering function
+ * @see getNodeHeight - Node sizing utility
+ * @see getClusteringStats - Performance analysis
  */
 
 import type { GraphNode, GraphEdge } from '../types';
+import { logger } from '../utils/Logger'
+
 
 /**
- * Configuration for element clustering
+ * Configuration parameters for element clustering optimization.
+ * Controls the behavior of the collision-aware clustering algorithm.
+ * 
+ * Used to fine-tune clustering behavior based on graph characteristics
+ * and visual requirements.
+ * 
+ * @example
+ * ```typescript
+ * const config: ClusteringConfig = {
+ *   compressionFactor: 0.7,  // More aggressive clustering
+ *   padding: 20,             // More spacing between elements
+ *   xBucketSize: 75          // Larger spatial buckets
+ * };
+ * ```
  */
 export interface ClusteringConfig {
+  /** How much to compress element spacing toward puzzle center (0.4-0.8, default: 0.6) */
   compressionFactor?: number;
+  /** Minimum padding between elements in pixels (default: 15) */
   padding?: number;
+  /** Size of spatial buckets for collision detection in pixels (default: 50) */
   xBucketSize?: number;
 }
 
 /**
- * Occupied space tracker for collision detection
+ * Occupied space tracker for collision detection.
+ * Represents a Y-axis range occupied by a node at a specific X position.
+ * 
+ * Used internally by the spatial bucketing system for efficient
+ * overlap detection and safe position finding.
+ * 
+ * @internal
  */
 interface OccupiedRange {
+  /** Unique identifier of the node occupying this space */
   id: string;
+  /** Top Y coordinate of the occupied area */
   top: number;
+  /** Bottom Y coordinate of the occupied area */
   bottom: number;
 }
 
 /**
- * Apply post-layout clustering to group elements near their connected puzzles
- * with collision detection to prevent overlaps
+ * Apply sophisticated post-layout clustering to group elements near connected puzzles.
  * 
- * @param nodes - Array of positioned nodes
- * @param edges - Array of edges between nodes
- * @param compressionFactor - How much to compress element spacing (0.4-0.8)
- * @returns Nodes with adjusted positions for better clustering
+ * **Algorithm Overview:**
+ * 1. **relationship Analysis**: Maps puzzle-element connections via requirement/reward edges
+ * 2. **Spatial Registration**: Registers non-element nodes in collision detection system
+ * 3. **Group Processing**: For each puzzle, clusters its connected elements
+ * 4. **Collision Detection**: Checks for overlaps using spatial bucketing (O(log n))
+ * 5. **Safe Positioning**: Finds optimal positions when conflicts occur
+ * 6. **Position Updates**: Applies new positions and updates spatial index
+ * 
+ * @param nodes - Array of positioned graph nodes (must include position coordinates)
+ * @param edges - Array of graph edges (requires 'requirement' and 'reward' relationship types)
+ * @param compressionFactor - Compression ratio toward puzzle center (0.4-0.8, default: 0.6)
+ * @returns New array of nodes with optimized clustering positions
+ * 
+ * @remarks
+ * **Compression Factor Guidelines:**
+ * - 0.4-0.5: Conservative clustering (subtle grouping)
+ * - 0.6-0.7: Balanced clustering (recommended for most cases)
+ * - 0.7-0.8: Aggressive clustering (tight grouping, may cause crowding)
+ * 
+ * **Performance Characteristics:**
+ * - Spatial bucketing reduces collision checks to O(log n) per node
+ * - Memory efficient with occupied space tracking
+ * - Scales well with graph size (O(V + E) overall complexity)
+ * 
+ * **Visual Impact:**
+ * - Elements visually cluster near their related puzzles
+ * - Maintains minimum spacing for readability
+ * - Preserves overall graph structure and flow
+ * - Reduces visual scatter and improves comprehension
+ * 
+ * @example
+ * ```typescript
+ * // Conservative clustering
+ * const lightlyClustered = applyElementClustering(nodes, edges, 0.5);
+ * 
+ * // Balanced clustering (recommended)
+ * const clustered = applyElementClustering(nodes, edges, 0.6);
+ * 
+ * // Aggressive clustering
+ * const tightlyClustered = applyElementClustering(nodes, edges, 0.75);
+ * 
+ * // Analyze movement
+ * const stats = getClusteringStats(nodes, clustered);
+ * console.log(`Clustered ${stats.movedNodes} elements`);
+ * ```
+ * 
+ * Complexity: O(V + E + C log C) where V = nodes, E = edges, C = clustered nodes
  */
 export function applyElementClustering(
   nodes: GraphNode[],
@@ -83,7 +192,7 @@ export function applyElementClustering(
     }
   });
   
-  console.log('Puzzle-element groups:', puzzleToElements.size);
+  logger.debug('Puzzle-element groups:', undefined, puzzleToElements.size);
   
   // Apply clustering for each puzzle's connected elements
   const adjustedNodes = [...nodes];
@@ -178,7 +287,7 @@ export function applyElementClustering(
     // Get all connected element nodes
     const elementNodes = elementIds
       .map(id => adjustedNodes.find(n => n.id === id))
-      .filter(n => n !== undefined) as GraphNode[];
+      .filter(n => n !== undefined);
     
     if (elementNodes.length <= 1) return;
     
@@ -232,11 +341,6 @@ export function applyElementClustering(
     });
     
     const puzzleLabel = puzzleNode.data?.label || puzzleNode.id;
-    if (overlapCount > 0) {
-      console.log(`Clustered ${elementNodes.length} elements around puzzle "${puzzleLabel}" (${overlapCount} overlaps prevented)`);
-    } else {
-      console.log(`Clustered ${elementNodes.length} elements around puzzle "${puzzleLabel}"`);
-    }
   });
   
   console.groupEnd();
@@ -244,10 +348,39 @@ export function applyElementClustering(
 }
 
 /**
- * Determine the appropriate height for a node based on its entity type
+ * Calculate appropriate node height based on entity type and visual requirements.
  * 
- * @param node - The node to calculate height for
- * @returns Height in pixels for the node
+ * Provides consistent node sizing across the graph to ensure proper spacing
+ * and collision detection. Heights are optimized for readability and content.
+ * 
+ * @param node - Graph node with metadata indicating entity type
+ * @returns Height in pixels appropriate for the node's entity type
+ * 
+ * @remarks
+ * **Height Standards:**
+ * - **Puzzle**: 120px (taller to accommodate complexity information)
+ * - **Character**: 100px (medium height for character details)
+ * - **Element**: 80px (standard height for most elements)
+ * - **Timeline**: 80px (compact for timeline events)
+ * - **Default**: 80px (fallback for unknown types)
+ * 
+ * **Usage in Clustering:**
+ * - Used for collision detection calculations
+ * - Ensures proper spacing between clustered elements
+ * - Maintains visual hierarchy through size differentiation
+ * 
+ * @example
+ * ```typescript
+ * const puzzleNode = { data: { metadata: { entityType: 'puzzle' } } };
+ * const height = getNodeHeight(puzzleNode);
+ * console.log(height); // 120
+ * 
+ * const elementNode = { data: { metadata: { entityType: 'element' } } };
+ * const height2 = getNodeHeight(elementNode);
+ * console.log(height2); // 80
+ * ```
+ * 
+ * Complexity: O(1)
  */
 export function getNodeHeight(node: GraphNode): number {
   const entityType = node.data.metadata.entityType;
@@ -261,15 +394,56 @@ export function getNodeHeight(node: GraphNode): number {
 }
 
 /**
- * Calculate clustering statistics
+ * Calculate comprehensive statistics for clustering operation analysis.
  * 
- * @param originalNodes - Nodes before clustering
- * @param clusteredNodes - Nodes after clustering
- * @returns Statistics about the clustering operation
+ * Compares original and clustered node positions to provide metrics about
+ * the clustering effectiveness and impact. Useful for optimization tuning
+ * and performance monitoring.
+ * 
+ * @param originalNodes - Array of nodes before clustering operation
+ * @param clusteredNodes - Array of nodes after clustering operation
+ * @returns Statistics object with movement metrics and counts
+ * 
+ * @remarks
+ * **Statistical Measurements:**
+ * - **Moved Nodes**: Count of nodes with position changes > 0.01px
+ * - **Average Movement**: Mean distance moved across all modified nodes
+ * - **Max Movement**: Largest single node displacement
+ * 
+ * **Use Cases:**
+ * - Algorithm tuning (optimal compression factor selection)
+ * - Performance monitoring (clustering effectiveness)
+ * - Quality assurance (ensuring reasonable movement distances)
+ * - A/B testing different clustering parameters
+ * 
+ * **Movement Threshold:**
+ * - Uses 0.01px threshold to filter out floating-point precision artifacts
+ * - Only counts meaningful position changes in statistics
+ * 
+ * @example
+ * ```typescript
+ * const originalNodes = await getLayoutNodes('original');
+ * const clusteredNodes = applyElementClustering(originalNodes, edges, 0.6);
+ * const stats = getClusteringStats(originalNodes, clusteredNodes);
+ * 
+ * console.log(`Clustering Results:`);
+ * console.log(`- Moved nodes: ${stats.movedNodes}`);
+ * console.log(`- Average movement: ${stats.averageMovement.toFixed(1)}px`);
+ * console.log(`- Max movement: ${stats.maxMovement.toFixed(1)}px`);
+ * 
+ * if (stats.averageMovement > 100) {
+ *   console.warn('High movement detected - consider lower compression factor');
+ * }
+ * ```
+ * 
+ * Complexity: O(n) where n = nodes.length
  */
 export function getClusteringStats(originalNodes: GraphNode[], clusteredNodes: GraphNode[]): {
+  /** Number of nodes that moved during clustering */
   movedNodes: number;
+  /** Average distance moved by modified nodes in pixels */
   averageMovement: number;
+  /** Maximum distance any single node moved in pixels */
   maxMovement: number;
 } {
   let movedNodes = 0;

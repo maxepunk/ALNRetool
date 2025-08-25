@@ -10,6 +10,8 @@ import {
 } from '@/lib/filters/filterClassifier';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 import type { SynthesizedFilterParams } from '@/services/api';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 export interface CharacterJourneyData {
   characters: Character[];
@@ -64,8 +66,8 @@ export function useCharacterJourneyData() {
     // Include server-side filters in cache key for granular caching
     queryKey: ['characterJourney', 'hybrid-filtered', filterCacheKey],
     queryFn: async (): Promise<CharacterJourneyData> => {
-      console.log('[useCharacterJourneyData] Fetching with hybrid filtering...');
-      console.log('[useCharacterJourneyData] Server-side filters:', serverFilters);
+      logger.debug('[useCharacterJourneyData] Fetching with hybrid filtering...');
+      logger.debug('[useCharacterJourneyData] Server-side filters:', undefined, serverFilters);
       
       // Fetch data with server-side filters applied
       const [synthesized, characters, timeline] = await Promise.all([
@@ -74,7 +76,7 @@ export function useCharacterJourneyData() {
         timelineApi.listAll(), // Timeline doesn't have server-side filters yet
       ]);
       
-      console.log(`[useCharacterJourneyData] Server-filtered data fetched:
+      logger.debug(`[useCharacterJourneyData] Server-filtered data fetched:
         - Characters: ${characters.length} (after server filters)
         - Elements: ${synthesized.elements.length} (after server filters)
         - Puzzles: ${synthesized.puzzles.length}
@@ -123,7 +125,7 @@ export function useCharacterJourneyData() {
       },
     });
     
-    console.log(`[useCharacterJourneyData] Client-side filters applied:
+    logger.debug(`[useCharacterJourneyData] Client-side filters applied:
       - Characters: ${query.data.characters.length} → ${filtered.characters.length}
       - Elements: ${query.data.elements.length} → ${filtered.elements.length}
       - Puzzles: ${query.data.puzzles.length} → ${filtered.puzzles.length}

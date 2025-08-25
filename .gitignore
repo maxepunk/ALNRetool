@@ -41,3 +41,8 @@ coverage/
 # Temporary files
 .tmp/
 temp/
+
+# Debug scripts with potential secrets
+scripts/
+!scripts/.env.example
+!scripts/README.md

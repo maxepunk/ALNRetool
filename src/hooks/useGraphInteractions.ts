@@ -17,6 +17,8 @@ import type {
 } from '@xyflow/react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import toast from 'react-hot-toast';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 interface UseGraphInteractionsOptions {
   readOnly?: boolean;
@@ -138,7 +140,7 @@ export function useGraphInteractions({
     event.stopPropagation();
     
     // Could open a context menu here
-    console.log('Context menu for node:', node.id);
+    logger.debug('Context menu for node:', undefined, node.id);
   }, []);
   
   // Handle edge click

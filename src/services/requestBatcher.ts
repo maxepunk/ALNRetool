@@ -1,3 +1,5 @@
+import { logger } from '@/lib/graph/utils/Logger'
+
 /**
  * Request Batcher with DataLoader Pattern
  * 
@@ -53,7 +55,7 @@ export class RequestBatcher {
     // Check if we have a pending request for this key
     const pending = this.pendingRequests.get(key);
     if (pending && Date.now() - pending.timestamp < this.maxCacheAge) {
-      console.log(`[RequestBatcher] Deduplicating request: ${key}`);
+      logger.debug(`[RequestBatcher] Deduplicating request: ${key}`);
       return pending.promise as Promise<T>;
     }
     

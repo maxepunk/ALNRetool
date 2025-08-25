@@ -6,6 +6,8 @@
 import { useEffect, useState } from 'react';
 import { ReactFlow, Background, Controls, MiniMap, BackgroundVariant } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 // Import our hooks
 import { useCharacters, useElements, usePuzzles, useTimeline } from '@/hooks/useNotionData';
@@ -63,12 +65,12 @@ export function TestGraphIntegration() {
       timeline: timelineQuery.data || [],
     };
     
-    console.log('Building graph with data:', {
+    logger.debug('Building graph with data:', { 
       characters: notionData.characters.length,
       elements: notionData.elements.length,
       puzzles: notionData.puzzles.length,
       timeline: notionData.timeline.length,
-    });
+     });
     
     try {
       // Measure performance
@@ -81,7 +83,7 @@ export function TestGraphIntegration() {
           graph = buildPuzzleFocusGraph(notionData);
           break;
         case 'character-journey':
-          graph = buildCharacterJourneyGraph(notionData);
+          graph = buildCharacterJourneyGraph(notionData, notionData.characters[0]?.id || 'default');
           break;
         case 'content-status':
           graph = buildContentStatusGraph(notionData);
@@ -95,7 +97,7 @@ export function TestGraphIntegration() {
       // Validate graph
       const validation = validateGraphData(graph);
       if (!validation.valid) {
-        console.error('Graph validation failed:', validation.errors);
+        logger.error('Graph validation failed:', undefined, new Error(validation.errors.join(', ')));
         setError(`Graph validation failed: ${validation.errors.join(', ')}`);
         return;
       }
@@ -112,7 +114,7 @@ export function TestGraphIntegration() {
       });
       setError(null);
       
-      console.log('Graph built successfully:', {
+      logger.debug('Graph built successfully:', undefined, {
         buildTime: `${(endTime - startTime).toFixed(2)}ms`,
         nodes: graph.nodes.length,
         edges: graph.edges.length,
@@ -120,7 +122,7 @@ export function TestGraphIntegration() {
       });
       
     } catch (err) {
-      console.error('Failed to build graph:', err);
+      logger.error('Failed to build graph:', undefined, err instanceof Error ? err : undefined);
       setError(err instanceof Error ? err.message : 'Unknown error');
     }
   }, [

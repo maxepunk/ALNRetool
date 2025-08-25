@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { cacheService } from '../services/cache.js';
 import { AppError } from '../middleware/errorHandler.js';
+import config from '../config/index.js';
 
 const router = Router();
 
@@ -35,8 +36,8 @@ router.post('/clear', asyncHandler(async (req: Request, res: Response) => {
   const adminKey = req.headers['x-admin-key'];
   // If ADMIN_KEY is set (even in non-prod), it must match.
   // In production, ADMIN_KEY must be set and must match.
-  if (process.env.NODE_ENV === 'production' || process.env.ADMIN_KEY) {
-    if (!process.env.ADMIN_KEY || adminKey !== process.env.ADMIN_KEY) {
+  if (config.nodeEnv === 'production' || config.adminKey) {
+    if (!config.adminKey || adminKey !== config.adminKey) {
       throw new AppError(403, 'FORBIDDEN', 'Admin access required');
     }
   }

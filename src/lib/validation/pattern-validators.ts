@@ -20,7 +20,7 @@ export function parseSFPatterns(text: string): SFPattern[] {
     patterns.push({
       type: match[1]!,
       value: match[2],
-      raw: match[0]!,
+      raw: match[0],
     });
   }
   

@@ -199,11 +199,11 @@ export function toNotionElementProperties(updates: Partial<Element>) {
   }
   
   if (updates.requiredForPuzzleIds !== undefined) {
-    properties['Required for puzzles'] = toNotionRelation(updates.requiredForPuzzleIds);
+    properties['Required For (Puzzle)'] = toNotionRelation(updates.requiredForPuzzleIds);
   }
   
   if (updates.rewardedByPuzzleIds !== undefined) {
-    properties['Rewarded by puzzles'] = toNotionRelation(updates.rewardedByPuzzleIds);
+    properties['Rewarded by (Puzzle)'] = toNotionRelation(updates.rewardedByPuzzleIds);
   }
   
   if (updates.associatedCharacterIds !== undefined) {

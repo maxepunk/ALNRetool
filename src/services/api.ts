@@ -21,6 +21,8 @@ import type {
 } from '@/types/notion/app';
 import { requestBatcher } from './requestBatcher';
 import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 // Get API base URL from environment or use relative path in production
 const API_BASE_URL = import.meta.env.VITE_API_URL || 
@@ -201,19 +203,19 @@ export const charactersApi = {
     let hasMore = true;
     let pageCount = 0;
 
-    console.log('[charactersApi.listAll] Starting to fetch all characters', filters ? 'with filters' : 'no filters');
+    logger.debug('[charactersApi.listAll] Starting to fetch all characters', undefined, filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
       const response = await charactersApi.list({ ...filters, limit: 100, cursor });
-      console.log(`[charactersApi.listAll] Page ${pageCount}: ${response.data.length} items, hasMore: ${response.hasMore}`);
+      logger.debug(`[charactersApi.listAll] Page ${pageCount}: ${response.data.length} items, hasMore: ${response.hasMore}`);
       
       allCharacters.push(...response.data);
       cursor = response.nextCursor || undefined;
       hasMore = response.hasMore;
     }
 
-    console.log(`[charactersApi.listAll] Complete. Total: ${allCharacters.length}`);
+    logger.debug(`[charactersApi.listAll] Complete. Total: ${allCharacters.length}`);
     return allCharacters;
   },
 
@@ -252,14 +254,13 @@ export const elementsApi = {
     let hasMore = true;
     let pageCount = 0;
 
-    console.log('[elementsApi.listAll] Starting to fetch all elements', filters ? 'with filters' : 'no filters');
+    logger.debug('[elementsApi.listAll] Starting to fetch all elements', undefined, filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
-      console.log(`[elementsApi.listAll] Fetching page ${pageCount}, cursor: ${cursor || 'none'}`);
       
       const response = await elementsApi.list({ ...filters, limit: 100, cursor });
-      console.log(`[elementsApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
+      logger.debug(`[elementsApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
       
       allElements.push(...response.data);
       cursor = response.nextCursor || undefined;
@@ -267,22 +268,22 @@ export const elementsApi = {
       
       // Extra safety check
       if (!response.nextCursor && response.hasMore) {
-        console.warn('[elementsApi.listAll] WARNING: hasMore is true but nextCursor is null!');
+        logger.warn('[elementsApi.listAll] WARNING: hasMore is true but nextCursor is null!');
         hasMore = false;
       }
       
       // Debug: Check if we should continue
-      console.log(`[elementsApi.listAll] Continue? hasMore=${hasMore}, cursor=${cursor}`);
+      logger.debug(`[elementsApi.listAll] Continue? hasMore=${hasMore}, cursor=${cursor}`);
     }
 
-    console.log(`[elementsApi.listAll] Complete. Total elements: ${allElements.length}`);
+    logger.debug(`[elementsApi.listAll] Complete. Total elements: ${allElements.length}`);
     
     // Debug: Check for the specific element we're looking for
     const blackMarketCard = allElements.find(e => e.id === '1dc2f33d-583f-8056-bf34-c6a9922067d8');
     if (blackMarketCard) {
-      console.log('[elementsApi.listAll] Found Black Market Business card in fetched data!');
+      logger.debug('[elementsApi.listAll] Found Black Market Business card in fetched data!');
     } else {
-      console.log('[elementsApi.listAll] Black Market Business card NOT found in fetched data');
+      logger.debug('[elementsApi.listAll] Black Market Business card NOT found in fetched data');
     }
     
     return allElements;
@@ -367,14 +368,13 @@ export const timelineApi = {
     let hasMore = true;
     let pageCount = 0;
 
-    console.log('[timelineApi.listAll] Starting to fetch all timeline events', filters ? 'with filters' : 'no filters');
+    logger.debug('[timelineApi.listAll] Starting to fetch all timeline events', undefined, filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
-      console.log(`[timelineApi.listAll] Fetching page ${pageCount}, cursor: ${cursor || 'none'}`);
       
       const response = await timelineApi.list({ ...filters, limit: 100, cursor });
-      console.log(`[timelineApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
+      logger.debug(`[timelineApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
       
       allEvents.push(...response.data);
       cursor = response.nextCursor || undefined;
@@ -382,19 +382,19 @@ export const timelineApi = {
       
       // Extra safety check
       if (!response.nextCursor && response.hasMore) {
-        console.warn('[timelineApi.listAll] WARNING: hasMore is true but nextCursor is null!');
+        logger.warn('[timelineApi.listAll] WARNING: hasMore is true but nextCursor is null!');
         hasMore = false;
       }
     }
 
-    console.log(`[timelineApi.listAll] Complete. Total timeline events: ${allEvents.length}`);
+    logger.debug(`[timelineApi.listAll] Complete. Total timeline events: ${allEvents.length}`);
     
     // Debug: Check for the specific timeline event we're looking for
     const missingEvent = allEvents.find(e => e.id === '1b52f33d-583f-80f0-a1f3-ecb9b9cdd040');
     if (missingEvent) {
-      console.log('[timelineApi.listAll] Found timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 in fetched data!');
+      logger.debug('[timelineApi.listAll] Found timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 in fetched data!');
     } else {
-      console.log('[timelineApi.listAll] Timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 NOT found in fetched data');
+      logger.debug('[timelineApi.listAll] Timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 NOT found in fetched data');
     }
     
     return allEvents;
@@ -466,7 +466,7 @@ export const synthesizedApi = {
     totalPuzzles: number;
   }> => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : '';
-    console.log('[synthesizedApi.getAll] Fetching synthesized data...', filters ? `with filters: ${queryString}` : 'no filters');
+    logger.debug('[synthesizedApi.getAll] Fetching synthesized data...', undefined, filters ? `with filters: ${queryString}` : 'no filters');
     
     const result = await fetcher<{
       elements: Element[];
@@ -475,13 +475,13 @@ export const synthesizedApi = {
       totalPuzzles: number;
     }>(`/notion/synthesized${queryString}`);
     
-    console.log(`[synthesizedApi.getAll] Complete. Elements: ${result.totalElements}, Puzzles: ${result.totalPuzzles}`);
+    logger.debug(`[synthesizedApi.getAll] Complete. Elements: ${result.totalElements}, Puzzles: ${result.totalPuzzles}`);
     
     // Debug: Check relationship counts
     const elementsWithPuzzleRefs = result.elements.filter(e => 
       (e.requiredForPuzzleIds?.length > 0) || (e.rewardedByPuzzleIds?.length > 0)
     );
-    console.log(`[synthesizedApi.getAll] Elements with puzzle relationships: ${elementsWithPuzzleRefs.length}`);
+    logger.debug(`[synthesizedApi.getAll] Elements with puzzle relationships: ${elementsWithPuzzleRefs.length}`);
     
     return result;
   },

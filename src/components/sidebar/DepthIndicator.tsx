@@ -6,12 +6,6 @@
 import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Info, CheckCircle, AlertCircle } from 'lucide-react';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import type { DepthMetadata } from '@/lib/graph/types';
 
 interface DepthIndicatorProps {
@@ -65,36 +59,41 @@ export function DepthIndicator({ isOpen, depthMetadata }: DepthIndicatorProps) {
           </>
         )}
         
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-            </TooltipTrigger>
-            <TooltipContent side="right" className="max-w-xs">
-              <div className="space-y-2 text-xs">
-                <p className="font-medium">Connection Depth Explained</p>
-                <p>
-                  Connection depth controls how many &quot;hops&quot; from the selected character to include in the graph.
+        <div 
+          className="relative group inline-block"
+          title="Connection depth controls how many 'hops' from the selected character to include in the graph"
+        >
+          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+          {/* Custom tooltip on hover */}
+          <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 
+                          hidden group-hover:block 
+                          bg-primary text-primary-foreground 
+                          rounded-md px-3 py-2 text-xs 
+                          max-w-xs pointer-events-none
+                          animate-in fade-in-0 zoom-in-95">
+            <div className="space-y-2 text-xs">
+              <p className="font-medium">Connection Depth Explained</p>
+              <p>
+                Connection depth controls how many "hops" from the selected character to include in the graph.
+              </p>
+              <p>
+                • <strong>1 hop:</strong> Direct connections only
+              </p>
+              <p>
+                • <strong>2 hops:</strong> Connections of connections
+              </p>
+              <p>
+                • <strong>3+ hops:</strong> Extended network
+              </p>
+              {isCompleteNetwork && (
+                <p className="text-green-600 font-medium mt-2">
+                  This character's entire network fits within {currentDepthLimit} hop{currentDepthLimit !== 1 ? 's' : ''}.
+                  Increasing depth won't show additional nodes.
                 </p>
-                <p>
-                  • <strong>1 hop:</strong> Direct connections only
-                </p>
-                <p>
-                  • <strong>2 hops:</strong> Connections of connections
-                </p>
-                <p>
-                  • <strong>3+ hops:</strong> Extended network
-                </p>
-                {isCompleteNetwork && (
-                  <p className="text-green-600 font-medium mt-2">
-                    This character&apos;s entire network fits within {currentDepthLimit} hop{currentDepthLimit !== 1 ? 's' : ''}.
-                    Increasing depth won&apos;t show additional nodes.
-                  </p>
-                )}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Depth distribution breakdown */}

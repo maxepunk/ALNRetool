@@ -9,6 +9,7 @@
 
 import NodeCache from 'node-cache';
 import crypto from 'crypto';
+import { log } from '../utils/logger.js';
 
 interface InvalidationEvent {
   type: 'entity' | 'related' | 'all';
@@ -66,7 +67,7 @@ export class CacheCoordinator {
    * Invalidate a specific entity and all related caches
    */
   async invalidateEntity(entityType: string, entityId: string): Promise<void> {
-    console.log(`[CacheCoordinator] Invalidating ${entityType}:${entityId}`);
+    log.info('[CacheCoordinator] Invalidating entity', { entityType, entityId });
     
     // Create invalidation event
     const event: InvalidationEvent = {
@@ -101,7 +102,7 @@ export class CacheCoordinator {
     entityId: string,
     relatedEntities: Array<{ type: string; ids: string[] }>
   ): Promise<void> {
-    console.log(`[CacheCoordinator] Invalidating related entities for ${entityType}:${entityId}`);
+    log.info('[CacheCoordinator] Invalidating related entities', { entityType, entityId, relatedEntities });
     
     const relatedIds: string[] = [];
     
@@ -155,7 +156,7 @@ export class CacheCoordinator {
     // Delete from cache
     for (const key of keysToDelete) {
       this.cache.del(key);
-      console.log(`[CacheCoordinator] Deleted cache key: ${key}`);
+      log.debug('[CacheCoordinator] Deleted cache key', { key });
     }
   }
 
@@ -213,7 +214,7 @@ export class CacheCoordinator {
    * Clear all caches and reset version
    */
   async clearAll(): Promise<void> {
-    console.log('[CacheCoordinator] Clearing all caches');
+    log.info('[CacheCoordinator] Clearing all caches');
     
     // Clear node-cache
     this.cache.flushAll();
@@ -245,7 +246,7 @@ export class CacheCoordinator {
    * Invalidate cache for specific filters
    */
   async invalidateFilters(entityType: string, filters: Record<string, any>): Promise<void> {
-    console.log(`[CacheCoordinator] Invalidating filtered cache for ${entityType}`, filters);
+    log.info('[CacheCoordinator] Invalidating filtered cache', { entityType, filters });
     
     // Build filter key
     const filterKey = Object.entries(filters)
@@ -271,7 +272,7 @@ export class CacheCoordinator {
   async batchInvalidate(
     invalidations: Array<{ entityType: string; entityId: string }>
   ): Promise<void> {
-    console.log(`[CacheCoordinator] Batch invalidating ${invalidations.length} entities`);
+    log.info('[CacheCoordinator] Batch invalidating entities', { count: invalidations.length });
     
     const startTime = Date.now();
     
@@ -301,7 +302,7 @@ export class CacheCoordinator {
     this.metadata.version = this.version;
     
     const duration = Date.now() - startTime;
-    console.log(`[CacheCoordinator] Batch invalidation completed in ${duration}ms`);
+    log.info('[CacheCoordinator] Batch invalidation completed', { durationMs: duration });
   }
 }
 

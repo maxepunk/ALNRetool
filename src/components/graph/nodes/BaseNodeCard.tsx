@@ -9,7 +9,6 @@ import { memo, type ReactNode } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export type NodeType = 'puzzle' | 'character' | 'element' | 'timeline' | 'group';
@@ -189,16 +188,9 @@ const BaseNodeCard = memo(({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <h3 className="font-semibold truncate cursor-help">
-                    {title}
-                  </h3>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{title}</p>
-                </TooltipContent>
-              </Tooltip>
+              <h3 className="font-semibold truncate" title={title}>
+                {title}
+              </h3>
             </div>
           </div>
 

@@ -4,34 +4,28 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { CharacterTransformer } from '../../modules/transformers/CharacterTransformer';
+import { createMockCharacter } from '../../test-utils/mockFactories';
+import { logger } from '../../utils/Logger';
 import type { Character } from '@/types/notion/app';
 
 // Create test instance
 const characterTransformer = new CharacterTransformer();
 
-// Mock console methods
-const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+// Mock logger methods
+vi.mock('../../utils/Logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }
+}));
+
+const loggerSpy = vi.mocked(logger.warn);
 
 describe('Character Transformer', () => {
   afterEach(() => {
-    consoleSpy.mockClear();
-  });
-
-  const createMockCharacter = (overrides?: Partial<Character>): Character => ({
-    id: 'char-1',
-    name: 'Test Character',
-    type: 'Player',
-    tier: 'Core',
-    ownedElementIds: [],
-    associatedElementIds: [],
-    characterPuzzleIds: [],
-    eventIds: [],
-    connections: [],
-    primaryAction: '',
-    characterLogline: '',
-    overview: '',
-    emotionTowardsCEO: '',
-    ...overrides,
+    loggerSpy.mockClear();
   });
 
   describe('transform', () => {
@@ -54,7 +48,7 @@ describe('Character Transformer', () => {
       expect(node).toBeDefined();
       expect(node?.data.metadata.errorState).toBeDefined();
       expect(node?.data.metadata.errorState?.type).toBe('validation_error');
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(loggerSpy).toHaveBeenCalled();
     });
 
     it('should calculate importance score for Core tier', () => {
@@ -177,7 +171,7 @@ describe('Character Transformer', () => {
         createMockCharacter({ id: 'char-3' }),
       ];
 
-      const nodes = characterTransformer.transformMultiple(characters);
+      const nodes = characterTransformer.transformMultiple(characters as Character[]);
 
       // Should still get 3 nodes, but one with error state
       expect(nodes).toHaveLength(3);

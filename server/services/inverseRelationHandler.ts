@@ -8,6 +8,7 @@
 
 import { notion } from './notion.js';
 import { cacheService } from './cache.js';
+import { log } from '../utils/logger.js';
 import type { NotionPage } from '../../src/types/notion/raw.js';
 import type { Element, Puzzle } from '../../src/types/notion/app.js';
 import { transformElement, transformPuzzle } from '../../src/types/notion/transforms.js';
@@ -149,7 +150,10 @@ export class InverseRelationHandler {
       
       return transformElement(response);
     } catch (error) {
-      console.error(`Failed to fetch element ${elementId}:`, error);
+      log.error('Failed to fetch element', {
+        elementId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return null;
     }
   }
@@ -165,7 +169,10 @@ export class InverseRelationHandler {
       
       return transformPuzzle(response);
     } catch (error) {
-      console.error(`Failed to fetch puzzle ${puzzleId}:`, error);
+      log.error('Failed to fetch puzzle', {
+        puzzleId,
+        error: error instanceof Error ? error.message : String(error)
+      });
       return null;
     }
   }
@@ -190,7 +197,7 @@ export class InverseRelationHandler {
     for (const puzzleId of toAdd) {
       const puzzle = await this.fetchPuzzle(puzzleId);
       if (!puzzle) {
-        console.warn(`Puzzle ${puzzleId} not found, skipping`);
+        log.warn('Puzzle not found, skipping', { puzzleId });
         continue;
       }
       
@@ -212,7 +219,7 @@ export class InverseRelationHandler {
     for (const puzzleId of toRemove) {
       const puzzle = await this.fetchPuzzle(puzzleId);
       if (!puzzle) {
-        console.warn(`Puzzle ${puzzleId} not found, skipping`);
+        log.warn('Puzzle not found, skipping', { puzzleId });
         continue;
       }
       

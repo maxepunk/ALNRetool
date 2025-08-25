@@ -259,7 +259,7 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
       {/* Search and select popover */}
       {searchable && (
         <Popover open={isOpen} onOpenChange={setIsOpen}>
-          <PopoverTrigger asChild>
+          <PopoverTrigger>
             <Button
               variant="outline"
               className="w-full justify-between bg-white/5 border-white/10 hover:bg-white/10"

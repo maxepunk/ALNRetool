@@ -89,15 +89,11 @@ export default function GraphControls({
 
       {/* Layout Controls */}
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 bg-background/80 backdrop-blur-md border-border/40"
-            title="Layout Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
+        <DropdownMenuTrigger 
+          className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-border/40 bg-background/80 backdrop-blur-md hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50" 
+          title="Layout Settings"
+        >
+          <Settings className="h-4 w-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuLabel>Layout Algorithm</DropdownMenuLabel>
@@ -115,16 +111,28 @@ export default function GraphControls({
             Force-Directed
           </DropdownMenuItem>
           <DropdownMenuItem
+            onClick={() => handleLayoutChange('force-atlas2')}
+            className={cn(layoutAlgorithm === 'force-atlas2' && "bg-accent")}
+          >
+            ForceAtlas2
+          </DropdownMenuItem>
+          <DropdownMenuItem
             onClick={() => handleLayoutChange('circular')}
             className={cn(layoutAlgorithm === 'circular' && "bg-accent")}
           >
             Circular
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => handleLayoutChange('hierarchical')}
-            className={cn(layoutAlgorithm === 'hierarchical' && "bg-accent")}
+            onClick={() => handleLayoutChange('grid')}
+            className={cn(layoutAlgorithm === 'grid' && "bg-accent")}
           >
-            Tree
+            Grid
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => handleLayoutChange('radial')}
+            className={cn(layoutAlgorithm === 'radial' && "bg-accent")}
+          >
+            Radial
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={triggerRelayout}>

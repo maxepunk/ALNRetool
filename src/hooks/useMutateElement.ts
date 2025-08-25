@@ -7,6 +7,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { elementsApi } from '@/services/api';
 import type { Element } from '@/types/notion/app';
 import { toast } from 'react-hot-toast';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 interface MutateElementParams {
   id: string;
@@ -53,7 +55,7 @@ export function useMutateElement() {
     },
     
     onError: (error) => {
-      console.error('Failed to update element:', error);
+      logger.error('Failed to update element:', undefined, error);
       toast.error('Failed to update element');
     },
   });

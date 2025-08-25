@@ -28,7 +28,10 @@ export default defineConfig({
       'use-sync-external-store',
       'use-sync-external-store/shim/with-selector',
       'zustand',
-      'zustand/traditional'
+      'zustand/traditional',
+      'dagre',
+      'dagre/lib/graphlib',
+      'd3-force'
     ]
   },
   server: {
@@ -43,13 +46,20 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: './src/test/setup.ts',
+    testTimeout: 10000,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: false,  // Allow parallel execution
+        maxForks: 4,        // Limit to 4 parallel processes
+        minForks: 1,
+        isolate: true,
+      }
+    },
     css: {
       modules: {
         classNameStrategy: 'non-scoped'
       }
-    },
-    moduleNameMapper: {
-      '\\.module\\.css$': '/src/test/mocks/cssModules.ts'
     },
     coverage: {
       reporter: ['text', 'json', 'html'],

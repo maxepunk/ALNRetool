@@ -21,7 +21,6 @@ import {
   User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -213,49 +212,33 @@ export default function AppLayout() {
             />
             
             {/* Notifications */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="Notifications"
-                    className="relative text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-                  >
-                    <Bell size={18} />
-                    {/* Notification dot */}
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>3 new notifications</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Notifications"
+              className="relative text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+              title="3 new notifications"
+            >
+              <Bell size={18} />
+              {/* Notification dot */}
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
+            </Button>
             
             {/* User profile */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    aria-label="User profile"
-                    className={cn(
-                      "relative rounded-full",
-                      "bg-gradient-to-br from-primary/20 to-primary/10",
-                      "hover:from-primary/30 hover:to-primary/20",
-                      "transition-all duration-200"
-                    )}
-                  >
-                    <User size={18} className="text-foreground" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  <p>User profile</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="User profile"
+              title="User profile"
+              className={cn(
+                "relative rounded-full",
+                "bg-gradient-to-br from-primary/20 to-primary/10",
+                "hover:from-primary/30 hover:to-primary/20",
+                "transition-all duration-200"
+              )}
+            >
+              <User size={18} className="text-foreground" />
+            </Button>
           </div>
         </div>
         

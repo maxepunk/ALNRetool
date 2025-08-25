@@ -7,6 +7,8 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { QUERY_STALE_TIME } from '@/lib/queryClient';
 import type { PaginationParams } from '@/services/api';
 import type { APIResponse } from '@/types/notion/app';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 /**
  * Hook options for fetching entities
@@ -134,11 +136,11 @@ export function useAllEntityData<T>(
     queryKey: [...queryKey, 'all'], // Different key from paginated version
     queryFn: async () => {
       if (debug) {
-        console.log(`[${debug}] Starting to fetch all entities`);
+        logger.debug(`[${debug}] Starting to fetch all entities`);
       }
       const result = await api.listAll();
       if (debug) {
-        console.log(`[${debug}] Fetched total entities:`, result.length);
+        logger.debug(`[${debug}] Fetched total entities:`, undefined, result.length);
       }
       return result;
     },

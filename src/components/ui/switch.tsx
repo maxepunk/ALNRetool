@@ -1,28 +1,58 @@
 import * as React from "react"
-import * as SwitchPrimitive from "@radix-ui/react-switch"
-
 import { cn } from "@/lib/utils"
+
+// Native HTML switch implementation to replace Radix UI
+// This fixes the React 18/19 compatibility issue
+
+interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'type'> {
+  onCheckedChange?: (checked: boolean) => void
+}
 
 function Switch({
   className,
+  checked,
+  defaultChecked,
+  onCheckedChange,
+  onChange,
+  disabled,
   ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root>) {
+}: SwitchProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onChange?.(e)
+    onCheckedChange?.(e.target.checked)
+  }
+
   return (
-    <SwitchPrimitive.Root
-      data-slot="switch"
-      className={cn(
-        "peer data-[state=checked]:bg-primary data-[state=unchecked]:bg-input focus-visible:border-ring focus-visible:ring-ring/50 dark:data-[state=unchecked]:bg-input/80 inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      {...props}
-    >
-      <SwitchPrimitive.Thumb
-        data-slot="switch-thumb"
-        className={cn(
-          "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
-        )}
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input
+        type="checkbox"
+        className="sr-only peer"
+        checked={checked}
+        defaultChecked={defaultChecked}
+        onChange={handleChange}
+        disabled={disabled}
+        {...props}
       />
-    </SwitchPrimitive.Root>
+      <div
+        className={cn(
+          "relative inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full",
+          "border border-transparent shadow-xs transition-all outline-none",
+          "peer-checked:bg-primary peer-not-checked:bg-input",
+          "peer-focus-visible:ring-[3px] peer-focus-visible:ring-ring/50",
+          "peer-disabled:cursor-not-allowed peer-disabled:opacity-50",
+          "dark:peer-not-checked:bg-input/80",
+          className
+        )}
+      >
+        <span
+          className={cn(
+            "pointer-events-none block size-4 rounded-full transition-transform",
+            "bg-background dark:peer-not-checked:bg-foreground dark:peer-checked:bg-primary-foreground",
+            "peer-checked:translate-x-[calc(100%-2px)] peer-not-checked:translate-x-0"
+          )}
+        />
+      </div>
+    </label>
   )
 }
 

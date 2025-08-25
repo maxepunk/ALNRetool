@@ -1,8 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
+import { timingSafeEqual } from 'crypto';
+import config from '../config/index.js';
+import { log } from '../utils/logger.js';
 
 export const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
   // In development, allow all requests from localhost without API key
-  if (process.env.NODE_ENV === 'development') {
+  if (config.nodeEnv === 'development') {
     const origin = req.get('origin');
     const referer = req.get('referer');
     
@@ -14,7 +17,7 @@ export const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
   
   // In production, allow requests from the same origin without API key
   // This allows the frontend to access the API without exposing the key
-  if (process.env.NODE_ENV === 'production') {
+  if (config.nodeEnv === 'production') {
     // Check if request is from same origin (our frontend)
     const origin = req.get('origin');
     const host = req.get('host');
@@ -39,24 +42,35 @@ export const apiKeyAuth = (req: Request, res: Response, next: NextFunction) => {
   }
   
   // For non-localhost requests in dev and non-same-origin in prod, require API key
-  const API_KEY = process.env.NOTION_API_KEY;
+  const API_KEY = config.notionApiKey;
   const providedKey = req.header('X-API-Key');
   
-  if (!API_KEY) {
-    console.error('NOTION_API_KEY is not set in the environment.');
-    return res.status(500).json({ 
-      statusCode: 500,
-      code: 'CONFIG_ERROR',
-      message: 'Server configuration error.' 
-    });
+  // Secure comparison using timing-safe equal to prevent timing attacks
+  let isValidKey = false;
+  if (providedKey && API_KEY) {
+    try {
+      // Convert both strings to Buffers of equal length for secure comparison
+      const providedKeyBuffer = Buffer.from(providedKey, 'utf8');
+      const apiKeyBuffer = Buffer.from(API_KEY, 'utf8');
+      
+      // Only compare if lengths match to avoid buffer length attacks
+      if (providedKeyBuffer.length === apiKeyBuffer.length) {
+        isValidKey = timingSafeEqual(providedKeyBuffer, apiKeyBuffer);
+      }
+    } catch {
+      // If buffer creation fails, key is invalid
+      isValidKey = false;
+    }
   }
   
   // Debug logging for integration tests (without exposing keys)
-  if (process.env.NODE_ENV === 'test') {
-    console.log('[Auth] Authentication check:', providedKey === API_KEY ? 'PASS' : 'FAIL');
+  if (config.nodeEnv === 'test') {
+    log.debug('[Auth] Authentication check', {
+      result: isValidKey ? 'PASS' : 'FAIL'
+    });
   }
   
-  if (providedKey === API_KEY) {
+  if (isValidKey) {
     return next();
   }
 

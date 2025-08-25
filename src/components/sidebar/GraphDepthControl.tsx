@@ -7,10 +7,7 @@ import { motion } from 'framer-motion';
 import { SlidersHorizontal } from 'lucide-react';
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { useFilterStore } from '@/stores/filterStore';
 
@@ -54,17 +51,13 @@ export function GraphDepthControl({ isOpen }: GraphDepthControlProps) {
         <Select
           value={connectionDepth.toString()}
           onValueChange={(value) => setConnectionDepth(parseInt(value))}
+          className="h-8 text-xs"
         >
-          <SelectTrigger className="h-8 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">1 hop (immediate)</SelectItem>
-            <SelectItem value="2">2 hops (close)</SelectItem>
-            <SelectItem value="3">3 hops (extended)</SelectItem>
-            <SelectItem value="4">4 hops (broad)</SelectItem>
-            <SelectItem value="5">5 hops (wide)</SelectItem>
-          </SelectContent>
+          <SelectItem value="1">1 hop (immediate)</SelectItem>
+          <SelectItem value="2">2 hops (close)</SelectItem>
+          <SelectItem value="3">3 hops (extended)</SelectItem>
+          <SelectItem value="4">4 hops (broad)</SelectItem>
+          <SelectItem value="5">5 hops (wide)</SelectItem>
         </Select>
         <p className="text-xs text-muted-foreground px-1">
           Controls how many connections to show from selected nodes in graph views

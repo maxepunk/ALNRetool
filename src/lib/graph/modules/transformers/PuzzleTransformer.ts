@@ -75,3 +75,49 @@ export class PuzzleTransformer extends BaseTransformer<Puzzle> {
     return errors;
   }
 }
+
+/**
+ * Pre-configured singleton instance of PuzzleTransformer.
+ * Ready-to-use transformer for puzzle entity processing.
+ * 
+ * **Usage Benefits:**
+ * - Avoids repeated instantiation overhead
+ * - Consistent configuration across application
+ * - Immediate availability for puzzle transformations
+ * - Standard pattern matching other transformer modules
+ * 
+ * **Common Usage Patterns:**
+ * - Single puzzle transformation with hierarchy analysis
+ * - Collection transformation with validation
+ * - Integration with graph building pipeline
+ * - Puzzle-specific labeling and sizing
+ * 
+ * @example
+ * ```typescript
+ * import { puzzleTransformer } from './transformers/PuzzleTransformer';
+ * 
+ * // Transform single puzzle
+ * const puzzleNode = puzzleTransformer.transformEntity(puzzle);
+ * 
+ * // Transform puzzle collection with hierarchy
+ * const puzzleNodes = puzzleTransformer.transformCollection(
+ *   puzzles,
+ *   { skipValidation: false, sortResults: false }
+ * );
+ * 
+ * // Use in graph building
+ * const graphBuilder = new GraphBuilder();
+ * graphBuilder.addNodes(puzzleNodes);
+ * 
+ * // Check puzzle hierarchy
+ * puzzleNodes.forEach(node => {
+ *   const size = node.data.metadata.visualHints?.size;
+ *   if (size === 'large') {
+ *     console.log(`${node.data.label} is a parent puzzle`);
+ *   }
+ * });
+ * ```
+ * 
+ * Singleton Pattern: Ensures consistent transformer configuration across modules
+ */
+export const puzzleTransformer = new PuzzleTransformer();

@@ -6,6 +6,8 @@
  */
 
 import { QueryClient } from '@tanstack/react-query';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 export class CacheVersionManager {
   private static instance: CacheVersionManager;
@@ -38,7 +40,7 @@ export class CacheVersionManager {
     const entityType = headers.get('X-Entity-Type');
     
     if (version && version !== this.currentVersion) {
-      console.log(`[CacheVersionManager] Version changed: ${this.currentVersion} → ${version}`);
+      logger.debug(`[CacheVersionManager] Version changed: ${this.currentVersion} → ${version}`);
       this.handleVersionChange(this.currentVersion, version);
       this.currentVersion = version;
     }
@@ -46,7 +48,7 @@ export class CacheVersionManager {
     if (entityVersion && entityType) {
       const currentEntityVersion = this.entityVersions.get(entityType);
       if (currentEntityVersion && currentEntityVersion !== entityVersion) {
-        console.log(`[CacheVersionManager] Entity version changed for ${entityType}: ${currentEntityVersion} → ${entityVersion}`);
+        logger.debug(`[CacheVersionManager] Entity version changed for ${entityType}: ${currentEntityVersion} → ${entityVersion}`);
         this.invalidateEntityQueries(entityType);
       }
       this.entityVersions.set(entityType, entityVersion);
@@ -61,7 +63,7 @@ export class CacheVersionManager {
     
     // If this is not the first version we've seen, invalidate all queries
     if (oldVersion !== null) {
-      console.log('[CacheVersionManager] Invalidating all queries due to version change');
+      logger.debug('[CacheVersionManager] Invalidating all queries due to version change');
       this.queryClient.invalidateQueries();
     }
   }
@@ -72,7 +74,7 @@ export class CacheVersionManager {
   private invalidateEntityQueries(entityType: string): void {
     if (!this.queryClient) return;
     
-    console.log(`[CacheVersionManager] Invalidating queries for ${entityType}`);
+    logger.debug(`[CacheVersionManager] Invalidating queries for ${entityType}`);
     this.queryClient.invalidateQueries({ queryKey: ['notion', entityType] });
     
     // Also invalidate related entity types

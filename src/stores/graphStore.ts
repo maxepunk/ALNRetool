@@ -9,7 +9,7 @@ import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { Node, Edge } from '@xyflow/react';
 
-export type LayoutAlgorithm = 'dagre' | 'force' | 'circular' | 'hierarchical';
+export type LayoutAlgorithm = 'dagre' | 'force' | 'force-atlas2' | 'circular' | 'grid' | 'radial' | 'hierarchical';
 export type NodeSizeMode = 'uniform' | 'dynamic' | 'compact';
 
 export interface GraphState {

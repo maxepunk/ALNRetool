@@ -9,7 +9,7 @@
  * - Supports group hover patterns
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { debounceAnimation, prefersReducedMotion } from '@/lib/animations';
 
 interface AnimationState {
@@ -111,6 +111,14 @@ export function useAnimationState({
   
   // Timers for temporary animations
   const animationTimersRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  
+  // Clean up all timers on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      animationTimersRef.current.forEach(timer => clearTimeout(timer));
+      animationTimersRef.current.clear();
+    };
+  }, []);
   
   // Register a connection between nodes via an edge
   const registerConnection = useCallback((edgeId: string, sourceNodeId: string, targetNodeId: string) => {

@@ -26,12 +26,12 @@ export default function NotFound() {
           The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
         
-        <Button asChild className="gap-2">
-          <Link to="/">
+        <Link to="/">
+          <Button className="gap-2">
             <Home className="h-4 w-4" />
             Go to Home
-          </Link>
-        </Button>
+          </Button>
+        </Link>
       </div>
     </div>
   )

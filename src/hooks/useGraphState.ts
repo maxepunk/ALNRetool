@@ -20,6 +20,8 @@ import {
   type OnSelectionChangeParams,
 } from '@xyflow/react';
 import type { GraphData } from '@/lib/graph/types';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 interface UseGraphStateOptions {
   initialGraphData: GraphData;
@@ -76,10 +78,10 @@ export function useGraphState({
   
   // Update nodes and edges when graph data changes
   useEffect(() => {
-    console.log('[useGraphState] Updating with new graph data:', {
+    logger.debug('[useGraphState] Updating with new graph data:', { 
       nodes: initialGraphData.nodes.length,
       edges: initialGraphData.edges.length
-    });
+     });
     setNodes(initialGraphData.nodes);
     setEdges(initialGraphData.edges);
   }, [initialGraphData, setNodes, setEdges]);
@@ -186,7 +188,7 @@ export function useGraphState({
   
   // Handle connection creation
   const handleConnect = useCallback((params: Connection) => {
-    console.log('Connection attempt:', params);
+    logger.debug('Connection attempt:', undefined, params);
     onConnect?.(params);
     // Future: Handle creating new relationships
   }, [onConnect]);

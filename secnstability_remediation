@@ -1,0 +1,190 @@
+Test Issues Remediation Plan
+
+  Executive Summary
+
+  Fix test failures caused by our lazy loading implementation and Radix UI mock incompatibilities. Two issues
+  identified, both fixable without compromising production code quality.
+
+  Issue Analysis
+
+  Issue 1: Nested Button Warning
+
+  Location: src/components/graph/GraphControls.tsx:92-100Cause: Test mocks don't handle Radix UI's asChild prop
+  correctlyImpact: Test-only warnings, no production impact
+
+  Issue 2: Test Timeouts
+
+  Location: src/lib/graph/modules/LayoutOrchestrator.tsCause: Lazy loading made layout async, tests expect sync
+  behaviorImpact: Tests timeout waiting for layout changes that never occur
+
+  Implementation Plan
+
+  ┌─────────────────────────────────────────────────────────┐
+  │                   PHASE STRUCTURE                        │
+  ├─────────────────────────────────────────────────────────┤
+  │                                                          │
+  │  Phase 1: GraphControls Fix           [Independent]     │
+  │     └── Button composition change                       │
+  │                                                          │
+  │  Phase 2: Test Infrastructure         [Sequential]      │
+  │     ├── Create test setup file                          │
+  │     └── Add preloading utilities                        │
+  │                                                          │
+  │  Phase 3: Validation                  [Final]           │
+  │     ├── Run full test suite                             │
+  │     └── Document changes                                │
+  │                                                          │
+  └─────────────────────────────────────────────────────────┘
+
+  Phase 1: Fix GraphControls Button Nesting
+
+  Objective
+
+  Eliminate nested button structure that causes test warnings
+
+  Implementation
+
+  File: src/components/graph/GraphControls.tsx
+
+  Current Structure (lines 92-100):
+  <DropdownMenuTrigger asChild>
+    <Button variant="outline" size="icon" ...>
+      <Settings className="h-4 w-4" />
+    </Button>
+  </DropdownMenuTrigger>
+
+  New Structure:
+  <DropdownMenuTrigger className="h-8 w-8 inline-flex items-center justify-center rounded-md border border-border/40
+  bg-background/80 backdrop-blur-md hover:bg-accent hover:text-accent-foreground">
+    <Settings className="h-4 w-4" />
+  </DropdownMenuTrigger>
+
+  Benefits
+
+  - Eliminates nested button issue entirely
+  - Works with or without proper asChild support
+  - Maintains same visual appearance and behavior
+
+  Phase 2: Create Test Infrastructure
+
+  Objective
+
+  Handle async layout operations in tests without changing production code
+
+  Implementation Steps
+
+  2.1 Create Test Setup File
+
+  File: src/test/setup.ts
+
+  import { beforeAll } from 'vitest';
+  import { LayoutOrchestrator } from '@/lib/graph/modules/LayoutOrchestrator';
+
+  // Preload common algorithms for synchronous test execution
+  let orchestrator: LayoutOrchestrator | null = null;
+
+  beforeAll(async () => {
+    orchestrator = new LayoutOrchestrator();
+    await orchestrator.preloadCommonAlgorithms(['dagre', 'force']);
+
+    // Make available globally for tests that need it
+    (global as any).__testOrchestrator = orchestrator;
+  });
+
+  // Helper for tests that need async layout
+  export async function withAsyncLayout(fn: () => Promise<void>) {
+    await fn();
+    // Allow any pending layout operations to complete
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
+
+  2.2 Update Vitest Configuration
+
+  File: vite.config.ts
+
+  Add to test configuration:
+  test: {
+    setupFiles: ['./src/test/setup.ts'],
+    // ... existing config
+  }
+
+  2.3 Create Test Utilities
+
+  File: src/test/layout-utils.ts
+
+  import { act } from '@testing-library/react';
+
+  export async function waitForLayout() {
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    });
+  }
+
+  export function mockLayoutSync() {
+    // Mock for tests that need immediate layout
+    return {
+      applyLayout: (graph: any) => graph,
+      applyLayoutAsync: async (graph: any) => graph,
+    };
+  }
+
+  Phase 3: Validation and Documentation
+
+  Validation Steps
+
+  1. Run Test Suite
+  npm run test:run
+    - Verify no nested button warnings
+    - Confirm no timeouts
+    - Check all tests pass
+  2. Run Specific Problem Tests
+  npx vitest run GraphControls
+  npx vitest run integration
+  3. Verify Production Build
+  npm run build
+  npm run preview
+
+  Documentation
+
+  File: docs/TEST_MIGRATION.md
+
+  # Test Migration Guide - Lazy Loading
+
+  ## Background
+  Layout algorithms now use lazy loading for performance.
+  This affects tests that expect synchronous layout operations.
+
+  ## Changes Required
+
+  ### For Tests Using Layout
+  - Tests now preload 'dagre' and 'force' algorithms automatically
+  - Use `waitForLayout()` helper for async operations
+  - Or use `mockLayoutSync()` for simple unit tests
+
+  ### For GraphControls Tests
+  - Button structure changed to avoid nesting
+  - No test changes needed if using actual components
+
+  Success Criteria
+
+  - All tests pass without warnings
+  - No test timeouts
+  - Production functionality unchanged
+  - Clear migration documentation
+  - Maintainable solution
+
+  Risk Mitigation
+
+  | Risk                   | Mitigation                           |
+  |------------------------|--------------------------------------|
+  | Breaking production    | Changes are minimal and test-focused |
+  | Future test failures   | Documentation and utilities provided |
+  | Performance regression | Lazy loading preserved in production |
+
+  Next Steps
+
+  Would you like me to:
+  1. Implement Phase 1 - Fix GraphControls button nesting
+  2. Implement Phase 2 - Create test infrastructure
+  3. Execute all phases - Complete implementation
+  4. Create detailed task agents - For parallel execution

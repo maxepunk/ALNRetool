@@ -21,11 +21,6 @@
         "TAVILY_API_KEY": "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"
       }
     },
-    "duckduckgo": {
-      "type": "stdio", 
-      "command": "npx",
-      "args": ["-y", "@oevortex/ddg_search"]
-    },
     "notion": {
       "type": "stdio",
       "command": "node",
@@ -37,28 +32,10 @@
         "NOTION_MARKDOWN_CONVERSION": "true"
       }
     },
-    "github": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN:-}"
-      }
-    },
-    "desktop-commander": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@wonderwhy-er/desktop-commander"]
-    },
     "playwright-generic": {
       "type": "stdio",
       "command": "npx",
       "args": ["@executeautomation/playwright-mcp-server", "--port", "3335"]
-    },
-    "gsuite": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["--directory", "/home/spide/projects/GitHub/mcp-gsuite", "run", "mcp-gsuite"]
     },
     "magic": {
       "type": "stdio",

@@ -140,7 +140,7 @@ function calculateLayoutQuality(
   const puzzleNodes = nodes.filter(n => n.data.metadata.entityType === 'puzzle');
 
   elementNodes.forEach(element => {
-    const entity = element.data.entity as any;
+    const entity = element.data.entity;
     const connectedPuzzles = [
       ...(entity.requiredForPuzzleIds || []),
       ...(entity.rewardedByPuzzleIds || [])
@@ -205,7 +205,7 @@ function createMockNode(
 ): GraphNode {
   return {
     id,
-    type: entityType === 'puzzle' ? 'puzzleNode' : 'elementNode',
+    type: entityType === 'puzzle' ? 'puzzle' : 'element',
     position: { x, y },
     data: {
       label: `Node ${id}`,

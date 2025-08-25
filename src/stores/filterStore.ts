@@ -9,6 +9,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { urlToFilterState, filterStateToUrl, updateBrowserUrl } from '@/utils/urlState';
 
 // Filter types for different views
 export interface PuzzleFilters {
@@ -50,7 +51,7 @@ export interface FilterState {
   nodeConnectionsFilters: NodeConnectionsFilters | null;
   
   // Current active view (for route-aware filtering)
-  activeView: 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections' | null;
+  activeView: 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections' | 'timeline' | 'full-network' | null;
 }export interface FilterActions {
   // Universal filter actions
   setSearchTerm: (term: string) => void;
@@ -85,11 +86,16 @@ export interface FilterState {
   clearNodeConnectionsFilters: () => void;
   
   // View management
-  setActiveView: (view: 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections' | null) => void;
+  setActiveView: (view: 'puzzle-focus' | 'character-journey' | 'content-status' | 'node-connections' | 'timeline' | 'full-network' | null) => void;
   
   // Global actions
   clearAllFilters: () => void;
   applyPreset: (preset: 'recent' | 'my-work' | 'needs-review' | 'critical-path') => void;
+  
+  // URL-driven state management (Phase 2)
+  hydrateFromUrl: (urlParams: URLSearchParams) => void;
+  syncToUrl: (replace?: boolean) => void;
+  getUrlParams: () => URLSearchParams;
 }
 
 // Computed values
@@ -304,7 +310,73 @@ export const useFilterStore = create<FilterStore>()(
               });
               break;
           }
-        },        // Computed values
+        },
+        
+        // URL-driven state management (Phase 2)
+        hydrateFromUrl: (urlParams) => {
+          const urlState = urlToFilterState(urlParams);
+          
+          // Merge URL state with current state, giving URL precedence
+          const currentState = get();
+          const mergedState = { ...currentState };
+          
+          // Apply URL state with validation
+          if (urlState.searchTerm !== undefined) {
+            mergedState.searchTerm = urlState.searchTerm;
+          }
+          
+          if (urlState.connectionDepth !== undefined) {
+            mergedState.connectionDepth = urlState.connectionDepth;
+          }
+          
+          if (urlState.activeView !== undefined) {
+            mergedState.activeView = urlState.activeView;
+          }
+          
+          // Merge puzzle filters
+          if (urlState.puzzleFilters) {
+            mergedState.puzzleFilters = {
+              ...currentState.puzzleFilters,
+              ...urlState.puzzleFilters
+            };
+          }
+          
+          // Merge character filters
+          if (urlState.characterFilters) {
+            mergedState.characterFilters = {
+              ...currentState.characterFilters,
+              ...urlState.characterFilters
+            };
+          }
+          
+          // Merge content filters
+          if (urlState.contentFilters) {
+            mergedState.contentFilters = {
+              ...currentState.contentFilters,
+              ...urlState.contentFilters
+            };
+          }
+          
+          // Set node connections filters
+          if (urlState.nodeConnectionsFilters) {
+            mergedState.nodeConnectionsFilters = urlState.nodeConnectionsFilters;
+          }
+          
+          // Apply the merged state
+          set(mergedState);
+        },
+        
+        syncToUrl: (replace = false) => {
+          const state = get();
+          updateBrowserUrl(state, replace);
+        },
+        
+        getUrlParams: () => {
+          const state = get();
+          return filterStateToUrl(state);
+        },
+        
+        // Computed values
         hasActiveFilters: () => {
           const state = get();
           return !!(
@@ -458,3 +530,12 @@ export const useNodeConnectionsFilters = () => useFilterStore(state => state.nod
 export const useActiveView = () => useFilterStore(state => state.activeView);
 export const useHasActiveFilters = () => useFilterStore(state => state.hasActiveFilters());
 export const useActiveFilterCount = () => useFilterStore(state => state.activeFilterCount());
+
+// URL-driven filter hooks (Phase 2)
+export const useUrlFilters = () => {
+  return {
+    hydrateFromUrl: useFilterStore(state => state.hydrateFromUrl),
+    syncToUrl: useFilterStore(state => state.syncToUrl),
+    getUrlParams: useFilterStore(state => state.getUrlParams)
+  };
+};

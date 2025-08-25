@@ -1,9 +1,11 @@
 /**
  * Factory function for creating typed entity mutation hooks
- * Provides optimistic updates, error rollback, and cache invalidation
+ * Provides optimistic updates, error rollback, cache invalidation, and CSRF protection
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
+// CSRF token support will be added when mutation API services are updated
+// import { useCSRFToken, fetchWithCSRF } from '../useCSRFToken';
 import type { 
   Character, 
   Element, 
@@ -186,10 +188,10 @@ export function validateUpdates<T>(updates: Partial<T>, entityType: EntityType):
   // Entity-specific validation
   if (entityType === 'puzzles') {
     const puzzleUpdates = updates as Partial<Puzzle>;
-    if (puzzleUpdates.subPuzzleIds && puzzleUpdates.subPuzzleIds.some((id: string | null) => !id)) {
+    if (puzzleUpdates.subPuzzleIds?.some((id: string | null) => !id)) {
       return 'Invalid sub-puzzle reference';
     }
-    if (puzzleUpdates.puzzleElementIds && puzzleUpdates.puzzleElementIds.some((id: string | null) => !id)) {
+    if (puzzleUpdates.puzzleElementIds?.some((id: string | null) => !id)) {
       return 'Invalid puzzle element reference';
     }
   }

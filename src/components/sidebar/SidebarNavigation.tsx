@@ -1,8 +1,9 @@
 /**
  * SidebarNavigation Component
- * Handles main navigation items in the sidebar
+ * Dynamic navigation using ViewRegistry
  */
 
+import { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { 
@@ -10,49 +11,22 @@ import {
   Users, 
   CheckSquare, 
   Clock,
-  Share2
+  Share2,
+  FileText
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { viewRegistry } from '@/contexts/ViewContext';
+import { RouteUtils } from '@/components/generated/RouteGenerator';
 
-interface NavItem {
-  path: string;
-  label: string;
-  icon: LucideIcon;
-  description: string;
-}
-
-const navItems: NavItem[] = [
-  {
-    path: '/puzzles',
-    label: 'Puzzle Focus',
-    icon: Network,
-    description: 'Visualize puzzle dependencies and rewards'
-  },
-  {
-    path: '/character-journey',
-    label: 'Character Journey',
-    icon: Users,
-    description: 'Track character ownership paths'
-  },
-  {
-    path: '/node-connections',
-    label: 'Node Connections',
-    icon: Share2,
-    description: 'Explore any entity\'s connections'
-  },
-  {
-    path: '/status',
-    label: 'Content Status',
-    icon: CheckSquare,
-    description: 'Review content completion and issues'
-  },
-  {
-    path: '/timeline',
-    label: 'Timeline',
-    icon: Clock,
-    description: 'View chronological story events'
-  }
-];
+// Icon mapping for view types
+const iconMap: Record<string, LucideIcon> = {
+  'puzzle-focus': Network,
+  'character-journey': Users,
+  'node-connections': Share2,
+  'content-status': CheckSquare,
+  'timeline': Clock,
+  'default': FileText
+};
 
 interface SidebarNavigationProps {
   isOpen: boolean;
@@ -60,6 +34,21 @@ interface SidebarNavigationProps {
 
 export function SidebarNavigation({ isOpen }: SidebarNavigationProps) {
   const location = useLocation();
+  
+  // Generate navigation items from ViewRegistry
+  const navItems = useMemo(() => {
+    const views = viewRegistry.getAll();
+    return views.map(view => {
+      const route = RouteUtils.getRouteForView(view.id);
+      return {
+        id: view.id,
+        path: route?.path || `/${view.id}`,
+        label: view.ui?.title || view.name,
+        icon: iconMap[view.id] || iconMap.default,
+        description: view.ui?.description || view.description || ''
+      };
+    });
+  }, []);
 
   return (
     <nav 
@@ -74,7 +63,7 @@ export function SidebarNavigation({ isOpen }: SidebarNavigationProps) {
         
         return (
           <Link
-            key={item.path}
+            key={item.id}
             to={item.path}
             className={cn(
               'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
@@ -89,9 +78,11 @@ export function SidebarNavigation({ isOpen }: SidebarNavigationProps) {
             {isOpen && (
               <div className="flex-1 min-w-0">
                 <div className="font-medium">{item.label}</div>
-                <div className="text-xs text-muted-foreground truncate">
-                  {item.description}
-                </div>
+                {item.description && (
+                  <div className="text-xs text-muted-foreground truncate">
+                    {item.description}
+                  </div>
+                )}
               </div>
             )}
           </Link>

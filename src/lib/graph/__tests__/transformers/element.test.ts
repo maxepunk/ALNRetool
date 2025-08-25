@@ -4,7 +4,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { ElementTransformer } from '../../modules/transformers/ElementTransformer';
-import type { Element, ElementStatus } from '@/types/notion/app';
+import { createMockElement } from '../../test-utils/mockFactories';
+import type { ElementStatus } from '@/types/notion/app';
 
 // Create test instance
 const elementTransformer = new ElementTransformer();
@@ -26,34 +27,10 @@ vi.mock('../../patterns', () => ({
 }));
 
 describe('Element Transformer', () => {
-  const createMockElement = (overrides?: Partial<Element>): Element => ({
-    id: 'elem-1',
-    name: 'Test Element',
-    descriptionText: '',
-    sfPatterns: { rfid: '', valueRating: 1, memoryType: 'Personal', group: { name: '', multiplier: '1' } },
-    basicType: 'Prop',
-    ownerId: undefined,
-    containerId: undefined,
-    contentIds: [],
-    timelineEventId: undefined,
-    status: 'Done',
-    firstAvailable: null,
-    requiredForPuzzleIds: [],
-    rewardedByPuzzleIds: [],
-    containerPuzzleId: undefined,
-    narrativeThreads: [],
-    associatedCharacterIds: [],
-    puzzleChain: [],
-    productionNotes: '',
-    filesMedia: [],
-    contentLink: undefined,
-    isContainer: false,
-    ...overrides,
-  });
 
   describe('transform', () => {
     it('should transform a valid element', () => {
-      const element = createMockElement();
+      const element = createMockElement({ basicType: 'Prop' });
       const node = elementTransformer.transform(element);
 
       expect(node).toBeDefined();

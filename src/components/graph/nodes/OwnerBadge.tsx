@@ -1,6 +1,5 @@
 import { memo, useState } from 'react';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { HOVER_TRANSITIONS } from '@/lib/animations';
 
 interface OwnerBadgeProps {
@@ -82,41 +81,46 @@ const OwnerBadge = memo(({
   const tierStyle = tierStyles[tier];
   
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div 
-          className={cn(
-            'w-7 h-7 rounded-full border-2 flex items-center justify-center',
-            'text-xs font-semibold cursor-help overflow-hidden',
-            'transition-all duration-200',
-            HOVER_TRANSITIONS.scale,
-            'hover:shadow-lg hover:z-10',
-            positionClasses[position],
-            tierStyle.wrapper,
-            tierStyle.hoverGlow,
-            tier === 'Tier 1' && tierStyle.pulseColor,
-            'group'
-          )}
-        >
-          {portraitUrl && !imageFailed ? (
-            <img 
-              src={portraitUrl} 
-              alt={characterName}
-              className="absolute inset-0 w-full h-full object-cover rounded-full transition-transform duration-200 group-hover:scale-105"
-              onError={() => setImageFailed(true)}
-            />
-          ) : (
-            <span className="relative z-[1] tracking-tighter transition-transform duration-200 group-hover:scale-110">
-              {initials}
-            </span>
-          )}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent>
-        <p>Owner: {characterName}</p>
-        <p className="text-xs text-muted-foreground">{tier}</p>
-      </TooltipContent>
-    </Tooltip>
+    <div className="relative group inline-block">
+      <div 
+        className={cn(
+          'w-7 h-7 rounded-full border-2 flex items-center justify-center',
+          'text-xs font-semibold cursor-help overflow-hidden',
+          'transition-all duration-200',
+          HOVER_TRANSITIONS.scale,
+          'hover:shadow-lg hover:z-10',
+          positionClasses[position],
+          tierStyle.wrapper,
+          tierStyle.hoverGlow,
+          tier === 'Tier 1' && tierStyle.pulseColor,
+          'group'
+        )}
+        title={`Owner: ${characterName} (${tier})`}
+      >
+        {portraitUrl && !imageFailed ? (
+          <img 
+            src={portraitUrl} 
+            alt={characterName}
+            className="absolute inset-0 w-full h-full object-cover rounded-full transition-transform duration-200 group-hover:scale-105"
+            onError={() => setImageFailed(true)}
+          />
+        ) : (
+          <span className="relative z-[1] tracking-tighter transition-transform duration-200 group-hover:scale-110">
+            {initials}
+          </span>
+        )}
+      </div>
+      {/* CSS-only tooltip */}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50
+                      hidden group-hover:block
+                      bg-primary text-primary-foreground
+                      rounded-md px-2 py-1 text-xs
+                      whitespace-nowrap pointer-events-none
+                      animate-in fade-in-0 zoom-in-95">
+        <div>Owner: {characterName}</div>
+        <div className="text-xs opacity-80">{tier}</div>
+      </div>
+    </div>
   );
 });
 

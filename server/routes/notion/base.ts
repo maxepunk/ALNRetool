@@ -8,7 +8,9 @@ import { notion } from '../../services/notion.js';
 import { cacheService } from '../../services/cache.js';
 import type { 
   NotionListResponse, 
-  NotionPage 
+  NotionPage,
+  NotionProperty,
+  NotionRelationProperty
 } from '../../../src/types/notion/raw.js';
 import type { APIResponse } from '../../../src/types/notion/app.js';
 
@@ -57,6 +59,40 @@ export async function handleCachedNotionRequest<T>(
 }
 
 /**
+ * Helper to fetch complete relation property data when has_more is true
+ */
+async function fetchCompleteRelationProperty(
+  pageId: string,
+  propertyId: string
+): Promise<NotionRelationProperty> {
+  const allRelations: Array<{ id: string }> = [];
+  let cursor: string | undefined;
+  
+  do {
+    const response = await notion.pages.properties.retrieve({
+      page_id: pageId,
+      property_id: propertyId,
+      start_cursor: cursor,
+      page_size: 100
+    }) as any;
+    
+    if (response.type === 'relation' && response.results) {
+      allRelations.push(...response.results.map((r: any) => ({ id: r.relation?.id || r.id })));
+      cursor = response.next_cursor || undefined;
+    } else {
+      break;
+    }
+  } while (cursor);
+  
+  return {
+    id: propertyId,
+    type: 'relation',
+    relation: allRelations,
+    has_more: false
+  };
+}
+
+/**
  * Helper to fetch pages from a database with pagination limit
  */
 export async function fetchAllPages(
@@ -85,7 +121,20 @@ export async function fetchAllPages(
     
     const response = await notion.databases.query(queryParams) as NotionListResponse<NotionPage>;
     
-    pages.push(...response.results);
+    // Process each page to fetch complete relation properties
+    for (const page of response.results) {
+      // Check for relation properties with has_more = true
+      for (const [propName, prop] of Object.entries(page.properties)) {
+        if (prop.type === 'relation' && (prop).has_more) {
+          // Fetch complete relation data
+          const completeRelation = await fetchCompleteRelationProperty(page.id, prop.id);
+          // Replace the truncated relation with complete data
+          page.properties[propName] = completeRelation;
+        }
+      }
+      pages.push(page);
+    }
+    
     totalFetched += response.results.length;
     cursor = response.next_cursor || undefined;
     

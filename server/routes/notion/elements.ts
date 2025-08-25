@@ -5,12 +5,11 @@
 import { createEntityRouter, type InverseRelation } from './createEntityRouter.js';
 import { buildElementFilters } from '../../services/filterBuilder.js';
 import { transformElement, elementToNotionProps } from '../../../src/types/notion/transforms.js';
+import config from '../../config/index.js';
 
-const ELEMENTS_DATABASE_ID = process.env.NOTION_ELEMENTS_DB || 
-  '18c2f33d-583f-8020-91bc-d84c7dd94306';
+const ELEMENTS_DATABASE_ID = config.notionDatabaseIds.elements;
 
-const PUZZLES_DATABASE_ID = process.env.NOTION_PUZZLES_DB || 
-  '1b62f33d-583f-80cc-87cf-d7d6c4b0b265';
+const PUZZLES_DATABASE_ID = config.notionDatabaseIds.puzzles;
 
 // Define inverse relations for elements
 const elementInverseRelations: InverseRelation[] = [

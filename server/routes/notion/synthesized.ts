@@ -8,6 +8,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { cacheService } from '../../services/cache.js';
 import { fetchAllPages } from './base.js';
 import { transformElement, transformPuzzle } from '../../../src/types/notion/transforms.js';
+import config from '../../config/index.js';
 import type { Element, Puzzle } from '../../../src/types/notion/app.js';
 
 const router = Router();
@@ -18,8 +19,8 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
   const { buildElementFilters, buildPuzzleFilters } = await import('../../services/filterBuilder.js');
   
   // Get database IDs from environment
-  const elementsDb = process.env.NOTION_ELEMENTS_DB || '18c2f33d-583f-8020-91bc-d84c7dd94306';
-  const puzzlesDb = process.env.NOTION_PUZZLES_DB || '1b62f33d-583f-80cc-87cf-d7d6c4b0b265';
+  const elementsDb = config.notionDatabaseIds.elements;
+  const puzzlesDb = config.notionDatabaseIds.puzzles;
   
   // Extract filter parameters from query
   const elementStatus = req.query.elementStatus as string | undefined;

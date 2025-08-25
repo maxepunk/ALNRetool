@@ -4,7 +4,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { PuzzleTransformer } from '../../modules/transformers/PuzzleTransformer';
-import type { Puzzle, Act } from '@/types/notion/app';
+import { createMockPuzzle } from '../../test-utils/mockFactories';
+import type { Act } from '@/types/notion/app';
 
 // Create test instance
 const puzzleTransformer = new PuzzleTransformer();
@@ -17,26 +18,9 @@ describe('Puzzle Transformer', () => {
     consoleSpy.mockClear();
   });
 
-  const createMockPuzzle = (overrides?: Partial<Puzzle>): Puzzle => ({
-    id: 'puzzle-1',
-    name: 'Test Puzzle',
-    descriptionSolution: 'Solve by doing X',
-    puzzleElementIds: [],
-    lockedItemId: undefined,
-    ownerId: undefined,
-    rewardIds: [],
-    parentItemId: undefined,
-    subPuzzleIds: [],
-    storyReveals: [],
-    timing: [],
-    narrativeThreads: [],
-    assetLink: undefined,
-    ...overrides,
-  });
-
   describe('transform', () => {
     it('should transform a valid puzzle', () => {
-      const puzzle = createMockPuzzle();
+      const puzzle = createMockPuzzle({ timing: [] });
       const node = puzzleTransformer.transform(puzzle);
 
       expect(node).toBeDefined();
@@ -94,6 +78,7 @@ describe('Puzzle Transformer', () => {
       const subPuzzle = createMockPuzzle({
         name: 'Sub Puzzle',
         parentItemId: 'puzzle-parent',
+        timing: [],
       });
       const subNode = puzzleTransformer.transform(subPuzzle);
       expect(subNode?.data.label).toBe('Sub Puzzle');
@@ -102,6 +87,7 @@ describe('Puzzle Transformer', () => {
       const parent = createMockPuzzle({
         name: 'Parent Puzzle',
         subPuzzleIds: ['sub-1', 'sub-2'],
+        timing: [],
       });
       const parentNode = puzzleTransformer.transform(parent);
       expect(parentNode?.data.label).toBe('Parent Puzzle');

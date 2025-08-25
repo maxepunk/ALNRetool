@@ -3,7 +3,7 @@
  * Puzzle-specific filter controls for the sidebar
  */
 
-import { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import {
   Collapsible,
   CollapsibleContent,
@@ -24,15 +24,18 @@ import { ChevronRight, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFilterStore } from '@/stores/filterStore';
 import { usePuzzles } from '@/hooks/usePuzzles';
+import { useFilterNavigation } from '@/hooks/useFilterNavigation';
 
 interface PuzzleFiltersProps {
   isOpen: boolean;
   isExpanded: boolean;
   onToggleExpanded: () => void;
-}export const PuzzleFilters = memo(function PuzzleFilters({ 
-  isOpen, 
-  isExpanded, 
-  onToggleExpanded 
+}
+
+export const PuzzleFilters = memo(function PuzzleFilters({ 
+  isOpen,
+  isExpanded,
+  onToggleExpanded
 }: PuzzleFiltersProps) {
   const puzzleFilters = useFilterStore((state) => state.puzzleFilters);
   const toggleAct = useFilterStore((state) => state.toggleAct);
@@ -41,6 +44,7 @@ interface PuzzleFiltersProps {
   const clearPuzzleFilters = useFilterStore((state) => state.clearPuzzleFilters);
   
   const { data: puzzles, isLoading } = usePuzzles();
+  const { navigateToPuzzleFocus } = useFilterNavigation();
 
   // Derive available acts from puzzle data
   const availableActs = useMemo(() => {
@@ -61,8 +65,14 @@ interface PuzzleFiltersProps {
   }, [toggleAct]);
 
   const handlePuzzleSelect = useCallback((value: string) => {
-    selectPuzzle(value === 'all' ? null : value);
-  }, [selectPuzzle]);  const handleStatusChange = useCallback((value: string) => {
+    const puzzleId = value === 'all' ? null : value;
+    selectPuzzle(puzzleId); // Update FilterStore state
+    
+    // Navigate to puzzle focus view if a specific puzzle is selected
+    if (puzzleId) {
+      navigateToPuzzleFocus(puzzleId);
+    }
+  }, [selectPuzzle, navigateToPuzzleFocus]);  const handleStatusChange = useCallback((value: string) => {
     setCompletionStatus(value as 'all' | 'completed' | 'incomplete');
   }, [setCompletionStatus]);
 
@@ -93,13 +103,12 @@ interface PuzzleFiltersProps {
     );
   }  return (
     <Collapsible open={isExpanded} onOpenChange={onToggleExpanded}>
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          className="w-full justify-between px-3 py-2 h-auto"
-          aria-expanded={isExpanded}
-          aria-controls="puzzle-filters-content"
-        >
+      <CollapsibleTrigger 
+        className="w-full justify-between px-3 py-2 h-auto hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
+        aria-expanded={isExpanded}
+        aria-controls="puzzle-filters-content"
+      >
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <Network className="h-4 w-4" aria-hidden="true" />
             <span className="font-medium">Puzzle Filters</span>
@@ -116,7 +125,7 @@ interface PuzzleFiltersProps {
             )}
             aria-hidden="true"
           />
-        </Button>
+        </div>
       </CollapsibleTrigger>      <CollapsibleContent id="puzzle-filters-content" className="px-3 pb-3 space-y-3">
         {/* Act Selection */}
         <div className="space-y-2">

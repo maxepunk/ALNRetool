@@ -8,6 +8,10 @@ import type { Node, Edge } from '@xyflow/react'
 // Mock React Flow components
 export const mockReactFlow = () => {
   vi.mock('@xyflow/react', () => ({
+    MarkerType: {
+      Arrow: 'arrow',
+      ArrowClosed: 'arrowclosed',
+    },
     ReactFlow: vi.fn(({ children, nodes, edges, onNodeClick }) => (
       <div className="react-flow" data-testid="react-flow">
         <div className="react-flow__renderer">

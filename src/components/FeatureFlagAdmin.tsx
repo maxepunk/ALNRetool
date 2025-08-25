@@ -20,7 +20,7 @@ export function FeatureFlagAdmin() {
   const [showPanel, setShowPanel] = React.useState(false);
 
   // Only show in development
-  if (process.env.NODE_ENV === 'production') {
+  if (import.meta.env?.PROD === true) {
     return null;
   }
 

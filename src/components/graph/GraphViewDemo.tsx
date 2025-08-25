@@ -3,6 +3,8 @@ import GraphView from './GraphView';
 import { useCharacters, useElements, usePuzzles, useTimeline } from '@/hooks/useNotionData';
 import { CharacterSkeleton, ElementSkeleton, PuzzleSkeleton, TimelineSkeleton } from '../skeletons';
 import type { ViewType } from '@/lib/graph/types';
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 /**
  * Demo component to test GraphView with real data
@@ -20,12 +22,12 @@ const GraphViewDemo: React.FC = () => {
   
   // Handle node click
   const handleNodeClick = (node: any) => {
-    console.log('Node clicked:', node);
+    logger.debug('Node clicked:', undefined, node);
   };
   
   // Handle selection change
   const handleSelectionChange = (params: any) => {
-    console.log('Selection changed:', params);
+    logger.debug('Selection changed:', undefined, params);
   };
   
   if (isLoading) {

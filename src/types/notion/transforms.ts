@@ -225,8 +225,8 @@ export function transformElement(page: NotionPage): Element {
     timelineEventId: getRelationIds(props['Timeline Event'])[0],
     status: (getStatus(props['Status']) || 'Idea/Placeholder') as ElementStatus,
     firstAvailable: getSelect(props['First Available']) as Act,
-    requiredForPuzzleIds: getRelationIds(props['Required for puzzles']),
-    rewardedByPuzzleIds: getRelationIds(props['Rewarded by puzzles']),
+    requiredForPuzzleIds: getRelationIds(props['Required For (Puzzle)']),
+    rewardedByPuzzleIds: getRelationIds(props['Rewarded by (Puzzle)']),
     containerPuzzleId: getRelationIds(props['Container Puzzle'])[0],
     narrativeThreads: getMultiSelect(props['Narrative Threads']),
     associatedCharacterIds: getRollupStrings(props['Associated Characters']),
@@ -356,13 +356,13 @@ export function elementToNotionProps(element: Partial<Element>): any {
   }
   
   if (element.requiredForPuzzleIds !== undefined) {
-    properties['Required for puzzles'] = {
+    properties['Required For (Puzzle)'] = {
       relation: element.requiredForPuzzleIds.map(id => ({ id }))
     };
   }
   
   if (element.rewardedByPuzzleIds !== undefined) {
-    properties['Rewarded by puzzles'] = {
+    properties['Rewarded by (Puzzle)'] = {
       relation: element.rewardedByPuzzleIds.map(id => ({ id }))
     };
   }

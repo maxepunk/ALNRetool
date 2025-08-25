@@ -1,4 +1,6 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
+import { logger } from '@/lib/graph/utils/Logger'
+
 
 /**
  * Configure React Query client with optimal settings for ALNRetool
@@ -21,10 +23,9 @@ export const QUERY_RETRY_DELAY = (attemptIndex: number) =>
 const queryCache = new QueryCache({
   onError: (error, query) => {
     // Global error handler for all queries
-    console.error('Query error:', {
-      queryKey: query.queryKey,
-      error,
-    })
+    logger.error('Query error:', {
+      queryKey: JSON.stringify(query.queryKey),
+    }, error instanceof Error ? error : undefined)
     // In production, this would trigger error reporting/monitoring
   },
   onSuccess: (_data, query) => {
@@ -39,10 +40,9 @@ const queryCache = new QueryCache({
 const mutationCache = new MutationCache({
   onError: (error, _variables, _context, mutation) => {
     // Global error handler for all mutations
-    console.error('Mutation cache error:', {
-      mutationKey: mutation.options.mutationKey,
-      error,
-    })
+    logger.error('Mutation cache error:', {
+      mutationKey: JSON.stringify(mutation.options.mutationKey),
+    }, error instanceof Error ? error : undefined)
   },
   onSuccess: (_data, _variables, _context, mutation) => {
     // Global success handler for mutations
@@ -87,7 +87,7 @@ export const queryClient = new QueryClient({
       
       // Handle errors globally
       onError: (error) => {
-        console.error('Mutation error:', error)
+        logger.error('Mutation error:', undefined, error)
         // In production, this would trigger error reporting
       },
     },

@@ -6,6 +6,8 @@
 import type { TimelineEvent } from '@/types/notion/app';
 import type { NodeMetadata, VisualHints, GraphNode } from '../../types';
 import { BaseTransformer } from '../BaseTransformer';
+import { logger } from '../../utils/Logger'
+
 
 export class TimelineTransformer extends BaseTransformer<TimelineEvent> {
   protected entityType = 'timeline' as const;
@@ -16,14 +18,14 @@ export class TimelineTransformer extends BaseTransformer<TimelineEvent> {
    */
   protected generateLabel(timeline: TimelineEvent): string {
     if (!timeline.date) {
-      console.warn(`Timeline event ${timeline.id} has no date`);
+      logger.warn(`Timeline event ${timeline.id} has no date`);
       return 'Unknown Date';
     }
 
     try {
       const date = new Date(timeline.date);
       if (isNaN(date.getTime())) {
-        console.warn(`Invalid date format for timeline event ${timeline.id}: ${timeline.date}`);
+        logger.warn(`Invalid date format for timeline event ${timeline.id}: ${timeline.date}`);
         return timeline.date; // Return as-is if can't parse
       }
 
@@ -36,7 +38,7 @@ export class TimelineTransformer extends BaseTransformer<TimelineEvent> {
       };
       return date.toLocaleDateString('en-US', options);
     } catch (error) {
-      console.warn(`Error formatting date for timeline event ${timeline.id}:`, error);
+      logger.warn(`Error formatting date for timeline event ${timeline.id}:`, undefined, error);
       return timeline.date || 'Unknown Date';
     }
   }
@@ -132,3 +134,49 @@ export class TimelineTransformer extends BaseTransformer<TimelineEvent> {
     });
   }
 }
+
+/**
+ * Pre-configured singleton instance of TimelineTransformer.
+ * Ready-to-use transformer for timeline event processing.
+ * 
+ * **Usage Benefits:**
+ * - Avoids repeated instantiation overhead
+ * - Consistent configuration across application
+ * - Immediate availability for timeline transformations
+ * - Standard pattern matching other transformer modules
+ * 
+ * **Common Usage Patterns:**
+ * - Single timeline event transformation with date formatting
+ * - Collection transformation with chronological sorting
+ * - Integration with graph building pipeline
+ * - Timeline-specific validation and connection tracking
+ * 
+ * @example
+ * ```typescript
+ * import { timelineTransformer } from './transformers/TimelineTransformer';
+ * 
+ * // Transform single timeline event
+ * const eventNode = timelineTransformer.transformEntity(timelineEvent);
+ * 
+ * // Transform chronologically sorted collection
+ * const eventNodes = timelineTransformer.transformCollection(
+ *   events,
+ *   { skipValidation: false, sortResults: true }
+ * );
+ * 
+ * // Use in graph building
+ * const graphBuilder = new GraphBuilder();
+ * graphBuilder.addNodes(eventNodes);
+ * 
+ * // Access timeline connections for edge creation
+ * eventNodes.forEach(node => {
+ *   const connections = node.data.metadata.timelineConnections;
+ *   connections.forEach(connectionId => {
+ *     // Create edges to connected entities
+ *   });
+ * });
+ * ```
+ * 
+ * Singleton Pattern: Ensures consistent transformer configuration across modules
+ */
+export const timelineTransformer = new TimelineTransformer();

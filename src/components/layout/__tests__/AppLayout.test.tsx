@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeAll } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { screen, within } from '@/test/test-utils'
 import { renderWithProviders, userEvent } from '@/test/utils'
 import AppLayout from '../AppLayout'
 
@@ -41,9 +41,10 @@ describe('AppLayout', () => {
       const nav = screen.getByRole('navigation')
       expect(nav).toBeInTheDocument()
       
-      expect(within(nav).getByRole('link', { name: /puzzles/i })).toBeInTheDocument()
-      expect(within(nav).getByRole('link', { name: /characters/i })).toBeInTheDocument()
-      expect(within(nav).getByRole('link', { name: /status/i })).toBeInTheDocument()
+      // Check for actual nav item labels
+      expect(within(nav).getByRole('link', { name: /puzzle focus/i })).toBeInTheDocument()
+      expect(within(nav).getByRole('link', { name: /character journey/i })).toBeInTheDocument()
+      expect(within(nav).getByRole('link', { name: /content status/i })).toBeInTheDocument()
     })
 
     it('should render main content area with Outlet', () => {
@@ -67,36 +68,36 @@ describe('AppLayout', () => {
     it('should have correct href attributes for navigation links', () => {
       renderWithProviders(<AppLayout />)
       
-      const puzzlesLink = screen.getByRole('link', { name: /puzzles/i })
-      const charactersLink = screen.getByRole('link', { name: /characters/i })
-      const statusLink = screen.getByRole('link', { name: /status/i })
+      const puzzlesLink = screen.getByRole('link', { name: /puzzle focus/i })
+      const charactersLink = screen.getByRole('link', { name: /character journey/i })
+      const statusLink = screen.getByRole('link', { name: /content status/i })
       
-      expect(puzzlesLink).toHaveAttribute('href', '/puzzles')
+      expect(puzzlesLink).toHaveAttribute('href', '/puzzle-focus')
       expect(charactersLink).toHaveAttribute('href', '/character-journey')
-      expect(statusLink).toHaveAttribute('href', '/status')
+      expect(statusLink).toHaveAttribute('href', '/content-status')
     })
 
     it('should highlight active navigation link based on current route', () => {
       renderWithProviders(<AppLayout />, { initialEntries: ['/character-journey'] })
       
-      const charactersLink = screen.getByRole('link', { name: /characters/i })
+      const charactersLink = screen.getByRole('link', { name: /character journey/i })
       // NavLink from react-router-dom adds aria-current for active links
       expect(charactersLink).toHaveAttribute('aria-current', 'page')
       
-      const puzzlesLink = screen.getByRole('link', { name: /puzzles/i })
+      const puzzlesLink = screen.getByRole('link', { name: /puzzle focus/i })
       expect(puzzlesLink).not.toHaveAttribute('aria-current', 'page')
     })
 
     it('should navigate when clicking navigation links', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<AppLayout />, { initialEntries: ['/puzzles'] })
+      renderWithProviders(<AppLayout />, { initialEntries: ['/puzzle-focus'] })
       
-      const charactersLink = screen.getByRole('link', { name: /characters/i })
+      const charactersLink = screen.getByRole('link', { name: /character journey/i })
       await user.click(charactersLink)
       
       // Check that the active link has changed using aria-current
       expect(charactersLink).toHaveAttribute('aria-current', 'page')
-      expect(screen.getByRole('link', { name: /puzzles/i })).not.toHaveAttribute('aria-current', 'page')
+      expect(screen.getByRole('link', { name: /puzzle focus/i })).not.toHaveAttribute('aria-current', 'page')
     })
 
     it('should display correct icons for each navigation item', () => {
@@ -104,10 +105,14 @@ describe('AppLayout', () => {
       
       const nav = screen.getByRole('navigation')
       
-      // Check for icon presence (using data-testid or aria-label)
-      expect(within(nav).getByTestId('puzzle-icon')).toBeInTheDocument()
-      expect(within(nav).getByTestId('character-icon')).toBeInTheDocument()
-      expect(within(nav).getByTestId('status-icon')).toBeInTheDocument()
+      // Check for SVG icons in each link
+      const links = within(nav).getAllByRole('link')
+      
+      // Each navigation link should have an icon (svg element)
+      links.forEach(link => {
+        const svg = link.querySelector('svg')
+        expect(svg).toBeInTheDocument()
+      })
     })
   })
 
@@ -182,7 +187,7 @@ describe('AppLayout', () => {
   describe('Breadcrumbs', () => {
     it('should display breadcrumbs for nested routes', () => {
       renderWithProviders(<AppLayout />, { 
-        initialEntries: ['/puzzles/puzzle-123'] 
+        initialEntries: ['/puzzle-focus/puzzle-123'] 
       })
       
       // Check if Breadcrumbs component is rendered
@@ -196,16 +201,16 @@ describe('AppLayout', () => {
       const user = userEvent.setup()
       
       renderWithProviders(<AppLayout />, { 
-        initialEntries: ['/puzzles/puzzle-123'] 
+        initialEntries: ['/puzzle-focus/puzzle-123'] 
       })
       
       const breadcrumbs = screen.getByRole('navigation', { name: /breadcrumb/i })
-      const puzzlesLink = within(breadcrumbs).getByRole('link', { name: /puzzles/i })
+      const puzzlesLink = within(breadcrumbs).getByRole('link', { name: /puzzle focus/i })
       
       await user.click(puzzlesLink)
       
       // Should navigate back to puzzles list
-      expect(window.location.pathname).toBe('/puzzles')
+      expect(window.location.pathname).toBe('/puzzle-focus')
     })
   })
 

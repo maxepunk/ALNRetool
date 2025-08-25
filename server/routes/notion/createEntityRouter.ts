@@ -8,6 +8,7 @@ import { asyncHandler } from '../../utils/asyncHandler.js';
 import { handleCachedNotionRequest } from './base.js';
 import { notion } from '../../services/notion.js';
 import { cacheService } from '../../services/cache.js';
+import { log } from '../../utils/logger.js';
 import type { NotionPage } from '../../../src/types/notion/raw.js';
 
 /**
@@ -76,7 +77,7 @@ async function updateInverseRelations<T>(
       try {
         // Get current target entity
         const targetPage = await notion.pages.retrieve({ 
-          page_id: targetId 
+          page_id: targetId as string
         }) as NotionPage;
         
         const targetProp = targetPage.properties[relation.targetField];
@@ -86,7 +87,7 @@ async function updateInverseRelations<T>(
         // Add this entity if not already present
         if (!currentIds.includes(entityId)) {
           await notion.pages.update({
-            page_id: targetId,
+            page_id: targetId as string,
             properties: {
               [relation.targetField]: {
                 relation: [...currentRelatedIds, { id: entityId }]
@@ -98,7 +99,10 @@ async function updateInverseRelations<T>(
           cacheService.invalidatePattern(`*_${targetId}`);
         }
       } catch (error) {
-        console.error(`Failed to update inverse relation for ${targetId}:`, error);
+        log.error('Failed to update inverse relation', {
+          targetId,
+          error: error instanceof Error ? error.message : String(error)
+        });
       }
     }
     
@@ -107,7 +111,7 @@ async function updateInverseRelations<T>(
       try {
         // Get current target entity
         const targetPage = await notion.pages.retrieve({ 
-          page_id: targetId 
+          page_id: targetId as string
         }) as NotionPage;
         
         const targetProp = targetPage.properties[relation.targetField];
@@ -117,7 +121,7 @@ async function updateInverseRelations<T>(
         // Remove this entity if present
         if (filteredIds.length !== currentRelatedIds.length) {
           await notion.pages.update({
-            page_id: targetId,
+            page_id: targetId as string,
             properties: {
               [relation.targetField]: {
                 relation: filteredIds
@@ -129,7 +133,10 @@ async function updateInverseRelations<T>(
           cacheService.invalidatePattern(`*_${targetId}`);
         }
       } catch (error) {
-        console.error(`Failed to update inverse relation for ${targetId}:`, error);
+        log.error('Failed to update inverse relation', {
+          targetId,
+          error: error instanceof Error ? error.message : String(error)
+        });
       }
     }
   }
@@ -192,7 +199,10 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
           }) as NotionPage;
           oldData = config.transform(oldPage);
         } catch (error) {
-          console.error('Failed to retrieve old data for inverse relations:', error);
+          log.error('Failed to retrieve old data for inverse relations', {
+            entityId: req.params.id,
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
       }
       

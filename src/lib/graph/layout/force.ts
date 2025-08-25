@@ -8,6 +8,8 @@
 
 import * as d3Force from 'd3-force';
 import type { GraphNode, GraphEdge, SimulationGraphNode } from '../types';
+import { logger } from '../utils/Logger'
+
 
 interface SimulationGraphEdge {
   source: string | SimulationGraphNode;
@@ -87,7 +89,7 @@ export function applyForceLayout(
     nodeSizeByType = {}
   } = config;
 
-  console.log('🌐 Applying optimized force-directed layout:', {
+  logger.debug('🌐 Applying optimized force-directed layout:', { 
     nodeCount,
     edgeCount: edges.length,
     isDenseGraph,
@@ -96,7 +98,7 @@ export function applyForceLayout(
     linkStrength,
     collisionRadius,
     iterations
-  });
+   });
 
   // Create d3 simulation nodes (mutable copies)
   const simulationNodes: SimulationGraphNode[] = nodes.map(node => ({
@@ -125,8 +127,8 @@ export function applyForceLayout(
   // Create force simulation with enhanced forces for anti-clustering
   const simulation = d3Force.forceSimulation(simulationNodes)
     // Link force with relationship-based parameters
-    .force('link', d3Force.forceLink(simulationLinks)
-      .id((d: any) => d.id)
+    .force('link', d3Force.forceLink<SimulationGraphNode, SimulationGraphEdge>(simulationLinks)
+      .id((d: SimulationGraphNode) => d.id)
       .distance((d: SimulationGraphEdge) => {
         // Semantic link distances by edge type
         if (d.type === 'ownership') return linkDistance * 0.7;     // Closer for ownership
@@ -150,8 +152,8 @@ export function applyForceLayout(
       .iterations(3)  // More iterations for better convergence
     )
     // Many-body force with strong repulsion
-    .force('charge', d3Force.forceManyBody()
-      .strength((d: any) => {
+    .force('charge', d3Force.forceManyBody<SimulationGraphNode>()
+      .strength((d: SimulationGraphNode) => {
         // Node-type specific charge strength (multipliers)
         const nodeType = d.type || 'default';
         const typeMultiplier = nodeStrengthByType[nodeType];
@@ -184,8 +186,8 @@ export function applyForceLayout(
       .strength(centerStrength)
     )
     // Collision force with adaptive radius - INCREASED FOR PUZZLES
-    .force('collision', d3Force.forceCollide()
-      .radius((d: any) => {
+    .force('collision', d3Force.forceCollide<SimulationGraphNode>()
+      .radius((d: SimulationGraphNode) => {
         // Node-type specific collision radius (multipliers)
         const nodeType = d.type || 'default';
         const typeMultiplier = nodeSizeByType[nodeType];
@@ -234,7 +236,7 @@ export function applyForceLayout(
     .velocityDecay(velocityDecay);
 
   // Run simulation for specified iterations with position bounds checking
-  console.log('⚙️ Running force simulation for', iterations, 'iterations...');
+  logger.debug(`⚙️ Running force simulation for ${iterations} iterations...`);
   const startTime = performance.now();
   
   // Define reasonable bounds to prevent extreme positions
@@ -268,7 +270,7 @@ export function applyForceLayout(
       
       // Also check for NaN or Infinity values (shouldn't happen but safety check)
       if (!isFinite(node.x ?? 0) || !isFinite(node.y ?? 0)) {
-        console.warn(`Invalid position detected for node ${node.id}, resetting to center`);
+        logger.warn(`Invalid position detected for node ${node.id}, resetting to center`);
         node.x = width / 2;
         node.y = height / 2;
         if (node.vx !== undefined) node.vx = 0;
@@ -290,7 +292,7 @@ export function applyForceLayout(
       if (i % updateInterval === 0 || i === iterations - 1) {
         const progress = i / iterations;
         if (currentCheckpoint < checkpoints.length && progress >= checkpoints[currentCheckpoint]!) {
-          console.log(`  ${Math.round(progress * 100)}% complete...`);
+          logger.debug(`  ${Math.round(progress * 100)}% complete...`);
           currentCheckpoint++;
         }
       }
@@ -312,7 +314,7 @@ export function applyForceLayout(
   }
   
   const computeTime = performance.now() - startTime;
-  console.log(`✅ Simulation complete in ${computeTime.toFixed(0)}ms`);
+  logger.debug(`✅ Simulation complete in ${computeTime.toFixed(0)}ms`);
 
   // Stop simulation
   simulation.stop();
@@ -321,7 +323,7 @@ export function applyForceLayout(
   const positionedNodes = nodes.map(node => {
     const simNode = simulationNodes.find(n => n.id === node.id);
     if (!simNode) {
-      console.warn(`Node ${node.id} not found in simulation results`);
+      logger.warn(`Node ${node.id} not found in simulation results`);
       return node;
     }
 
@@ -339,7 +341,7 @@ export function applyForceLayout(
   const avgDistance = calculateAverageDistance(positionedNodes, edges);
   const minDistance = calculateMinimumDistance(positionedNodes);
   
-  console.log('📊 Force layout metrics:', {
+  logger.debug('📊 Force layout metrics:', undefined, {
     bounds,
     avgNodeDistance: avgDistance.toFixed(0),
     minNodeDistance: minDistance.toFixed(0),
@@ -349,7 +351,7 @@ export function applyForceLayout(
 
   // Warn if minimum distance suggests overlaps
   if (minDistance < collisionRadius * 0.8) {
-    console.warn(`⚠️ Potential node overlaps detected (min distance: ${minDistance.toFixed(0)}px, collision radius: ${collisionRadius}px)`);
+    logger.warn(`⚠️ Potential node overlaps detected (min distance: ${minDistance.toFixed(0)}px, collision radius: ${collisionRadius}px)`);
   }
 
   return positionedNodes;
@@ -375,12 +377,12 @@ export function applyClusteredForceLayout(
     clusters.get(cluster)!.push(node);
   });
 
-  console.log('🎯 Applying clustered force layout:', {
+  logger.debug('🎯 Applying clustered force layout:', { 
     clusterCount: clusters.size,
     clusters: Array.from(clusters.entries()).map(([key, nodes]) => ({
       cluster: key,
       nodeCount: nodes.length
-    }))
+     }))
   });
 
   // Calculate cluster centers in a grid pattern for better space utilization
@@ -426,8 +428,8 @@ export function applyClusteredForceLayout(
 
   // Create force simulation with cluster attraction
   const simulation = d3Force.forceSimulation(simulationNodes)
-    .force('link', d3Force.forceLink(simulationLinks)
-      .id((d: any) => d.id)
+    .force('link', d3Force.forceLink<SimulationGraphNode, SimulationGraphEdge>(simulationLinks)
+      .id((d: SimulationGraphNode) => d.id)
       .distance(config.linkDistance || 200)
       .strength(config.linkStrength || 0.1)
     )
@@ -441,12 +443,12 @@ export function applyClusteredForceLayout(
       .iterations(3)
     )
     // Add cluster attraction forces
-    .force('clusterX', d3Force.forceX((d: any) => {
-      const center = clusterCenters.get(d.cluster);
+    .force('clusterX', d3Force.forceX<SimulationGraphNode>((d: SimulationGraphNode) => {
+      const center = clusterCenters.get(d.cluster || '');
       return center ? center.x : (config.width || 12000) / 2;
     }).strength(0.4))
-    .force('clusterY', d3Force.forceY((d: any) => {
-      const center = clusterCenters.get(d.cluster);
+    .force('clusterY', d3Force.forceY<SimulationGraphNode>((d: SimulationGraphNode) => {
+      const center = clusterCenters.get(d.cluster || '');
       return center ? center.y : (config.height || 10000) / 2;
     }).strength(0.4))
     .alpha(1)
@@ -456,7 +458,7 @@ export function applyClusteredForceLayout(
 
   // Run simulation
   const iterations = config.iterations || 800;
-  console.log('⚙️ Running clustered simulation for', iterations, 'iterations...');
+  logger.debug(`⚙️ Running clustered simulation for ${iterations} iterations...`);
   simulation.tick(iterations);
   simulation.stop();
 
@@ -475,7 +477,7 @@ export function applyClusteredForceLayout(
       },
       data: {
         ...node.data,
-        cluster: (simNode as any).cluster
+        cluster: (simNode).cluster
       }
     };
   });

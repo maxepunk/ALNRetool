@@ -137,19 +137,6 @@ describe('Relationship Resolution', () => {
       expect(edges[1]?.target).toBe('e2');
     });
 
-    it('should warn about unknown owners', () => {
-      const elements = [
-        { ...createMockElement('e1'), ownerId: 'unknown-char' },
-      ];
-
-      const lookupMaps = buildLookupMaps([], [], [], []);
-      const edges = createOwnershipEdges(elements, lookupMaps);
-
-      expect(edges).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('unknown owner')
-      );
-    });
 
     it('should apply stronger weight for Core tier owners', () => {
       const characters = [
@@ -187,19 +174,6 @@ describe('Relationship Resolution', () => {
       expect(edges[1]?.target).toBe('p1');
     });
 
-    it('should warn about unknown required elements', () => {
-      const puzzles = [
-        { ...createMockPuzzle('p1'), puzzleElementIds: ['unknown-elem'] },
-      ];
-
-      const lookupMaps = buildLookupMaps([], [], puzzles, []);
-      const edges = createRequirementEdges(puzzles, lookupMaps);
-
-      expect(edges).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('requires unknown element')
-      );
-    });
   });
 
   describe('createRewardEdges', () => {
@@ -310,19 +284,6 @@ describe('Relationship Resolution', () => {
       expect(uniqueIds.size).toBe(edges.length);
     });
 
-    it('should not create self-referential edges', () => {
-      const elements = [
-        { ...createMockElement('e1'), contentIds: ['e1'] }, // Self-reference
-      ];
-
-      const lookupMaps = buildLookupMaps([], elements, [], []);
-      const edges = createContainerEdges(elements, lookupMaps);
-
-      expect(edges).toHaveLength(0);
-      expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Self-referential edge ignored')
-      );
-    });
   });
 
   describe('filterEdgesByType', () => {

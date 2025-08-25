@@ -24,6 +24,7 @@ import { ChevronRight, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFilterStore } from '@/stores/filterStore';
 import { useCharacters } from '@/hooks/useCharacters';
+import { useFilterNavigation } from '@/hooks/useFilterNavigation';
 
 interface CharacterFiltersProps {
   isOpen: boolean;
@@ -47,6 +48,7 @@ export const CharacterFilters = memo(function CharacterFilters({
   const clearCharacterFilters = useFilterStore((state) => state.clearCharacterFilters);
   
   const { data: characters, isLoading } = useCharacters();
+  const { navigateToCharacterJourney } = useFilterNavigation();
 
   const handleTierToggle = useCallback((tier: 'Core' | 'Secondary' | 'Tertiary') => {
     toggleTier(tier);
@@ -59,8 +61,14 @@ export const CharacterFilters = memo(function CharacterFilters({
   const handleTypeChange = useCallback((value: string) => {
     setCharacterType(value as 'all' | 'Player' | 'NPC');
   }, [setCharacterType]);  const handleCharacterSelect = useCallback((value: string) => {
-    selectCharacter(value === 'all' ? null : value);
-  }, [selectCharacter]);
+    const characterId = value === 'all' ? null : value;
+    selectCharacter(characterId); // Update FilterStore state
+    
+    // Navigate to character journey view if a specific character is selected
+    if (characterId) {
+      navigateToCharacterJourney(characterId);
+    }
+  }, [selectCharacter, navigateToCharacterJourney]);
 
   const handleClearFilters = useCallback(() => {
     clearCharacterFilters();
@@ -91,13 +99,12 @@ export const CharacterFilters = memo(function CharacterFilters({
     );
   }  return (
     <Collapsible open={isExpanded} onOpenChange={onToggleExpanded}>
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          className="w-full justify-between px-3 py-2 h-auto"
-          aria-expanded={isExpanded}
-          aria-controls="character-filters-content"
-        >
+      <CollapsibleTrigger 
+        className="w-full justify-between px-3 py-2 h-auto hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
+        aria-expanded={isExpanded}
+        aria-controls="character-filters-content"
+      >
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4" aria-hidden="true" />
             <span className="font-medium">Character Filters</span>
@@ -114,7 +121,7 @@ export const CharacterFilters = memo(function CharacterFilters({
             )}
             aria-hidden="true"
           />
-        </Button>
+        </div>
       </CollapsibleTrigger>      <CollapsibleContent id="character-filters-content" className="px-3 pb-3 space-y-3">
         {/* Tier Selection */}
         <div className="space-y-2">

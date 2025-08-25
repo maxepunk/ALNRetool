@@ -85,6 +85,23 @@ export default tseslint.config(
       '@typescript-eslint/prefer-nullish-coalescing': 'warn',
       '@typescript-eslint/prefer-optional-chain': 'warn',
       '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+      
+      // Security: Ban direct process.env access - use config module instead
+      // Exception: Config modules are allowed to access process.env directly
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'MemberExpression[object.object.name="process"][object.property.name="env"]',
+          message: 'Direct process.env access is forbidden. Use the config module from server/config/index.js instead.',
+        },
+      ],
+    },
+  },
+  {
+    // Config module exemption - allow direct process.env access in config files only
+    files: ['server/config/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': 'off', // Config modules need direct access to process.env
     },
   },
   {

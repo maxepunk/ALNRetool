@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@/test/test-utils';
 import GraphControls from './GraphControls';
 import { useGraphStore } from '@/stores/graphStore';
 
@@ -88,22 +88,22 @@ describe('GraphControls', () => {
     expect(settingsButton).toBeInTheDocument();
   });
 
-  it('handles layout algorithm change', () => {
+  it('handles layout algorithm change', async () => {
     render(<GraphControls />);
     
     // Open the dropdown
     const settingsButton = screen.getByTitle('Layout Settings');
     fireEvent.click(settingsButton);
     
-    // Click on Force-Directed option
-    const forceOption = screen.getByText('Force-Directed');
+    // With mocked Radix UI, content should be directly in DOM
+    const forceOption = await screen.findByText('Force-Directed');
     fireEvent.click(forceOption);
     
     expect(mockSetLayoutAlgorithm).toHaveBeenCalledWith('force');
     expect(mockTriggerRelayout).toHaveBeenCalledTimes(1);
   });
 
-  it('shows current layout algorithm as selected', () => {
+  it('shows current layout algorithm as selected', async () => {
     // Setup mock to return 'force' as current algorithm
     (useGraphStore as any).mockImplementation((selector: any) => {
       const state = {
@@ -125,11 +125,11 @@ describe('GraphControls', () => {
     fireEvent.click(settingsButton);
     
     // Check that Force-Directed has the active styling
-    const forceOption = screen.getByText('Force-Directed');
-    expect(forceOption.parentElement).toHaveClass('bg-accent');
+    const forceOption = await screen.findByText('Force-Directed');
+    expect(forceOption).toHaveClass('bg-accent');
   });
 
-  it('handles re-layout trigger', () => {
+  it('handles re-layout trigger', async () => {
     render(<GraphControls />);
     
     // Open the dropdown
@@ -137,7 +137,7 @@ describe('GraphControls', () => {
     fireEvent.click(settingsButton);
     
     // Click on Re-layout option
-    const relayoutOption = screen.getByText('Re-layout Graph');
+    const relayoutOption = await screen.findByText('Re-layout Graph');
     fireEvent.click(relayoutOption);
     
     expect(mockTriggerRelayout).toHaveBeenCalledTimes(1);

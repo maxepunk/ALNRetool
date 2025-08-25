@@ -4,35 +4,35 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { TimelineTransformer } from '../../modules/transformers/TimelineTransformer';
-import type { TimelineEvent } from '@/types/notion/app';
+import { createMockTimelineEvent } from '../../test-utils/mockFactories';
+import { logger } from '../../utils/Logger';
 
 // Create test instance
 const timelineTransformer = new TimelineTransformer();
 
-// Mock console methods
-const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+// Mock logger methods
+vi.mock('../../utils/Logger', () => ({
+  logger: {
+    warn: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    debug: vi.fn(),
+  }
+}));
+
+const loggerSpy = vi.mocked(logger.warn);
 
 describe('Timeline Transformer', () => {
   afterEach(() => {
-    consoleSpy.mockClear();
+    loggerSpy.mockClear();
   });
 
-  const createMockTimeline = (overrides?: Partial<TimelineEvent>): TimelineEvent => ({
-    id: 'timeline-1',
-    name: 'Test Event',
-    description: 'Test Event',
-    date: '2024-01-15T10:00:00Z',
-    charactersInvolvedIds: [],
-    memoryEvidenceIds: [],
-    memTypes: [],
-    notes: '',
-    lastEditedTime: '2024-01-01T00:00:00Z',
-    ...overrides,
-  });
+  // Use the centralized mock with custom name for backward compatibility
+  const createMockTimeline = createMockTimelineEvent;
 
   describe('transform', () => {
     it('should transform a valid timeline event', () => {
-      const timeline = createMockTimeline();
+      const timeline = createMockTimeline({ date: '2024-01-15T00:00:00Z' });
       const node = timelineTransformer.transform(timeline);
 
       expect(node).toBeDefined();
@@ -62,7 +62,7 @@ describe('Timeline Transformer', () => {
       const node = timelineTransformer.transform(timeline);
 
       expect(node?.data.label).toBe('Unknown Date');
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining('has no date')
       );
     });
@@ -72,7 +72,7 @@ describe('Timeline Transformer', () => {
       const node = timelineTransformer.transform(timeline);
 
       expect(node?.data.label).toBe('invalid-date'); // Returns as-is
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(loggerSpy).toHaveBeenCalledWith(
         expect.stringContaining('Invalid date format')
       );
     });
@@ -161,8 +161,9 @@ describe('Timeline Transformer', () => {
       expect(nodes).toEqual([]);
     });
 
-    it('should log warning for null/undefined events', () => {
-      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    it('should log warning for null/undefined events', async () => {
+      const { log } = await import('@/utils/logger');
+      const warnSpy = vi.spyOn(log, 'warn').mockImplementation(() => {});
       
       // Create an event that will cause the transformer to skip it
       const invalidEvent = null as any;
@@ -170,7 +171,8 @@ describe('Timeline Transformer', () => {
       timelineTransformer.transformMultiple([invalidEvent]);
       
       expect(warnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Skipping null/undefined timeline entity')
+        'Skipping null/undefined entity',
+        { entityType: 'timeline' }
       );
       
       warnSpy.mockRestore();

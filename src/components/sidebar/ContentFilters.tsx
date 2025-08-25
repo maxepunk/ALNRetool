@@ -11,10 +11,7 @@ import {
 } from '@/components/ui/collapsible';
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -85,13 +82,12 @@ export const ContentFilters = memo(function ContentFilters({
     );
   }  return (
     <Collapsible open={isExpanded} onOpenChange={onToggleExpanded}>
-      <CollapsibleTrigger asChild>
-        <Button
-          variant="ghost"
-          className="w-full justify-between px-3 py-2 h-auto"
-          aria-expanded={isExpanded}
-          aria-controls="content-filters-content"
-        >
+      <CollapsibleTrigger 
+        className="w-full justify-between px-3 py-2 h-auto hover:bg-accent hover:text-accent-foreground rounded-lg transition-colors"
+        aria-expanded={isExpanded}
+        aria-controls="content-filters-content"
+      >
+        <div className="flex items-center justify-between w-full">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4" aria-hidden="true" />
             <span className="font-medium">Content Filters</span>
@@ -108,7 +104,7 @@ export const ContentFilters = memo(function ContentFilters({
             )}
             aria-hidden="true"
           />
-        </Button>
+        </div>
       </CollapsibleTrigger>      <CollapsibleContent id="content-filters-content" className="px-3 pb-3 space-y-3">
         {/* Content Status */}
         <div className="space-y-2">
@@ -151,20 +147,15 @@ export const ContentFilters = memo(function ContentFilters({
             Last Edited
           </Label>
           <Select
+            id="edited-range"
             value={contentFilters.lastEditedRange}
             onValueChange={handleEditedRangeChange}
+            className="w-full"
           >
-            <SelectTrigger 
-              id="edited-range" 
-              className="w-full"
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All time</SelectItem>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This week</SelectItem>
-              <SelectItem value="month">This month</SelectItem>            </SelectContent>
+            <SelectItem value="all">All time</SelectItem>
+            <SelectItem value="today">Today</SelectItem>
+            <SelectItem value="week">This week</SelectItem>
+            <SelectItem value="month">This month</SelectItem>
           </Select>
         </div>
 
