@@ -1,0 +1,237 @@
+/**
+ * Consolidated filter panel component
+ * Combines all filter types into a single, configurable component
+ */
+
+import { useFilterStore } from '@/stores/filterStore';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+// Radio group removed - using checkboxes for all filters
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface FilterConfig {
+  type: 'checkbox' | 'radio' | 'slider' | 'multiselect';
+  label: string;
+  options?: Array<{ value: string; label: string }>;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+interface FilterPanelProps {
+  title: string;
+  filters: Record<string, FilterConfig>;
+  entityType?: 'character' | 'puzzle' | 'element' | 'timeline';
+}
+
+export function FilterPanel({ title, filters }: FilterPanelProps) {
+  const store = useFilterStore();
+  
+  const renderFilter = (key: string, config: FilterConfig) => {
+    switch (config.type) {
+      case 'checkbox':
+        return (
+          <div key={key} className="space-y-2">
+            <Label>{config.label}</Label>
+            {config.options?.map(option => (
+              <div key={option.value} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${key}-${option.value}`}
+                  checked={store.getFilter(key)?.includes(option.value)}
+                  onCheckedChange={(checked) => {
+                    const current = store.getFilter(key) || [];
+                    if (checked) {
+                      store.setFilter(key, [...current, option.value]);
+                    } else {
+                      store.setFilter(key, current.filter((v: string) => v !== option.value));
+                    }
+                  }}
+                />
+                <Label htmlFor={`${key}-${option.value}`}>{option.label}</Label>
+              </div>
+            ))}
+          </div>
+        );
+      
+      case 'radio':
+        // Use checkboxes with single selection behavior for radio
+        const currentValue = store.getFilter(key);
+        return (
+          <div key={key} className="space-y-2">
+            <Label>{config.label}</Label>
+            {config.options?.map(option => (
+              <div key={option.value} className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${key}-${option.value}`}
+                  checked={currentValue === option.value}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      store.setFilter(key, option.value);
+                    } else {
+                      store.setFilter(key, null);
+                    }
+                  }}
+                />
+                <Label htmlFor={`${key}-${option.value}`}>{option.label}</Label>
+              </div>
+            ))}
+          </div>
+        );
+      
+      case 'slider':
+        // Use input with type=range for slider functionality
+        return (
+          <div key={key} className="space-y-2">
+            <div className="flex justify-between">
+              <Label>{config.label}</Label>
+              <span className="text-sm text-muted-foreground">
+                {store.getFilter(key) || config.min || 0}
+              </span>
+            </div>
+            <input
+              type="range"
+              value={store.getFilter(key) || config.min || 0}
+              onChange={(e) => store.setFilter(key, Number(e.target.value))}
+              min={config.min}
+              max={config.max}
+              step={config.step}
+              className="w-full"
+            />
+          </div>
+        );
+      
+      case 'multiselect':
+        const selected = store.getFilter(key) || [];
+        return (
+          <div key={key} className="space-y-2">
+            <Label>{config.label}</Label>
+            <div className="flex flex-wrap gap-1">
+              {selected.map((value: string) => (
+                <Badge key={value} variant="secondary" className="pr-1">
+                  {value}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-4 w-4 p-0 ml-1"
+                    onClick={() => {
+                      store.setFilter(key, selected.filter((v: string) => v !== value));
+                    }}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              ))}
+            </div>
+            <div className="space-y-1">
+              {config.options?.map(option => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`${key}-${option.value}`}
+                    checked={selected.includes(option.value)}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        store.setFilter(key, [...selected, option.value]);
+                      } else {
+                        store.setFilter(key, selected.filter((v: string) => v !== option.value));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`${key}-${option.value}`}>{option.label}</Label>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+  
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {Object.entries(filters).map(([key, config]) => renderFilter(key, config))}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Export pre-configured filter panels for common use cases
+export const CharacterFilterPanel = () => (
+  <FilterPanel
+    title="Character Filters"
+    entityType="character"
+    filters={{
+      characterTypes: {
+        type: 'radio',
+        label: 'Character Type',
+        options: [
+          { value: 'all', label: 'All' },
+          { value: 'Player', label: 'Players' },
+          { value: 'NPC', label: 'NPCs' }
+        ]
+      },
+      tiers: {
+        type: 'multiselect',
+        label: 'Tiers',
+        options: [
+          { value: 'Core', label: 'Core' },
+          { value: 'Standard', label: 'Standard' },
+          { value: 'Optional', label: 'Optional' }
+        ]
+      }
+    }}
+  />
+);
+
+export const PuzzleFilterPanel = () => (
+  <FilterPanel
+    title="Puzzle Filters"
+    entityType="puzzle"
+    filters={{
+      acts: {
+        type: 'multiselect',
+        label: 'Acts',
+        options: [
+          { value: 'Act1', label: 'Act 1' },
+          { value: 'Act2', label: 'Act 2' },
+          { value: 'Act3', label: 'Act 3' },
+          { value: 'Act4', label: 'Act 4' }
+        ]
+      },
+      completionStatus: {
+        type: 'radio',
+        label: 'Completion Status',
+        options: [
+          { value: 'all', label: 'All' },
+          { value: 'completed', label: 'Completed' },
+          { value: 'incomplete', label: 'Incomplete' }
+        ]
+      }
+    }}
+  />
+);
+
+export const DepthFilterPanel = () => (
+  <FilterPanel
+    title="Graph Depth"
+    filters={{
+      depth: {
+        type: 'slider',
+        label: 'Connection Depth',
+        min: 1,
+        max: 5,
+        step: 1
+      }
+    }}
+  />
+);
+
+export default FilterPanel;

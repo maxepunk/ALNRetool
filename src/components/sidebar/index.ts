@@ -5,8 +5,6 @@
 
 export { SidebarNavigation } from './SidebarNavigation';
 export { SidebarSearch } from './SidebarSearch';
-export { PuzzleFilters } from './PuzzleFilters';
-export { CharacterFilters } from './CharacterFilters';
-export { ContentFilters } from './ContentFilters';
+export { FilterPanel } from './FilterPanel';
 export { ActiveFiltersSummary } from './ActiveFiltersSummary';
 export { ThemeToggle } from './ThemeToggle';

@@ -21,6 +21,7 @@ import {
 import { cn } from '@/lib/utils';
 import { RelationFieldEditor } from './RelationFieldEditor';
 import { ArrayFieldEditor } from './ArrayFieldEditor';
+import { FilesFieldEditor } from './FilesFieldEditor';
 import type { FieldEditorProps } from './types';
 
 export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
@@ -36,6 +37,9 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
     entityType,
   } = props;
 
+  // Format error message consistently
+  const displayError = error ? (typeof error === 'string' ? error : error.message) : undefined;
+
   // Handle different field types
   switch (field.type) {
     case 'text':
@@ -47,6 +51,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
+            {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
           </Label>
           <Input
             id={field.key}
@@ -65,9 +70,9 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && (
+          {displayError && (
             <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1">
-              {error}
+              {displayError}
             </p>
           )}
         </div>
@@ -82,6 +87,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
+            {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
           </Label>
           <Textarea
             id={field.key}
@@ -101,9 +107,9 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && (
+          {displayError && (
             <p className="text-xs text-destructive animate-in fade-in slide-in-from-top-1">
-              {error}
+              {displayError}
             </p>
           )}
         </div>
@@ -115,6 +121,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
+            {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
           </Label>
           <Select
             value={value || ''}
@@ -135,7 +142,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {displayError && <p className="text-xs text-destructive">{displayError}</p>}
         </div>
       );
 
@@ -178,7 +185,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {displayError && <p className="text-xs text-destructive">{displayError}</p>}
         </div>
       );
 
@@ -188,6 +195,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
+            {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
           </Label>
           <Input
             id={field.key}
@@ -200,7 +208,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {displayError && <p className="text-xs text-destructive">{displayError}</p>}
         </div>
       );
 
@@ -210,6 +218,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
+            {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
           </Label>
           <Input
             id={field.key}
@@ -223,7 +232,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {displayError && <p className="text-xs text-destructive">{displayError}</p>}
         </div>
       );
 
@@ -233,6 +242,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
+            {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
           </Label>
           <Input
             id={field.key}
@@ -248,7 +258,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>
           )}
-          {error && <p className="text-xs text-destructive">{error}</p>}
+          {displayError && <p className="text-xs text-destructive">{displayError}</p>}
         </div>
       );
 
@@ -285,7 +295,6 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
         <RelationFieldEditor
           {...props}
           multiple={true}
-          searchable={true}
           entityType={(field as any).entityType || entityType}
         />
       );
@@ -295,7 +304,6 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
         <RelationFieldEditor
           {...props}
           multiple={false}
-          searchable={true}
           entityType={(field as any).entityType || entityType}
         />
       );
@@ -309,22 +317,13 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
       );
 
     case 'files':
-      // Files field - simplified for now, can be enhanced later
       return (
-        <div className="space-y-2">
-          <Label className="text-sm font-medium">
-            {field.label}
-            {field.required && <span className="text-destructive ml-1">*</span>}
-          </Label>
-          <div className="p-3 bg-white/5 border border-white/10 rounded-md">
-            <p className="text-sm text-muted-foreground">
-              File upload not yet implemented
-            </p>
-          </div>
-          {field.helperText && (
-            <p className="text-xs text-muted-foreground">{field.helperText}</p>
-          )}
-        </div>
+        <FilesFieldEditor
+          {...props}
+          maxFiles={10}
+          maxSize={10 * 1024 * 1024} // 10MB
+          acceptedTypes={['.pdf', '.doc', '.docx', '.txt', '.jpg', '.jpeg', '.png', '.gif']}
+        />
       );
 
     default:

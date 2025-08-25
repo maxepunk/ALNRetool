@@ -1,4 +1,5 @@
 import winston from 'winston';
+import config from '../config/index.js';
 
 // Sensitive patterns to redact
 const SENSITIVE_PATTERNS = [
@@ -60,8 +61,8 @@ const devFormat = winston.format.printf(({ level, message, timestamp, ...meta })
 // Create logger instance with dynamic configuration
 function createLogger() {
   // Get config values at runtime to avoid circular dependency
-  const nodeEnv = process.env.NODE_ENV || 'development';
-  const logLevel = process.env.LOG_LEVEL || 'info';
+  const nodeEnv = config.nodeEnv;
+  const logLevel = config.logLevel;
   
   return winston.createLogger({
     level: logLevel,
@@ -88,7 +89,7 @@ function createLogger() {
 const logger = createLogger();
 
 // Production configuration
-const nodeEnv = process.env.NODE_ENV || 'development';
+const nodeEnv = config.nodeEnv;
 if (nodeEnv === 'production') {
   // Remove console transport in production
   logger.clear();

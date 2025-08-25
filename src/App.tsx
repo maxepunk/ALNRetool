@@ -1,11 +1,12 @@
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+import { Toaster } from 'react-hot-toast';
 import AppRouter from './router/AppRouter';
 import { FeatureFlagAdmin } from './components/FeatureFlagAdmin';
 import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 import { ViewContextProvider } from '@/contexts/ViewContext';
-import { GraphContextProvider } from '@/contexts/GraphContextProvider';
+// GraphContextProvider removed in Phase 3 cleanup
 
 // Create a client instance
 const queryClient = new QueryClient({
@@ -27,14 +28,40 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <GraphContextProvider>
-          <ViewContextProvider>
-            <AppRouter />
-          </ViewContextProvider>
-        </GraphContextProvider>
+        <ViewContextProvider>
+          <AppRouter />
+        </ViewContextProvider>
       </BrowserRouter>
       <ReactQueryDevtools initialIsOpen={false} />
       <FeatureFlagAdmin />
+      <Toaster 
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            style: {
+              background: '#10b981',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#10b981',
+            },
+          },
+          error: {
+            style: {
+              background: '#ef4444',
+            },
+            iconTheme: {
+              primary: '#fff',
+              secondary: '#ef4444',
+            },
+          },
+        }}
+      />
     </QueryClientProvider>
   );
 }

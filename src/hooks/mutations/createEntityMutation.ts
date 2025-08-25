@@ -4,6 +4,7 @@
  */
 
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 // CSRF token support will be added when mutation API services are updated
 // import { useCSRFToken, fetchWithCSRF } from '../useCSRFToken';
 import type { 
@@ -74,7 +75,17 @@ export function createEntityMutation<T extends EntityType>({
       MutationContext<EntityDataType<T>>
     >({
       mutationFn: async ({ id, updates }) => {
-        return apiService.update(id, updates);
+        // Show loading toast
+        const loadingToast = toast.loading(`Saving ${entityType.slice(0, -1)}...`);
+        
+        try {
+          const result = await apiService.update(id, updates);
+          toast.dismiss(loadingToast);
+          return result;
+        } catch (error) {
+          toast.dismiss(loadingToast);
+          throw error;
+        }
       },
       
       // Optimistic update
@@ -125,24 +136,63 @@ export function createEntityMutation<T extends EntityType>({
           queryClient.setQueryData(singleQueryKey, context.previousData);
         }
         
+        // Show error toast
+        const entityName = entityType.slice(0, -1); // Remove 's' for singular
+        toast.error(`Failed to save ${entityName}: ${error.message || 'Unknown error'}`);
+        
         // Call custom error handler
         onError?.(error, variables, context);
       },
       
       // Invalidate and refetch on success
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
+        // Show success toast
+        const entityName = entityType.slice(0, -1); // Remove 's' for singular
+        toast.success(`${entityName.charAt(0).toUpperCase() + entityName.slice(1)} saved successfully!`);
         // Invalidate queries to ensure fresh data
-        queryClient.invalidateQueries({ queryKey });
+        await queryClient.invalidateQueries({ queryKey });
         
-        // Also invalidate related queries
-        // This handles cross-entity relationships
-        if (entityType === 'puzzles') {
-          queryClient.invalidateQueries({ queryKey: ['notion', 'elements'] });
+        // Comprehensive cache invalidation for all potentially connected entities
+        // This ensures the graph updates properly when any relationship changes
+        // 
+        // Why invalidate everything? 
+        // 1. Graph visualization needs ALL connected entities to render edges correctly
+        // 2. Bidirectional relationships mean changes propagate in both directions
+        // 3. Connection depth filtering needs to recalculate paths when any connection changes
+        // 4. It's safer to over-invalidate than to miss updates (data is cached for 5 min anyway)
+        
+        // Helper function to invalidate both patterns (with and without 'all')
+        const invalidateEntity = async (entity: string) => {
+          await queryClient.invalidateQueries({ queryKey: ['notion', entity, 'all'] });
+          await queryClient.invalidateQueries({ queryKey: ['notion', entity] });
+        };
+        
+        // Relationship map showing which entity types connect to each other:
+        // Characters -> Elements (owned, associated), Puzzles (character puzzles), Timeline (events)
+        // Elements -> Characters (owner), Elements (container/contents), Puzzles (required/rewarded), Timeline (events)
+        // Puzzles -> Elements (requirements, rewards, locked item), Puzzles (parent/sub), Characters (via owner rollup)
+        // Timeline -> Characters (involved), Elements (memory/evidence)
+        
+        if (entityType === 'characters') {
+          // Characters connect to: Elements, Puzzles, Timeline
+          await invalidateEntity('elements');
+          await invalidateEntity('puzzles');
+          await invalidateEntity('timeline');
         } else if (entityType === 'elements') {
-          queryClient.invalidateQueries({ queryKey: ['notion', 'puzzles'] });
-        } else if (entityType === 'characters') {
-          queryClient.invalidateQueries({ queryKey: ['notion', 'puzzles'] });
-          queryClient.invalidateQueries({ queryKey: ['notion', 'timeline'] });
+          // Elements connect to: Characters, Puzzles, Timeline, other Elements
+          await invalidateEntity('characters');
+          await invalidateEntity('puzzles');
+          await invalidateEntity('timeline');
+          // Elements is already invalidated above via queryKey
+        } else if (entityType === 'puzzles') {
+          // Puzzles connect to: Elements, Characters (via owner), other Puzzles
+          await invalidateEntity('elements');
+          await invalidateEntity('characters');
+          // Puzzles is already invalidated above via queryKey
+        } else if (entityType === 'timeline') {
+          // Timeline connects to: Characters, Elements
+          await invalidateEntity('characters');
+          await invalidateEntity('elements');
         }
         
         // Call custom success handler
