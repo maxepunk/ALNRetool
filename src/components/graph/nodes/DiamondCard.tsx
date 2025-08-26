@@ -37,6 +37,10 @@ interface DiamondCardProps extends Partial<NodeProps> {
   isChild?: boolean;
   // Complexity for color coding
   complexity?: 'simple' | 'medium' | 'complex';
+  // Filter state styling
+  outlineColor?: string;
+  outlineWidth?: number;
+  opacity?: number;
 }
 
 // Size configurations for diamond
@@ -48,31 +52,40 @@ const sizeConfigs = {
   child: { size: 160, shadow: 12, padding: 14 },
 };
 
-// Status badge variants
+// Status badge variants with improved contrast
 const statusVariants = {
-  draft: { variant: 'secondary' as const, label: 'Draft', className: 'bg-gray-100/80' },
-  ready: { variant: 'default' as const, label: 'Ready', className: 'bg-green-100/80 text-green-700' },
-  locked: { variant: 'destructive' as const, label: '🔒', className: 'bg-red-100/80' },
-  chained: { variant: 'outline' as const, label: '🔗', className: 'bg-amber-100/80' },
-  error: { variant: 'destructive' as const, label: '⚠️', className: 'bg-red-100/80' },
+  draft: { variant: 'secondary' as const, label: 'Draft', className: 'bg-gray-100 text-gray-700 border-gray-300 font-medium' },
+  ready: { variant: 'default' as const, label: 'Ready', className: 'bg-green-100 text-green-700 border-green-300 font-medium' },
+  locked: { variant: 'destructive' as const, label: '🔒', className: 'bg-red-100 text-red-700 border-red-300 font-medium' },
+  chained: { variant: 'outline' as const, label: '🔗', className: 'bg-amber-100 text-amber-700 border-amber-300 font-medium' },
+  error: { variant: 'destructive' as const, label: '⚠️', className: 'bg-red-100 text-red-700 border-red-300 font-medium' },
 };
 
-// Complexity color schemes for borders and glows
+// Complexity color schemes with WCAG AA compliant contrast using purple family
 const complexityColors = {
   simple: {
-    border: 'border-green-500/50',
-    glow: 'hover:shadow-green-400/30',
-    bg: 'from-green-50/60 to-emerald-100/40',
+    border: 'border-purple-600',
+    glow: 'hover:shadow-purple-400/40',
+    gradient: 'bg-gradient-to-br from-purple-500 to-purple-400', // Lighter purple (more distinct)
+    accent: 'text-white',
+    iconColor: 'text-purple-50',
+    shadow: 'shadow-purple-600/20'
   },
   medium: {
-    border: 'border-amber-500/50',
-    glow: 'hover:shadow-amber-400/30',
-    bg: 'from-amber-50/60 to-orange-100/40',
+    border: 'border-purple-700',
+    glow: 'hover:shadow-purple-500/40',
+    gradient: 'bg-gradient-to-br from-purple-700 to-purple-600', // Medium purple
+    accent: 'text-white',
+    iconColor: 'text-purple-50',
+    shadow: 'shadow-purple-700/20'
   },
   complex: {
-    border: 'border-red-500/50',
-    glow: 'hover:shadow-red-400/30',
-    bg: 'from-red-50/60 to-rose-100/40',
+    border: 'border-purple-900',
+    glow: 'hover:shadow-purple-600/40',
+    gradient: 'bg-gradient-to-br from-purple-900 to-purple-800', // Darkest purple
+    accent: 'text-white',
+    iconColor: 'text-purple-100',
+    shadow: 'shadow-purple-900/20'
   },
 };
 
@@ -88,7 +101,7 @@ const CountIndicator = ({ count, max = 5, color = 'amber' }: { count: number; ma
           key={i}
           className={cn(
             'w-1.5 h-1.5 rounded-full',
-            color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500'
+            color === 'amber' ? 'bg-amber-600' : 'bg-emerald-600'
           )}
         />
       ))}
@@ -117,6 +130,9 @@ const DiamondCard = memo(({
   isParent = false,
   isChild = false,
   complexity = 'medium',
+  outlineColor = '',
+  outlineWidth = 0,
+  opacity = 1,
 }: DiamondCardProps) => {
   // Adjust size based on hierarchy
   const actualSize = isParent ? 'parent' : isChild ? 'child' : size;
@@ -124,7 +140,7 @@ const DiamondCard = memo(({
   const complexityTheme = complexityColors[complexity];
   
   return (
-    <div className="relative group">
+    <div className="relative group" style={{ opacity }}>
       {/* Diamond Container */}
       <div
         className={cn(
@@ -137,25 +153,36 @@ const DiamondCard = memo(({
           height: `${config.size}px`,
         }}
       >
-        {/* Rotated Diamond Shape */}
+        {/* Diamond Outline (behind main shape) */}
+        {outlineWidth > 0 && (
+          <div
+            className="absolute inset-0 rounded-[20%]"
+            style={{
+              transform: `rotate(45deg) scale(${1 + (outlineWidth * 0.02)})`,
+              backgroundColor: outlineColor,
+              transformOrigin: 'center',
+            }}
+          />
+        )}
+        
+        {/* Rotated Diamond Shape with improved contrast and modern styling */}
         <div
           className={cn(
-            'absolute inset-0 rounded-[20%] transition-all duration-500',
-            'backdrop-blur-md backdrop-saturate-150',
+            'absolute inset-0 rounded-[20%] transition-all duration-300',
             'border-2',
             complexityTheme.border,
+            complexityTheme.gradient,
             complexityTheme.glow,
-            selected && 'ring-4 ring-amber-500/50 ring-offset-2 ring-offset-transparent',
-            highlighted && 'ring-4 ring-yellow-400/80 ring-offset-2 ring-offset-transparent shadow-yellow-300/50'
+            complexityTheme.shadow,
+            selected && 'ring-4 ring-purple-400 ring-opacity-50',
+            highlighted && 'shadow-xl shadow-yellow-400/50'
           )}
           style={{
             transform: 'rotate(45deg)',
-            background: `linear-gradient(135deg, ${complexityTheme.bg})`,
             boxShadow: `
-              0 ${config.shadow}px ${config.shadow * 2}px -${config.shadow/2}px rgba(0, 0, 0, 0.15),
-              0 ${config.shadow / 2}px ${config.shadow}px -${config.shadow/4}px rgba(0, 0, 0, 0.1),
-              inset 0 1px 0 rgba(255, 255, 255, 0.5),
-              inset 0 -1px 0 rgba(0, 0, 0, 0.05)
+              0 20px 25px -5px rgba(0, 0, 0, 0.25),
+              0 10px 10px -5px rgba(0, 0, 0, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1)
             `,
           }}
         >
@@ -200,14 +227,16 @@ const DiamondCard = memo(({
           <div className="flex-1 flex flex-col items-center justify-center">
             {icon && (
               <div className={cn(
-                'text-amber-600 mb-1 transition-transform duration-300 group-hover:scale-110',
+                complexityTheme.iconColor,
+                'mb-1 transition-transform duration-300 group-hover:scale-110',
                 isParent ? 'scale-125' : isChild ? 'scale-90' : ''
               )}>
                 {icon}
               </div>
             )}
             <h3 className={cn(
-              'font-bold text-gray-800 text-center leading-tight px-2',
+              'font-bold text-center leading-tight px-2',
+              complexityTheme.accent,
               isParent ? 'text-base' : isChild ? 'text-xs' : 'text-sm'
             )}>
               {title}
@@ -243,9 +272,9 @@ const DiamondCard = memo(({
           {/* Complexity Indicator (corner dot) */}
           <div className="absolute top-2 right-2">
             <div className={cn(
-              'w-2 h-2 rounded-full shadow-sm',
-              complexity === 'simple' ? 'bg-green-400' :
-              complexity === 'complex' ? 'bg-red-400' : 'bg-amber-400'
+              'w-3 h-3 rounded-full shadow-md ring-2 ring-white/30',
+              complexity === 'simple' ? 'bg-purple-500' :
+              complexity === 'complex' ? 'bg-purple-900' : 'bg-purple-700'
             )} />
           </div>
         </div>

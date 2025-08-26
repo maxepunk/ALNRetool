@@ -5,6 +5,7 @@ import type { GraphNodeData } from '@/lib/graph/types';
 import type { Element } from '@/types/notion/app';
 import BaseNodeCard, { type NodeStatus } from './BaseNodeCard';
 import OwnerBadge from './OwnerBadge';
+import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { 
@@ -32,6 +33,18 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
   const hasSF = entity.sfPatterns !== undefined && Object.keys(entity.sfPatterns).length > 0;
+  
+  // Use shared hook for filter styles FIRST
+  const { 
+    isHighlighted,
+    outlineColor,
+    outlineWidth,
+    opacity,
+    zIndex,
+    shouldShowBadges, 
+    shouldShowStats,
+    shouldShowDetails 
+  } = useNodeFilterStyles(metadata, selected);
   
   // Determine visual style based on status
   const getNodeStatus = (): NodeStatus | undefined => {
@@ -78,8 +91,8 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
   const nodeStatus = getNodeStatus();
   const statuses: NodeStatus[] = nodeStatus ? [nodeStatus] : [];
   
-  // Header slot - badges arranged horizontally
-  const headerSlot = (
+  // Header slot - badges arranged horizontally (zoom-aware)
+  const headerSlot = shouldShowBadges ? (
     <div className="flex items-center justify-between gap-1">
       {/* Left side: SF and Memory Type badges */}
       <div className="flex gap-1 items-center">
@@ -153,32 +166,32 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
         </div>
       )}
     </div>
-  );
+  ) : undefined;
   
-  // Footer slot - stats section with RFID and element type
-  const footerSlot = (
+  // Footer slot - stats section with RFID and element type (zoom-aware)
+  const footerSlot = shouldShowStats ? (
     <div className="flex justify-between items-center text-xs">
       {/* Element Type */}
       <div className="flex items-center gap-1">
         {entity.isContainer ? (
-          <Box className="h-3 w-3 text-purple-500" />
+          <Box className="h-3 w-3 text-violet-600" />
         ) : (
-          <Package className="h-3 w-3 text-purple-500" />
+          <Package className="h-3 w-3 text-violet-600" />
         )}
-        <span className="text-gray-600 font-medium">
+        <span className="text-gray-700 font-medium">
           {entity.basicType ? entity.basicType.replace(' Token', '') : 'Prop'}
         </span>
       </div>
       
       {/* RFID if present */}
       {entity.sfPatterns?.rfid && (
-        <span className="flex items-center text-purple-600 font-mono text-xs">
+        <span className="flex items-center text-violet-700 font-mono text-xs font-medium">
           <Hash className="h-3 w-3 mr-0.5" />
           {entity.sfPatterns.rfid}
         </span>
       )}
     </div>
-  );
+  ) : undefined;
   
   // Corner slot - owner badge
   const cornerSlot = metadata.ownerName ? (
@@ -189,8 +202,8 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
     />
   ) : undefined;
   
-  // Main content with narrative threads
-  const content = (
+  // Main content with narrative threads (zoom-aware)
+  const content = shouldShowDetails ? (
     <div className="space-y-1">
       {/* Narrative Threads */}
       {entity.narrativeThreads && entity.narrativeThreads.length > 0 && (
@@ -215,13 +228,13 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
         </div>
       )}
     </div>
-  );
+  ) : undefined;
   
   // Choose icon based on element type and properties
   const getIcon = () => {
-    if (entity.isContainer) return <Box className="h-5 w-5 text-purple-600" />;
-    if (hasSF) return <Shield className="h-5 w-5 text-purple-600" />;
-    return <Package className="h-5 w-5 text-purple-600" />;
+    if (entity.isContainer) return <Box className="h-5 w-5 text-violet-600" />;
+    if (hasSF) return <Shield className="h-5 w-5 text-violet-600" />;
+    return <Package className="h-5 w-5 text-violet-600" />;
   };
   
   // Custom styling for the card wrapper
@@ -229,17 +242,9 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
     isDualRole && 'ring-2 ring-purple-400/40 ring-offset-1',
     entity.isContainer && 'shadow-lg'
   );
-  
-  // Determine visual styling based on filter state
-  const getFilterClassName = () => {
-    if (metadata.isFocused) return 'ring-4 ring-yellow-500 ring-opacity-50';
-    if (metadata.isFiltered) return 'ring-2 ring-blue-500 ring-opacity-50';
-    if (metadata.isConnected) return 'opacity-70';
-    return '';
-  };
 
   return (
-    <div className={getFilterClassName()}>
+    <div style={{ position: 'relative', zIndex }}>
       <BaseNodeCard
         nodeType="element"
         size="medium"
@@ -247,18 +252,21 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
         title={entity.name}
         icon={getIcon()}
         selected={selected}
-        highlighted={metadata.searchMatch || metadata.isFocused}
-      className={cardClassName}
-      headerSlot={headerSlot}
-      footerSlot={footerSlot}
-      cornerSlot={cornerSlot}
-      handlePositions={{
-        source: Position.Right,
-        target: Position.Left
-      }}
-    >
-      {content}
-    </BaseNodeCard>
+        highlighted={isHighlighted}
+        className={cardClassName}
+        headerSlot={headerSlot}
+        footerSlot={footerSlot}
+        cornerSlot={cornerSlot}
+        handlePositions={{
+          source: Position.Right,
+          target: Position.Left
+        }}
+        outlineColor={outlineColor}
+        outlineWidth={outlineWidth}
+        opacity={opacity}
+      >
+        {content}
+      </BaseNodeCard>
     </div>
   );
 });

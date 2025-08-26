@@ -3,6 +3,7 @@ import type { NodeProps } from '@xyflow/react';
 import type { GraphNodeData } from '@/lib/graph/types';
 import type { Puzzle } from '@/types/notion/app';
 import DiamondCard, { type NodeStatus } from './DiamondCard';
+import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { Puzzle as PuzzleIcon, User } from 'lucide-react';
 
 /**
@@ -13,6 +14,17 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as GraphNodeData<Puzzle>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
+  
+  // Use shared hook for filter styles
+  const { 
+    isHighlighted,
+    outlineColor,
+    outlineWidth,
+    opacity,
+    zIndex,
+    shouldShowBadges, 
+    shouldShowStats 
+  } = useNodeFilterStyles(metadata, selected);
   
   // Determine hierarchy
   const isParent = entity.subPuzzleIds && entity.subPuzzleIds.length > 0;
@@ -33,48 +45,46 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
   const hasElements = entity.puzzleElementIds && entity.puzzleElementIds.length > 0;
   const isDraft = !hasElements;
   const isReady = hasElements;
-  const isChained = isParent || isChild;
   
-  // Build status array
+  // Build status array - simplified to show only most important status
   const statuses: NodeStatus[] = [];
-  if (hasError) statuses.push('error');
-  else if (isDraft) statuses.push('draft');
-  else if (isReady) statuses.push('ready');
-  if (isChained) statuses.push('chained');
-  if (isLocked) statuses.push('locked');
+  if (hasError) {
+    statuses.push('error');
+  } else if (isLocked) {
+    statuses.push('locked');
+  } else if (isDraft) {
+    statuses.push('draft');
+  } else if (isReady) {
+    statuses.push('ready');
+  }
   
-  // Owner badge - simplified
-  const ownerBadge = entity.ownerId ? (
+  // Owner badge - simplified (only show when zoomed in enough)
+  const ownerBadge = shouldShowBadges && entity.ownerId ? (
     <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100/80 backdrop-blur-sm">
       <User className="h-3 w-3 text-gray-600" />
     </div>
   ) : undefined;
-  
-  // Determine visual styling based on filter state
-  const getFilterClassName = () => {
-    if (metadata.isFocused) return 'ring-4 ring-yellow-500 ring-opacity-50';
-    if (metadata.isFiltered) return 'ring-2 ring-blue-500 ring-opacity-50';
-    if (metadata.isConnected) return 'opacity-70';
-    return '';
-  };
 
   return (
-    <div className={getFilterClassName()}>
+    <div style={{ position: 'relative', zIndex }}>
       <DiamondCard
         title={entity.name}
         icon={<PuzzleIcon className="h-5 w-5" />}
         selected={selected}
-        highlighted={metadata.searchMatch || metadata.isFocused}
-        statuses={statuses}
-        requirementsCount={entity.puzzleElementIds?.length || 0}
-      rewardsCount={entity.rewardIds?.length || 0}
-      ownerBadge={ownerBadge}
-      isParent={isParent}
-      isChild={isChild}
-      complexity={getComplexity()}
-      size="medium"
-      maxCount={5}
-    />
+        highlighted={isHighlighted}
+        statuses={shouldShowBadges ? statuses : []}
+        requirementsCount={shouldShowStats ? (entity.puzzleElementIds?.length || 0) : 0}
+        rewardsCount={shouldShowStats ? (entity.rewardIds?.length || 0) : 0}
+        ownerBadge={ownerBadge}
+        isParent={isParent}
+        isChild={isChild}
+        complexity={getComplexity()}
+        size="medium"
+        maxCount={5}
+        outlineColor={outlineColor}
+        outlineWidth={outlineWidth}
+        opacity={opacity}
+      />
     </div>
   );
 });

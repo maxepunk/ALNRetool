@@ -34,44 +34,53 @@ interface BaseNodeCardProps extends Partial<NodeProps> {
   headerSlot?: ReactNode;  // Top area for badges, status indicators
   footerSlot?: ReactNode;  // Bottom area for stats, counts
   cornerSlot?: ReactNode;  // Corner overlay for owner badges, special indicators
+  // Filter state styling
+  outlineColor?: string;
+  outlineWidth?: number;
+  opacity?: number;
 }
 
-// Node type color themes with glassmorphism effects
+// Node type color themes with WCAG AA compliant contrast
 const nodeThemes = {
   puzzle: {
-    border: 'border-amber-500/60 border-2',
-    background: 'bg-gradient-to-br from-amber-50/80 to-amber-100/70',
-    glow: 'group-hover:shadow-[0_0_20px_rgba(245,158,11,0.4)]',
-    hover: 'hover:shadow-amber-300/60',
-    selected: 'ring-2 ring-amber-500/80 ring-offset-2',
+    border: 'border-purple-500 border-2',
+    gradient: 'bg-gradient-to-br from-purple-50 to-purple-100',
+    glow: 'group-hover:shadow-[0_0_20px_rgba(147,51,234,0.3)]',
+    hover: 'hover:shadow-purple-400/30',
+    selected: 'ring-2 ring-purple-600 ring-offset-2',
+    text: 'text-purple-900',
   },
   character: {
-    border: 'border-green-500/60 border-2',
-    background: 'bg-gradient-to-br from-green-50/80 to-green-100/70',
-    glow: 'group-hover:shadow-[0_0_20px_rgba(34,197,94,0.4)]',
-    hover: 'hover:shadow-green-300/60',
-    selected: 'ring-2 ring-green-500/80 ring-offset-2',
+    border: 'border-blue-500 border-2',
+    gradient: 'bg-gradient-to-br from-blue-50 to-blue-100',
+    glow: 'group-hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]',
+    hover: 'hover:shadow-blue-400/30',
+    selected: 'ring-2 ring-blue-600 ring-offset-2',
+    text: 'text-blue-900',
   },
   element: {
-    border: 'border-purple-500/60 border-2',
-    background: 'bg-gradient-to-br from-purple-50/80 to-purple-100/70',
-    glow: 'group-hover:shadow-[0_0_20px_rgba(168,85,247,0.4)]',
-    hover: 'hover:shadow-purple-300/60',
-    selected: 'ring-2 ring-purple-500/80 ring-offset-2',
+    border: 'border-orange-500 border-2',
+    gradient: 'bg-gradient-to-br from-orange-50 to-orange-100',
+    glow: 'group-hover:shadow-[0_0_20px_rgba(251,146,60,0.3)]',
+    hover: 'hover:shadow-orange-400/30',
+    selected: 'ring-2 ring-orange-600 ring-offset-2',
+    text: 'text-orange-900',
   },
   timeline: {
-    border: 'border-orange-500/60 border-2',
-    background: 'bg-gradient-to-br from-orange-50/80 to-orange-100/70',
-    glow: 'group-hover:shadow-[0_0_20px_rgba(249,115,22,0.4)]',
-    hover: 'hover:shadow-orange-300/60',
-    selected: 'ring-2 ring-orange-500/80 ring-offset-2',
+    border: 'border-amber-500 border-2',
+    gradient: 'bg-gradient-to-br from-amber-50 to-amber-100',
+    glow: 'group-hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]',
+    hover: 'hover:shadow-amber-400/30',
+    selected: 'ring-2 ring-amber-600 ring-offset-2',
+    text: 'text-amber-900',
   },
   group: {
-    border: 'border-gray-300/60 border-dashed',
-    background: 'bg-gray-50/50',
+    border: 'border-gray-400 border-dashed',
+    gradient: 'bg-gradient-to-br from-gray-50 to-gray-100',
     glow: 'group-hover:shadow-[0_0_15px_rgba(156,163,175,0.3)]',
-    hover: 'hover:shadow-gray-200/50',
-    selected: 'ring-2 ring-gray-400/80 ring-offset-2',
+    hover: 'hover:shadow-gray-400/30',
+    selected: 'ring-2 ring-gray-600 ring-offset-2',
+    text: 'text-gray-800',
   },
 };
 
@@ -84,13 +93,13 @@ const sizeClasses = {
   child: 'w-36 h-28 text-xs',
 };
 
-// Status badge variants
+// Status badge variants with improved contrast
 const statusVariants = {
-  draft: { variant: 'secondary' as const, label: 'Draft' },
-  ready: { variant: 'default' as const, label: 'Ready' },
-  locked: { variant: 'destructive' as const, label: '🔒 Locked' },
-  chained: { variant: 'outline' as const, label: '🔗 Chained' },
-  error: { variant: 'destructive' as const, label: '⚠️ Error' },
+  draft: { variant: 'secondary' as const, label: 'Draft', className: 'bg-gray-100 text-gray-700 border-gray-300 font-medium' },
+  ready: { variant: 'default' as const, label: 'Ready', className: 'bg-green-100 text-green-700 border-green-300 font-medium' },
+  locked: { variant: 'destructive' as const, label: '🔒 Locked', className: 'bg-red-100 text-red-700 border-red-300 font-medium' },
+  chained: { variant: 'outline' as const, label: '🔗 Chained', className: 'bg-amber-100 text-amber-700 border-amber-300 font-medium' },
+  error: { variant: 'destructive' as const, label: '⚠️ Error', className: 'bg-red-100 text-red-700 border-red-300 font-medium' },
 };
 
 const BaseNodeCard = memo(({
@@ -111,25 +120,38 @@ const BaseNodeCard = memo(({
   headerSlot,
   footerSlot,
   cornerSlot,
+  outlineColor = '',
+  outlineWidth = 0,
+  opacity = 1,
 }: BaseNodeCardProps) => {
   const theme = nodeThemes[nodeType];
   const sizeClass = sizeClasses[size];
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
 
   return (
-    <div className="relative group">
+    <div className="relative group" style={{ opacity }}>
+      {/* Custom outline (behind main card) */}
+      {outlineWidth > 0 && (
+        <div
+          className="absolute rounded-lg"
+          style={{
+            inset: `-${outlineWidth}px`,
+            backgroundColor: outlineColor,
+            zIndex: -1,
+          }}
+        />
+      )}
       <Card
         className={cn(
           'relative transition-all duration-300 cursor-pointer overflow-hidden',
           sizeClass,
           theme.border,
-          theme.background,
+          theme.gradient,
           theme.hover,
           theme.glow,
           selected && theme.selected,
-          highlighted && 'ring-2 ring-yellow-400/80 ring-offset-2 bg-yellow-50/90',
-          // Glassmorphism effects
-          'backdrop-blur-sm backdrop-saturate-150',
+          highlighted && 'shadow-lg shadow-yellow-400/70',
+          // Strong shadows for depth
           'shadow-lg hover:shadow-xl',
           // Glass-like shine effect
           'before:absolute before:inset-0 before:rounded-lg before:bg-gradient-to-br before:from-white/10 before:to-transparent before:pointer-events-none',
@@ -173,7 +195,10 @@ const BaseNodeCard = memo(({
                     <Badge
                       key={s}
                       variant={statusVariants[s].variant}
-                      className="text-xs px-1.5 py-0 h-5 shadow-sm backdrop-blur-sm bg-white/80"
+                      className={cn(
+                        "text-xs px-1.5 py-0 h-5 shadow-sm backdrop-blur-sm",
+                        statusVariants[s].className
+                      )}
                     >
                       {statusVariants[s].label}
                     </Badge>
@@ -184,7 +209,7 @@ const BaseNodeCard = memo(({
           )}
 
           {/* Title section with icon */}
-          <div className="flex items-center gap-2 mb-1">
+          <div className={cn("flex items-center gap-2 mb-1", theme.text)}>
             {icon && (
               <div className="text-lg shrink-0 transition-transform duration-300 group-hover:scale-110">
                 {icon}
@@ -199,14 +224,14 @@ const BaseNodeCard = memo(({
 
           {/* Main content area */}
           {children && (
-            <div className="flex-1 overflow-hidden">
+            <div className={cn("flex-1 overflow-hidden", theme.text)}>
               {children}
             </div>
           )}
 
           {/* Footer slot - for stats, counts, etc */}
           {footerSlot && (
-            <div className="mt-auto pt-1 border-t border-gray-200/40 backdrop-blur-sm">
+            <div className={cn("mt-auto pt-1 border-t border-gray-300/40 backdrop-blur-sm", theme.text)}>
               {footerSlot}
             </div>
           )}
