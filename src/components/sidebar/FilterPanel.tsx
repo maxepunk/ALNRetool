@@ -183,8 +183,8 @@ export const CharacterFilterPanel = () => (
         label: 'Tiers',
         options: [
           { value: 'Core', label: 'Core' },
-          { value: 'Standard', label: 'Standard' },
-          { value: 'Optional', label: 'Optional' }
+          { value: 'Secondary', label: 'Secondary' },
+          { value: 'Tertiary', label: 'Tertiary' }
         ]
       }
     }}
@@ -200,10 +200,9 @@ export const PuzzleFilterPanel = () => (
         type: 'multiselect',
         label: 'Acts',
         options: [
-          { value: 'Act1', label: 'Act 1' },
-          { value: 'Act2', label: 'Act 2' },
-          { value: 'Act3', label: 'Act 3' },
-          { value: 'Act4', label: 'Act 4' }
+          { value: 'Act 0', label: 'Act 0' },
+          { value: 'Act 1', label: 'Act 1' },
+          { value: 'Act 2', label: 'Act 2' }
         ]
       },
       completionStatus: {
@@ -213,6 +212,42 @@ export const PuzzleFilterPanel = () => (
           { value: 'all', label: 'All' },
           { value: 'completed', label: 'Completed' },
           { value: 'incomplete', label: 'Incomplete' }
+        ]
+      }
+    }}
+  />
+);
+
+export const ElementFilterPanel = () => (
+  <FilterPanel
+    title="Element Filters"
+    entityType="element"
+    filters={{
+      basicTypes: {
+        type: 'multiselect',
+        label: 'Element Types',
+        options: [
+          { value: 'Set Dressing', label: 'Set Dressing' },
+          { value: 'Prop', label: 'Prop' },
+          { value: 'Memory Token (Audio)', label: 'Memory Token (Audio)' },
+          { value: 'Memory Token (Video)', label: 'Memory Token (Video)' },
+          { value: 'Memory Token (Image)', label: 'Memory Token (Image)' },
+          { value: 'Memory Token (Audio+Image)', label: 'Memory Token (Audio+Image)' },
+          { value: 'Document', label: 'Document' }
+        ]
+      },
+      status: {
+        type: 'multiselect',
+        label: 'Production Status',
+        options: [
+          { value: 'Idea/Placeholder', label: 'Idea/Placeholder' },
+          { value: 'in space playtest ready', label: 'In Space Playtest Ready' },
+          { value: 'In development', label: 'In Development' },
+          { value: 'Writing Complete', label: 'Writing Complete' },
+          { value: 'Design Complete', label: 'Design Complete' },
+          { value: 'Source Prop/print', label: 'Source Prop/Print' },
+          { value: 'Ready for Playtest', label: 'Ready for Playtest' },
+          { value: 'Done', label: 'Done' }
         ]
       }
     }}

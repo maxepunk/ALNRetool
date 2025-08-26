@@ -51,6 +51,8 @@ describe('URL State Integration', () => {
 
   const sampleFilterState: FilterState = {
     searchTerm: 'integration test',
+    selectedNodeId: 'char-123',
+    focusedNodeId: 'char-123',
     connectionDepth: 4,
     activeView: 'node-connections',
     puzzleFilters: {
@@ -68,11 +70,12 @@ describe('URL State Integration', () => {
     contentFilters: {
       contentStatus: new Set(['draft']),
       hasIssues: null,
-      lastEditedRange: 'today'
+      lastEditedRange: 'today',
+      elementBasicTypes: new Set(),
+      elementStatus: new Set()
     },
     nodeConnectionsFilters: {
-      nodeType: 'character',
-      selectedNodeId: 'char-123'
+      nodeType: 'character'
     }
   };
 
@@ -97,6 +100,16 @@ describe('URL State Integration', () => {
         '',
         expect.stringContaining('nodeType=character')
       );
+      expect(mockHistory.pushState).toHaveBeenCalledWith(
+        {},
+        '',
+        expect.stringContaining('selectedNodeId=char-123')
+      );
+      expect(mockHistory.pushState).toHaveBeenCalledWith(
+        {},
+        '',
+        expect.stringContaining('focusedNodeId=char-123')
+      );
     });
 
     it('should use replaceState when replace=true', () => {
@@ -109,6 +122,8 @@ describe('URL State Integration', () => {
     it('should handle empty state correctly', () => {
       const emptyState: FilterState = {
         searchTerm: '',
+        selectedNodeId: null,
+        focusedNodeId: null,
         connectionDepth: 3, // default
         activeView: null,
         puzzleFilters: {
@@ -126,7 +141,9 @@ describe('URL State Integration', () => {
         contentFilters: {
           contentStatus: new Set(),
           hasIssues: null,
-          lastEditedRange: 'all' // default
+          lastEditedRange: 'all', // default
+          elementBasicTypes: new Set(),
+          elementStatus: new Set()
         },
         nodeConnectionsFilters: null
       };
@@ -144,14 +161,15 @@ describe('URL State Integration', () => {
 
   describe('URL Parsing Integration', () => {
     it('should parse URL with parameters correctly', () => {
-      const testUrl = 'http://localhost:5173/node-connections?search=test&depth=5&nodeType=puzzle&nodeId=puzzle-456';
+      const testUrl = 'http://localhost:5173/node-connections?search=test&depth=5&nodeType=puzzle&selectedNodeId=puzzle-456&focusedNodeId=puzzle-456';
       
       const filters = parseUrlFilters(testUrl);
       
       expect(filters.searchTerm).toBe('test');
       expect(filters.connectionDepth).toBe(5);
       expect(filters.nodeConnectionsFilters?.nodeType).toBe('puzzle');
-      expect(filters.nodeConnectionsFilters?.selectedNodeId).toBe('puzzle-456');
+      expect(filters.selectedNodeId).toBe('puzzle-456');
+      expect(filters.focusedNodeId).toBe('puzzle-456');
     });
 
     it('should handle malformed URLs gracefully', () => {
@@ -183,7 +201,8 @@ describe('URL State Integration', () => {
       expect(shareableUrl).toContain('search=integration+test');
       expect(shareableUrl).toContain('depth=4');
       expect(shareableUrl).toContain('nodeType=character');
-      expect(shareableUrl).toContain('nodeId=char-123');
+      expect(shareableUrl).toContain('selectedNodeId=char-123');
+      expect(shareableUrl).toContain('focusedNodeId=char-123');
     });
 
     it('should use current pathname when no base path provided', () => {
@@ -217,9 +236,10 @@ describe('URL State Integration', () => {
       expect(reconstructedFilters.puzzleFilters?.selectedActs).toEqual(sampleFilterState.puzzleFilters.selectedActs);
       expect(reconstructedFilters.characterFilters?.selectedTiers).toEqual(sampleFilterState.characterFilters.selectedTiers);
       
-      // Test node connections
+      // Test node connections  
       expect(reconstructedFilters.nodeConnectionsFilters?.nodeType).toBe(sampleFilterState.nodeConnectionsFilters!.nodeType);
-      expect(reconstructedFilters.nodeConnectionsFilters?.selectedNodeId).toBe(sampleFilterState.nodeConnectionsFilters!.selectedNodeId);
+      expect(reconstructedFilters.selectedNodeId).toBe(sampleFilterState.selectedNodeId);
+      expect(reconstructedFilters.focusedNodeId).toBe(sampleFilterState.focusedNodeId);
     });
   });
 
@@ -227,14 +247,14 @@ describe('URL State Integration', () => {
     it('should support back/forward navigation state reconstruction', () => {
       // Simulate a sequence of navigation states
       const states = [
-        { search: 'first', depth: 3, nodeType: 'character', nodeId: 'char-1' },
-        { search: 'second', depth: 4, nodeType: 'puzzle', nodeId: 'puzzle-1' },
-        { search: 'third', depth: 5, nodeType: 'element', nodeId: 'element-1' }
+        { search: 'first', depth: 3, nodeType: 'character', selectedNodeId: 'char-1', focusedNodeId: 'char-1' },
+        { search: 'second', depth: 4, nodeType: 'puzzle', selectedNodeId: 'puzzle-1', focusedNodeId: 'puzzle-1' },
+        { search: 'third', depth: 5, nodeType: 'element', selectedNodeId: 'element-1', focusedNodeId: 'element-1' }
       ];
       
-      const reconstructedStates = states.map(({ search, depth, nodeType, nodeId }) => {
+      const reconstructedStates = states.map(({ search, depth, nodeType, selectedNodeId, focusedNodeId }) => {
         // Simulate URL from browser history
-        const mockUrl = `http://localhost:5173/view?search=${search}&depth=${depth}&nodeType=${nodeType}&nodeId=${nodeId}`;
+        const mockUrl = `http://localhost:5173/view?search=${search}&depth=${depth}&nodeType=${nodeType}&selectedNodeId=${selectedNodeId}&focusedNodeId=${focusedNodeId}`;
         return parseUrlFilters(mockUrl);
       });
       
@@ -242,14 +262,20 @@ describe('URL State Integration', () => {
       expect(reconstructedStates[0]!.searchTerm).toBe('first');
       expect(reconstructedStates[0]!.connectionDepth).toBe(3);
       expect(reconstructedStates[0]!.nodeConnectionsFilters?.nodeType).toBe('character');
+      expect(reconstructedStates[0]!.selectedNodeId).toBe('char-1');
+      expect(reconstructedStates[0]!.focusedNodeId).toBe('char-1');
       
       expect(reconstructedStates[1]!.searchTerm).toBe('second');
       expect(reconstructedStates[1]!.connectionDepth).toBe(4);
       expect(reconstructedStates[1]!.nodeConnectionsFilters?.nodeType).toBe('puzzle');
+      expect(reconstructedStates[1]!.selectedNodeId).toBe('puzzle-1');
+      expect(reconstructedStates[1]!.focusedNodeId).toBe('puzzle-1');
       
       expect(reconstructedStates[2]!.searchTerm).toBe('third');
       expect(reconstructedStates[2]!.connectionDepth).toBe(5);
       expect(reconstructedStates[2]!.nodeConnectionsFilters?.nodeType).toBe('element');
+      expect(reconstructedStates[2]!.selectedNodeId).toBe('element-1');
+      expect(reconstructedStates[2]!.focusedNodeId).toBe('element-1');
     });
   });
 });

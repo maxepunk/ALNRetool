@@ -1,303 +1,20 @@
 /**
- * React Flow Graph State Management Hook
- * Manages nodes, edges, and interactions for the graph visualization
+ * Viewport Management Hook
+ * Manages intelligent viewport focusing and transitions for the graph visualization
  * 
- * Testing Note: This is a React Flow integration hook - tested via integration tests
- * No unit tests as this is a thin wrapper around third-party library
+ * Note: This file was refactored from a larger graph state management system.
+ * The centralized state management was abandoned in Sprint 2 in favor of
+ * direct state management in GraphView to avoid React Flow conflicts.
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
-import {
-  useNodesState,
-  useEdgesState,
-  useReactFlow,
-  type Node,
-  type Edge,
-  type NodeChange,
-  type EdgeChange,
-  type Connection,
-  type NodeMouseHandler,
-  type OnSelectionChangeParams,
-} from '@xyflow/react';
-import type { GraphData } from '@/lib/graph/types';
-
-
-interface UseGraphStateOptions {
-  initialGraphData: GraphData;
-  onNodeClick?: (node: Node) => void;
-  onSelectionChange?: (params: OnSelectionChangeParams) => void;
-  onConnect?: (connection: Connection) => void;
-}
-
-interface UseGraphStateReturn {
-  // State
-  nodes: Node[];
-  edges: Edge[];
-  selectedNodeId: string | null;
-  hoveredNodeId: string | null;
-  
-  // Handlers  
-  onNodesChange: (changes: NodeChange[]) => void;
-  onEdgesChange: (changes: EdgeChange[]) => void;
-  handleNodeClick: NodeMouseHandler;
-  handleNodeMouseEnter: NodeMouseHandler;
-  handleNodeMouseLeave: NodeMouseHandler;
-  handleConnect: (params: Connection) => void;
-  
-  // Actions
-  setSelectedNode: (nodeId: string | null) => void;
-  highlightConnections: (nodeId: string) => void;
-  resetHighlights: () => void;
-  updateGraphData: (newData: GraphData) => void;
-  
-  // Utilities
-  getConnectedNodes: (nodeId: string) => string[];
-  getNodeById: (nodeId: string) => Node | undefined;
-}
-
-/**
- * Custom hook for managing React Flow graph state
- */
-export function useGraphState({
-  initialGraphData,
-  onNodeClick,
-  onSelectionChange: _onSelectionChange,
-  onConnect,
-}: UseGraphStateOptions): UseGraphStateReturn {
-  // React Flow state
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialGraphData.nodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraphData.edges);
-  
-  // Local state
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  
-  // React Flow instance (for programmatic control)
-  const reactFlowInstance = useReactFlow();
-  
-  // Update nodes and edges when graph data changes
-  useEffect(() => {
-    console.debug('[useGraphState] Updating with new graph data:', { 
-      nodes: initialGraphData.nodes.length,
-      edges: initialGraphData.edges.length
-     });
-    setNodes(initialGraphData.nodes);
-    setEdges(initialGraphData.edges);
-  }, [initialGraphData, setNodes, setEdges]);
-  
-  // Get connected node IDs for a given node
-  const getConnectedNodes = useCallback((nodeId: string): string[] => {
-    const connected = new Set<string>();
-    
-    edges.forEach(edge => {
-      if (edge.source === nodeId) {
-        connected.add(edge.target);
-      } else if (edge.target === nodeId) {
-        connected.add(edge.source);
-      }
-    });
-    
-    return Array.from(connected);
-  }, [edges]);
-  
-  // Get node by ID
-  const getNodeById = useCallback((nodeId: string): Node | undefined => {
-    return nodes.find(n => n.id === nodeId);
-  }, [nodes]);
-  
-  // Highlight connections for a node
-  const highlightConnections = useCallback((nodeId: string) => {
-    const connectedNodeIds = getConnectedNodes(nodeId);
-    
-    // Update edges - highlight connected ones
-    setEdges((eds) =>
-      eds.map((edge) => {
-        const isConnected = edge.source === nodeId || edge.target === nodeId;
-        return {
-          ...edge,
-          animated: isConnected,
-          style: {
-            ...edge.style,
-            strokeWidth: isConnected ? 2 : 1,
-            opacity: isConnected ? 1 : 0.3,
-          },
-        };
-      })
-    );
-    
-    // Update nodes - dim non-connected ones
-    setNodes((nds) =>
-      nds.map((node) => {
-        const isHighlighted = node.id === nodeId || connectedNodeIds.includes(node.id);
-        return {
-          ...node,
-          style: {
-            ...node.style,
-            opacity: isHighlighted ? 1 : 0.3,
-          },
-        };
-      })
-    );
-  }, [getConnectedNodes, setEdges, setNodes]);
-  
-  // Reset all highlights
-  const resetHighlights = useCallback(() => {
-    // Reset edge styles
-    setEdges((eds) =>
-      eds.map((edge) => ({
-        ...edge,
-        animated: false,
-        style: {
-          ...edge.style,
-          strokeWidth: 1,
-          opacity: 1,
-        },
-      }))
-    );
-    
-    // Reset node opacity
-    setNodes((nds) =>
-      nds.map((node) => ({
-        ...node,
-        style: {
-          ...node.style,
-          opacity: 1,
-        },
-      }))
-    );
-  }, [setEdges, setNodes]);
-  
-  // Handle node click
-  const handleNodeClick: NodeMouseHandler = useCallback((_event, node) => {
-    setSelectedNodeId(node.id);
-    onNodeClick?.(node);
-  }, [onNodeClick]);
-  
-  // Handle node hover
-  const handleNodeMouseEnter: NodeMouseHandler = useCallback((_event, node) => {
-    setHoveredNodeId(node.id);
-    highlightConnections(node.id);
-  }, [highlightConnections]);
-  
-  // Handle node mouse leave
-  const handleNodeMouseLeave: NodeMouseHandler = useCallback(() => {
-    setHoveredNodeId(null);
-    resetHighlights();
-  }, [resetHighlights]);
-  
-  // Handle connection creation
-  const handleConnect = useCallback((params: Connection) => {
-    console.debug('Connection attempt:', params);
-    onConnect?.(params);
-    // Future: Handle creating new relationships
-  }, [onConnect]);
-  
-  // Set selected node programmatically
-  const setSelectedNode = useCallback((nodeId: string | null) => {
-    setSelectedNodeId(nodeId);
-    
-    if (nodeId) {
-      // Center the view on the selected node
-      const node = getNodeById(nodeId);
-      if (node && reactFlowInstance) {
-        reactFlowInstance.setCenter(node.position.x, node.position.y, {
-          duration: 800,
-          zoom: 1.5,
-        });
-      }
-    }
-  }, [getNodeById, reactFlowInstance]);
-  
-  // Update graph data
-  const updateGraphData = useCallback((newData: GraphData) => {
-    setNodes(newData.nodes);
-    setEdges(newData.edges);
-  }, [setNodes, setEdges]);
-  
-  return {
-    // State
-    nodes,
-    edges,
-    selectedNodeId,
-    hoveredNodeId,
-    
-    // Handlers (cast to handle type variance)
-    onNodesChange: onNodesChange as (changes: NodeChange[]) => void,
-    onEdgesChange: onEdgesChange as (changes: EdgeChange[]) => void,
-    handleNodeClick,
-    handleNodeMouseEnter,
-    handleNodeMouseLeave,
-    handleConnect,
-    
-    // Actions
-    setSelectedNode,
-    highlightConnections,
-    resetHighlights,
-    updateGraphData,
-    
-    // Utilities
-    getConnectedNodes,
-    getNodeById,
-  };
-}
-
-/**
- * Hook for filtering graph data based on view type
- */
-export function useGraphFilter(
-  graphData: GraphData,
-  filters: {
-    nodeTypes?: string[];
-    edgeTypes?: string[];
-    searchQuery?: string;
-  }
-): GraphData {
-  return useMemo(() => {
-    let filteredNodes = graphData.nodes;
-    let filteredEdges = graphData.edges;
-    
-    // Filter nodes by type
-    if (filters.nodeTypes && filters.nodeTypes.length > 0) {
-      filteredNodes = filteredNodes.filter(node => 
-        filters.nodeTypes!.includes(node.type || 'default')
-      );
-    }
-    
-    // Filter nodes by search query
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      filteredNodes = filteredNodes.filter(node =>
-        node.data.label?.toLowerCase().includes(query) ||
-        node.id.toLowerCase().includes(query)
-      );
-    }
-    
-    // Filter edges to only include those between visible nodes
-    const visibleNodeIds = new Set(filteredNodes.map(n => n.id));
-    filteredEdges = filteredEdges.filter(edge =>
-      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-    );
-    
-    // Filter edges by type
-    if (filters.edgeTypes && filters.edgeTypes.length > 0) {
-      filteredEdges = filteredEdges.filter(edge =>
-        filters.edgeTypes!.includes(edge.data?.relationshipType || 'default')
-      );
-    }
-    
-    return {
-      ...graphData,
-      nodes: filteredNodes,
-      edges: filteredEdges,
-    };
-  }, [graphData, filters.nodeTypes, filters.edgeTypes, filters.searchQuery]);
-}
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useReactFlow, type Node } from '@xyflow/react';
 
 /**
  * Hook for managing graph zoom and viewport
  */
-export function useGraphViewport() {
-  const { getViewport, setViewport, fitView, zoomIn, zoomOut } = useReactFlow();
+function useGraphViewport() {
+  const { getViewport, setViewport, fitView, zoomIn, zoomOut, getNodes } = useReactFlow();
   
   const handleZoomToFit = useCallback(() => {
     fitView({ padding: 0.2, duration: 800 });
@@ -315,11 +32,364 @@ export function useGraphViewport() {
     setViewport({ x: 0, y: 0, zoom: 1 }, { duration: 800 });
   }, [setViewport]);
   
+  /**
+   * Fit viewport to show specific nodes with optimal zoom level
+   */
+  const fitToNodes = useCallback((nodeIds: string[], options?: { padding?: number; duration?: number }) => {
+    const currentNodes = getNodes();
+    const targetNodes = currentNodes.filter(node => nodeIds.includes(node.id));
+    
+    if (targetNodes.length === 0) {
+      console.warn('[useGraphViewport] No nodes found for IDs:', nodeIds);
+      return;
+    }
+    
+    // Use React Flow's built-in fitView with node filtering
+    fitView({
+      nodes: targetNodes,
+      padding: options?.padding ?? 0.3,
+      duration: options?.duration ?? 800
+    });
+  }, [getNodes, fitView]);
+  
+  /**
+   * Fit viewport to show search results with highlighting
+   */
+  const fitToSearchResults = useCallback((searchQuery: string, options?: { padding?: number; duration?: number }) => {
+    if (!searchQuery.trim()) {
+      // No search query, fit to all visible nodes
+      handleZoomToFit();
+      return;
+    }
+    
+    const currentNodes = getNodes();
+    const query = searchQuery.toLowerCase();
+    
+    // Find nodes that match the search query
+    const matchingNodes = currentNodes.filter(node => {
+      const hasSearchMatch = node.data?.searchMatch === true;
+      const label = typeof node.data?.label === 'string' ? node.data.label : '';
+      const nameMatches = label.toLowerCase().includes(query);
+      const idMatches = node.id.toLowerCase().includes(query);
+      
+      return hasSearchMatch || nameMatches || idMatches;
+    });
+    
+    if (matchingNodes.length === 0) {
+      console.info('[useGraphViewport] No matching nodes found for search:', searchQuery);
+      // Still fit to all visible nodes if no matches
+      handleZoomToFit();
+      return;
+    }
+    
+    // Fit view to matching nodes
+    fitView({
+      nodes: matchingNodes,
+      padding: options?.padding ?? 0.3,
+      duration: options?.duration ?? 800
+    });
+    
+    if (import.meta.env.DEV) {
+      console.debug('[useGraphViewport] Fitted to search results:', {
+        query: searchQuery,
+        matchCount: matchingNodes.length,
+        nodeIds: matchingNodes.map(n => n.id)
+      });
+    }
+  }, [getNodes, fitView, handleZoomToFit]);
+  
+  // Debouncing for rapid viewport changes
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  /**
+   * Debounced version of fitToSearchResults to prevent excessive calls during rapid filtering
+   */
+  const debouncedFitToSearchResults = useCallback((searchQuery: string, delay = 300) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      fitToSearchResults(searchQuery);
+    }, delay);
+  }, [fitToSearchResults]);
+  
+  /**
+   * Debounced version of fitToNodes to prevent excessive calls during rapid changes
+   */
+  const debouncedFitToNodes = useCallback((nodeIds: string[], delay = 300) => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    debounceTimeoutRef.current = setTimeout(() => {
+      fitToNodes(nodeIds);
+    }, delay);
+  }, [fitToNodes]);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
+  
   return {
     viewport: getViewport(),
     zoomToFit: handleZoomToFit,
     zoomIn: handleZoomIn,
     zoomOut: handleZoomOut,
     resetView: handleResetView,
+    fitToNodes,
+    fitToSearchResults,
+    debouncedFitToNodes,
+    debouncedFitToSearchResults,
   };
+}
+
+/**
+ * Hook for intelligent viewport management with priority-based focusing
+ * 
+ * Implements smart viewport logic:
+ * - Selected node (from search dropdown) takes highest priority
+ * - Search results take high priority
+ * - Focused nodes (connection depth filtering) take medium priority  
+ * - All visible nodes take lowest priority
+ * 
+ * @param searchTerm Current search query
+ * @param selectedNodeId Specifically selected node from search
+ * @param focusedNodeId Currently focused node for connection depth
+ * @param connectionDepth Depth level for connection filtering
+ * @param visibleNodes Currently visible nodes after all filtering (for proper depth view fitting)
+ */
+export function useViewportManager(
+  searchTerm: string,
+  selectedNodeId: string | null,
+  focusedNodeId: string | null,
+  connectionDepth: number | null,
+  visibleNodes?: Node[]
+) {
+  const { 
+    fitToSearchResults, 
+    fitToNodes, 
+    zoomToFit,
+    debouncedFitToSearchResults
+  } = useGraphViewport();
+  
+  const previousState = useRef({
+    searchTerm: '',
+    selectedNodeId: null as string | null,
+    focusedNodeId: null as string | null,
+    connectionDepth: null as number | null
+  });
+  
+  /**
+   * Determine current viewport priority level
+   * Higher number = higher priority
+   */
+  const getCurrentPriority = useCallback(() => {
+    if (selectedNodeId) return 4; // Highest: specifically selected node
+    if (searchTerm && searchTerm.trim()) return 3; // High: search results
+    if (focusedNodeId && connectionDepth) return 2; // Medium: focused connections
+    return 1; // Lowest: all visible nodes
+  }, [selectedNodeId, searchTerm, focusedNodeId, connectionDepth]);
+  
+  /**
+   * Execute viewport change with smooth transitions
+   */
+  const executeViewportChange = useCallback((priority: number, immediate = false) => {
+    const delay = immediate ? 0 : 200; // Short delay for smooth transitions
+    
+    setTimeout(() => {
+      switch (priority) {
+        case 4: // Selected specific node
+          if (selectedNodeId) {
+            if (import.meta.env.DEV) {
+              console.debug('[ViewportManager] Focusing on selected node:', selectedNodeId);
+            }
+            fitToNodes([selectedNodeId], { padding: 0.2, duration: 600 });
+          }
+          break;
+          
+        case 3: // Search results
+          if (searchTerm?.trim()) {
+            if (import.meta.env.DEV) {
+              console.debug('[ViewportManager] Focusing on search results:', searchTerm);
+            }
+            fitToSearchResults(searchTerm, { padding: 0.25, duration: 600 });
+          }
+          break;
+          
+        case 2: // Focused connections
+          if (focusedNodeId && visibleNodes && visibleNodes.length > 0) {
+            if (import.meta.env.DEV) {
+              console.debug('[ViewportManager] Focusing on connections for node:', focusedNodeId, 'with', visibleNodes.length, 'visible nodes');
+            }
+            // Fit to all visible nodes when connection depth is active
+            fitToNodes(visibleNodes.map(n => n.id), { padding: 0.3, duration: 600 });
+          } else if (focusedNodeId) {
+            // Fallback to just the focused node if visibleNodes not provided
+            if (import.meta.env.DEV) {
+              console.debug('[ViewportManager] Focusing on single node (fallback):', focusedNodeId);
+            }
+            fitToNodes([focusedNodeId], { padding: 0.3, duration: 600 });
+          }
+          break;
+          
+        case 1: // All nodes
+        default:
+          if (import.meta.env.DEV) {
+            console.debug('[ViewportManager] Fitting all visible nodes');
+          }
+          zoomToFit();
+          break;
+      }
+    }, delay);
+  }, [selectedNodeId, searchTerm, focusedNodeId, visibleNodes, fitToSearchResults, fitToNodes, zoomToFit]);
+  
+  // Performance optimization: throttle rapid successive changes
+  const throttleRef = useRef<NodeJS.Timeout | null>(null);
+  const isThrottledRef = useRef(false);
+  
+  /**
+   * Smart viewport management with priority handling and performance optimizations
+   */
+  useEffect(() => {
+    const currentPriority = getCurrentPriority();
+    const prev = previousState.current;
+    
+    // Check what changed
+    const searchChanged = searchTerm !== prev.searchTerm;
+    const selectedChanged = selectedNodeId !== prev.selectedNodeId;
+    const focusChanged = focusedNodeId !== prev.focusedNodeId;
+    const depthChanged = connectionDepth !== prev.connectionDepth;
+    
+    // Performance optimization: Only trigger for meaningful changes
+    if (searchChanged || selectedChanged || focusChanged || depthChanged) {
+      // Edge case: Handle empty/whitespace-only search terms
+      const normalizedSearch = searchTerm?.trim() || '';
+      const normalizedPrevSearch = prev.searchTerm?.trim() || '';
+      
+      // Skip if both are effectively empty (performance optimization)
+      if (!normalizedSearch && !normalizedPrevSearch && searchChanged) {
+        if (import.meta.env.DEV) {
+          console.debug('[ViewportManager] Ignoring whitespace-only search change');
+        }
+        previousState.current.searchTerm = normalizedSearch;
+        return;
+      }
+      
+      if (import.meta.env.DEV) {
+        console.debug('[ViewportManager] State change detected:', {
+          searchChanged,
+          selectedChanged,
+          focusChanged, 
+          depthChanged,
+          currentPriority,
+          searchTerm: normalizedSearch || 'none',
+          selectedNodeId: selectedNodeId || 'none',
+          focusedNodeId: focusedNodeId || 'none',
+          connectionDepth: connectionDepth || 'none'
+        });
+      }
+      
+      // Throttle rapid changes to prevent viewport thrashing
+      if (isThrottledRef.current) {
+        if (import.meta.env.DEV) {
+          console.debug('[ViewportManager] Throttling rapid viewport change');
+        }
+        if (throttleRef.current) {
+          clearTimeout(throttleRef.current);
+        }
+        throttleRef.current = setTimeout(() => {
+          isThrottledRef.current = false;
+          executeViewportChange(currentPriority);
+        }, 100);
+        return;
+      }
+      
+      // Mark as throttled and execute immediately
+      isThrottledRef.current = true;
+      executeViewportChange(currentPriority);
+      
+      // Reset throttle after a delay
+      throttleRef.current = setTimeout(() => {
+        isThrottledRef.current = false;
+      }, 150);
+      
+      // Update previous state
+      previousState.current = {
+        searchTerm: normalizedSearch,
+        selectedNodeId,
+        focusedNodeId,
+        connectionDepth
+      };
+    }
+  }, [searchTerm, selectedNodeId, focusedNodeId, connectionDepth, getCurrentPriority, executeViewportChange]);
+  
+  // Cleanup throttle timeout
+  useEffect(() => {
+    return () => {
+      if (throttleRef.current) {
+        clearTimeout(throttleRef.current);
+      }
+    };
+  }, []);
+  
+  /**
+   * Manual viewport control methods
+   */
+  const manualControls = useMemo(() => ({
+    /**
+     * Force focus on search results (bypasses priority logic)
+     */
+    focusSearchResults: (query: string) => {
+      if (import.meta.env.DEV) {
+        console.debug('[ViewportManager] Manual focus on search:', query);
+      }
+      fitToSearchResults(query, { padding: 0.25, duration: 600 });
+    },
+    
+    /**
+     * Force focus on specific nodes (bypasses priority logic)
+     */
+    focusNodes: (nodeIds: string[]) => {
+      if (import.meta.env.DEV) {
+        console.debug('[ViewportManager] Manual focus on nodes:', nodeIds);
+      }
+      fitToNodes(nodeIds, { padding: 0.3, duration: 600 });
+    },
+    
+    /**
+     * Force fit all visible nodes (bypasses priority logic)
+     */
+    fitAll: () => {
+      if (import.meta.env.DEV) {
+        console.debug('[ViewportManager] Manual fit all nodes');
+      }
+      zoomToFit();
+    },
+    
+    /**
+     * Get current priority level for debugging
+     */
+    getCurrentPriority,
+    
+    /**
+     * Debounced version for rapid changes
+     */
+    debouncedFocusSearchResults: (query: string, delay?: number) => {
+      debouncedFitToSearchResults(query, delay);
+    }
+  }), [
+    fitToSearchResults, 
+    fitToNodes, 
+    zoomToFit, 
+    getCurrentPriority, 
+    debouncedFitToSearchResults
+  ]);
+  
+  return manualControls;
 }

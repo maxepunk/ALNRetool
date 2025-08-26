@@ -14,6 +14,8 @@ import type { FilterState } from '@/stores/filterStore';
 describe('URL State Management', () => {
   const mockFilterState: FilterState = {
     searchTerm: 'test search',
+    selectedNodeId: 'node-789',
+    focusedNodeId: 'node-789',
     connectionDepth: 5,
     activeView: 'node-connections',
     puzzleFilters: {
@@ -31,11 +33,12 @@ describe('URL State Management', () => {
     contentFilters: {
       contentStatus: new Set(['draft', 'review']),
       hasIssues: true,
-      lastEditedRange: 'week'
+      lastEditedRange: 'week',
+      elementBasicTypes: new Set(),
+      elementStatus: new Set()
     },
     nodeConnectionsFilters: {
-      nodeType: 'character',
-      selectedNodeId: 'node-789'
+      nodeType: 'character'
     }
   };
 
@@ -58,12 +61,15 @@ describe('URL State Management', () => {
       expect(params.get('issues')).toBe('true');
       expect(params.get('edited')).toBe('week');
       expect(params.get('nodeType')).toBe('character');
-      expect(params.get('nodeId')).toBe('node-789');
+      expect(params.get('selectedNodeId')).toBe('node-789');
+      expect(params.get('focusedNodeId')).toBe('node-789');
     });
 
     it('should skip default values', () => {
       const minimalState: FilterState = {
         searchTerm: '',
+        selectedNodeId: null,
+        focusedNodeId: null,
         connectionDepth: 3, // Default value
         activeView: null,
         puzzleFilters: {
@@ -81,7 +87,9 @@ describe('URL State Management', () => {
         contentFilters: {
           contentStatus: new Set(),
           hasIssues: null,
-          lastEditedRange: 'all' // Default value
+          lastEditedRange: 'all', // Default value
+          elementBasicTypes: new Set(),
+          elementStatus: new Set()
         },
         nodeConnectionsFilters: null
       };
@@ -109,7 +117,8 @@ describe('URL State Management', () => {
         issues: 'true',
         edited: 'week',
         nodeType: 'character',
-        nodeId: 'node-789'
+        selectedNodeId: 'node-789',
+        focusedNodeId: 'node-focused'
       });
       
       const state = urlToFilterState(params);
@@ -129,7 +138,8 @@ describe('URL State Management', () => {
       expect(state.contentFilters?.hasIssues).toBe(true);
       expect(state.contentFilters?.lastEditedRange).toBe('week');
       expect(state.nodeConnectionsFilters?.nodeType).toBe('character');
-      expect(state.nodeConnectionsFilters?.selectedNodeId).toBe('node-789');
+      expect(state.selectedNodeId).toBe('node-789');
+      expect(state.focusedNodeId).toBe('node-focused');
     });
 
     it('should validate and filter invalid values', () => {
@@ -173,6 +183,8 @@ describe('URL State Management', () => {
     it('should return base path when no filters', () => {
       const minimalState: FilterState = {
         searchTerm: '',
+        selectedNodeId: null,
+        focusedNodeId: null,
         connectionDepth: 3,
         activeView: null,
         puzzleFilters: {
@@ -190,7 +202,9 @@ describe('URL State Management', () => {
         contentFilters: {
           contentStatus: new Set(),
           hasIssues: null,
-          lastEditedRange: 'all'
+          lastEditedRange: 'all',
+          elementBasicTypes: new Set(),
+          elementStatus: new Set()
         },
         nodeConnectionsFilters: null
       };
@@ -219,7 +233,8 @@ describe('URL State Management', () => {
       // Test other properties
       expect(reconstructedState.puzzleFilters?.selectedPuzzleId).toBe(mockFilterState.puzzleFilters.selectedPuzzleId);
       expect(reconstructedState.characterFilters?.selectedCharacterId).toBe(mockFilterState.characterFilters.selectedCharacterId);
-      expect(reconstructedState.nodeConnectionsFilters?.selectedNodeId).toBe(mockFilterState.nodeConnectionsFilters?.selectedNodeId);
+      expect(reconstructedState.selectedNodeId).toBe(mockFilterState.selectedNodeId);
+      expect(reconstructedState.focusedNodeId).toBe(mockFilterState.focusedNodeId);
     });
   });
 });

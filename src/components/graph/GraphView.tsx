@@ -32,7 +32,7 @@
  * @see {@link applyPureDagreLayout} for layout algorithm
  */
 
-import { useMemo, useEffect, useState, useCallback } from 'react';
+import { useMemo, useEffect, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
@@ -43,14 +43,13 @@ import {
   BackgroundVariant,
   ReactFlowProvider
 } from '@xyflow/react';
-import type { Edge } from '@xyflow/react';
+import type { Edge, Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import PuzzleNode from './nodes/PuzzleNode';
 import CharacterNode from './nodes/CharacterNode';
 import ElementNode from './nodes/ElementNode';
 import TimelineNode from './nodes/TimelineNode';
-import GraphControls from './GraphControls';
 import { DetailPanelRefactored } from '@/components/DetailPanel';
 import { applyPureDagreLayout } from '@/lib/graph/layout/dagre';
 import { useAllEntityData } from '@/hooks/generic/useEntityData';
@@ -58,10 +57,10 @@ import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/
 import { queryKeys } from '@/lib/queryKeys';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { resolveAllRelationships } from '@/lib/graph/relationships';
-import type { GraphNode } from '@/lib/graph/types';
-import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
-// Removed unused mutation imports
+import type { GraphNode, GraphEdge } from '@/lib/graph/types';
+import type { Character, Puzzle } from '@/types/notion/app';
 import { useFilterStore } from '@/stores/filterStore';
+import { useViewportManager } from '@/hooks/useGraphState';
 
 /**
  * Custom node component mapping for React Flow.
@@ -77,7 +76,41 @@ const nodeTypes = {
 };
 
 /**
- * GraphView - Interactive graph visualization component.
+ * ViewportController - Component that manages viewport within React Flow context
+ * Must be rendered as a child of ReactFlow to access useReactFlow hook
+ */
+function ViewportController({ 
+  searchTerm,
+  selectedNodeId,
+  focusedNodeId, 
+  connectionDepth,
+  nodes 
+}: { 
+  searchTerm: string;
+  selectedNodeId: string | null;
+  focusedNodeId: string | null;
+  connectionDepth: number | null;
+  nodes: Node[];
+}) {
+  const viewportControls = useViewportManager(searchTerm, selectedNodeId, focusedNodeId, connectionDepth, nodes);
+  
+  // Initial fit to view on mount or when nodes change significantly
+  const hasNodes = nodes.length > 0;
+  useEffect(() => {
+    if (hasNodes) {
+      // Small delay to ensure nodes are rendered
+      const timer = setTimeout(() => {
+        viewportControls.fitAll();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [hasNodes, viewportControls]); // Only re-fit when going from 0 to >0 nodes
+  
+  return null; // This component doesn't render anything
+}
+
+/**
+ * GraphViewComponent - Internal graph visualization component.
  * 
  * @component
  * @returns {JSX.Element} React Flow graph with controls and detail panel
@@ -98,32 +131,24 @@ const nodeTypes = {
  * 
  * **Complexity:** O(n*m) where n = nodes, m = edges for layout
  */
-export default function GraphView() {
+function GraphViewComponent() {
   // Get view configuration from route
   const { config: viewConfig } = useViewConfig();
   
-  /**
-   * Selected node state for detail panel editing.
-   * Contains the entity data and type for the detail panel.
-   */
-  const [selectedNode, setSelectedNode] = useState<{
-    entity: Character | Element | Puzzle | TimelineEvent;
-    entityType: 'character' | 'element' | 'puzzle' | 'timeline';
-  } | null>(null);
-  
-  /**
-   * Focused node ID for connection depth filtering.
-   * When set, only nodes within N connections are shown.
-   */
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
-  
-  // Filter state from store
+  // Filter state from store - select specific properties to avoid unstable references
   const searchTerm = useFilterStore(state => state.searchTerm);
+  const selectedNodeId = useFilterStore(state => state.selectedNodeId);
+  const focusedNodeId = useFilterStore(state => state.focusedNodeId);
+  const setSelectedNode = useFilterStore(state => state.setSelectedNode);
+  const setFocusedNode = useFilterStore(state => state.setFocusedNode);
   const connectionDepth = useFilterStore(state => state.connectionDepth);
-  const characterFilters = useFilterStore(state => state.characterFilters);
-  const puzzleFilters = useFilterStore(state => state.puzzleFilters);
   
-  console.log('GraphView render - searchTerm:', searchTerm);
+  // Select specific filter properties instead of whole objects to prevent infinite loops
+  const characterSelectedTiers = useFilterStore(state => state.characterFilters.selectedTiers);
+  const characterType = useFilterStore(state => state.characterFilters.characterType);
+  const puzzleSelectedActs = useFilterStore(state => state.puzzleFilters.selectedActs);
+  const puzzleCompletionStatus = useFilterStore(state => state.puzzleFilters.completionStatus);
+  
   
   // Fetch data based on view config
   const shouldFetchCharacters = viewConfig.filters.entityTypes?.includes('all') || 
@@ -141,6 +166,8 @@ export default function GraphView() {
   const { data: puzzles = [] } = useAllEntityData(puzzlesApi, queryKeys.puzzles());
   const { data: timeline = [] } = useAllEntityData(timelineApi, queryKeys.timeline());
 
+
+
   /**
    * Create all graph nodes from entity data.
    * Applies filtering based on view config and user selections.
@@ -149,7 +176,6 @@ export default function GraphView() {
    * @returns {GraphNode[]} Array of nodes with positions and metadata
    */
   const allNodes = useMemo(() => {
-    console.log('Creating nodes with searchTerm:', searchTerm);
     const nodes: GraphNode[] = [];
     
     /**
@@ -175,13 +201,13 @@ export default function GraphView() {
      * @returns {boolean} True if passes all filters
      */
     const matchesCharacterFilters = (character: Character): boolean => {
-      if (characterFilters.selectedTiers.size > 0) {
+      if (characterSelectedTiers.size > 0) {
         const tier = character.tier || 'Standard';
-        if (!characterFilters.selectedTiers.has(tier as any)) return false;
+        if (!characterSelectedTiers.has(tier as any)) return false;
       }
-      if (characterFilters.characterType !== 'all') {
+      if (characterType !== 'all') {
         const type = character.type || 'Player';
-        if (type !== characterFilters.characterType) return false;
+        if (type !== characterType) return false;
       }
       return true;
     };
@@ -195,26 +221,22 @@ export default function GraphView() {
      */
     const matchesPuzzleFilters = (puzzle: Puzzle): boolean => {
       // Check act filter
-      if (puzzleFilters.selectedActs.size > 0) {
+      if (puzzleSelectedActs.size > 0) {
         // Puzzle has timing: Act[] field, not act field
         // Check if ANY of the puzzle's timing acts match the selected acts
         const puzzleActs = puzzle.timing || [];
-        const hasMatchingAct = puzzleActs.some(act => {
+        const hasMatchingAct = puzzleActs.some((act) => {
           // Convert Act format ('Act 0', 'Act 1', 'Act 2') to filter format ('Act0', 'Act1', 'Act2')
           const normalizedAct = act ? act.replace(' ', '') : '';
-          return puzzleFilters.selectedActs.has(normalizedAct);
+          return puzzleSelectedActs.has(normalizedAct);
         });
         
-        console.log(`Puzzle ${puzzle.name} - Acts: ${puzzleActs.join(', ')}, Filter has: ${Array.from(puzzleFilters.selectedActs)}, Matches: ${hasMatchingAct}`);
         if (!hasMatchingAct) return false;
       }
       
       // Note: Puzzle type doesn't have a completed field
       // Completion status filtering would need to be implemented differently
       // For now, ignore completion status filter since the data doesn't support it
-      if (puzzleFilters.completionStatus !== 'all') {
-        console.warn(`Completion status filtering not supported - Puzzle type lacks 'completed' field`);
-      }
       
       return true;
     };
@@ -225,9 +247,6 @@ export default function GraphView() {
         // Only filter by puzzle-specific filters, not search (search should highlight, not hide)
         if (matchesPuzzleFilters(puzzle)) {
           const isMatch = searchTerm ? matchesSearch(puzzle) : false;
-          if (searchTerm && isMatch) {
-            console.log(`Puzzle "${puzzle.name}" matches search "${searchTerm}"`);
-          }
           nodes.push({
             id: puzzle.id,
             type: 'puzzle',
@@ -275,7 +294,6 @@ export default function GraphView() {
     
     // Add element nodes if enabled and they pass filters
     if (shouldFetchElements) {
-      console.log(`[GraphView] Adding ${elements.length} element nodes`);
       elements.forEach(element => {
         // No element-specific filters currently, just add all
         nodes.push({
@@ -329,10 +347,10 @@ export default function GraphView() {
     shouldFetchPuzzles,
     shouldFetchTimeline,
     searchTerm,
-    characterFilters.selectedTiers,
-    characterFilters.characterType,
-    puzzleFilters.selectedActs,
-    puzzleFilters.completionStatus
+    characterSelectedTiers,
+    characterType,
+    puzzleSelectedActs,
+    puzzleCompletionStatus
   ]);
 
   /**
@@ -402,28 +420,30 @@ export default function GraphView() {
       characters,
       elements, 
       puzzles,
-      timeline,
-      allNodes
+      timeline
     );
-    console.log(`[GraphView] Created ${edges.length} total edges`);
-    const rewardEdges = edges.filter(e => e.data?.relationshipType === 'reward');
-    console.log(`[GraphView] Found ${rewardEdges.length} reward edges:`, rewardEdges);
     return edges;
   }, [characters, elements, puzzles, timeline, allNodes]);
 
-  // Filter nodes based on focused node and depth
-  const filteredNodes = useMemo(() => {
+  // Calculate the set of node IDs within connection depth once to avoid duplication
+  const nodesWithinDepth = useMemo(() => {
     if (!focusedNodeId || !connectionDepth || connectionDepth > 10) {
-      return allNodes;
+      return null;
     }
     
-    // Get the set of node IDs within depth
-    const nodesWithinDepth = getNodesWithinDepth(
+    return getNodesWithinDepth(
       focusedNodeId,
       allNodes,
       allEdges,
       connectionDepth
     );
+  }, [allNodes, allEdges, focusedNodeId, connectionDepth, getNodesWithinDepth]);
+
+  // Filter nodes based on focused node and depth
+  const filteredNodes = useMemo(() => {
+    if (!nodesWithinDepth) {
+      return allNodes;
+    }
     
     // Filter nodes to only include those within depth and add focus metadata
     return allNodes
@@ -438,31 +458,25 @@ export default function GraphView() {
           }
         }
       }));
-  }, [allNodes, allEdges, focusedNodeId, connectionDepth, getNodesWithinDepth]);
+  }, [allNodes, nodesWithinDepth, focusedNodeId]);
 
   // Filter edges based on visible nodes
   const filteredEdges = useMemo(() => {
-    if (!focusedNodeId || !connectionDepth || connectionDepth > 10) {
+    if (!nodesWithinDepth) {
       return allEdges;
     }
-    
-    // Get the set of node IDs within depth
-    const nodesWithinDepth = getNodesWithinDepth(
-      focusedNodeId,
-      allNodes,
-      allEdges,
-      connectionDepth
-    );
     
     // Filter edges to only include those between visible nodes
     return allEdges.filter(edge => 
       nodesWithinDepth.has(edge.source) && nodesWithinDepth.has(edge.target)
     );
-  }, [allNodes, allEdges, focusedNodeId, connectionDepth, getNodesWithinDepth]);
+  }, [allEdges, nodesWithinDepth]);
 
   // Apply layout to nodes using view config
   const layoutedNodes = useMemo(() => {
-    if (filteredNodes.length === 0) return [];
+    if (filteredNodes.length === 0) {
+      return [];
+    }
     
     // Apply layout with view-specific configuration
     const layoutConfig = {
@@ -473,134 +487,156 @@ export default function GraphView() {
       rankSpacing: viewConfig.layout.spacing?.rankSpacing || 300
     };
     
-    return applyPureDagreLayout(filteredNodes, filteredEdges, layoutConfig);
+    const result = applyPureDagreLayout(filteredNodes, filteredEdges, layoutConfig);
+    return result;
   }, [filteredNodes, filteredEdges, viewConfig]);
 
-  // React Flow state
-  const [nodes, setNodes, onNodesChange] = useNodesState(layoutedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(filteredEdges);
-  
-  // Update nodes when layout changes
+  // React Flow state - initialize with empty state to avoid race conditions
+  const [nodes, setNodes, onNodesChange] = useNodesState<GraphNode>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<GraphEdge>([]);
+
+  // Sync computed values to React Flow state atomically to prevent race conditions
   useEffect(() => {
+    // Update both nodes and edges in a single effect to ensure atomic updates
+    // This prevents React Flow from rendering incomplete graph state that breaks
+    // minimap and edge rendering during layout transitions
+    
     setNodes(layoutedNodes);
-  }, [layoutedNodes, setNodes]);
-  
-  // Update edges when they change
-  useEffect(() => {
     setEdges(filteredEdges);
-  }, [filteredEdges, setEdges]);
+  }, [layoutedNodes, filteredEdges, setNodes, setEdges]);
+
+  // Derive selected entity from selectedNodeId
+  const selectedEntity = useMemo(() => {
+    if (!selectedNodeId) return null;
+    
+    // Find the node with the selected ID
+    const node = allNodes.find(n => n.id === selectedNodeId);
+    if (!node) {
+      // Node might not exist yet if data is still loading
+      return null;
+    }
+    
+    // Get entity directly from node data
+    const entity = node.data.entity;
+    const entityType = node.data.metadata?.entityType;
+    
+    if (!entity || !entityType) {
+      console.warn('Node missing entity or entityType:', node);
+      return null;
+    }
+    
+    // Return the entity with its type
+    return { entity, entityType };
+  }, [selectedNodeId, allNodes]);
 
   // Click handlers for node interaction
   const onNodeClick = (nodeId: string) => {
-    // Find the clicked node in our data
-    const clickedNode = layoutedNodes.find(node => node.id === nodeId);
-    if (!clickedNode) return;
-    
-    const nodeData = clickedNode.data;
-    if (!nodeData.entity || !nodeData.metadata?.entityType) return;
+    // Always open detail panel for the clicked node
+    setSelectedNode(nodeId);
     
     // Toggle focused node for depth filtering
     if (focusedNodeId === nodeId) {
-      // Clicking the same node again unfocuses it
-      setFocusedNodeId(null);
+      // Clicking the same focused node again unfocuses it
+      setFocusedNode(null);
     } else {
       // Set as focused node for depth filtering
-      setFocusedNodeId(nodeId);
+      setFocusedNode(nodeId);
     }
-    
-    // Set selected node for detail panel
-    setSelectedNode({
-      entity: nodeData.entity,
-      entityType: nodeData.metadata.entityType
-    });
   };
   
-  const onEdgeClick = (edgeId: string) => {
-    console.log('Edge clicked:', edgeId);
+  const onEdgeClick = () => {
+    // Edge click handler - currently no action needed
   };
-  
-  // Update selectedNode.entity with fresh data after mutations
-  useEffect(() => {
-    if (selectedNode) {
-      // Find the updated entity in the refreshed data arrays
-      let updatedEntity: Character | Element | Puzzle | TimelineEvent | null = null;
-      
-      switch (selectedNode.entityType) {
-        case 'character':
-          updatedEntity = characters.find(c => c.id === selectedNode.entity.id) || null;
-          break;
-        case 'element':
-          updatedEntity = elements.find(e => e.id === selectedNode.entity.id) || null;
-          break;
-        case 'puzzle':
-          updatedEntity = puzzles.find(p => p.id === selectedNode.entity.id) || null;
-          break;
-        case 'timeline':
-          updatedEntity = timeline.find(t => t.id === selectedNode.entity.id) || null;
-          break;
-      }
-      
-      // Update selectedNode with fresh entity data if found
-      if (updatedEntity && updatedEntity !== selectedNode.entity) {
-        setSelectedNode({
-          ...selectedNode,
-          entity: updatedEntity
-        });
-      }
-    }
-  }, [selectedNode, characters, elements, puzzles, timeline]);
 
-  // Handle detail panel close - also clears focus
+  // Handle detail panel close - only clears selection, not focus
   const handleDetailPanelClose = () => {
     setSelectedNode(null);
-    setFocusedNodeId(null);  // Clear focus when closing detail panel
+    // Keep focusedNodeId - user might want to maintain the filtered view
   };
 
   return (
     <div className="h-full w-full flex">
       <div className="flex-1 relative">
-        {/* Focus indicator - shows when a node is selected */}
+        {/* Focus indicator with clear button */}
         {focusedNodeId && connectionDepth && connectionDepth <= 10 && (
           <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
-            <div className="text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Viewing connections within </span>
-              <span className="font-semibold text-blue-600 dark:text-blue-400">{connectionDepth}</span>
-              <span className="text-gray-600 dark:text-gray-400"> levels</span>
+            <div className="flex items-center gap-3">
+              <div className="text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Viewing connections within </span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">{connectionDepth}</span>
+                <span className="text-gray-600 dark:text-gray-400"> levels</span>
+              </div>
+              <button
+                onClick={() => setFocusedNode(null)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                title="Clear focus filter"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
           </div>
         )}
         
-        <ReactFlowProvider>
-          <ReactFlow
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={(_, node) => onNodeClick(node.id)}
+          onEdgeClick={onEdgeClick}
+          nodeTypes={nodeTypes}
+          minZoom={0.1}
+          maxZoom={2}
+        >
+          <ViewportController 
+            searchTerm={searchTerm}
+            selectedNodeId={selectedNodeId}
+            focusedNodeId={focusedNodeId}
+            connectionDepth={connectionDepth}
             nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onNodeClick={(_, node) => onNodeClick(node.id)}
-            onEdgeClick={(_, edge) => onEdgeClick(edge.id)}
-            nodeTypes={nodeTypes}
-            fitView
-            minZoom={0.1}
-            maxZoom={2}
-          >
-            <Background 
-              variant={BackgroundVariant.Dots} 
-              gap={16} 
-              size={1} 
-              className="bg-gray-50 dark:bg-gray-900"
-            />
-            <Controls />
-            <MiniMap />
-            <GraphControls />
-          </ReactFlow>
-        </ReactFlowProvider>
+          />
+          <Background 
+            variant={BackgroundVariant.Dots} 
+            gap={16} 
+            size={1} 
+            className="bg-gray-50 dark:bg-gray-900"
+          />
+          <Controls />
+          <MiniMap 
+            nodeColor={(node) => {
+              switch (node.type) {
+                case 'puzzle': return '#f59e0b'; // amber
+                case 'character': return '#10b981'; // green
+                case 'element': return '#8b5cf6'; // purple
+                case 'timeline': return '#f97316'; // orange
+                default: 
+                  return '#6b7280'; // gray
+              }
+            }}
+            nodeStrokeWidth={3}
+            nodeStrokeColor="#000000"
+            nodeBorderRadius={4}
+            maskColor="rgba(100, 100, 100, 0.1)"
+            zoomable
+            pannable
+            style={{
+              width: 200,
+              height: 150,
+              // Hide MiniMap only when we have no nodes to show
+              opacity: nodes.length === 0 ? 0 : 1,
+              pointerEvents: nodes.length === 0 ? 'none' : 'auto'
+            }}
+          />
+        </ReactFlow>
       </div>
       
       {/* Detail Panel */}
-      {selectedNode && (
+      {selectedEntity && (
         <DetailPanelRefactored
-          entity={selectedNode.entity}
-          entityType={selectedNode.entityType}
+          entity={selectedEntity.entity}
+          entityType={selectedEntity.entityType}
           onClose={handleDetailPanelClose}
           allEntities={{
             characters,
@@ -611,5 +647,22 @@ export default function GraphView() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * GraphView - Provider wrapper that enables React Flow context access.
+ * 
+ * This wrapper ensures the GraphViewComponent can access useReactFlow hook
+ * for dynamic viewport management and other React Flow API features.
+ * 
+ * @component
+ * @returns {JSX.Element} GraphViewComponent wrapped in ReactFlowProvider
+ */
+export default function GraphView() {
+  return (
+    <ReactFlowProvider>
+      <GraphViewComponent />
+    </ReactFlowProvider>
   );
 }

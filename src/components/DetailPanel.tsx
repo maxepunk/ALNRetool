@@ -572,14 +572,7 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
           </div>
         ) : (
           <ErrorBoundary
-            onRetry={() => {
-              // Reset form state on retry
-              setFormData({});
-              setValidationErrors({});
-              setIsDirty(false);
-              mutation?.reset();
-            }}
-            onClose={onClose}
+            context="DetailPanel"
           >
             {/* Error display */}
             {error && (

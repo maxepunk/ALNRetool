@@ -502,7 +502,7 @@ export function applyDagreLayout(
     
     dagreGraph.setEdge(edge.source, edge.target, {
       // Weight affects edge routing
-      weight: edge.data?.strength || 1,
+      weight: edge.data?.weight || 1,
     });
   });
   
@@ -673,7 +673,7 @@ export function applyHierarchicalLayout(
     }
     
     dagreGraph.setEdge(edge.source, edge.target, {
-      weight: edge.data?.strength || 1,
+      weight: edge.data?.weight || 1,
     });
   });
   
@@ -782,7 +782,7 @@ export function applyPuzzleChainGrouping(
   edges.forEach(edge => {
     if (validNodeIds.has(edge.source) && validNodeIds.has(edge.target)) {
       dagreGraph.setEdge(edge.source, edge.target, {
-        weight: edge.data?.strength || 1,
+        weight: edge.data?.weight || 1,
       });
     }
   });

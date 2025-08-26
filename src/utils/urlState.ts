@@ -119,10 +119,15 @@ export function filterStateToUrl(state: FilterState): URLSearchParams {
   // Node connections filters
   if (state.nodeConnectionsFilters) {
     params.set('nodeType', state.nodeConnectionsFilters.nodeType);
-    
-    if (state.nodeConnectionsFilters.selectedNodeId) {
-      params.set('nodeId', state.nodeConnectionsFilters.selectedNodeId);
-    }
+  }
+  
+  // Node selection (separate from nodeConnectionsFilters)
+  if (state.selectedNodeId) {
+    params.set('selectedNodeId', state.selectedNodeId);
+  }
+  
+  if (state.focusedNodeId) {
+    params.set('focusedNodeId', state.focusedNodeId);
   }
   
   return params;
@@ -251,10 +256,20 @@ export function urlToFilterState(params: URLSearchParams): Partial<FilterState> 
   const nodeType = params.get('nodeType');
   if (nodeType && ['character', 'puzzle', 'element', 'timeline'].includes(nodeType)) {
     const nodeConnectionsFilters: NodeConnectionsFilters = {
-      nodeType: nodeType as NodeConnectionsFilters['nodeType'],
-      selectedNodeId: params.get('nodeId') || null
+      nodeType: nodeType as NodeConnectionsFilters['nodeType']
     };
     state.nodeConnectionsFilters = nodeConnectionsFilters;
+  }
+  
+  // Node selection (separate from nodeConnectionsFilters)
+  const selectedNodeId = params.get('selectedNodeId');
+  if (selectedNodeId) {
+    state.selectedNodeId = selectedNodeId;
+  }
+  
+  const focusedNodeId = params.get('focusedNodeId');
+  if (focusedNodeId) {
+    state.focusedNodeId = focusedNodeId;
   }
   
   return state;

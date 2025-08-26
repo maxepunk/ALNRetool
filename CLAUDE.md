@@ -6,9 +6,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ALNRetool is a visualization and editing tool for "About Last Night," a 20-40 player murder mystery game. It enables puzzle and narrative designers to visualize and edit game content stored in Notion databases through interactive graph interfaces with React Flow.
 
-**REFACTORING STATUS**: Major architectural refactoring completed (39% total code reduction from 280→172 files). Phase E cleanup complete. See Architecture_Cleanup.md for details.
-**CURRENT FOCUS**: Production-ready codebase with streamlined architecture and full functionality.
-
 ## Key Technical Context
 
 ### Architecture Overview

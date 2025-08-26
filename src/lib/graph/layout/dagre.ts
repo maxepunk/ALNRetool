@@ -366,7 +366,7 @@ export function applyPureDagreLayout(
   // Element clustering removed in Phase 3
 
   // Log some metrics about the layout
-  const bounds = calculateBounds(positionedNodes);
+  // const bounds = calculateBounds(positionedNodes);
   // logger.debug('[Pure Dagre] Layout complete:', undefined, {
   //   nodesPositioned: positionedNodes.length,
   //   bounds: {
@@ -536,59 +536,59 @@ function getNodeHeight(node: GraphNode): number {
   return baseHeights[entityType] || 60;
 }
 
-/**
- * Calculate bounding box of positioned nodes
- * 
- * @function calculateBounds
- * @description Computes the minimum bounding rectangle that contains all nodes
- * in the graph. Used for viewport calculations, centering, and layout metrics.
- * 
- * @param {GraphNode[]} nodes - Array of positioned nodes
- * 
- * @returns {Object} Bounding box coordinates
- * @returns {number} minX - Leftmost x coordinate
- * @returns {number} minY - Topmost y coordinate  
- * @returns {number} maxX - Rightmost x coordinate
- * @returns {number} maxY - Bottommost y coordinate
- * 
- * @internal
- * @complexity O(n) where n = nodes.length
- * 
- * @example
- * ```typescript
- * const bounds = calculateBounds(positionedNodes);
- * const graphWidth = bounds.maxX - bounds.minX;
- * const graphHeight = bounds.maxY - bounds.minY;
- * ```
- */
-function calculateBounds(nodes: GraphNode[]): {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-} {
-  if (nodes.length === 0) {
-    return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
-  }
-  
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  
-  nodes.forEach(node => {
-    const x = node.position.x;
-    const y = node.position.y;
-    const width = node.width || 100;
-    const height = node.height || 50;
-    
-    minX = Math.min(minX, x);
-    minY = Math.min(minY, y);
-    maxX = Math.max(maxX, x + width);
-    maxY = Math.max(maxY, y + height);
-  });
-  
-  return { minX, minY, maxX, maxY };
-}
+// /**
+//  * Calculate bounding box of positioned nodes
+//  * 
+//  * @function calculateBounds
+//  * @description Computes the minimum bounding rectangle that contains all nodes
+//  * in the graph. Used for viewport calculations, centering, and layout metrics.
+//  * 
+//  * @param {GraphNode[]} nodes - Array of positioned nodes
+//  * 
+//  * @returns {Object} Bounding box coordinates
+//  * @returns {number} minX - Leftmost x coordinate
+//  * @returns {number} minY - Topmost y coordinate  
+//  * @returns {number} maxX - Rightmost x coordinate
+//  * @returns {number} maxY - Bottommost y coordinate
+//  * 
+//  * @internal
+//  * @complexity O(n) where n = nodes.length
+//  * 
+//  * @example
+//  * ```typescript
+//  * const bounds = calculateBounds(positionedNodes);
+//  * const graphWidth = bounds.maxX - bounds.minX;
+//  * const graphHeight = bounds.maxY - bounds.minY;
+//  * ```
+//  */
+// function calculateBounds(nodes: GraphNode[]): {
+//   minX: number;
+//   minY: number;
+//   maxX: number;
+//   maxY: number;
+// } {
+//   if (nodes.length === 0) {
+//     return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
+//   }
+//   
+//   let minX = Infinity;
+//   let minY = Infinity;
+//   let maxX = -Infinity;
+//   let maxY = -Infinity;
+//   
+//   nodes.forEach(node => {
+//     const x = node.position.x;
+//     const y = node.position.y;
+//     const width = node.width || 100;
+//     const height = node.height || 50;
+//     
+//     minX = Math.min(minX, x);
+//     minY = Math.min(minY, y);
+//     maxX = Math.max(maxX, x + width);
+//     maxY = Math.max(maxY, y + height);
+//   });
+//   
+//   return { minX, minY, maxX, maxY };
+// }
 
 

@@ -1,9 +1,7 @@
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { Toaster } from 'react-hot-toast';
 import AppRouter from './router/AppRouter';
-import { FeatureFlagAdmin } from './components/FeatureFlagAdmin';
 import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 import { ViewContextProvider } from '@/contexts/ViewContext';
 // GraphContextProvider removed in Phase 3 cleanup
@@ -32,8 +30,6 @@ function App() {
           <AppRouter />
         </ViewContextProvider>
       </BrowserRouter>
-      <ReactQueryDevtools initialIsOpen={false} />
-      <FeatureFlagAdmin />
       <Toaster 
         position="top-right"
         toastOptions={{

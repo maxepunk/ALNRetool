@@ -83,11 +83,10 @@ import type {
   EntityLookupMaps, 
   RelationshipType,
   EntityType,
-  PlaceholderNodeData,
-  GraphNode
+  PlaceholderNodeData
 } from './types';
 import type { Node } from '@xyflow/react';
-import { createEdge, calculateSmartWeight, getEdgeKey } from './edges';
+import { createEdge } from './edges';
 
 
 
@@ -392,7 +391,7 @@ export function createPlaceholderNode(
  * 
  * // Filter edges by ownership strength
  * const strongOwnership = ownershipEdges.filter(edge => 
- *   edge.data.strength > 0.8
+ *   edge.data.weight > 0.8
  * );
  * 
  * // Investigation ownership network analysis
@@ -457,8 +456,6 @@ export function createOwnershipEdges(
       edge.data = {
         ...edge.data,
         relationshipType: 'ownership',
-        label: 'owns',
-        strength: 0.9,
       };
       edges.push(edge as GraphEdge);
     }
@@ -583,8 +580,6 @@ export function createRequirementEdges(
         edge.data = {
           ...edge.data,
           relationshipType: 'requirement',
-          label: 'needs',
-          strength: 0.8,
         };
         edges.push(edge as GraphEdge);
       }
@@ -719,8 +714,6 @@ export function createRewardEdges(
         edge.data = {
           ...edge.data,
           relationshipType: 'reward',
-          label: 'gives',
-          strength: 0.7,
         };
         edges.push(edge as GraphEdge);
       }
@@ -858,8 +851,6 @@ export function createTimelineEdges(
       edge.data = {
         ...edge.data,
         relationshipType: 'timeline',
-        label: 'appears in',
-        strength: 0.5,
       };
       edges.push(edge as GraphEdge);
     }
@@ -989,18 +980,15 @@ export function createContainerEdges(
       const edge = createEdge(
         element.id,   // Container is source
         contentId,    // Content element is target
-        'relationship'  // Using 'relationship' as 'container' is not in RelationshipType
+        'container'   // Now using proper 'container' type
       );
       
       if (edge) {
-        // Add metadata for backward compatibility
+        // Add metadata for container relationship
         edge.data = {
           ...edge.data,
-          relationshipType: 'container' as any,  // Override for backward compatibility
-          label: 'contains',
-          strength: 0.7,
         };
-        edges.push(edge as GraphEdge);
+        edges.push(edge);
       }
     });
   });
@@ -1041,8 +1029,10 @@ export function createCharacterPuzzleEdges(
         edges.push(createEdge(
           character.id,
           puzzleId,
-          'character-puzzle' as RelationshipType,
-          calculateSmartWeight('character-puzzle' as RelationshipType, 2) // Medium weight
+          'relationship',
+          undefined, // sourceNode
+          undefined, // targetNode
+          { weight: 2 } // Medium weight
         ));
       } else {
         console.warn(`Character ${character.name} references missing puzzle: ${puzzleId}`);
@@ -1186,13 +1176,10 @@ export function resolveAllRelationships(
   characters: Character[],
   elements: Element[],
   puzzles: Puzzle[],
-  timeline: TimelineEvent[],
-  nodes?: GraphNode[]
+  timeline: TimelineEvent[]
 ): GraphEdge[] {
   // Build lookup maps for efficient resolution
   const lookupMaps = buildLookupMaps(characters, elements, puzzles, timeline);
-  
-  console.group('Resolving relationships with smart edge weighting');
   
   // Create all edge types directly using the refactored functions
   const ownershipEdges = createOwnershipEdges(elements, lookupMaps);
@@ -1211,25 +1198,6 @@ export function resolveAllRelationships(
     ...containerEdges,
     ...characterPuzzleEdges
   ];
-  
-  // Calculate statistics for logging
-  const totalEdges = allEdges.length;
-  const averageWeight = allEdges.reduce((sum, edge) => 
-    sum + (edge.data?.weight || 1), 0) / (totalEdges || 1);
-  
-  // Log statistics
-  console.info(`Total edges created: ${totalEdges}`);
-  console.info(`Average edge weight: ${averageWeight.toFixed(2)}`);
-  
-  // Log edge type distribution
-  const edgeTypeCount = allEdges.reduce((acc, edge) => {
-    const type = edge.data?.relationshipType || 'unknown';
-    acc[type] = (acc[type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  console.info('Edge distribution by type:', undefined, edgeTypeCount);
-  console.groupEnd();
   
   return allEdges;
 }

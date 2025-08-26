@@ -122,21 +122,3 @@ export async function waitFor(
   }
 }
 
-/**
- * Create a mock graph store for testing components that use it
- */
-export function createMockGraphStore() {
-  return {
-    nodes: [],
-    edges: [],
-    setNodes: vi.fn(),
-    setEdges: vi.fn(),
-    zoomIn: vi.fn(),
-    zoomOut: vi.fn(),
-    resetZoom: vi.fn(),
-    fitView: vi.fn(),
-    layoutAlgorithm: 'dagre' as const,
-    setLayoutAlgorithm: vi.fn(),
-    triggerRelayout: vi.fn(),
-  };
-}

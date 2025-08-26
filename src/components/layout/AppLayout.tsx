@@ -6,18 +6,20 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { Outlet, useLocation, Link } from 'react-router-dom'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useLastSyncTime } from '@/hooks/useLastSyncTime'
+import { useUIStore } from '@/stores/uiStore'
 import Breadcrumbs from '@/components/common/Breadcrumbs'
 import ConnectionStatus from '@/components/common/ConnectionStatus'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 import Sidebar from '@/components/layout/Sidebar'
+import { HeaderSearch } from '@/components/layout/HeaderSearch'
 import { 
   Menu, 
   X, 
   PanelLeft,
   Search,
-  Bell,
   User
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -25,10 +27,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout() {
-  const [leftSidebarOpen, setLeftSidebarOpen] = useState(true)
+  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed)
+  const toggleSidebar = useUIStore((state) => state.toggleSidebar)
+  const leftSidebarOpen = !sidebarCollapsed
   const [headerMinimized, setHeaderMinimized] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [isNavigationPending] = useState(false)
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
   
   const location = useLocation()
   const isOnline = useOnlineStatus()
@@ -43,10 +47,10 @@ export default function AppLayout() {
       setIsMobile(isMobileView)
       
       // Auto-manage sidebar based on screen size
-      if (isMobileView) {
-        setLeftSidebarOpen(false)
-      } else {
-        setLeftSidebarOpen(true)
+      if (isMobileView && leftSidebarOpen) {
+        toggleSidebar() // Close on mobile
+      } else if (!isMobileView && !leftSidebarOpen) {
+        toggleSidebar() // Open on desktop
       }
     }
     
@@ -75,10 +79,10 @@ export default function AppLayout() {
 
   // Close mobile menu on navigation
   useEffect(() => {
-    if (isMobile) {
-      setLeftSidebarOpen(false)
+    if (isMobile && leftSidebarOpen) {
+      toggleSidebar()
     }
-  }, [location, isMobile])
+  }, [location, isMobile, leftSidebarOpen, toggleSidebar])
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -106,12 +110,29 @@ export default function AppLayout() {
       >
         <div className="flex items-center justify-between h-14 px-4 md:px-6">
           <div className="flex items-center gap-3">
+            {/* Desktop sidebar toggle */}
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleSidebar}
+                aria-label={leftSidebarOpen ? "Close sidebar" : "Open sidebar"}
+                aria-expanded={leftSidebarOpen}
+                className="text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
+              >
+                <PanelLeft size={20} className={cn(
+                  "transition-transform duration-200",
+                  leftSidebarOpen && "rotate-180"
+                )} />
+              </Button>
+            )}
+            
             {/* Mobile menu toggle */}
             {isMobile && (
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
+                onClick={toggleSidebar}
                 aria-label={leftSidebarOpen ? "Close menu" : "Open menu"}
                 aria-expanded={leftSidebarOpen}
                 className="text-foreground hover:bg-accent/50 transition-colors"
@@ -142,19 +163,6 @@ export default function AppLayout() {
               </Button>
             )}
             
-            {/* Desktop sidebar toggle */}
-            {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setLeftSidebarOpen(!leftSidebarOpen)}
-                aria-label={leftSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-                className="text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-              >
-                <PanelLeft size={18} />
-              </Button>
-            )}
-            
             {/* Logo and Title */}
             <Link 
               to="/" 
@@ -175,22 +183,7 @@ export default function AppLayout() {
           <div className="flex items-center gap-2 md:gap-3">
             {/* Search - Desktop only */}
             {!isMobile && (
-              <div className="relative max-w-xs hidden lg:block">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className={cn(
-                    "w-full h-9 pl-9 pr-4 rounded-lg text-sm",
-                    "bg-muted/30 backdrop-blur-sm",
-                    "border border-border/50",
-                    "placeholder-muted-foreground",
-                    "focus:bg-background focus:border-primary",
-                    "focus:ring-1 focus:ring-primary focus:ring-offset-0",
-                    "transition-all duration-200"
-                  )}
-                />
-              </div>
+              <HeaderSearch className="max-w-xs hidden lg:block" />
             )}
             
             {/* Mobile Search Button */}
@@ -198,6 +191,7 @@ export default function AppLayout() {
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => setMobileSearchOpen(true)}
                 aria-label="Search"
                 className="text-muted-foreground hover:text-foreground hover:bg-accent/50"
               >
@@ -211,18 +205,6 @@ export default function AppLayout() {
               lastSyncTime={lastSyncTime}
             />
             
-            {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Notifications"
-              className="relative text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
-              title="3 new notifications"
-            >
-              <Bell size={18} />
-              {/* Notification dot */}
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
-            </Button>
             
             {/* User profile */}
             <Button
@@ -258,21 +240,7 @@ export default function AppLayout() {
         </AnimatePresence>
       </motion.header>
 
-      {/* Loading indicator */}
-      <AnimatePresence>
-        {isNavigationPending && (
-          <motion.div
-            initial={{ scaleX: 0 }}
-            animate={{ scaleX: 1 }}
-            exit={{ scaleX: 0 }}
-            transition={{ duration: 0.3 }}
-            className="h-0.5 bg-gradient-to-r from-primary via-primary/80 to-primary origin-left" 
-            data-testid="navigation-loading"
-          />
-        )}
-      </AnimatePresence>
-
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0">
         {/* Sidebar with Animation Wrapper */}
         <AnimatePresence mode="wait">
           {leftSidebarOpen && (
@@ -288,7 +256,7 @@ export default function AppLayout() {
                     stiffness: 300,
                     damping: 30
                   }}
-                  className="relative"
+                  className="relative h-full"
                 >
                   <Sidebar />
                 </motion.div>
@@ -305,7 +273,7 @@ export default function AppLayout() {
                     stiffness: 300,
                     damping: 30
                   }}
-                  className="fixed inset-y-0 left-0 z-30 mt-14"
+                  className="fixed inset-y-0 left-0 z-30 h-full"
                 >
                   <Sidebar />
                 </motion.div>
@@ -323,9 +291,47 @@ export default function AppLayout() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
               className="fixed inset-0 bg-black/50 backdrop-blur-sm z-20"
-              onClick={() => setLeftSidebarOpen(false)}
+              onClick={toggleSidebar}
               aria-hidden="true"
             />
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Search Overlay */}
+        <AnimatePresence>
+          {mobileSearchOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center pt-20"
+              onClick={() => setMobileSearchOpen(false)}
+            >
+              <motion.div
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -20, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="bg-background border border-border rounded-lg shadow-xl mx-4 w-full max-w-md"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold">Search</h3>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMobileSearchOpen(false)}
+                      aria-label="Close search"
+                    >
+                      <X size={18} />
+                    </Button>
+                  </div>
+                  <HeaderSearch isMobile />
+                </div>
+              </motion.div>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -339,32 +345,6 @@ export default function AppLayout() {
             "transition-all duration-300 ease-in-out"
           )}
         >
-          {/* Floating sidebar toggle when closed */}
-          <AnimatePresence>
-            {!leftSidebarOpen && !isMobile && (
-              <motion.div
-                initial={{ x: -20, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: -20, opacity: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={cn(
-                    "absolute left-4 top-4 z-10",
-                    "bg-background/80 backdrop-blur-sm",
-                    "border-border/50 shadow-lg",
-                    "hover:bg-accent/50"
-                  )}
-                  onClick={() => setLeftSidebarOpen(true)}
-                  aria-label="Open sidebar"
-                >
-                  <PanelLeft size={16} />
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
           
           <ErrorBoundary>
             <div className="h-full">
@@ -383,23 +363,19 @@ export default function AppLayout() {
           "border-border/40 text-muted-foreground"
         )}
       >
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-          <p className="text-center sm:text-left">
+        <div className="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0">
+          <p className="text-center">
             © 2024 ALNRetool - About Last Night Visualization Tool
           </p>
-          <div className="flex items-center gap-2">
-            <motion.span 
-              className={cn(
-                "inline-block w-2 h-2 rounded-full",
-                isOnline ? 'bg-green-500' : 'bg-red-500'
-              )}
-              animate={isOnline ? {} : { scale: [1, 1.2, 1] }}
-              transition={{ duration: 1, repeat: Infinity }}
-            />
-            <p>
-              Last synced: <time data-testid="last-sync-time">{lastSyncTime}</time>
-            </p>
-          </div>
+          {/* React Query DevTools - Development only */}
+          {import.meta.env?.DEV && (
+            <div className="sm:ml-4">
+              <ReactQueryDevtools 
+                initialIsOpen={false}
+                buttonPosition="bottom-left"
+              />
+            </div>
+          )}
         </div>
       </footer>
     </div>

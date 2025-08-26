@@ -79,11 +79,15 @@ export interface CharacterFilters {
  * @property {Set} contentStatus - Content workflow status filters
  * @property {boolean|null} hasIssues - Filter for content with issues
  * @property {'today'|'week'|'month'|'all'} lastEditedRange - Time range filter
+ * @property {Set} elementBasicTypes - Element type filters (Prop, Memory Token, etc.)
+ * @property {Set} elementStatus - Element production status filters
  */
 export interface ContentFilters {
   contentStatus: Set<'draft' | 'review' | 'approved' | 'published'>;
   hasIssues: boolean | null;
   lastEditedRange: 'today' | 'week' | 'month' | 'all';
+  elementBasicTypes: Set<string>;
+  elementStatus: Set<string>;
 }
 
 /**
@@ -91,11 +95,9 @@ export interface ContentFilters {
  * @interface NodeConnectionsFilters
  * 
  * @property {'character'|'puzzle'|'element'|'timeline'} nodeType - Node type focus
- * @property {string|null} selectedNodeId - Selected node for connection analysis
  */
 export interface NodeConnectionsFilters {
   nodeType: 'character' | 'puzzle' | 'element' | 'timeline';
-  selectedNodeId: string | null;
 }
 
 /**
@@ -113,6 +115,8 @@ export interface NodeConnectionsFilters {
 export interface FilterState {
   // Universal filters
   searchTerm: string;
+  selectedNodeId: string | null; // Universal node selection (search, click, detail panel)
+  focusedNodeId: string | null; // Node for connection depth filtering
   
   // Graph view settings (universal across views)
   connectionDepth: number;
@@ -136,6 +140,8 @@ export interface FilterActions {
   // Universal filter actions
   setSearchTerm: (term: string) => void;
   clearSearch: () => void;
+  setSelectedNode: (nodeId: string | null) => void;
+  setFocusedNode: (nodeId: string | null) => void;
   
   // Graph view settings actions
   setConnectionDepth: (depth: number) => void;
@@ -162,7 +168,6 @@ export interface FilterActions {
   
   // Node connections filter actions
   setNodeType: (type: 'character' | 'puzzle' | 'element' | 'timeline') => void;
-  setSelectedNodeId: (nodeId: string | null) => void;
   clearNodeConnectionsFilters: () => void;
   
   // View management
@@ -240,6 +245,8 @@ export const useFilterStore = create<FilterStore>()(
       (set, get) => ({
         // Initial state
         searchTerm: '',
+        selectedNodeId: null,
+        focusedNodeId: null,
         connectionDepth: 3, // Default to 3 hops
         puzzleFilters: {
           selectedActs: new Set(),
@@ -257,6 +264,8 @@ export const useFilterStore = create<FilterStore>()(
           contentStatus: new Set(),
           hasIssues: null,
           lastEditedRange: 'all',
+          elementBasicTypes: new Set(),
+          elementStatus: new Set(),
         },
         nodeConnectionsFilters: null,
         activeView: null,
@@ -264,6 +273,8 @@ export const useFilterStore = create<FilterStore>()(
         // Universal filter actions
         setSearchTerm: (term) => set({ searchTerm: term }),
         clearSearch: () => set({ searchTerm: '' }),
+        setSelectedNode: (nodeId) => set({ selectedNodeId: nodeId }),
+        setFocusedNode: (nodeId) => set({ focusedNodeId: nodeId }),
 
         // Graph view settings actions
         setConnectionDepth: (depth) => set({ connectionDepth: depth }),
@@ -355,20 +366,16 @@ export const useFilterStore = create<FilterStore>()(
             contentStatus: new Set(),
             hasIssues: null,
             lastEditedRange: 'all',
+            elementBasicTypes: new Set(),
+            elementStatus: new Set(),
           }
         })),
 
         // Node connections filter actions
         setNodeType: (type) => set((state) => ({
           nodeConnectionsFilters: {
-            ...(state.nodeConnectionsFilters || { selectedNodeId: null }),
+            ...(state.nodeConnectionsFilters || {}),
             nodeType: type
-          }
-        })),
-        setSelectedNodeId: (nodeId) => set((state) => ({
-          nodeConnectionsFilters: {
-            ...(state.nodeConnectionsFilters || { nodeType: 'character' }),
-            selectedNodeId: nodeId
           }
         })),
         clearNodeConnectionsFilters: () => set({ nodeConnectionsFilters: null }),
@@ -379,6 +386,8 @@ export const useFilterStore = create<FilterStore>()(
         // Global actions
         clearAllFilters: () => set({
           searchTerm: '',
+          selectedNodeId: null,
+          focusedNodeId: null,
           puzzleFilters: {
             selectedActs: new Set(),
             selectedPuzzleId: null,
@@ -395,6 +404,8 @@ export const useFilterStore = create<FilterStore>()(
             contentStatus: new Set(),
             hasIssues: null,
             lastEditedRange: 'all',
+            elementBasicTypes: new Set(),
+            elementStatus: new Set(),
           },
           nodeConnectionsFilters: null
         }),        // Apply preset filters
@@ -518,6 +529,12 @@ export const useFilterStore = create<FilterStore>()(
             case 'completionStatus':
               return state.puzzleFilters.completionStatus;
               
+            // Element filters (new)
+            case 'basicTypes':
+              return state.contentFilters.elementBasicTypes ? Array.from(state.contentFilters.elementBasicTypes) : [];
+            case 'status':
+              return state.contentFilters.elementStatus ? Array.from(state.contentFilters.elementStatus) : [];
+              
             // Graph depth
             case 'depth':
               return state.connectionDepth;
@@ -579,6 +596,29 @@ export const useFilterStore = create<FilterStore>()(
                 });
               }
               break;
+            
+            // Element filters (new)
+            case 'basicTypes':
+              if (Array.isArray(value)) {
+                set({
+                  contentFilters: {
+                    ...state.contentFilters,
+                    elementBasicTypes: new Set(value)
+                  }
+                });
+              }
+              break;
+              
+            case 'status':
+              if (Array.isArray(value)) {
+                set({
+                  contentFilters: {
+                    ...state.contentFilters,
+                    elementStatus: new Set(value)
+                  }
+                });
+              }
+              break;
               
             case 'depth':
               if (typeof value === 'number') {
@@ -615,7 +655,9 @@ export const useFilterStore = create<FilterStore>()(
             state.contentFilters.contentStatus.size > 0 ||
             state.contentFilters.hasIssues !== null ||
             state.contentFilters.lastEditedRange !== 'all' ||
-            state.nodeConnectionsFilters?.selectedNodeId
+            state.contentFilters.elementBasicTypes.size > 0 ||
+            state.contentFilters.elementStatus.size > 0 ||
+            state.focusedNodeId !== null
           );
         },
 
@@ -635,7 +677,9 @@ export const useFilterStore = create<FilterStore>()(
           count += state.contentFilters.contentStatus.size;
           if (state.contentFilters.hasIssues !== null) count++;
           if (state.contentFilters.lastEditedRange !== 'all') count++;
-          if (state.nodeConnectionsFilters?.selectedNodeId) count++;
+          count += state.contentFilters.elementBasicTypes.size;
+          count += state.contentFilters.elementStatus.size;
+          if (state.focusedNodeId) count++;
           
           return count;
         },        getActiveFiltersForView: () => {
@@ -692,8 +736,8 @@ export const useFilterStore = create<FilterStore>()(
               if (state.nodeConnectionsFilters?.nodeType) {
                 filters.push(`Type: ${state.nodeConnectionsFilters.nodeType}`);
               }
-              if (state.nodeConnectionsFilters?.selectedNodeId) {
-                filters.push('Node selected');
+              if (state.focusedNodeId) {
+                filters.push('Node focused');
               }
               break;
           }
@@ -718,7 +762,9 @@ export const useFilterStore = create<FilterStore>()(
           },
           contentFilters: {
             ...state.contentFilters,
-            contentStatus: Array.from(state.contentFilters.contentStatus)
+            contentStatus: Array.from(state.contentFilters.contentStatus),
+            elementBasicTypes: Array.from(state.contentFilters.elementBasicTypes),
+            elementStatus: Array.from(state.contentFilters.elementStatus)
           }
         }),
         // Custom deserialization for Sets
@@ -736,7 +782,9 @@ export const useFilterStore = create<FilterStore>()(
           },
           contentFilters: {
             ...persisted.contentFilters,
-            contentStatus: new Set(persisted.contentFilters?.contentStatus || [])
+            contentStatus: new Set(persisted.contentFilters?.contentStatus || []),
+            elementBasicTypes: new Set(persisted.contentFilters?.elementBasicTypes || []),
+            elementStatus: new Set(persisted.contentFilters?.elementStatus || [])
           }
         })
       }

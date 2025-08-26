@@ -4,7 +4,6 @@
  */
 
 export { SidebarNavigation } from './SidebarNavigation';
-export { SidebarSearch } from './SidebarSearch';
 export { FilterPanel } from './FilterPanel';
 export { ActiveFiltersSummary } from './ActiveFiltersSummary';
 export { ThemeToggle } from './ThemeToggle';

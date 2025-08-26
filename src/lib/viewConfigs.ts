@@ -282,7 +282,8 @@ export const viewConfigs: Record<string, ViewConfig> = {
  * Hook for using view configurations
  */
 export function useViewConfig(viewType: string): ViewConfig {
-  return viewConfigs[viewType] || viewConfigs['full-graph'];
+  const config = viewConfigs[viewType as keyof typeof viewConfigs];
+  return config ?? viewConfigs['full-graph']!;
 }
 
 /**

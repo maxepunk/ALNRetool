@@ -33,22 +33,7 @@
  */
 
 import type { Node } from '@xyflow/react';
-
-/**
- * Enumeration of all supported relationship types in the graph.
- * Each type has corresponding visual styling and weight modifiers.
- * 
- * @typedef {string} RelationshipType
- */
-export type RelationshipType = 
-  | 'requirement' 
-  | 'reward' 
-  | 'ownership' 
-  | 'owner' 
-  | 'timeline' 
-  | 'dependency'
-  | 'relationship'
-  | 'chain';
+import type { RelationshipType } from './types';
 
 /**
  * Visual configuration for each edge type.
@@ -98,6 +83,14 @@ export const EDGE_STYLES = {
     markerEnd: { type: 'arrowclosed' as const },
     label: 'owns',
   },
+  owner: {
+    stroke: '#8b5cf6',
+    strokeWidth: 2,
+    strokeDasharray: '3,3',
+    animated: false,
+    markerEnd: { type: 'arrowclosed' as const },
+    label: 'owns',
+  },
   chain: {
     stroke: '#ef4444',
     strokeWidth: 3,
@@ -122,7 +115,39 @@ export const EDGE_STYLES = {
     markerEnd: undefined,
     label: undefined,
   },
-};
+  collaboration: {
+    stroke: '#06b6d4',
+    strokeWidth: 2,
+    strokeDasharray: '4,2',
+    animated: false,
+    markerEnd: undefined,
+    label: 'collaborates',
+  },
+  container: {
+    stroke: '#84cc16',
+    strokeWidth: 2,
+    strokeDasharray: '6,3',
+    animated: false,
+    markerEnd: { type: 'arrowclosed' as const },
+    label: 'contains',
+  },
+  'puzzle-grouping': {
+    stroke: '#f97316',
+    strokeWidth: 1,
+    strokeDasharray: '8,4',
+    animated: false,
+    markerEnd: undefined,
+    label: 'grouped',
+  },
+  'virtual-dependency': {
+    stroke: '#9ca3af',
+    strokeWidth: 1,
+    strokeDasharray: '1,3',
+    animated: false,
+    markerEnd: undefined,
+    label: undefined,
+  },
+} satisfies Record<RelationshipType, any>;
 
 /**
  * Calculate smart edge weight based on element affinity and puzzle relationships.
@@ -219,12 +244,15 @@ export function calculateSmartWeight(
       weight *= 5; // Very high weight for parent-child
     }
     
-    // Puzzles in the same narrative thread get higher weight
-    const commonThreads = sourcePuzzle?.narrativeThreads?.filter((thread: string) =>
-      targetPuzzle?.narrativeThreads?.includes(thread)
-    );
-    if (commonThreads?.length > 0) {
-      weight *= 2; // Double weight for narrative connections
+    // Optimized narrative thread comparison using Set lookup (O(N+M) instead of O(N*M))
+    const sourceThreads = new Set(sourcePuzzle?.narrativeThreads || []);
+    if (sourceThreads.size > 0) {
+      const commonThreads = targetPuzzle?.narrativeThreads?.filter((thread: string) => 
+        sourceThreads.has(thread)
+      );
+      if (commonThreads?.length > 0) {
+        weight *= 2; // Double weight for narrative connections
+      }
     }
   }
   
@@ -342,15 +370,17 @@ export function createEdge(
     markerEnd: styleConfig.markerEnd,
     label: styleConfig.label,
     labelStyle: {
-      fill: 'hsl(var(--foreground))',
+      fill: '#374151', // Gray-700 for dark text
       fontSize: 12,
       fontWeight: 500,
     },
     labelBgPadding: [8, 4] as [number, number],
     labelBgBorderRadius: 4,
     labelBgStyle: {
-      fill: 'hsl(var(--background))',
+      fill: '#ffffff', // White background
       fillOpacity: 0.9,
+      stroke: '#d1d5db', // Light border
+      strokeWidth: 1,
     },
     data: {
       weight,
