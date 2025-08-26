@@ -80,13 +80,22 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
   // Choose icon based on character type
   const icon = isNPC ? <Users className="h-5 w-5" /> : <User className="h-5 w-5" />;
   
+  // Determine visual styling based on filter state
+  const getFilterClassName = () => {
+    if (metadata.isFocused) return 'ring-4 ring-yellow-500 ring-opacity-50';
+    if (metadata.isFiltered) return 'ring-2 ring-blue-500 ring-opacity-50';
+    if (metadata.isConnected) return 'opacity-70';
+    return '';
+  };
+  
   return (
-    <BaseNodeCard
-      nodeType="character"
-      size={size}
-      status={statuses}
-      title={entity.name}
-      icon={icon}
+    <div className={getFilterClassName()}>
+      <BaseNodeCard
+        nodeType="character"
+        size={size}
+        status={statuses}
+        title={entity.name}
+        icon={icon}
       selected={selected}
       highlighted={metadata.searchMatch}
       headerSlot={badges}
@@ -94,6 +103,7 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
     >
       {content}
     </BaseNodeCard>
+    </div>
   );
 });
 

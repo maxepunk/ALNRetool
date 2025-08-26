@@ -121,6 +121,16 @@ export interface FilterState {
   
   // Graph view settings (universal across views)
   connectionDepth: number;
+  filterMode: 'pure' | 'connected' | 'focused'; // How depth filtering behaves
+  focusRespectFilters: boolean; // Whether focus mode respects entity filters or shows all connections
+  
+  // Entity visibility toggles (Option 2)
+  entityVisibility: {
+    characters: boolean;
+    puzzles: boolean;
+    elements: boolean;
+    timeline: boolean;
+  };
   
   // View-specific filters
   puzzleFilters: PuzzleFilters;
@@ -146,6 +156,14 @@ export interface FilterActions {
   
   // Graph view settings actions
   setConnectionDepth: (depth: number) => void;
+  setFilterMode: (mode: 'pure' | 'connected' | 'focused') => void;
+  setFocusRespectFilters: (respect: boolean) => void;
+  
+  // Entity visibility actions (Option 2)
+  toggleEntityVisibility: (entityType: 'characters' | 'puzzles' | 'elements' | 'timeline') => void;
+  setEntityVisibility: (entityType: 'characters' | 'puzzles' | 'elements' | 'timeline', visible: boolean) => void;
+  showAllEntities: () => void;
+  hideAllEntities: () => void;
   
   // Puzzle filter actions
   toggleAct: (act: string) => void;
@@ -252,6 +270,14 @@ export const useFilterStore = create<FilterStore>()(
         selectedNodeId: null,
         focusedNodeId: null,
         connectionDepth: 3, // Default to 3 hops
+        filterMode: 'connected' as const, // Default to connected mode
+        focusRespectFilters: true, // Default to respecting filters in focus mode
+        entityVisibility: {
+          characters: true,
+          puzzles: true,
+          elements: true,
+          timeline: true,
+        },
         puzzleFilters: {
           selectedActs: new Set(),
           selectedPuzzleId: null,
@@ -278,10 +304,63 @@ export const useFilterStore = create<FilterStore>()(
         setSearchTerm: (term) => set({ searchTerm: term }),
         clearSearch: () => set({ searchTerm: '' }),
         setSelectedNode: (nodeId) => set({ selectedNodeId: nodeId }),
-        setFocusedNode: (nodeId) => set({ focusedNodeId: nodeId }),
+        setFocusedNode: (nodeId) => {
+          // Update filter mode when focus changes
+          const state = get();
+          if (nodeId) {
+            // When a node is focused, switch to focused mode
+            set({ focusedNodeId: nodeId, filterMode: 'focused' });
+          } else {
+            // When focus is cleared, switch back based on depth
+            const newMode = state.connectionDepth === 0 ? 'pure' : 'connected';
+            set({ focusedNodeId: nodeId, filterMode: newMode });
+          }
+        },
 
         // Graph view settings actions
-        setConnectionDepth: (depth) => set({ connectionDepth: depth }),
+        setConnectionDepth: (depth) => {
+          // Automatically set filter mode based on depth and focus state
+          const state = get();
+          if (depth === 0) {
+            set({ connectionDepth: depth, filterMode: 'pure' });
+          } else if (state.focusedNodeId) {
+            set({ connectionDepth: depth, filterMode: 'focused' });
+          } else {
+            set({ connectionDepth: depth, filterMode: 'connected' });
+          }
+        },
+        setFilterMode: (mode) => set({ filterMode: mode }),
+        setFocusRespectFilters: (respect) => set({ focusRespectFilters: respect }),
+        
+        // Entity visibility actions (Option 2)
+        toggleEntityVisibility: (entityType) => set((state) => ({
+          entityVisibility: {
+            ...state.entityVisibility,
+            [entityType]: !state.entityVisibility[entityType]
+          }
+        })),
+        setEntityVisibility: (entityType, visible) => set((state) => ({
+          entityVisibility: {
+            ...state.entityVisibility,
+            [entityType]: visible
+          }
+        })),
+        showAllEntities: () => set({
+          entityVisibility: {
+            characters: true,
+            puzzles: true,
+            elements: true,
+            timeline: true
+          }
+        }),
+        hideAllEntities: () => set({
+          entityVisibility: {
+            characters: false,
+            puzzles: false,
+            elements: false,
+            timeline: false
+          }
+        }),
 
         // Puzzle filter actions
         toggleAct: (act) => set((state) => {
@@ -392,6 +471,14 @@ export const useFilterStore = create<FilterStore>()(
           searchTerm: '',
           selectedNodeId: null,
           focusedNodeId: null,
+          connectionDepth: 3,
+          filterMode: 'connected',
+          entityVisibility: {
+            characters: true,
+            puzzles: true,
+            elements: true,
+            timeline: true,
+          },
           puzzleFilters: {
             selectedActs: new Set(),
             selectedPuzzleId: null,

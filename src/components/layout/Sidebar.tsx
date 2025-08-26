@@ -10,9 +10,11 @@ import { useUIStore } from '@/stores/uiStore';
 
 // Import sub-components
 import { SidebarNavigation } from '../sidebar/SidebarNavigation';
-import { CharacterFilterPanel, PuzzleFilterPanel, ElementFilterPanel, DepthFilterPanel } from '../sidebar/FilterPanel';
+import { CharacterFilterPanel, PuzzleFilterPanel, ElementFilterPanel } from '../sidebar/FilterPanel';
+import { DepthSlider } from '../sidebar/DepthSlider';
 import { ActiveFiltersSummary } from '../sidebar/ActiveFiltersSummary';
 import { ThemeToggle } from '../sidebar/ThemeToggle';
+import EntityTypeToggle from '../filters/EntityTypeToggle';
 
 export default function Sidebar() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
@@ -65,10 +67,15 @@ export default function Sidebar() {
 
           {/* View-specific Filters */}
           <div className="px-3 py-2 space-y-2 pb-6">
+            {/* Entity Visibility Toggles (Option 2) */}
+            <EntityTypeToggle />
+            <Separator className="my-2 opacity-30" />
+            
+            {/* Entity-specific Filters */}
             <CharacterFilterPanel />
             <PuzzleFilterPanel />
             <ElementFilterPanel />
-            <DepthFilterPanel />
+            <DepthSlider />
           </div>
         </div>
       </div>

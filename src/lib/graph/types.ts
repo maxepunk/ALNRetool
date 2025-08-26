@@ -777,6 +777,12 @@ export interface NodeMetadata {
   isParent?: boolean;
   isChild?: boolean;
   parentId?: string;
+  
+  // Filter-related metadata
+  isFiltered?: boolean; // Node passed the active filters
+  isConnected?: boolean; // Node included via connection depth
+  isFocused?: boolean; // Node is the current focus node
+  searchMatch?: boolean; // Node matches search term
   timelineConnections?: string[];
   collaborators?: string[];
   visualHints?: VisualHints;
@@ -797,10 +803,6 @@ export interface NodeMetadata {
   tier?: string; // Node tier for grouping
   timestamp?: number; // Unix timestamp for timeline ordering
   time?: number; // Alternative time representation
-  // Search highlighting
-  searchMatch?: boolean; // Whether this node matches current search term
-  // Connection depth focus
-  isFocused?: boolean; // Whether this node is the focused node for connection depth filtering
 }
 
 /**

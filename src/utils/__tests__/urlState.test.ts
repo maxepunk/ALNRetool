@@ -18,6 +18,14 @@ describe('URL State Management', () => {
     focusedNodeId: 'node-789',
     connectionDepth: 5,
     activeView: 'node-connections',
+    filterMode: 'connected' as const,
+    focusRespectFilters: true,
+    entityVisibility: {
+      characters: true,
+      puzzles: true,
+      elements: true,
+      timeline: true
+    },
     puzzleFilters: {
       selectedActs: new Set(['Act 0', 'Act 1']),
       selectedPuzzleId: 'puzzle-123',
@@ -72,6 +80,14 @@ describe('URL State Management', () => {
         focusedNodeId: null,
         connectionDepth: 3, // Default value
         activeView: null,
+        filterMode: 'connected' as const,
+        focusRespectFilters: true,
+        entityVisibility: {
+          characters: true,
+          puzzles: true,
+          elements: true,
+          timeline: true
+        },
         puzzleFilters: {
           selectedActs: new Set(),
           selectedPuzzleId: null,
@@ -187,6 +203,14 @@ describe('URL State Management', () => {
         focusedNodeId: null,
         connectionDepth: 3,
         activeView: null,
+        filterMode: 'connected' as const,
+        focusRespectFilters: true,
+        entityVisibility: {
+          characters: true,
+          puzzles: true,
+          elements: true,
+          timeline: true
+        },
         puzzleFilters: {
           selectedActs: new Set(),
           selectedPuzzleId: null,

@@ -55,6 +55,14 @@ describe('URL State Integration', () => {
     focusedNodeId: 'char-123',
     connectionDepth: 4,
     activeView: 'node-connections',
+    filterMode: 'connected' as const,
+    focusRespectFilters: true,
+    entityVisibility: {
+      characters: true,
+      puzzles: true,
+      elements: true,
+      timeline: true
+    },
     puzzleFilters: {
       selectedActs: new Set(['Act 1']),
       selectedPuzzleId: 'test-puzzle',
@@ -126,6 +134,14 @@ describe('URL State Integration', () => {
         focusedNodeId: null,
         connectionDepth: 3, // default
         activeView: null,
+        filterMode: 'connected' as const,
+        focusRespectFilters: true,
+        entityVisibility: {
+          characters: true,
+          puzzles: true,
+          elements: true,
+          timeline: true
+        },
         puzzleFilters: {
           selectedActs: new Set(),
           selectedPuzzleId: null,

@@ -424,7 +424,7 @@ function createDagreGraph(
     // Use network-simplex for better edge crossing minimization
     ranker: config.optimizeEdgeCrossings ? 'longest-path' : 'longest-path',
     // Align nodes to reduce edge crossings
-    align: 'UL', // Up-Left alignment
+    align: 'UR', // Top-Right alignment
   });
   
   g.setDefaultEdgeLabel(() => ({}));

@@ -230,15 +230,24 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
     entity.isContainer && 'shadow-lg'
   );
   
+  // Determine visual styling based on filter state
+  const getFilterClassName = () => {
+    if (metadata.isFocused) return 'ring-4 ring-yellow-500 ring-opacity-50';
+    if (metadata.isFiltered) return 'ring-2 ring-blue-500 ring-opacity-50';
+    if (metadata.isConnected) return 'opacity-70';
+    return '';
+  };
+
   return (
-    <BaseNodeCard
-      nodeType="element"
-      size="medium"
-      status={statuses}
-      title={entity.name}
-      icon={getIcon()}
-      selected={selected}
-      highlighted={metadata.searchMatch}
+    <div className={getFilterClassName()}>
+      <BaseNodeCard
+        nodeType="element"
+        size="medium"
+        status={statuses}
+        title={entity.name}
+        icon={getIcon()}
+        selected={selected}
+        highlighted={metadata.searchMatch || metadata.isFocused}
       className={cardClassName}
       headerSlot={headerSlot}
       footerSlot={footerSlot}
@@ -250,6 +259,7 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
     >
       {content}
     </BaseNodeCard>
+    </div>
   );
 });
 

@@ -50,14 +50,23 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
     </div>
   ) : undefined;
   
+  // Determine visual styling based on filter state
+  const getFilterClassName = () => {
+    if (metadata.isFocused) return 'ring-4 ring-yellow-500 ring-opacity-50';
+    if (metadata.isFiltered) return 'ring-2 ring-blue-500 ring-opacity-50';
+    if (metadata.isConnected) return 'opacity-70';
+    return '';
+  };
+
   return (
-    <DiamondCard
-      title={entity.name}
-      icon={<PuzzleIcon className="h-5 w-5" />}
-      selected={selected}
-      highlighted={metadata.searchMatch}
-      statuses={statuses}
-      requirementsCount={entity.puzzleElementIds?.length || 0}
+    <div className={getFilterClassName()}>
+      <DiamondCard
+        title={entity.name}
+        icon={<PuzzleIcon className="h-5 w-5" />}
+        selected={selected}
+        highlighted={metadata.searchMatch || metadata.isFocused}
+        statuses={statuses}
+        requirementsCount={entity.puzzleElementIds?.length || 0}
       rewardsCount={entity.rewardIds?.length || 0}
       ownerBadge={ownerBadge}
       isParent={isParent}
@@ -66,6 +75,7 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
       size="medium"
       maxCount={5}
     />
+    </div>
   );
 });
 

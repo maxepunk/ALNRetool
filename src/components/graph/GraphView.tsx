@@ -58,9 +58,10 @@ import { queryKeys } from '@/lib/queryKeys';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { resolveAllRelationships } from '@/lib/graph/relationships';
 import type { GraphNode, GraphEdge } from '@/lib/graph/types';
-import type { Character, Puzzle } from '@/types/notion/app';
+import type { Character, Puzzle, TimelineEvent } from '@/types/notion/app';
 import { useFilterStore } from '@/stores/filterStore';
 import { useViewportManager } from '@/hooks/useGraphState';
+import { FilterStatusBar } from './FilterStatusBar';
 
 /**
  * Custom node component mapping for React Flow.
@@ -144,12 +145,19 @@ function GraphViewComponent() {
   const setSelectedNode = useFilterStore(state => state.setSelectedNode);
   const setFocusedNode = useFilterStore(state => state.setFocusedNode);
   const connectionDepth = useFilterStore(state => state.connectionDepth);
+  const filterMode = useFilterStore(state => state.filterMode);
+  const focusRespectFilters = useFilterStore(state => state.focusRespectFilters);
   
   // Select specific filter properties instead of whole objects to prevent infinite loops
   const characterSelectedTiers = useFilterStore(state => state.characterFilters.selectedTiers);
   const characterType = useFilterStore(state => state.characterFilters.characterType);
   const puzzleSelectedActs = useFilterStore(state => state.puzzleFilters.selectedActs);
   const puzzleCompletionStatus = useFilterStore(state => state.puzzleFilters.completionStatus);
+  const elementBasicTypes = useFilterStore(state => state.contentFilters.elementBasicTypes);
+  const elementStatus = useFilterStore(state => state.contentFilters.elementStatus);
+  
+  // Entity visibility toggles (Option 2)
+  const entityVisibility = useFilterStore(state => state.entityVisibility);
   
   
   // Fetch data based on view config
@@ -201,26 +209,30 @@ function GraphViewComponent() {
       return matches;
     };
     
+    
     /**
      * Check if a character passes tier and type filters.
-     * 
-     * Filter Logic:
-     * - Empty tier set (size === 0) = show all tiers (inclusive)
-     * - Populated tier set = show only selected tiers (exclusive)
-     * - characterType 'all' = show all types (inclusive)
-     * - Specific characterType = show only that type (exclusive)
      * 
      * @param {Character} character - Character to check
      * @returns {boolean} True if passes all filters
      */
     const matchesCharacterFilters = (character: Character): boolean => {
-      // Tier filter: Empty set = show all (inclusive default)
+      // Always show the focused node in focus mode
+      if (focusedNodeId && character.id === focusedNodeId) {
+        return true;
+      }
+      
+      // Check entity visibility toggle first
+      if (!entityVisibility.characters) {
+        return false;
+      }
+      
+      // Check character-specific filters
       if (characterSelectedTiers.size > 0) {
         const tier = character.tier || 'Standard';
         if (!characterSelectedTiers.has(tier as any)) return false;
       }
       
-      // Type filter: 'all' = show all (inclusive default)
       if (characterType !== 'all') {
         const type = character.type || 'Player';
         if (type !== characterType) return false;
@@ -231,26 +243,30 @@ function GraphViewComponent() {
     
     /**
      * Check if a puzzle passes act and completion filters.
-     * Handles Act format normalization ('Act 1' -> 'Act1').
-     * 
-     * Filter Logic:
-     * - Empty act set (size === 0) = show all acts (inclusive)
-     * - Populated act set = show only selected acts (exclusive)
-     * - completionStatus 'all' = show all puzzles (inclusive)
      * 
      * @param {Puzzle} puzzle - Puzzle to check
      * @returns {boolean} True if passes all filters
      */
     const matchesPuzzleFilters = (puzzle: Puzzle): boolean => {
-      // Act filter: Empty set = show all (inclusive default)
+      // Always show the focused node in focus mode
+      if (focusedNodeId && puzzle.id === focusedNodeId) {
+        return true;
+      }
+      
+      // Check entity visibility toggle first
+      if (!entityVisibility.puzzles) {
+        return false;
+      }
+      
+      // Check puzzle-specific filters
       if (puzzleSelectedActs.size > 0) {
         // Puzzle has timing: Act[] field
         // Check if ANY of the puzzle's timing acts match the selected acts
         const puzzleActs = puzzle.timing || [];
         const hasMatchingAct = puzzleActs.some((act) => {
-          // Convert Act format ('Act 0', 'Act 1', 'Act 2') to filter format ('Act0', 'Act1', 'Act2')
-          const normalizedAct = act ? act.replace(' ', '') : '';
-          return puzzleSelectedActs.has(normalizedAct);
+          // Filter panel sets acts with spaces ('Act 0', 'Act 1', 'Act 2')
+          // so we just check directly without normalization
+          return act && puzzleSelectedActs.has(act);
         });
         
         if (!hasMatchingAct) return false;
@@ -314,32 +330,66 @@ function GraphViewComponent() {
       });
     }
     
+    /**
+     * Check if an element passes type and status filters.
+     * 
+     * @param {any} element - Element to check
+     * @returns {boolean} True if passes all filters
+     */
+    const matchesElementFilters = (element: any): boolean => {
+      // Always show the focused node in focus mode
+      if (focusedNodeId && element.id === focusedNodeId) {
+        return true;
+      }
+      
+      // Check entity visibility toggle first
+      if (!entityVisibility.elements) {
+        return false;
+      }
+      
+      // Check element-specific filters
+      if (elementBasicTypes.size > 0) {
+        const basicType = element.basicType || '';
+        if (!elementBasicTypes.has(basicType)) return false;
+      }
+      
+      if (elementStatus.size > 0) {
+        const status = element.status || '';
+        if (!elementStatus.has(status)) return false;
+      }
+      
+      return true;
+    };
+    
     // Add element nodes if enabled and they pass filters
     if (shouldFetchElements) {
       elements.forEach(element => {
-        // No element-specific filters currently, just add all
-        nodes.push({
-          id: element.id,
-          type: 'element',
-          position: { x: 0, y: 0 },
-          data: {
-            label: element.name,
-            type: 'element',
+        // Apply element-specific filters
+        if (matchesElementFilters(element)) {
+          nodes.push({
             id: element.id,
-            entity: element,
-            metadata: { 
-              entityType: 'element',
-              searchMatch: searchTerm ? matchesSearch(element) : false
+            type: 'element',
+            position: { x: 0, y: 0 },
+            data: {
+              label: element.name,
+              type: 'element',
+              id: element.id,
+              entity: element,
+              metadata: { 
+                entityType: 'element',
+                searchMatch: searchTerm ? matchesSearch(element) : false,
+                isFocused: element.id === focusedNodeId
+              }
             }
-          }
-        });
+          });
+        }
       });
     }
     
     // Add timeline nodes if enabled and they pass filters
-    if (shouldFetchTimeline) {
+    if (shouldFetchTimeline && entityVisibility.timeline) {
       timeline.forEach(timelineEvent => {
-        // No timeline-specific filters currently, just add all
+        // No timeline-specific filters currently, just add if visible
         nodes.push({
           id: timelineEvent.id,
           type: 'timeline',
@@ -369,10 +419,14 @@ function GraphViewComponent() {
     shouldFetchPuzzles,
     shouldFetchTimeline,
     searchTerm,
+    focusedNodeId,
     characterSelectedTiers,
     characterType,
     puzzleSelectedActs,
-    puzzleCompletionStatus
+    puzzleCompletionStatus,
+    elementBasicTypes,
+    elementStatus,
+    entityVisibility
   ]);
 
   /**
@@ -425,10 +479,12 @@ function GraphViewComponent() {
 
   /**
    * Create edges from entity relationships.
-   * Uses the relationship resolution system to generate all edges.
+   * IMPORTANT: We create ALL possible edges first, then filter them based on visible nodes.
+   * This two-step process is needed because we need the edges to determine which nodes
+   * to include when using connection depth.
    * 
-   * @memoized Recalculates only when entities or nodes change
-   * @returns {Edge[]} Array of edges with styling and metadata
+   * @memoized Recalculates only when entities change
+   * @returns {Edge[]} Array of all possible edges in the system
    * 
    * **Edge Types Created:**
    * - requirement: Puzzle -> Element
@@ -437,7 +493,7 @@ function GraphViewComponent() {
    * - dependency: Puzzle -> Puzzle
    * - timeline: Element -> Timeline
    */
-  const allEdges = useMemo(() => {
+  const allPossibleEdges = useMemo(() => {
     const edges = resolveAllRelationships(
       characters,
       elements, 
@@ -446,53 +502,219 @@ function GraphViewComponent() {
     );
     return edges;
   }, [characters, elements, puzzles, timeline]);
+  
+  /**
+   * Filter edges to only include those between filtered nodes.
+   * This prevents unfiltered nodes from being pulled in via edges.
+   * 
+   * @memoized Recalculates when filtered nodes change
+   * @returns {Edge[]} Edges between visible nodes only
+   */
+  const baseFilteredEdges = useMemo(() => {
+    const visibleNodeIds = new Set(allNodes.map(n => n.id));
+    return allPossibleEdges.filter(edge => 
+      visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+    );
+  }, [allNodes, allPossibleEdges]);
 
-  // Calculate the set of node IDs within connection depth once to avoid duplication
+  /**
+   * Calculate nodes to display based on filtering mode:
+   * 1. Focus mode: Show N hops from a specific focused node
+   * 2. Connected mode: Show filtered nodes + N hops from each
+   * 3. Pure filter mode: Show only filtered nodes (depth = 0)
+   */
   const nodesWithinDepth = useMemo(() => {
-    if (!focusedNodeId || !connectionDepth || connectionDepth > 10) {
+    // Use filterMode to determine behavior
+    if (filterMode === 'pure') {
+      // Pure mode: Only show filtered nodes, no depth expansion
       return null;
     }
     
-    return getNodesWithinDepth(
-      focusedNodeId,
-      allNodes,
-      allEdges,
-      connectionDepth
-    );
-  }, [allNodes, allEdges, focusedNodeId, connectionDepth, getNodesWithinDepth]);
+    if (filterMode === 'focused' && focusedNodeId && connectionDepth && connectionDepth > 0 && connectionDepth <= 10) {
+      // Focus mode: Show N hops from focused node
+      // Use filtered or all edges based on the focusRespectFilters toggle
+      const edgesToUse = focusRespectFilters ? baseFilteredEdges : allPossibleEdges;
+      return getNodesWithinDepth(
+        focusedNodeId,
+        allNodes,
+        edgesToUse,
+        connectionDepth
+      );
+    }
+    
+    if (filterMode === 'connected' && connectionDepth && connectionDepth > 0 && connectionDepth <= 10) {
+      // Connected mode: Show filtered nodes + N hops from ALL of them
+      const connectedNodes = new Set<string>();
+      
+      // Start with all filtered nodes
+      allNodes.forEach(node => connectedNodes.add(node.id));
+      
+      // For each filtered node, find nodes within depth
+      allNodes.forEach(node => {
+        const visited = new Set<string>([node.id]);
+        const queue: { nodeId: string; depth: number }[] = [{ nodeId: node.id, depth: 0 }];
+        
+        while (queue.length > 0) {
+          const { nodeId, depth } = queue.shift()!;
+          
+          if (depth >= connectionDepth) continue;
+          
+          // Find all edges connected to this node - USE FILTERED EDGES
+          const connectedEdges = baseFilteredEdges.filter(e => 
+            e.source === nodeId || e.target === nodeId
+          );
+          
+          // Add connected nodes to visited set
+          for (const edge of connectedEdges) {
+            const neighborId = edge.source === nodeId ? edge.target : edge.source;
+            if (!visited.has(neighborId)) {
+              visited.add(neighborId);
+              connectedNodes.add(neighborId);
+              queue.push({ nodeId: neighborId, depth: depth + 1 });
+            }
+          }
+        }
+      });
+      
+      return connectedNodes;
+    }
+    
+    // Default: return null to show only filtered nodes
+    return null;
+  }, [allNodes, baseFilteredEdges, allPossibleEdges, focusedNodeId, connectionDepth, getNodesWithinDepth, filterMode, focusRespectFilters]);
 
   // Filter nodes based on focused node and depth
   const filteredNodes = useMemo(() => {
     if (!nodesWithinDepth) {
+      // Pure filter mode - return only filtered nodes
       return allNodes;
     }
     
-    // Filter nodes to only include those within depth and add focus metadata
-    return allNodes
-      .filter(node => nodesWithinDepth.has(node.id))
-      .map(node => ({
-        ...node,
-        data: {
-          ...node.data,
-          metadata: {
-            ...node.data.metadata,
-            isFocused: node.id === focusedNodeId
-          }
+    // Connected or Focus mode - need to include connected nodes
+    // Get all entity data to create nodes for connected entities
+    const allEntities = [...characters, ...elements, ...puzzles, ...timeline];
+    const nodeMap = new Map(allNodes.map(n => [n.id, n]));
+    const resultNodes: GraphNode[] = [];
+    
+    // Helper function to check if an entity should be included based on filters
+    // We need to recreate the filter logic here to check connected nodes
+    const shouldIncludeEntity = (entity: any, entityType: 'character' | 'element' | 'puzzle' | 'timeline'): boolean => {
+      // Check view config entity types first
+      const viewAllowsType = viewConfig.filters.entityTypes?.includes('all') || 
+                            viewConfig.filters.entityTypes?.includes(entityType);
+      if (!viewAllowsType) return false;
+      
+      // Check entity visibility toggles
+      if (entityType === 'character' && !entityVisibility.characters) return false;
+      if (entityType === 'element' && !entityVisibility.elements) return false;
+      if (entityType === 'puzzle' && !entityVisibility.puzzles) return false;
+      if (entityType === 'timeline' && !entityVisibility.timeline) return false;
+      
+      // Check entity-specific filters (simplified - no cross-entity exclusion)
+      if (entityType === 'character') {
+        const char = entity as Character;
+        if (characterSelectedTiers.size > 0) {
+          const tier = char.tier || 'Standard';
+          if (!characterSelectedTiers.has(tier as any)) return false;
         }
-      }));
-  }, [allNodes, nodesWithinDepth, focusedNodeId]);
+        if (characterType !== 'all') {
+          const type = char.type || 'Player';
+          if (type !== characterType) return false;
+        }
+      } else if (entityType === 'puzzle') {
+        const puzzle = entity as Puzzle;
+        if (puzzleSelectedActs.size > 0) {
+          const puzzleActs = puzzle.timing || [];
+          const hasMatchingAct = puzzleActs.some((act) => act && puzzleSelectedActs.has(act));
+          if (!hasMatchingAct) return false;
+        }
+      } else if (entityType === 'element') {
+        if (elementBasicTypes.size > 0) {
+          const basicType = entity.basicType || '';
+          if (!elementBasicTypes.has(basicType)) return false;
+        }
+        if (elementStatus.size > 0) {
+          const status = entity.status || '';
+          if (!elementStatus.has(status)) return false;
+        }
+      }
+      
+      return true;
+    };
+    
+    // Add all nodes that should be visible
+    nodesWithinDepth.forEach(nodeId => {
+      // Check if it's already a filtered node
+      const existingNode = nodeMap.get(nodeId);
+      if (existingNode) {
+        // This is a filtered node - mark it as such
+        resultNodes.push({
+          ...existingNode,
+          data: {
+            ...existingNode.data,
+            metadata: {
+              ...existingNode.data.metadata,
+              isFiltered: true,
+              isFocused: nodeId === focusedNodeId
+            }
+          }
+        });
+      } else {
+        // This is a connected node - find the entity and create a node
+        const entity = allEntities.find(e => e.id === nodeId);
+        if (entity) {
+          const entityType = 
+            characters.includes(entity as any) ? 'character' :
+            elements.includes(entity as any) ? 'element' :
+            puzzles.includes(entity as any) ? 'puzzle' : 'timeline';
+          
+          // Check if this entity should be included based on filters
+          // In focus mode with focusRespectFilters=false, include all connected nodes
+          if (filterMode === 'focused' && !focusRespectFilters) {
+            // Skip filter checks in focus mode when not respecting filters
+          } else if (!shouldIncludeEntity(entity, entityType)) {
+            return; // Skip this entity if it doesn't pass filters
+          }
+          
+          resultNodes.push({
+            id: entity.id,
+            type: entityType,
+            position: { x: 0, y: 0 },
+            data: {
+              label: entity.name || (entity as TimelineEvent).description || 'Unknown',
+              type: entityType,
+              id: entity.id,
+              entity,
+              metadata: {
+                entityType,
+                isFiltered: false,
+                isConnected: true,
+                isFocused: nodeId === focusedNodeId
+              }
+            }
+          });
+        }
+      }
+    });
+    
+    return resultNodes;
+  }, [allNodes, nodesWithinDepth, focusedNodeId, characters, elements, puzzles, timeline, 
+      viewConfig.filters.entityTypes, entityVisibility, characterSelectedTiers, characterType,
+      puzzleSelectedActs, puzzleCompletionStatus, elementBasicTypes, elementStatus,
+      filterMode, focusRespectFilters]);
 
   // Filter edges based on visible nodes
   const filteredEdges = useMemo(() => {
     if (!nodesWithinDepth) {
-      return allEdges;
+      // When not in focus mode, use edges between filtered nodes only
+      return baseFilteredEdges;
     }
     
-    // Filter edges to only include those between visible nodes
-    return allEdges.filter(edge => 
+    // In focus mode, show all edges between nodes within depth
+    return allPossibleEdges.filter(edge => 
       nodesWithinDepth.has(edge.source) && nodesWithinDepth.has(edge.target)
     );
-  }, [allEdges, nodesWithinDepth]);
+  }, [allPossibleEdges, baseFilteredEdges, nodesWithinDepth]);
 
   // Apply layout to nodes using view config
   const layoutedNodes = useMemo(() => {
@@ -576,30 +798,29 @@ function GraphViewComponent() {
     // Keep focusedNodeId - user might want to maintain the filtered view
   };
 
+  // Get focused node details for status bar
+  const focusedNodeData = useMemo(() => {
+    if (!focusedNodeId) return null;
+    const node = allNodes.find(n => n.id === focusedNodeId);
+    if (!node) return null;
+    return { id: node.id, name: node.data.label };
+  }, [focusedNodeId, allNodes]);
+
+  // Check if there are active filters
+  const hasActiveFilters = useFilterStore(state => state.hasActiveFilters);
+
   return (
     <div className="h-full w-full flex">
       <div className="flex-1 relative">
-        {/* Focus indicator with clear button */}
-        {focusedNodeId && connectionDepth && connectionDepth <= 10 && (
-          <div className="absolute top-4 left-4 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
-            <div className="flex items-center gap-3">
-              <div className="text-sm">
-                <span className="text-gray-600 dark:text-gray-400">Viewing connections within </span>
-                <span className="font-semibold text-blue-600 dark:text-blue-400">{connectionDepth}</span>
-                <span className="text-gray-600 dark:text-gray-400"> levels</span>
-              </div>
-              <button
-                onClick={() => setFocusedNode(null)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                title="Clear focus filter"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Filter status bar with comprehensive feedback */}
+        <FilterStatusBar
+          totalNodes={allNodes.length + (nodesWithinDepth ? nodesWithinDepth.size - allNodes.length : 0)}
+          visibleNodes={filteredNodes.length}
+          filterMode={filterMode}
+          connectionDepth={connectionDepth}
+          focusedNode={focusedNodeData}
+          hasActiveFilters={hasActiveFilters()}
+        />
         
         <ReactFlow
           nodes={nodes}
