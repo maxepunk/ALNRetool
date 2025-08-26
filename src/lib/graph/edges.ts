@@ -147,6 +147,14 @@ export const EDGE_STYLES = {
     markerEnd: undefined,
     label: undefined,
   },
+  connection: {
+    stroke: '#9333ea',
+    strokeWidth: 2,
+    strokeDasharray: '5,5',
+    animated: false,
+    markerEnd: undefined,
+    label: undefined,
+  },
 } satisfies Record<RelationshipType, any>;
 
 /**

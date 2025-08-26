@@ -39,6 +39,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { urlToFilterState, filterStateToUrl, updateBrowserUrl } from '@/utils/urlState';
+import type { ViewConfig } from '@/lib/viewConfigs';
 
 /**
  * Puzzle-specific filter configuration.
@@ -185,6 +186,9 @@ export interface FilterActions {
   // Generic filter methods (for new generic FilterPanel)
   getFilter: (key: string) => any;
   setFilter: (key: string, value: any) => void;
+  
+  // View-aware filter initialization
+  initializeFiltersForView: (viewConfig: ViewConfig) => void;
 }
 
 /**
@@ -636,6 +640,53 @@ export const useFilterStore = create<FilterStore>()(
             default:
               console.warn(`Unknown filter key: ${key}`);
               break;
+          }
+        },
+        
+        /**
+         * Initialize filters intelligently based on view configuration.
+         * Ensures that requested entity types are visible by default.
+         * 
+         * Filter Behavior:
+         * - Empty filter sets (size === 0) mean "show all" - inclusive by default
+         * - This allows views to show all entities when they request them
+         * - Users can still apply filters to narrow down results
+         * - View configs determine which entities are fetched, filters refine the display
+         */
+        initializeFiltersForView: (viewConfig: ViewConfig) => {
+          const entityTypes = viewConfig.filters.entityTypes || [];
+          const state = get();
+          
+          // If view includes characters, ensure they're not filtered out
+          if (entityTypes.includes('character') || entityTypes.includes('all')) {
+            // Only set defaults if no filters are already set by user
+            if (state.characterFilters.selectedTiers.size === 0 && 
+                state.characterFilters.characterType === 'all') {
+              // Keep filters empty/inclusive - don't need to change anything
+              // Empty selectedTiers means "show all tiers"
+              // characterType 'all' means "show all types"
+            }
+          }
+          
+          // If view includes puzzles, ensure they're not filtered out  
+          if (entityTypes.includes('puzzle') || entityTypes.includes('all')) {
+            // Only set defaults if no filters are already set by user
+            if (state.puzzleFilters.selectedActs.size === 0 &&
+                state.puzzleFilters.completionStatus === 'all') {
+              // Keep filters empty/inclusive - don't need to change anything
+              // Empty selectedActs means "show all acts"
+              // completionStatus 'all' means "show all completion states"
+            }
+          }
+          
+          // If view includes elements, ensure they're not filtered out
+          if (entityTypes.includes('element') || entityTypes.includes('all')) {
+            // Only set defaults if no filters are already set by user
+            if (state.contentFilters.elementBasicTypes.size === 0 &&
+                state.contentFilters.elementStatus.size === 0) {
+              // Keep filters empty/inclusive - don't need to change anything
+              // Empty sets mean "show all"
+            }
           }
         },
         

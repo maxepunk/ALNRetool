@@ -467,7 +467,8 @@ export const RelationshipTypes = {
   PUZZLE_GROUPING: 'puzzle-grouping',
   VIRTUAL_DEPENDENCY: 'virtual-dependency',
   DEPENDENCY: 'dependency',
-  RELATIONSHIP: 'relationship'
+  RELATIONSHIP: 'relationship',
+  CONNECTION: 'connection'
 } as const;
 
 export type RelationshipType = typeof RelationshipTypes[keyof typeof RelationshipTypes];
@@ -1438,6 +1439,6 @@ export const isEntityType = (type: unknown): type is EntityType => {
 export const isRelationshipType = (type: unknown): type is RelationshipType => {
   return (
     typeof type === 'string' &&
-    ['requirement', 'reward', 'chain', 'collaboration', 'timeline', 'owner', 'ownership', 'container', 'puzzle-grouping', 'virtual-dependency', 'dependency', 'relationship'].includes(type)
+    ['requirement', 'reward', 'chain', 'collaboration', 'timeline', 'owner', 'ownership', 'container', 'puzzle-grouping', 'virtual-dependency', 'dependency', 'relationship', 'connection'].includes(type)
   );
 };

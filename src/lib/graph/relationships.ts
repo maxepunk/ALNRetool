@@ -1051,6 +1051,72 @@ export function createCharacterPuzzleEdges(
 }
 
 // ============================================================================
+// Character Connection Edge Creation
+// ============================================================================
+
+/**
+ * Create edges between characters who share timeline connections.
+ * 
+ * Establishes bidirectional connections between characters who have
+ * shared timeline events, representing their narrative relationships
+ * in the murder mystery investigation.
+ * 
+ * @param characters Array of characters with connection data
+ * @param lookupMaps Entity lookup maps for O(1) character resolution
+ * @returns Array of character-to-character connection edges
+ */
+export function createCharacterConnectionEdges(
+  characters: Character[],
+  lookupMaps: EntityLookupMaps
+): GraphEdge[] {
+  
+  const edges: GraphEdge[] = [];
+  const processedPairs = new Set<string>(); // Avoid duplicate edges
+  
+  characters.forEach(character => {
+    if (!character.connections || character.connections.length === 0) return;
+    
+    character.connections.forEach(connectedCharId => {
+      // Create a unique pair ID to avoid duplicates (A→B and B→A)
+      const pairId = [character.id, connectedCharId].sort().join('-');
+      if (processedPairs.has(pairId)) return;
+      processedPairs.add(pairId);
+      
+      // Check if connected character exists
+      const connectedChar = lookupMaps.characters.get(connectedCharId);
+      
+      if (connectedChar) {
+        // Create bidirectional edge for character connections
+        const edge = createEdge(
+          character.id,
+          connectedCharId,
+          'connection', // New edge type for character connections
+          undefined,
+          undefined,
+          { weight: 0.7 } // Medium weight for character connections
+        );
+        
+        if (edge) {
+          edges.push(edge as GraphEdge);
+        }
+      } else {
+        console.warn(`Character ${character.name} has unknown connection: ${connectedCharId}`);
+      }
+    });
+  });
+  
+  console.info(`Created ${edges.length} character connection edges`);
+  if (edges.length > 0) {
+    console.debug('Character connection edges:', edges.map(e => ({
+      from: characters.find(c => c.id === e.source)?.name || e.source,
+      to: characters.find(c => c.id === e.target)?.name || e.target
+    })));
+  }
+  
+  return edges;
+}
+
+// ============================================================================
 // Main Relationship Resolution
 // ============================================================================
 
@@ -1178,6 +1244,13 @@ export function resolveAllRelationships(
   puzzles: Puzzle[],
   timeline: TimelineEvent[]
 ): GraphEdge[] {
+  console.log('[resolveAllRelationships] Starting with:', {
+    characters: characters.length,
+    elements: elements.length,
+    puzzles: puzzles.length,
+    timeline: timeline.length
+  });
+
   // Build lookup maps for efficient resolution
   const lookupMaps = buildLookupMaps(characters, elements, puzzles, timeline);
   
@@ -1188,6 +1261,17 @@ export function resolveAllRelationships(
   const timelineEdges = createTimelineEdges(elements, lookupMaps);
   const containerEdges = createContainerEdges(elements, lookupMaps);
   const characterPuzzleEdges = createCharacterPuzzleEdges(characters, lookupMaps);
+  const characterConnectionEdges = createCharacterConnectionEdges(characters, lookupMaps);
+  
+  console.log('[resolveAllRelationships] Edge counts:', {
+    ownership: ownershipEdges.length,
+    requirement: requirementEdges.length,
+    reward: rewardEdges.length,
+    timeline: timelineEdges.length,
+    container: containerEdges.length,
+    characterPuzzle: characterPuzzleEdges.length,
+    characterConnection: characterConnectionEdges.length
+  });
   
   // Combine all edges
   const allEdges = [
@@ -1196,8 +1280,12 @@ export function resolveAllRelationships(
     ...rewardEdges,
     ...timelineEdges,
     ...containerEdges,
-    ...characterPuzzleEdges
+    ...characterPuzzleEdges,
+    ...characterConnectionEdges
   ];
+  
+  console.log('[resolveAllRelationships] Total edges created:', allEdges.length);
+  console.log('[resolveAllRelationships] Edge types:', [...new Set(allEdges.map(e => e.data?.relationshipType))]);
   
   return allEdges;
 }

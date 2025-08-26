@@ -13,7 +13,7 @@
  * - Entity type badges for visual differentiation
  */
 
-import { memo, useCallback, useState, useRef, useEffect, useMemo } from 'react';
+import { memo, useCallback, useState, useRef, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -203,21 +203,6 @@ export const HeaderSearch = memo(function HeaderSearch({ isMobile = false, class
     }
   }, [isDropdownOpen, suggestions, highlightedIndex, handleSelectSuggestion]);
   
-  /**
-   * Close dropdown when clicking outside
-   */
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (inputRef.current && !inputRef.current.contains(e.target as any)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isDropdownOpen]);
   
   // Mobile modal view (used within mobile search modal)
   if (isMobile) {

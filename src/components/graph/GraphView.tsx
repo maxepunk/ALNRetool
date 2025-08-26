@@ -96,15 +96,17 @@ function ViewportController({
   
   // Initial fit to view on mount or when nodes change significantly
   const hasNodes = nodes.length > 0;
+  const fitAll = viewportControls.fitAll;
+  
   useEffect(() => {
     if (hasNodes) {
       // Small delay to ensure nodes are rendered
       const timer = setTimeout(() => {
-        viewportControls.fitAll();
+        fitAll();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [hasNodes, viewportControls]); // Only re-fit when going from 0 to >0 nodes
+  }, [hasNodes, fitAll]); // Only re-fit when going from 0 to >0 nodes
   
   return null; // This component doesn't render anything
 }
@@ -166,7 +168,12 @@ function GraphViewComponent() {
   const { data: puzzles = [] } = useAllEntityData(puzzlesApi, queryKeys.puzzles());
   const { data: timeline = [] } = useAllEntityData(timelineApi, queryKeys.timeline());
 
-
+  // Initialize filters when view changes to ensure requested entities are visible
+  useEffect(() => {
+    if (viewConfig) {
+      useFilterStore.getState().initializeFiltersForView(viewConfig);
+    }
+  }, [viewConfig.name]); // Re-initialize when view changes
 
   /**
    * Create all graph nodes from entity data.
@@ -197,18 +204,28 @@ function GraphViewComponent() {
     /**
      * Check if a character passes tier and type filters.
      * 
+     * Filter Logic:
+     * - Empty tier set (size === 0) = show all tiers (inclusive)
+     * - Populated tier set = show only selected tiers (exclusive)
+     * - characterType 'all' = show all types (inclusive)
+     * - Specific characterType = show only that type (exclusive)
+     * 
      * @param {Character} character - Character to check
      * @returns {boolean} True if passes all filters
      */
     const matchesCharacterFilters = (character: Character): boolean => {
+      // Tier filter: Empty set = show all (inclusive default)
       if (characterSelectedTiers.size > 0) {
         const tier = character.tier || 'Standard';
         if (!characterSelectedTiers.has(tier as any)) return false;
       }
+      
+      // Type filter: 'all' = show all (inclusive default)
       if (characterType !== 'all') {
         const type = character.type || 'Player';
         if (type !== characterType) return false;
       }
+      
       return true;
     };
     
@@ -216,13 +233,18 @@ function GraphViewComponent() {
      * Check if a puzzle passes act and completion filters.
      * Handles Act format normalization ('Act 1' -> 'Act1').
      * 
+     * Filter Logic:
+     * - Empty act set (size === 0) = show all acts (inclusive)
+     * - Populated act set = show only selected acts (exclusive)
+     * - completionStatus 'all' = show all puzzles (inclusive)
+     * 
      * @param {Puzzle} puzzle - Puzzle to check
      * @returns {boolean} True if passes all filters
      */
     const matchesPuzzleFilters = (puzzle: Puzzle): boolean => {
-      // Check act filter
+      // Act filter: Empty set = show all (inclusive default)
       if (puzzleSelectedActs.size > 0) {
-        // Puzzle has timing: Act[] field, not act field
+        // Puzzle has timing: Act[] field
         // Check if ANY of the puzzle's timing acts match the selected acts
         const puzzleActs = puzzle.timing || [];
         const hasMatchingAct = puzzleActs.some((act) => {
@@ -234,9 +256,9 @@ function GraphViewComponent() {
         if (!hasMatchingAct) return false;
       }
       
-      // Note: Puzzle type doesn't have a completed field
-      // Completion status filtering would need to be implemented differently
-      // For now, ignore completion status filter since the data doesn't support it
+      // Completion status: 'all' = show all (inclusive default)
+      // Note: Puzzle type doesn't have a completed field in the data model
+      // This filter is currently non-functional but kept for future implementation
       
       return true;
     };
@@ -423,7 +445,7 @@ function GraphViewComponent() {
       timeline
     );
     return edges;
-  }, [characters, elements, puzzles, timeline, allNodes]);
+  }, [characters, elements, puzzles, timeline]);
 
   // Calculate the set of node IDs within connection depth once to avoid duplication
   const nodesWithinDepth = useMemo(() => {

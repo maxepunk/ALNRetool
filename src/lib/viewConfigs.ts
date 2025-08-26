@@ -175,30 +175,30 @@ export const viewConfigs: Record<string, ViewConfig> = {
     name: 'Puzzle Network',
     description: 'Focus on puzzle dependencies and rewards',
     filters: {
-      entityTypes: ['puzzle'],
+      entityTypes: ['puzzle', 'element', 'character'],  // Include elements and characters for relationships
       puzzleComplexity: { min: 1, max: 5 }
     },
     layout: {
       algorithm: 'dagre',
-      direction: 'TB',
+      direction: 'TB',  // Keep vertical layout
       spacing: {
-        nodeSpacing: 80,
-        rankSpacing: 200
+        nodeSpacing: 100,  // Increase from 80 for better separation
+        rankSpacing: 300   // Increase from 200 to match main branch spacing
       }
     },
     display: {
       showLabels: true,
       showEdgeLabels: true,
       nodeSize: 'large',
-      edgeStyle: 'animated'
+      edgeStyle: 'animated'  // Keep animated edges
     }
   },
   
   'character-relations': {
     name: 'Character Relationships',
-    description: 'Character and element connections',
+    description: 'Shows how puzzles connect characters',
     filters: {
-      entityTypes: ['character', 'element'],
+      entityTypes: ['character', 'puzzle'],
       tiers: ['Core', 'Standard']
     },
     layout: {
@@ -210,7 +210,7 @@ export const viewConfigs: Record<string, ViewConfig> = {
     display: {
       showLabels: true,
       nodeSize: 'large',
-      edgeStyle: 'dashed',
+      edgeStyle: 'animated',
       colorScheme: 'default'
     }
   },
