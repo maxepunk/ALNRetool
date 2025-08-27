@@ -4,6 +4,7 @@
  */
 
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 
@@ -120,7 +121,7 @@ export function DropdownMenuContent({
   children, 
   className,
   align = 'center',
-  sideOffset = 4
+  sideOffset = 4,
 }: DropdownMenuContentProps) {
   const { open, triggerRef } = React.useContext(DropdownMenuContext)
   const [position, setPosition] = React.useState({ top: 0, left: 0 })
@@ -143,15 +144,15 @@ export function DropdownMenuContent({
 
   return (
     <AnimatePresence>
-      {open && (
+      {open && createPortal(
         <motion.div
           id="dropdown-content"
-          initial={{ opacity: 0, scale: 0.95, y: -10 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: -10 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.1 }}
           className={cn(
-            "absolute z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
+            "z-[100] min-w-[8rem] rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
             align === 'center' && '-translate-x-1/2',
             align === 'end' && '-translate-x-full',
             className
@@ -160,10 +161,12 @@ export function DropdownMenuContent({
             position: 'fixed',
             top: `${position.top}px`,
             left: `${position.left}px`,
+            pointerEvents: 'auto',
           }}
         >
           {children}
-        </motion.div>
+        </motion.div>,
+        document.body
       )}
     </AnimatePresence>
   )
@@ -179,23 +182,28 @@ export function DropdownMenuItem({
   const { setOpen } = React.useContext(DropdownMenuContext)
   
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!disabled) {
-      onClick?.(e)
-      setOpen(false)
-    }
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (disabled) return;
+    
+    onClick?.(e)
+    setOpen(false)
   }
 
   return (
     <div
       className={cn(
         "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors",
-        "hover:bg-accent hover:text-accent-foreground",
-        "focus:bg-accent focus:text-accent-foreground",
-        disabled && "pointer-events-none opacity-50",
+        !disabled && "hover:bg-accent hover:text-accent-foreground",
+        !disabled && "focus:bg-accent focus:text-accent-foreground",
+        disabled && "opacity-50 cursor-not-allowed",
         className
       )}
       onClick={handleClick}
+      onMouseDown={(e) => e.preventDefault()}
       role="menuitem"
+      tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled}
       {...props}
     >

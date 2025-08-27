@@ -88,7 +88,20 @@ import type {
 import type { Node } from '@xyflow/react';
 import { createEdge } from './edges';
 
-
+/**
+ * Stable relationship type constants to prevent unnecessary re-renders
+ * from string literal recreation
+ */
+export const RELATIONSHIP_TYPES = {
+  OWNERSHIP: 'ownership',
+  REQUIREMENT: 'requirement',
+  REWARD: 'reward',
+  TIMELINE: 'timeline',
+  CONTAINER: 'container',
+  RELATIONSHIP: 'relationship',
+  CONNECTION: 'connection',
+  PLACEHOLDER: 'placeholder',
+} as const;
 
 // ============================================================================
 // Lookup Map Builders
@@ -317,7 +330,7 @@ export function createPlaceholderNode(
 ): Node<PlaceholderNodeData> {
   return {
     id,
-    type: 'placeholder',
+    type: RELATIONSHIP_TYPES.PLACEHOLDER,
     position: { x: 0, y: 0 }, // Will be positioned by layout
     data: {
       label: `Missing ${entityType}: ${id.slice(0, 8)}...`,
@@ -448,14 +461,14 @@ export function createOwnershipEdges(
     const edge = createEdge(
       element.ownerId,  // Character is source
       element.id,       // Element is target
-      'ownership'
+      RELATIONSHIP_TYPES.OWNERSHIP
     );
     
     if (edge) {
       // Add metadata for backward compatibility
       edge.data = {
         ...edge.data,
-        relationshipType: 'ownership',
+        relationshipType: RELATIONSHIP_TYPES.OWNERSHIP,
       };
       edges.push(edge as GraphEdge);
     }
@@ -572,14 +585,14 @@ export function createRequirementEdges(
       const edge = createEdge(
         elementId,  // Element is the source (flows into puzzle)
         puzzle.id,  // Puzzle is the target (receives the element)
-        'requirement'
+        RELATIONSHIP_TYPES.REQUIREMENT
       );
       
       if (edge) {
         // Add metadata for backward compatibility
         edge.data = {
           ...edge.data,
-          relationshipType: 'requirement',
+          relationshipType: RELATIONSHIP_TYPES.REQUIREMENT,
         };
         edges.push(edge as GraphEdge);
       }
@@ -691,7 +704,7 @@ export function createRewardEdges(
   puzzles.forEach(puzzle => {
     if (!puzzle.rewardIds || puzzle.rewardIds.length === 0) return;
     
-    console.log(`[createRewardEdges] Puzzle "${puzzle.name}" has rewards:`, puzzle.rewardIds);
+    // Removed console.log to prevent console spam during infinite loop
     
     puzzle.rewardIds.forEach(elementId => {
       // Check if element exists
@@ -701,19 +714,19 @@ export function createRewardEdges(
         return;
       }
       
-      console.log(`[createRewardEdges] Creating edge from puzzle "${puzzle.name}" to element "${element.name}"`);
+      // Removed console.log to prevent console spam during infinite loop
       
       const edge = createEdge(
         puzzle.id,   // Puzzle is the source (provides the reward)
         elementId,   // Element is the target (receives as reward)
-        'reward'
+        RELATIONSHIP_TYPES.REWARD
       );
       
       if (edge) {
         // Add metadata for backward compatibility
         edge.data = {
           ...edge.data,
-          relationshipType: 'reward',
+          relationshipType: RELATIONSHIP_TYPES.REWARD,
         };
         edges.push(edge as GraphEdge);
       }
@@ -843,14 +856,14 @@ export function createTimelineEdges(
     const edge = createEdge(
       element.id,
       element.timelineEventId,
-      'timeline'
+      RELATIONSHIP_TYPES.TIMELINE
     );
     
     if (edge) {
       // Add metadata for backward compatibility
       edge.data = {
         ...edge.data,
-        relationshipType: 'timeline',
+        relationshipType: RELATIONSHIP_TYPES.TIMELINE,
       };
       edges.push(edge as GraphEdge);
     }
@@ -980,7 +993,7 @@ export function createContainerEdges(
       const edge = createEdge(
         element.id,   // Container is source
         contentId,    // Content element is target
-        'container'   // Now using proper 'container' type
+        RELATIONSHIP_TYPES.CONTAINER   // Now using proper constant
       );
       
       if (edge) {
@@ -1029,7 +1042,7 @@ export function createCharacterPuzzleEdges(
         edges.push(createEdge(
           character.id,
           puzzleId,
-          'relationship',
+          RELATIONSHIP_TYPES.RELATIONSHIP,
           undefined, // sourceNode
           undefined, // targetNode
           { weight: 2 } // Medium weight
@@ -1090,7 +1103,7 @@ export function createCharacterConnectionEdges(
         const edge = createEdge(
           character.id,
           connectedCharId,
-          'connection', // New edge type for character connections
+          RELATIONSHIP_TYPES.CONNECTION, // Using constant for character connections
           undefined,
           undefined,
           { weight: 0.7 } // Medium weight for character connections
@@ -1244,12 +1257,7 @@ export function resolveAllRelationships(
   puzzles: Puzzle[],
   timeline: TimelineEvent[]
 ): GraphEdge[] {
-  console.log('[resolveAllRelationships] Starting with:', {
-    characters: characters.length,
-    elements: elements.length,
-    puzzles: puzzles.length,
-    timeline: timeline.length
-  });
+  // Removed console.log to prevent console spam during infinite loop
 
   // Build lookup maps for efficient resolution
   const lookupMaps = buildLookupMaps(characters, elements, puzzles, timeline);
@@ -1263,15 +1271,7 @@ export function resolveAllRelationships(
   const characterPuzzleEdges = createCharacterPuzzleEdges(characters, lookupMaps);
   const characterConnectionEdges = createCharacterConnectionEdges(characters, lookupMaps);
   
-  console.log('[resolveAllRelationships] Edge counts:', {
-    ownership: ownershipEdges.length,
-    requirement: requirementEdges.length,
-    reward: rewardEdges.length,
-    timeline: timelineEdges.length,
-    container: containerEdges.length,
-    characterPuzzle: characterPuzzleEdges.length,
-    characterConnection: characterConnectionEdges.length
-  });
+  // Removed console.log to prevent console spam during infinite loop
   
   // Combine all edges
   const allEdges = [
@@ -1284,270 +1284,10 @@ export function resolveAllRelationships(
     ...characterConnectionEdges
   ];
   
-  console.log('[resolveAllRelationships] Total edges created:', allEdges.length);
-  console.log('[resolveAllRelationships] Edge types:', [...new Set(allEdges.map(e => e.data?.relationshipType))]);
+  // Removed console.log statements to prevent console spam during infinite loop
   
   return allEdges;
 }
-
-/**
- * Enhanced relationship resolution with comprehensive data integrity analysis and placeholder nodes.
- * 
- * Provides advanced relationship resolution for murder mystery investigation networks with
- * comprehensive missing entity detection, placeholder node creation, and data integrity
- * reporting for investigation data quality assurance and debugging.
- * 
- * **Enhanced Resolution Features:**
- * - **Missing Entity Detection**: Comprehensive scanning for broken entity references
- * - **Placeholder Node Creation**: Visual indicators for missing entities in investigation network
- * - **Data Integrity Reporting**: Detailed analysis of relationship completeness and quality
- * - **Investigation Continuity**: Maintains investigation workflow despite missing data
- * 
- * **Return Structure:**
- * - **edges**: Complete array of valid relationship edges for investigation graph
- * - **placeholderNodes**: Visual placeholder nodes for missing entity references
- * - **report**: Comprehensive data integrity analysis with quality metrics
- * 
- * **Data Quality Analysis:**
- * - Tracks all missing entity references across all relationship types
- * - Calculates investigation data integrity score (0-100 percentage)
- * - Provides detailed breakdown of broken relationships by entity type
- * - Enables investigation data quality monitoring and debugging
- * 
- * @param characters Array of investigation characters for relationship analysis
- * @param elements Array of story elements for comprehensive relationship scanning
- * @param puzzles Array of investigation puzzles for dependency analysis
- * @param timeline Array of timeline events for temporal relationship validation
- * @returns Object containing edges, placeholder nodes, and data integrity report
- * 
- * @complexity O(E + P + T + C + M) where E=elements, P=puzzles, T=timeline, C=characters, M=missing entities
- * 
- * @example
- * ```typescript
- * // Enhanced relationship resolution with data integrity analysis
- * const characters = await getCharacters();
- * const elements = await getElements();
- * const puzzles = await getPuzzles();
- * const timeline = await getTimeline();
- * 
- * const {
- *   edges,
- *   placeholderNodes,
- *   report
- * } = resolveRelationshipsWithIntegrity(
- *   characters,
- *   elements,
- *   puzzles,
- *   timeline
- * );
- * 
- * console.log('Investigation data quality analysis:', {
- *   totalEdges: edges.length,
- *   missingEntities: report.missingEntities.size,
- *   integrityScore: report.integrityScore,
- *   placeholderCount: placeholderNodes.length
- * });
- * 
- * // Investigation data quality dashboard
- * const generateQualityDashboard = (report: DataIntegrityReport) => {
- *   const missingByType = {};
- *   for (const [entityId, info] of report.missingEntities) {
- *     const type = info.type;
- *     missingByType[type] = (missingByType[type] || 0) + 1;
- *   }
- *   
- *   return {
- *     overallHealth: report.integrityScore > 80 ? 'healthy' : 'needs_attention',
- *     integrityScore: report.integrityScore,
- *     relationshipStats: {
- *       total: report.totalRelationships,
- *       broken: report.brokenRelationships,
- *       valid: report.totalRelationships - report.brokenRelationships
- *     },
- *     missingEntitiesByType: missingByType,
- *     investigationImpact: report.integrityScore < 70 ? 'critical' : 'manageable'
- *   };
- * };
- * 
- * // Visual investigation network with data quality indicators
- * const createEnhancedGraph = () => {
- *   const allNodes = [
- *     ...characterNodes,
- *     ...elementNodes,
- *     ...puzzleNodes,
- *     ...timelineNodes,
- *     ...placeholderNodes // Visual indicators for missing entities
- *   ];
- *   
- *   return {
- *     nodes: allNodes,
- *     edges: edges,
- *     metadata: {
- *       dataQuality: report.integrityScore,
- *       missingEntityCount: placeholderNodes.length,
- *       investigationCompleteness: ((edges.length / report.totalRelationships) * 100)
- *     }
- *   };
- * };
- * ```
- * 
- * @see {@link DataIntegrityReport} For data integrity report structure
- * @see {@link createPlaceholderNode} For placeholder node creation
- * @see {@link buildLookupMaps} For entity resolution optimization
- * @see {@link resolveAllRelationships} For standard relationship resolution
- * 
- * @remarks
- * **Investigation Data Quality Benefits:**
- * - Enables proactive identification of investigation data issues
- * - Provides visual feedback for missing entity references in investigation interface
- * - Supports investigation workflow continuity despite incomplete data
- * - Facilitates investigation data debugging and quality assurance processes
- * 
- * **Murder Mystery Investigation Integration:**
- * - Essential for investigation data quality monitoring and debugging
- * - Enables investigation workflow resilience with missing entity handling
- * - Provides investigation data completeness metrics for progress tracking
- * - Supports investigation interface features for data quality visualization
- */
-export function resolveRelationshipsWithIntegrity(
-  characters: Character[],
-  elements: Element[],
-  puzzles: Puzzle[],
-  timeline: TimelineEvent[]
-): {
-  edges: GraphEdge[];
-  placeholderNodes: Node<PlaceholderNodeData>[];
-  report: DataIntegrityReport;
-} {
-  // Build lookup maps for efficient resolution
-  const lookupMaps = buildLookupMaps(characters, elements, puzzles, timeline);
-  
-  // Track missing entities
-  const missingEntities = new Map<string, { type: EntityType; referencedBy: string[] }>();
-  const placeholderNodes: Node<PlaceholderNodeData>[] = [];
-  let brokenRelationships = 0;
-  let totalRelationships = 0;
-  
-  console.group('Resolving relationships with integrity checking');
-  
-  // Helper to track missing entity
-  const trackMissingEntity = (id: string, type: EntityType, referencedBy: string) => {
-    const existing = missingEntities.get(id);
-    if (existing) {
-      existing.referencedBy.push(referencedBy);
-    } else {
-      missingEntities.set(id, { type, referencedBy: [referencedBy] });
-    }
-  };
-  
-  // Create all edge types with missing entity tracking
-  const allEdges: GraphEdge[] = [];
-  
-  // First, scan all entities for references to missing entities
-  // This is more comprehensive than just looking at created edges
-  
-  // Check Elements for missing owners
-  elements.forEach(element => {
-    if (element.ownerId && !lookupMaps.characters.has(element.ownerId)) {
-      trackMissingEntity(element.ownerId, 'character', `Element: ${element.name}`);
-    }
-    if (element.timelineEventId && !lookupMaps.timeline.has(element.timelineEventId)) {
-      trackMissingEntity(element.timelineEventId, 'timeline', `Element: ${element.name}`);
-    }
-    // Check container relationships
-    element.contentIds?.forEach(contentId => {
-      if (!lookupMaps.elements.has(contentId)) {
-        trackMissingEntity(contentId, 'element', `Container: ${element.name}`);
-      }
-    });
-  });
-  
-  // Check Puzzles for missing elements and sub-puzzles
-  puzzles.forEach(puzzle => {
-    puzzle.puzzleElementIds?.forEach(elementId => {
-      if (!lookupMaps.elements.has(elementId)) {
-        trackMissingEntity(elementId, 'element', `Puzzle requirement: ${puzzle.name}`);
-      }
-    });
-    puzzle.rewardIds?.forEach(elementId => {
-      if (!lookupMaps.elements.has(elementId)) {
-        trackMissingEntity(elementId, 'element', `Puzzle reward: ${puzzle.name}`);
-      }
-    });
-    puzzle.subPuzzleIds?.forEach(subPuzzleId => {
-      if (!lookupMaps.puzzles.has(subPuzzleId)) {
-        trackMissingEntity(subPuzzleId, 'puzzle', `Parent puzzle: ${puzzle.name}`);
-      }
-    });
-  });
-  
-  // Check Characters for missing puzzles
-  characters.forEach(character => {
-    character.characterPuzzleIds?.forEach(puzzleId => {
-      if (!lookupMaps.puzzles.has(puzzleId)) {
-        trackMissingEntity(puzzleId, 'puzzle', `Character: ${character.name}`);
-      }
-    });
-  });
-  
-  // Create edges (these won't include edges to missing entities due to the checks in creation functions)
-  const standardEdges = [
-    ...createOwnershipEdges(elements, lookupMaps),
-    ...createRequirementEdges(puzzles, lookupMaps),
-    ...createRewardEdges(puzzles, lookupMaps),
-    ...createTimelineEdges(elements, lookupMaps),
-    ...createContainerEdges(elements, lookupMaps),
-    ...createCharacterPuzzleEdges(characters, lookupMaps),
-  ];
-  
-  // Count relationships (including broken ones we couldn't create)
-  totalRelationships = standardEdges.length + missingEntities.size;
-  brokenRelationships = missingEntities.size;
-  
-  // Add the created edges
-  allEdges.push(...standardEdges);
-  
-  // Create placeholder nodes for missing entities
-  missingEntities.forEach((info, id) => {
-    const placeholder = createPlaceholderNode(
-      id, 
-      info.type,
-      info.referencedBy.join(', ')
-    );
-    placeholderNodes.push(placeholder);
-  });
-  
-  // Calculate integrity score
-  const integrityScore = totalRelationships > 0
-    ? Math.round(((totalRelationships - brokenRelationships) / totalRelationships) * 100)
-    : 100;
-  
-  console.debug(`Data integrity: ${integrityScore}%`);
-  console.debug(`Missing entities: ${missingEntities.size}`);
-  console.debug(`Broken relationships: ${brokenRelationships}/${totalRelationships}`);
-  console.groupEnd();
-  
-  // Remove duplicates
-  const uniqueEdges = new Map<string, GraphEdge>();
-  allEdges.forEach(edge => {
-    uniqueEdges.set(edge.id, edge);
-  });
-  
-  return {
-    edges: Array.from(uniqueEdges.values()),
-    placeholderNodes,
-    report: {
-      missingEntities,
-      brokenRelationships,
-      totalRelationships,
-      integrityScore,
-    },
-  };
-}
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
 
 /**
  * Filter edges by relationship type

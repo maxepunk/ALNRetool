@@ -44,10 +44,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { RelationFieldEditor } from './RelationFieldEditor';
@@ -177,17 +174,18 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
             value={value || ''}
             onValueChange={onChange}
             disabled={disabled || field.readOnly}
+            className="bg-white/5 border-white/10 focus:border-white/20"
           >
-            <SelectTrigger className="bg-white/5 border-white/10 focus:border-white/20">
-              <SelectValue placeholder={field.placeholder || `Select ${field.label}`} />
-            </SelectTrigger>
-            <SelectContent>
-              {field.options?.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
+            {!value && (
+              <SelectItem value="" disabled>
+                {field.placeholder || `Select ${field.label}`}
+              </SelectItem>
+            )}
+            {field.options?.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </Select>
           {field.helperText && (
             <p className="text-xs text-muted-foreground">{field.helperText}</p>

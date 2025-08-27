@@ -30,6 +30,9 @@ export const queryKeys = {
   timelineEvent: (id: string) => [...queryKeys.timeline(), id] as const,
   timelineList: (filters?: { limit?: number; cursor?: string }) =>
     [...queryKeys.timeline(), 'list', filters] as const,
+  
+  // Graph-wide invalidation key for forcing React Flow updates
+  graphData: () => [...queryKeys.all, 'graph'] as const,
 }
 
 // Helper function to invalidate all queries for a specific entity type

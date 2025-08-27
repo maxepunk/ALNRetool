@@ -25,7 +25,8 @@
 
 import { createEntityRouter, type InverseRelation } from './createEntityRouter.js';
 import { buildPuzzleFilters } from '../../services/filterBuilder.js';
-import { transformPuzzle, puzzleToNotionProps } from '../../../src/types/notion/transforms.js';
+import { transformPuzzle } from '../../../src/types/notion/transforms.js';
+import { toNotionPuzzleProperties } from '../../services/notionPropertyMappers.js';
 import config from '../../config/index.js';
 
 /**
@@ -111,7 +112,7 @@ const router = createEntityRouter({
   databaseId: PUZZLES_DATABASE_ID,
   entityName: 'puzzles',
   transform: transformPuzzle,
-  toNotionProps: puzzleToNotionProps,
+  toNotionProps: toNotionPuzzleProperties,
   buildFilters: buildPuzzleFilters,
   inverseRelations: puzzleInverseRelations
 });

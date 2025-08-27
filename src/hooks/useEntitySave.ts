@@ -125,29 +125,29 @@ export function useEntitySave() {
       switch (type) {
         case 'character':
           await updateCharacter.mutateAsync({ 
-            id: entityId, 
-            updates: updates as Partial<Character> 
+            ...updates as Partial<Character>,
+            id: entityId
           });
           break;
           
         case 'puzzle':
           await updatePuzzle.mutateAsync({ 
-            id: entityId, 
-            updates: updates as Partial<Puzzle> 
+            ...updates as Partial<Puzzle>,
+            id: entityId
           });
           break;
           
         case 'element':
           await updateElement.mutateAsync({ 
-            id: entityId, 
-            updates: updates as Partial<Element> 
+            ...updates as Partial<Element>,
+            id: entityId
           });
           break;
           
         case 'timeline':
           await updateTimeline.mutateAsync({ 
-            id: entityId, 
-            updates: updates as Partial<TimelineEvent> 
+            ...updates as Partial<TimelineEvent>,
+            id: entityId
           });
           break;
           

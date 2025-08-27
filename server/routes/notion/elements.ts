@@ -25,7 +25,8 @@
 
 import { createEntityRouter, type InverseRelation } from './createEntityRouter.js';
 import { buildElementFilters } from '../../services/filterBuilder.js';
-import { transformElement, elementToNotionProps } from '../../../src/types/notion/transforms.js';
+import { transformElement } from '../../../src/types/notion/transforms.js';
+import { toNotionElementProperties } from '../../services/notionPropertyMappers.js';
 import config from '../../config/index.js';
 
 /**
@@ -104,7 +105,7 @@ const router = createEntityRouter({
   databaseId: ELEMENTS_DATABASE_ID,
   entityName: 'elements',
   transform: transformElement,
-  toNotionProps: elementToNotionProps,
+  toNotionProps: toNotionElementProperties,
   buildFilters: buildElementFilters,
   inverseRelations: elementInverseRelations
 });

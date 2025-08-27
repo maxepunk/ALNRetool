@@ -13,14 +13,12 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { FieldEditorProps } from './types';
 import { formatErrorMessage } from '@/utils/fieldValidation';
+import { useCreationStore } from '@/stores/creationStore';
 import type {
   Character,
   Element,
@@ -93,6 +91,8 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   entityType,
   multiple = true,
 }) => {
+  const { openCreatePanel } = useCreationStore();
+  
   // Determine if this is a multi-relation or single-relation field
   const isMultiple = field.type === 'relation' || multiple;
 
@@ -123,20 +123,37 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
       .filter(Boolean);
   }, [selectedIds, allEntities, targetType]);
 
+  // Get current entity context from field metadata (will be passed from DetailPanel)
+  const currentEntityId = (field as any).currentEntityId;
+  const currentEntityType = (field as any).currentEntityType;
+  
   // Handle entity selection
-  const handleSelect = useCallback((entityId: string) => {
+  const handleSelect = useCallback((value: string) => {
     if (disabled || field.readOnly) return;
+
+    // Check if this is the "create new" option
+    if (value === 'create-new') {
+      if (targetType) {
+        openCreatePanel(targetType, {
+          sourceComponent: 'relation-field',
+          relationFieldKey: field.key,
+          parentEntityId: currentEntityId,
+          parentEntityType: currentEntityType
+        });
+      }
+      return;
+    }
 
     if (isMultiple) {
       // Multi-select: add if not already selected
-      if (!selectedIds.includes(entityId)) {
-        onChange([...selectedIds, entityId]);
+      if (!selectedIds.includes(value)) {
+        onChange([...selectedIds, value]);
       }
     } else {
       // Single-select: replace selection
-      onChange(entityId);
+      onChange(value);
     }
-  }, [selectedIds, onChange, disabled, field.readOnly, isMultiple]);
+  }, [selectedIds, onChange, disabled, field.readOnly, isMultiple, targetType, currentEntityId, currentEntityType, openCreatePanel, field.key]);
 
   // Handle entity removal
   const handleRemove = useCallback((entityId: string) => {
@@ -229,26 +246,24 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
           value=""
           onValueChange={handleSelect}
           disabled={disabled}
+          className="bg-white/5 border-white/10 focus:border-white/20"
         >
-          <SelectTrigger className="bg-white/5 border-white/10 focus:border-white/20">
-            <SelectValue placeholder={
-              isMultiple 
-                ? `Add ${field.label.toLowerCase()}...` 
-                : field.placeholder || `Select ${field.label.toLowerCase()}...`
-            } />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="" disabled>
-              {isMultiple 
-                ? `Add ${field.label.toLowerCase()}...` 
-                : field.placeholder || `Select ${field.label.toLowerCase()}...`}
+          <SelectItem value="" disabled>
+            {isMultiple 
+              ? `Add ${field.label.toLowerCase()}...` 
+              : field.placeholder || `Select ${field.label.toLowerCase()}...`}
+          </SelectItem>
+          {unselectedEntities.map((entity) => (
+            <SelectItem key={entity.id} value={entity.id}>
+              {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
             </SelectItem>
-            {unselectedEntities.map((entity) => (
-              <SelectItem key={entity.id} value={entity.id}>
-                {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
-              </SelectItem>
-            ))}
-          </SelectContent>
+          ))}
+          {/* Add "Create new" option */}
+          {targetType && (
+            <SelectItem value="create-new" className="text-primary">
+              + Create new {targetType}
+            </SelectItem>
+          )}
         </Select>
       )}
 

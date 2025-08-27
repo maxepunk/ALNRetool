@@ -29,6 +29,8 @@ import type {
   QueryDatabaseResponse,
   GetPageParameters,
   GetPageResponse,
+  CreatePageParameters,
+  CreatePageResponse,
   UpdatePageParameters,
   UpdatePageResponse,
   GetPagePropertyParameters,
@@ -164,6 +166,14 @@ export const notion = {
     ),
   },
   pages: {
+    /**
+     * Create a new page.
+     * @param {CreatePageParameters} params - Parent and properties
+     * @returns {Promise<CreatePageResponse>} Created page
+     */
+    create: limiter.wrap((params: CreatePageParameters): Promise<CreatePageResponse> => 
+      getNotionClient().pages.create(params)
+    ),
     /**
      * Retrieve a page with all properties.
      * @param {GetPageParameters} params - Page ID

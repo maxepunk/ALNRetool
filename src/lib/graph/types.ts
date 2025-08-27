@@ -209,7 +209,7 @@ export interface NotionData {
  * };
  * ```
  * 
- * @see {@link resolveRelationshipsWithIntegrity} For generating integrity reports
+ * 
  * @see {@link EntityType} For entity type classification
  */
 export interface DataIntegrityReport {

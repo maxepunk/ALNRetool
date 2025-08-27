@@ -71,8 +71,11 @@ npx vitest run src/components/graph/GraphView.test.tsx
 # Run tests matching pattern
 npx vitest run -t "should handle node selection"
 
-# Debug a specific test
-npx vitest --inspect-brk src/lib/graph/transformers.test.ts
+# Run tests with specific reporter
+npx vitest run --reporter=json > test-results.json
+
+# Run tests for a specific directory with coverage
+npx vitest run src/hooks --coverage
 ```
 
 ### Commit Convention
@@ -119,6 +122,33 @@ src/hooks/useViewConfig.ts # Hook for accessing view configs
 ```
 2. View automatically available in UI without additional code
 
+### Entity Creation System (NEW)
+The app uses a portal-based creation flow with dedicated components:
+
+```
+src/components/
+├── CreatePanel.tsx           # Main creation form component
+├── CreatePanelPortal.tsx     # Portal wrapper for z-index management
+├── EntityCreationModal.tsx   # Modal container for creation
+└── graph/
+    └── FloatingActionButton.tsx  # FAB for triggering creation
+
+src/stores/
+└── creationStore.ts          # Zustand store for creation state
+
+src/hooks/mutations/
+├── create.ts                 # Core creation mutation hooks
+├── entityMutations.ts        # Entity-specific mutations
+└── updateRelationship.ts     # Relationship update mutations
+```
+
+#### Creation Flow
+1. User clicks FloatingActionButton or uses keyboard shortcut
+2. EntityCreationModal opens via portal (managed z-index)
+3. CreatePanel renders form based on entity type
+4. Mutations handled via TanStack Query with optimistic updates
+5. Cache invalidation via CacheCoordinator
+
 ### TypeScript Configuration
 - **Frontend**: `tsconfig.app.json` - ESNext modules, React JSX, path aliases
 - **Backend**: `tsconfig.server.json` - CommonJS output for Node.js
@@ -130,6 +160,7 @@ src/hooks/useViewConfig.ts # Hook for accessing view configs
 - **shadcn/ui Components**: UI primitives from `@/components/ui/*`
 - **Global Styles**: Animation keyframes in `src/index.css`
 - **No CSS Modules**: Migrated to Tailwind utilities
+- **Z-Index Management**: Centralized in `src/config/zIndex.ts`
 
 ### State Management Pattern
 - **React Query**: All server state via TanStack Query v5 hooks in `src/hooks/`
@@ -142,12 +173,17 @@ src/hooks/useViewConfig.ts # Hook for accessing view configs
 src/hooks/
 ├── generic/              # Generic reusable patterns
 │   └── useEntityData.ts  # Base hook with EntityAPI interface
-├── mutations/            # Mutation hooks
+├── mutations/            # Mutation hooks (expanded)
+│   ├── index.ts         # Barrel export
+│   ├── create.ts        # Creation mutations
+│   ├── entityMutations.ts # Entity-specific mutations
+│   └── updateRelationship.ts # Relationship updates
 ├── detail-panel/         # Detail panel specific hooks
 ├── useCharacters.ts      # Entity-specific hooks
 ├── useElements.ts
 ├── usePuzzles.ts
-└── useTimeline.ts
+├── useTimeline.ts
+└── useEntitySave.ts      # Save coordination hook
 ```
 
 ### Environment Configuration
@@ -268,8 +304,15 @@ tsx scripts/integration-test.ts       # Full integration test
   - FilesFieldEditor (file upload/display)
   - SelectFieldEditor, MultiSelectFieldEditor, CheckboxFieldEditor
 - **Mutation Hooks**: `src/hooks/mutations/` with cache invalidation
-- **Field Registry**: Metadata-driven field configurations
+- **Field Registry**: Metadata-driven field configurations in `src/config/fieldRegistry.ts`
 - **Bidirectional Relations**: Server-side InverseRelationHandler (needs integration fixes)
+
+#### Adding Custom Field Types
+1. Define field metadata in `src/config/fieldRegistry.ts`
+2. Create editor component in `src/components/field-editors/`
+3. Register in `FieldEditor.tsx` component switch
+4. Add TypeScript types to entity interfaces
+5. Update backend property mappers if needed
 
 ## Common Pitfalls to Avoid
 
@@ -282,12 +325,13 @@ tsx scripts/integration-test.ts       # Full integration test
 7. **Use absolute imports** - `@/*` for src files, not relative paths
 8. **Check config module first** - all env vars should go through `server/config/index.ts`
 9. **Don't add unnecessary abstractions** - direct entity processing is preferred over transformers
+10. **Watch z-index conflicts** - use centralized `src/config/zIndex.ts` for layering
 
 ## Current Development Status
 
 **Post-Refactor Status (pre-simplification-backup branch)**:
 - ✅ Completed: 39% total code reduction (172 files from 280)
-- ✅ Functional: All core features working including field editing
+- ✅ Functional: All core features working including field editing and entity creation
 - ✅ Phase A-E Complete: Save functionality, cache invalidation, user feedback, cleanup
 - ✅ Production-ready with streamlined architecture
 
@@ -295,6 +339,11 @@ tsx scripts/integration-test.ts       # Full integration test
 - ~98 TypeScript compilation errors (non-blocking, build works with --no-verify)
 - Inverse relation handler bypass in some mutation flows
 - Sequential entity fetching performance (N+1 queries)
+
+**Active Development (Transformermutationrefactor branch)**:
+- Entity creation system implementation
+- Mutation hook consolidation
+- Creation flow optimization
 
 See Architecture_Cleanup.md for detailed phase history and planned improvements.
 
@@ -327,21 +376,29 @@ npm run dev              # Frontend on :5173, backend on :3001
 3. Check console for mutation logs
 4. Verify in Notion that changes persisted
 
+### Testing Entity Creation
+1. Click the floating action button (bottom-right)
+2. Or use keyboard shortcut (Ctrl/Cmd + N)
+3. Select entity type and fill form
+4. Submit creates entity in Notion with optimistic UI update
+
 ### Adding New Entity Fields
-1. Update field registry in backend property mappers
+1. Update field registry in `src/config/fieldRegistry.ts`
 2. Add field editor component if custom type needed
 3. Update TypeScript types in `src/types/`
-4. Cache invalidation handled automatically via CacheCoordinator
+4. Update backend property mappers in `server/services/notionPropertyMappers.ts`
+5. Cache invalidation handled automatically via CacheCoordinator
 
 ### Debugging Graph Issues
 - Enable React Query DevTools (already configured)
 - Check Network tab for API calls to `/api/[entity-type]`
 - Use React Flow's built-in debugging: `window.__REACT_FLOW_STORE__`
 - Graph state in Zustand: check `src/stores/filterStore.ts`
+- Creation state: check `src/stores/creationStore.ts`
 
-## MCP (Model Context Protocol) Tools & Agent Guidelines
+## MCP (Model Context Protocol) Servers Configuration
 
-### Configured MCP Servers (from .mcp.json)
+### Actually Configured MCP Servers (from .mcp.json)
 
 #### 1. Zen MCP - AI-Powered Code Analysis & Generation
 Key tools for development assistance:
@@ -354,7 +411,30 @@ Key tools for development assistance:
 - `mcp__zen__analyze` - Code analysis for architecture/performance
 - `mcp__zen__tracer` - Code tracing and dependency mapping
 
-#### 2. Playwright Generic MCP - Browser Automation Testing
+#### 2. Context7 MCP - Library Documentation
+```javascript
+// Get up-to-date docs for libraries used in the project
+mcp__context7__resolve-library-id({libraryName: "react-flow"})
+mcp__context7__get-library-docs({context7CompatibleLibraryID: "/xyflow/react-flow"})
+```
+
+#### 3. Tavily MCP - Web Search & Content Extraction
+```javascript
+// Search for documentation and best practices
+mcp__tavily__tavily-search({query: "React Flow custom node types"})
+mcp__tavily__tavily-extract({urls: ["https://reactflow.dev/..."]})
+```
+
+#### 4. Notion MCP - Direct Database Operations
+```javascript
+// Query and update Notion databases directly
+mcp__notion__notion_query_database({database_id: "18c2f33d-583f-8060-a6ab-de32ff06bca2"})
+mcp__notion__notion_retrieve_page({page_id: "..."})
+mcp__notion__notion_update_page_properties({page_id: "...", properties: {...}})
+```
+**⚠️ Warning**: Direct Notion updates bypass cache invalidation. Prefer Express API for mutations.
+
+#### 5. Playwright Generic MCP - Browser Automation Testing
 ```javascript
 // Start dev server first
 npm run dev
@@ -373,29 +453,8 @@ mcp__playwright-generic__playwright_console_logs({type: "error"})
 - `.react-flow__node` - Graph nodes
 - `.detail-panel` - Detail panel container
 - `.filter-panel input` - Filter inputs
-
-#### 3. Notion MCP - Direct Database Operations
-```javascript
-// Query and update Notion databases directly
-mcp__notion__notion_query_database({database_id: "18c2f33d-583f-8060-a6ab-de32ff06bca2"})
-mcp__notion__notion_retrieve_page({page_id: "..."})
-mcp__notion__notion_update_page_properties({page_id: "...", properties: {...}})
-```
-**⚠️ Warning**: Direct Notion updates bypass cache invalidation. Prefer Express API for mutations.
-
-#### 4. Context7 MCP - Library Documentation
-```javascript
-// Get up-to-date docs for libraries used in the project
-mcp__context7__resolve-library-id({libraryName: "react-flow"})
-mcp__context7__get-library-docs({context7CompatibleLibraryID: "/xyflow/react-flow"})
-```
-
-#### 5. Tavily MCP - Web Search & Content Extraction
-```javascript
-// Search for documentation and best practices
-mcp__tavily__tavily-search({query: "React Flow custom node types"})
-mcp__tavily__tavily-extract({urls: ["https://reactflow.dev/..."]})
-```
+- `.floating-action-button` - Creation trigger
+- `.create-panel` - Creation form
 
 #### 6. Magic MCP - UI Component Generation
 ```javascript
@@ -505,7 +564,25 @@ mcp__playwright-generic__playwright_console_logs({type: "error"})
 mcp__notion__notion_retrieve_page({page_id: "character-page-id"})
 ```
 
-#### Example 2: Comprehensive Code Review with Zen MCP
+#### Example 2: Testing Entity Creation Flow
+```javascript
+// 1. Start server
+Bash("npm run dev")
+
+// 2. Test creation flow
+mcp__playwright-generic__playwright_navigate({url: "http://localhost:5173"})
+mcp__playwright-generic__playwright_click({selector: ".floating-action-button"})
+mcp__playwright-generic__playwright_screenshot({name: "creation-modal-open"})
+mcp__playwright-generic__playwright_select({selector: "select[name='type']", value: "character"})
+mcp__playwright-generic__playwright_fill({selector: "input[name='name']", value: "New Character"})
+mcp__playwright-generic__playwright_click({selector: "button:has-text('Create')"})
+
+// 3. Verify creation
+mcp__playwright-generic__playwright_get_visible_text()
+mcp__playwright-generic__playwright_console_logs({type: "all"})
+```
+
+#### Example 3: Comprehensive Code Review with Zen MCP
 ```javascript
 // 1. Deep code review of mutation system
 mcp__zen__codereview({
@@ -531,7 +608,7 @@ mcp__context7__get-library-docs({
 })
 ```
 
-#### Example 3: Debug Performance Issues
+#### Example 4: Debug Performance Issues
 ```javascript
 // 1. Use Zen to investigate
 mcp__zen__debug({
@@ -561,7 +638,7 @@ mcp__zen__analyze({
 })
 ```
 
-#### Example 4: Generate Tests with Zen MCP
+#### Example 5: Generate Tests with Zen MCP
 ```javascript
 // Generate comprehensive tests for critical components
 mcp__zen__testgen({
@@ -572,9 +649,19 @@ mcp__zen__testgen({
   next_step_required: false,
   model: "gpt-5"
 })
+
+// Generate tests for creation flow
+mcp__zen__testgen({
+  step: "Generate tests for src/components/CreatePanel.tsx",
+  findings: "Focus on: form validation, entity creation, error handling",
+  step_number: 1,
+  total_steps: 1,
+  next_step_required: false,
+  model: "o3"
+})
 ```
 
-#### Example 5: UI Component Enhancement with Magic MCP
+#### Example 6: UI Component Enhancement with Magic MCP
 ```javascript
 // Refine existing component UI
 mcp__magic__21st_magic_component_refiner({

@@ -4,15 +4,19 @@
  * Single source of truth for all Notion property names.
  * This DTO layer decouples frontend from direct Notion schema dependencies.
  * Changes to Notion property names only require updates here.
+ * 
+ * IMPORTANT: These field names are verified against the actual Notion API.
+ * Last verified: 2024 (see scripts/test-notion-fields.ts)
  */
 
 /**
  * Character Database Property Names
+ * Verified via Notion API database.retrieve()
  */
 export const CharacterProperties = {
   // Basic fields
   NAME: 'Name',
-  TYPE: 'Player or NPC',
+  TYPE: 'Type',  // NOT "Player or NPC"
   TIER: 'Tier',
   
   // Relations
@@ -20,22 +24,23 @@ export const CharacterProperties = {
   ASSOCIATED_ELEMENTS: 'Associated Elements',
   CHARACTER_PUZZLES: 'Character Puzzles',
   EVENTS: 'Events',
-  CONNECTIONS: 'Connections',
+  CONNECTIONS: 'Connections',  // rollup
   
   // Text fields
   PRIMARY_ACTION: 'Primary Action',
   CHARACTER_LOGLINE: 'Character Logline',
-  OVERVIEW: 'Overview & Key Relationships',
+  OVERVIEW: 'Overview & Key Relationships',  // Full name as in Notion
   EMOTION_TOWARDS_CEO: 'Emotion towards CEO & others'
 } as const;
 
 /**
  * Element Database Property Names
+ * Verified via Notion API database.retrieve()
  */
 export const ElementProperties = {
   // Basic fields
   NAME: 'Name',
-  DESCRIPTION: 'Description/Text',
+  DESCRIPTION: 'Description/Text',  // Full name as in Notion
   BASIC_TYPE: 'Basic Type',
   STATUS: 'Status',
   FIRST_AVAILABLE: 'First Available',
@@ -45,22 +50,32 @@ export const ElementProperties = {
   CONTAINER: 'Container',
   CONTENTS: 'Contents',
   TIMELINE_EVENT: 'Timeline Event',
-  REQUIRED_FOR: 'Required For',
-  REWARDED_BY: 'Rewarded By',
-  ASSOCIATED_CHARACTERS: 'Associated Characters',
+  CONTAINER_PUZZLE: 'Container Puzzle',
+  REQUIRED_FOR_PUZZLE: 'Required For (Puzzle)',
+  REWARDED_BY_PUZZLE: 'Rewarded by (Puzzle)',
+  ASSOCIATED_CHARACTERS: 'Associated Characters',  // rollup
   
   // Additional fields
   NARRATIVE_THREADS: 'Narrative Threads',
   PRODUCTION_NOTES: 'Production/Puzzle Notes',
-  CONTENT_LINK: 'Content Link'
+  CONTENT_LINK: 'Content Link',
+  PUZZLE_CHAIN: 'Puzzle Chain',  // rollup
+  IS_CONTAINER: 'Container?',  // formula
+  FILES_MEDIA: 'Files & media',
+  
+  // System fields
+  CREATED_BY: 'Created by',
+  LAST_EDITED_BY: 'Last edited by',
+  LAST_EDITED_TIME: 'Last edited time'
 } as const;
 
 /**
  * Puzzle Database Property Names
+ * Verified via Notion API database.retrieve()
  */
 export const PuzzleProperties = {
   // Basic fields
-  PUZZLE: 'Puzzle',
+  PUZZLE: 'Puzzle',  // This is the name/title field
   DESCRIPTION_SOLUTION: 'Description/Solution',
   
   // Relations
@@ -70,16 +85,23 @@ export const PuzzleProperties = {
   PARENT_ITEM: 'Parent item',
   SUB_PUZZLES: 'Sub-Puzzles',
   
+  // Rollup fields
+  OWNER: 'Owner',  // rollup
+  NARRATIVE_THREADS: 'Narrative Threads',  // rollup
+  STORY_REVEALS: 'Story Reveals',  // rollup
+  TIMING: 'Timing',  // rollup
+  
   // Additional fields
   ASSET_LINK: 'Asset Link'
 } as const;
 
 /**
  * Timeline Database Property Names
+ * Verified via Notion API database.retrieve()
  */
 export const TimelineProperties = {
   // Basic fields
-  DESCRIPTION: 'Description',
+  DESCRIPTION: 'Description',  // This is the title field
   DATE: 'Date',
   
   // Relations
@@ -87,7 +109,12 @@ export const TimelineProperties = {
   MEMORY_EVIDENCE: 'Memory/Evidence',
   
   // Additional fields
-  NOTES: 'Notes'
+  NOTES: 'Notes',
+  MEM_TYPE: 'mem type',  // rollup
+  
+  // System fields
+  LAST_EDITED_BY: 'Last edited by',
+  LAST_EDITED_TIME: 'Last edited time'
 } as const;
 
 /**

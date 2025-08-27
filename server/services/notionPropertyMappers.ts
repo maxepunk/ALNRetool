@@ -37,6 +37,12 @@ import type {
   Puzzle,
   TimelineEvent,
 } from '../../src/types/notion/app.js';
+import {
+  CharacterProperties,
+  ElementProperties,
+  PuzzleProperties,
+  TimelineProperties
+} from '../../src/types/notion/schema-mapping.js';
 
 /**
  * Convert plain text to Notion title property format.
@@ -282,54 +288,54 @@ export function toNotionProperties(
 export function toNotionCharacterProperties(updates: Partial<Character>) {
   const properties: Record<string, any> = {};
 
-  // Map app fields to Notion properties
+  // Map app fields to Notion properties using verified constants
   if (updates.name !== undefined) {
-    properties['Name'] = toNotionTitle(updates.name);
+    properties[CharacterProperties.NAME] = toNotionTitle(updates.name);
   }
   
   if (updates.type !== undefined) {
-    properties['Player or NPC'] = toNotionSelect(updates.type);
+    properties[CharacterProperties.TYPE] = toNotionSelect(updates.type);
   }
   
   if (updates.tier !== undefined) {
-    properties['Tier'] = toNotionSelect(updates.tier);
+    properties[CharacterProperties.TIER] = toNotionSelect(updates.tier);
   }
   
   if (updates.primaryAction !== undefined) {
-    properties['Primary action'] = toNotionRichText(updates.primaryAction || '');
+    properties[CharacterProperties.PRIMARY_ACTION] = toNotionRichText(updates.primaryAction || '');
   }
   
   if (updates.characterLogline !== undefined) {
-    properties['Character logline'] = toNotionRichText(updates.characterLogline || '');
+    properties[CharacterProperties.CHARACTER_LOGLINE] = toNotionRichText(updates.characterLogline || '');
   }
   
   if (updates.overview !== undefined) {
-    properties['Overview'] = toNotionRichText(updates.overview || '');
+    properties[CharacterProperties.OVERVIEW] = toNotionRichText(updates.overview || '');
   }
   
   if (updates.emotionTowardsCEO !== undefined) {
-    properties['Emotion towards CEO'] = toNotionRichText(updates.emotionTowardsCEO || '');
+    properties[CharacterProperties.EMOTION_TOWARDS_CEO] = toNotionRichText(updates.emotionTowardsCEO || '');
   }
   
   // Relation fields
   if (updates.ownedElementIds !== undefined) {
-    properties['Owned elements'] = toNotionRelation(updates.ownedElementIds);
+    properties[CharacterProperties.OWNED_ELEMENTS] = toNotionRelation(updates.ownedElementIds);
   }
   
   if (updates.associatedElementIds !== undefined) {
-    properties['Associated elements'] = toNotionRelation(updates.associatedElementIds);
+    properties[CharacterProperties.ASSOCIATED_ELEMENTS] = toNotionRelation(updates.associatedElementIds);
   }
   
   if (updates.characterPuzzleIds !== undefined) {
-    properties['Character puzzles'] = toNotionRelation(updates.characterPuzzleIds);
+    properties[CharacterProperties.CHARACTER_PUZZLES] = toNotionRelation(updates.characterPuzzleIds);
   }
   
   if (updates.eventIds !== undefined) {
-    properties['Events'] = toNotionRelation(updates.eventIds);
+    properties[CharacterProperties.EVENTS] = toNotionRelation(updates.eventIds);
   }
   
   if (updates.connections !== undefined) {
-    properties['Character Connections'] = toNotionRelation(updates.connections);
+    properties[CharacterProperties.CONNECTIONS] = toNotionRelation(updates.connections);
   }
 
   return properties;
@@ -367,69 +373,78 @@ export function toNotionElementProperties(updates: Partial<Element>) {
   const properties: Record<string, any> = {};
 
   if (updates.name !== undefined) {
-    properties['Name'] = toNotionTitle(updates.name);
+    properties[ElementProperties.NAME] = toNotionTitle(updates.name);
   }
   
   if (updates.descriptionText !== undefined) {
     // Preserve SF_ patterns when updating description
-    properties['Description'] = toNotionRichText(
+    properties[ElementProperties.DESCRIPTION] = toNotionRichText(
       preserveSFPatterns(updates.descriptionText)
     );
   }
   
   if (updates.basicType !== undefined) {
-    properties['Basic Type'] = toNotionSelect(updates.basicType);
+    properties[ElementProperties.BASIC_TYPE] = toNotionSelect(updates.basicType);
   }
   
   if (updates.status !== undefined) {
-    properties['Status'] = toNotionStatus(updates.status);
+    properties[ElementProperties.STATUS] = toNotionStatus(updates.status);
   }
   
   if (updates.firstAvailable !== undefined) {
-    properties['First Available'] = toNotionSelect(updates.firstAvailable);
+    properties[ElementProperties.FIRST_AVAILABLE] = toNotionSelect(updates.firstAvailable);
   }
   
   if (updates.productionNotes !== undefined) {
-    properties['Production Notes'] = toNotionRichText(updates.productionNotes || '');
+    properties[ElementProperties.PRODUCTION_NOTES] = toNotionRichText(updates.productionNotes || '');
   }
   
   if (updates.contentLink !== undefined) {
-    properties['Content Link'] = toNotionUrl(updates.contentLink || null);
+    properties[ElementProperties.CONTENT_LINK] = toNotionUrl(updates.contentLink || null);
   }
   
   // Relation fields
   if (updates.ownerId !== undefined) {
-    properties['Owner'] = toNotionRelation(updates.ownerId ? [updates.ownerId] : []);
+    properties[ElementProperties.OWNER] = toNotionRelation(updates.ownerId ? [updates.ownerId] : []);
   }
   
   if (updates.containerId !== undefined) {
-    properties['Container'] = toNotionRelation(updates.containerId ? [updates.containerId] : []);
+    properties[ElementProperties.CONTAINER] = toNotionRelation(updates.containerId ? [updates.containerId] : []);
   }
   
   if (updates.contentIds !== undefined) {
-    properties['Contents'] = toNotionRelation(updates.contentIds);
+    properties[ElementProperties.CONTENTS] = toNotionRelation(updates.contentIds);
+  }
+  
+  if (updates.timelineEventId !== undefined) {
+    properties[ElementProperties.TIMELINE_EVENT] = toNotionRelation(updates.timelineEventId ? [updates.timelineEventId] : []);
+  }
+  
+  if (updates.containerPuzzleId !== undefined) {
+    properties[ElementProperties.CONTAINER_PUZZLE] = toNotionRelation(updates.containerPuzzleId ? [updates.containerPuzzleId] : []);
   }
   
   if (updates.requiredForPuzzleIds !== undefined) {
-    properties['Required For (Puzzle)'] = toNotionRelation(updates.requiredForPuzzleIds);
+    properties[ElementProperties.REQUIRED_FOR_PUZZLE] = toNotionRelation(updates.requiredForPuzzleIds);
   }
   
   if (updates.rewardedByPuzzleIds !== undefined) {
-    properties['Rewarded by (Puzzle)'] = toNotionRelation(updates.rewardedByPuzzleIds);
+    properties[ElementProperties.REWARDED_BY_PUZZLE] = toNotionRelation(updates.rewardedByPuzzleIds);
   }
   
   if (updates.associatedCharacterIds !== undefined) {
-    properties['Associated characters'] = toNotionRelation(updates.associatedCharacterIds);
+    // Note: This is a rollup field, not directly writable via relations
+    properties[ElementProperties.ASSOCIATED_CHARACTERS] = toNotionRelation(updates.associatedCharacterIds);
   }
   
   // Array fields (narrative threads)
   if (updates.narrativeThreads !== undefined) {
-    properties['Narrative threads'] = toNotionMultiSelect(updates.narrativeThreads);
+    properties[ElementProperties.NARRATIVE_THREADS] = toNotionMultiSelect(updates.narrativeThreads);
   }
   
   // Files field
   if (updates.filesMedia !== undefined) {
-    properties['Files & media'] = toNotionFiles(updates.filesMedia);
+    properties[ElementProperties.FILES_MEDIA] = toNotionFiles(updates.filesMedia);
   }
   
   // Note: sfPatterns, puzzleChain, isContainer are computed fields - not writable
@@ -459,36 +474,48 @@ export function toNotionPuzzleProperties(updates: Partial<Puzzle>) {
   const properties: Record<string, any> = {};
 
   if (updates.name !== undefined) {
-    properties['Name'] = toNotionTitle(updates.name);
+    properties[PuzzleProperties.PUZZLE] = toNotionTitle(updates.name);
   }
   
   if (updates.descriptionSolution !== undefined) {
-    properties['Description/Solution'] = toNotionRichText(updates.descriptionSolution || '');
+    properties[PuzzleProperties.DESCRIPTION_SOLUTION] = toNotionRichText(updates.descriptionSolution || '');
   }
   
   if (updates.assetLink !== undefined) {
-    properties['Asset Link'] = toNotionUrl(updates.assetLink || null);
+    properties[PuzzleProperties.ASSET_LINK] = toNotionUrl(updates.assetLink || null);
+  }
+  
+  // Handle act field (from frontend creation) - convert to timing multi-select
+  const actValue = (updates as any).act;
+  if (actValue !== undefined) {
+    properties[PuzzleProperties.TIMING] = toNotionMultiSelect([actValue]);
+  } else if (updates.timing !== undefined) {
+    // Handle normal timing array - filter out null values and convert to strings
+    const timingValues = updates.timing
+      .filter(t => t !== null)
+      .map(t => String(t));
+    properties[PuzzleProperties.TIMING] = toNotionMultiSelect(timingValues);
   }
   
   // Relation fields
   if (updates.puzzleElementIds !== undefined) {
-    properties['Puzzle elements'] = toNotionRelation(updates.puzzleElementIds);
+    properties[PuzzleProperties.PUZZLE_ELEMENTS] = toNotionRelation(updates.puzzleElementIds);
   }
   
   if (updates.lockedItemId !== undefined) {
-    properties['Locked item'] = toNotionRelation(updates.lockedItemId ? [updates.lockedItemId] : []);
+    properties[PuzzleProperties.LOCKED_ITEM] = toNotionRelation(updates.lockedItemId ? [updates.lockedItemId] : []);
   }
   
   if (updates.rewardIds !== undefined) {
-    properties['Rewards'] = toNotionRelation(updates.rewardIds);
+    properties[PuzzleProperties.REWARDS] = toNotionRelation(updates.rewardIds);
   }
   
   if (updates.parentItemId !== undefined) {
-    properties['Parent item'] = toNotionRelation(updates.parentItemId ? [updates.parentItemId] : []);
+    properties[PuzzleProperties.PARENT_ITEM] = toNotionRelation(updates.parentItemId ? [updates.parentItemId] : []);
   }
   
   if (updates.subPuzzleIds !== undefined) {
-    properties['Sub-puzzles'] = toNotionRelation(updates.subPuzzleIds);
+    properties[PuzzleProperties.SUB_PUZZLES] = toNotionRelation(updates.subPuzzleIds);
   }
 
   return properties;
@@ -513,24 +540,24 @@ export function toNotionTimelineProperties(updates: Partial<TimelineEvent>) {
   const properties: Record<string, any> = {};
 
   if (updates.description !== undefined) {
-    properties['Description'] = toNotionTitle(updates.description);
+    properties[TimelineProperties.DESCRIPTION] = toNotionTitle(updates.description);
   }
   
   if (updates.date !== undefined) {
-    properties['Date'] = toNotionDate(updates.date);
+    properties[TimelineProperties.DATE] = toNotionDate(updates.date);
   }
   
   if (updates.notes !== undefined) {
-    properties['Notes'] = toNotionRichText(updates.notes || '');
+    properties[TimelineProperties.NOTES] = toNotionRichText(updates.notes || '');
   }
   
   // Relation fields
   if (updates.charactersInvolvedIds !== undefined) {
-    properties['Characters involved'] = toNotionRelation(updates.charactersInvolvedIds);
+    properties[TimelineProperties.CHARACTERS_INVOLVED] = toNotionRelation(updates.charactersInvolvedIds);
   }
   
   if (updates.memoryEvidenceIds !== undefined) {
-    properties['Memory/Evidence'] = toNotionRelation(updates.memoryEvidenceIds);
+    properties[TimelineProperties.MEMORY_EVIDENCE] = toNotionRelation(updates.memoryEvidenceIds);
   }
 
   return properties;

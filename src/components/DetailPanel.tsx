@@ -55,7 +55,6 @@ import {
   useUpdateElement,
   useUpdatePuzzle,
   useUpdateTimelineEvent,
-  validateUpdates,
 } from '@/hooks/mutations';
 import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
 
@@ -457,19 +456,13 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
       return; // No changes to save
     }
 
-    // Validate updates using the utility function
-    const validationError = validateUpdates(changes, entityType as any);
-    if (validationError) {
-      setValidationErrors({ _form: validationError });
-      return;
-    }
 
     try {
       // Use mutation if available, otherwise fallback to onSave prop
       if (mutation) {
         await mutation.mutateAsync({ 
           id: entity.id, 
-          updates: changes 
+          ...changes 
         });
         setIsDirty(false);
         setSaveSuccess(true);
@@ -485,7 +478,7 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
         setTimeout(() => setSaveSuccess(false), 3000);
       }
     } catch (error) {
-      console.error('Failed to save changes:', undefined, error instanceof Error ? error : new Error(String(error)));
+      // Error is already logged by the mutation
       setHasValidationError(true);
     }
   }, [formData, entity, mutation, onSave, validateForm, entityType]);

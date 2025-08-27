@@ -8,6 +8,12 @@
  */
 
 import type { FieldConfig } from '@/components/field-editors/types';
+import {
+  CharacterProperties,
+  ElementProperties,
+  PuzzleProperties,
+  TimelineProperties
+} from '@/types/notion/schema-mapping';
 
 // Field type definitions
 export type FieldType = 'text' | 'textarea' | 'select' | 'multiselect' | 'date' | 'url' | 
@@ -35,7 +41,7 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'text',
     required: true,
     category: 'basic',
-    notionProperty: 'Name',
+    notionProperty: CharacterProperties.NAME,
   },
   type: {
     key: 'type',
@@ -43,7 +49,7 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'select',
     required: true,
     category: 'basic',
-    notionProperty: 'Player or NPC',
+    notionProperty: CharacterProperties.TYPE,
     options: [
       { value: 'Player', label: 'Player' },
       { value: 'NPC', label: 'NPC' },
@@ -55,7 +61,7 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'select',
     required: true,
     category: 'basic',
-    notionProperty: 'Tier',
+    notionProperty: CharacterProperties.TIER,
     options: [
       { value: 'Core', label: 'Core' },
       { value: 'Secondary', label: 'Secondary' },
@@ -69,14 +75,14 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Primary Action',
     type: 'text',
     category: 'details',
-    notionProperty: 'Primary action',
+    notionProperty: CharacterProperties.PRIMARY_ACTION,
   },
   characterLogline: {
     key: 'characterLogline',
     label: 'Character Logline',
     type: 'text',
     category: 'details',
-    notionProperty: 'Character logline',
+    notionProperty: CharacterProperties.CHARACTER_LOGLINE,
   },
   overview: {
     key: 'overview',
@@ -84,14 +90,14 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'textarea',
     rows: 4,
     category: 'details',
-    notionProperty: 'Overview',
+    notionProperty: CharacterProperties.OVERVIEW,
   },
   emotionTowardsCEO: {
     key: 'emotionTowardsCEO',
     label: 'Emotion Towards CEO',
     type: 'text',
     category: 'details',
-    notionProperty: 'Emotion towards CEO',
+    notionProperty: CharacterProperties.EMOTION_TOWARDS_CEO,
   },
   
   // Relations (Editable)
@@ -100,7 +106,7 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Owned Elements',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Owned elements',
+    notionProperty: CharacterProperties.OWNED_ELEMENTS,
     searchable: true,
     entityType: 'element',
   },
@@ -109,7 +115,7 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Associated Elements',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Associated elements',
+    notionProperty: CharacterProperties.ASSOCIATED_ELEMENTS,
     searchable: true,
     entityType: 'element',
   },
@@ -118,7 +124,7 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Character Puzzles',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Character puzzles',
+    notionProperty: CharacterProperties.CHARACTER_PUZZLES,
     searchable: true,
     entityType: 'puzzle',
   },
@@ -127,7 +133,7 @@ export const CHARACTER_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Timeline Events',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Events',
+    notionProperty: CharacterProperties.EVENTS,
     searchable: true,
     entityType: 'timeline',
   },
@@ -153,7 +159,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'text',
     required: true,
     category: 'basic',
-    notionProperty: 'Name',
+    notionProperty: ElementProperties.NAME,
   },
   descriptionText: {
     key: 'descriptionText',
@@ -163,7 +169,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     category: 'basic',
     preservePattern: true,
     helperText: 'SF_ patterns will be preserved (e.g., SF_RFID:001, SF_VALUE:5)',
-    notionProperty: 'Description',
+    notionProperty: ElementProperties.DESCRIPTION,
   },
   basicType: {
     key: 'basicType',
@@ -171,7 +177,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'select',
     required: true,
     category: 'basic',
-    notionProperty: 'Basic Type',
+    notionProperty: ElementProperties.BASIC_TYPE,
     options: [
       { value: 'Set Dressing', label: 'Set Dressing' },
       { value: 'Prop', label: 'Prop' },
@@ -187,7 +193,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Status',
     type: 'select',
     category: 'basic',
-    notionProperty: 'Status',
+    notionProperty: ElementProperties.STATUS,
     options: [
       { value: 'Idea/Placeholder', label: 'Idea/Placeholder' },
       { value: 'in space playtest ready', label: 'In Space Playtest Ready' },
@@ -204,7 +210,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'First Available',
     type: 'select',
     category: 'basic',
-    notionProperty: 'First Available',
+    notionProperty: ElementProperties.FIRST_AVAILABLE,
     options: [
       { value: 'Act 0', label: 'Act 0' },
       { value: 'Act 1', label: 'Act 1' },
@@ -219,21 +225,21 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'textarea',
     rows: 3,
     category: 'details',
-    notionProperty: 'Production Notes',
+    notionProperty: ElementProperties.PRODUCTION_NOTES,
   },
   contentLink: {
     key: 'contentLink',
     label: 'Content Link',
     type: 'url',
     category: 'details',
-    notionProperty: 'Content Link',
+    notionProperty: ElementProperties.CONTENT_LINK,
   },
   narrativeThreads: {
     key: 'narrativeThreads',
     label: 'Narrative Threads',
     type: 'array',
     category: 'details',
-    notionProperty: 'Narrative threads',
+    notionProperty: ElementProperties.NARRATIVE_THREADS,
     helperText: 'Tags for narrative connections',
   },
   filesMedia: {
@@ -241,7 +247,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Files & Media',
     type: 'files',
     category: 'details',
-    notionProperty: 'Files & media',
+    notionProperty: ElementProperties.FILES_MEDIA,
   },
   
   // Relations (Editable)
@@ -250,7 +256,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Owner',
     type: 'relation-single',
     category: 'relations',
-    notionProperty: 'Owner',
+    notionProperty: ElementProperties.OWNER,
     searchable: true,
     entityType: 'character',
   },
@@ -259,7 +265,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Container',
     type: 'relation-single',
     category: 'relations',
-    notionProperty: 'Container',
+    notionProperty: ElementProperties.CONTAINER,
     searchable: true,
     entityType: 'element',
   },
@@ -268,7 +274,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Contents',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Contents',
+    notionProperty: ElementProperties.CONTENTS,
     searchable: true,
     entityType: 'element',
   },
@@ -277,7 +283,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Timeline Event',
     type: 'relation-single',
     category: 'relations',
-    notionProperty: 'Timeline Event',
+    notionProperty: ElementProperties.TIMELINE_EVENT,
     searchable: true,
     entityType: 'timeline',
   },
@@ -286,7 +292,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Required For Puzzles',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Required For (Puzzle)',
+    notionProperty: ElementProperties.REQUIRED_FOR_PUZZLE,
     searchable: true,
     entityType: 'puzzle',
     inverseOf: { 
@@ -299,7 +305,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Rewarded By Puzzles',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Rewarded by (Puzzle)',
+    notionProperty: ElementProperties.REWARDED_BY_PUZZLE,
     searchable: true,
     entityType: 'puzzle',
     inverseOf: { 
@@ -312,7 +318,7 @@ export const ELEMENT_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Container Puzzle',
     type: 'relation-single',
     category: 'relations',
-    notionProperty: 'Container puzzle',
+    notionProperty: ElementProperties.CONTAINER_PUZZLE,
     searchable: true,
     entityType: 'puzzle',
   },
@@ -362,7 +368,7 @@ export const PUZZLE_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'text',
     required: true,
     category: 'basic',
-    notionProperty: 'Name',
+    notionProperty: PuzzleProperties.PUZZLE,
   },
   descriptionSolution: {
     key: 'descriptionSolution',
@@ -370,14 +376,14 @@ export const PUZZLE_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'textarea',
     rows: 4,
     category: 'basic',
-    notionProperty: 'Description/Solution',
+    notionProperty: PuzzleProperties.DESCRIPTION_SOLUTION,
   },
   assetLink: {
     key: 'assetLink',
     label: 'Asset Link',
     type: 'url',
     category: 'basic',
-    notionProperty: 'Asset Link',
+    notionProperty: PuzzleProperties.ASSET_LINK,
   },
   
   // Relations (Editable)
@@ -386,7 +392,7 @@ export const PUZZLE_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Puzzle Elements',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Puzzle elements',
+    notionProperty: PuzzleProperties.PUZZLE_ELEMENTS,
     searchable: true,
     entityType: 'element',
   },
@@ -395,7 +401,7 @@ export const PUZZLE_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Locked Item',
     type: 'relation-single',
     category: 'relations',
-    notionProperty: 'Locked item',
+    notionProperty: PuzzleProperties.LOCKED_ITEM,
     searchable: true,
     entityType: 'element',
   },
@@ -404,7 +410,7 @@ export const PUZZLE_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Rewards',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Rewards',
+    notionProperty: PuzzleProperties.REWARDS,
     searchable: true,
     entityType: 'element',
   },
@@ -413,7 +419,7 @@ export const PUZZLE_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Parent Item',
     type: 'relation-single',
     category: 'relations',
-    notionProperty: 'Parent item',
+    notionProperty: PuzzleProperties.PARENT_ITEM,
     searchable: true,
     entityType: 'element',
   },
@@ -422,7 +428,7 @@ export const PUZZLE_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Sub-Puzzles',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Sub-puzzles',
+    notionProperty: PuzzleProperties.SUB_PUZZLES,
     searchable: true,
     entityType: 'puzzle',
   },
@@ -478,7 +484,7 @@ export const TIMELINE_FIELDS: Record<string, ExtendedFieldConfig> = {
     rows: 3,
     required: true,
     category: 'basic',
-    notionProperty: 'Description',
+    notionProperty: TimelineProperties.DESCRIPTION,
   },
   date: {
     key: 'date',
@@ -486,7 +492,7 @@ export const TIMELINE_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'date',
     required: true,
     category: 'basic',
-    notionProperty: 'Date',
+    notionProperty: TimelineProperties.DATE,
   },
   notes: {
     key: 'notes',
@@ -494,7 +500,7 @@ export const TIMELINE_FIELDS: Record<string, ExtendedFieldConfig> = {
     type: 'textarea',
     rows: 3,
     category: 'details',
-    notionProperty: 'Notes',
+    notionProperty: TimelineProperties.NOTES,
   },
   
   // Relations (Editable)
@@ -503,7 +509,7 @@ export const TIMELINE_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Characters Involved',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Characters involved',
+    notionProperty: TimelineProperties.CHARACTERS_INVOLVED,
     searchable: true,
     entityType: 'character',
   },
@@ -512,7 +518,7 @@ export const TIMELINE_FIELDS: Record<string, ExtendedFieldConfig> = {
     label: 'Memory/Evidence',
     type: 'relation',
     category: 'relations',
-    notionProperty: 'Memory/Evidence',
+    notionProperty: TimelineProperties.MEMORY_EVIDENCE,
     searchable: true,
     entityType: 'element',
   },

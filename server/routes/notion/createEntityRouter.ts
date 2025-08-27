@@ -95,7 +95,8 @@ async function updateInverseRelations<T>(
             }
           });
           
-          // Invalidate target cache
+          // Invalidate target cache (both patterns)
+          cacheService.invalidatePattern(`*:*`); // Invalidate collection caches that might contain this entity
           cacheService.invalidatePattern(`*_${targetId}`);
         }
       } catch (error) {
@@ -129,7 +130,8 @@ async function updateInverseRelations<T>(
             }
           });
           
-          // Invalidate target cache
+          // Invalidate target cache (both patterns)
+          cacheService.invalidatePattern(`*:*`); // Invalidate collection caches that might contain this entity
           cacheService.invalidatePattern(`*_${targetId}`);
         }
       } catch (error) {
@@ -185,6 +187,106 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     res.setHeader('X-Cache-Version', cacheService.getVersion());
     res.json(transformed);
   }));
+  
+  // POST / - Create new entity (if mapper provided)
+  if (config.toNotionProps) {
+    router.post('/', asyncHandler(async (req, res) => {
+      // Extract parent relationship metadata from request
+      const { _parentRelation, ...entityData } = req.body;
+      
+      // Create the Notion page
+      const properties = config.toNotionProps!(entityData);
+      const response = await notion.pages.create({
+        parent: { database_id: config.databaseId },
+        properties
+      }) as NotionPage;
+      
+      // Transform to app format
+      const transformed = config.transform(response);
+      
+      // If this was created from a parent relationship, update the parent atomically
+      if (_parentRelation) {
+        const { parentType, parentId, fieldKey } = _parentRelation;
+        
+        try {
+          // Import the appropriate mapper function dynamically
+          const mappers = await import('../../services/notionPropertyMappers.js');
+          // parentType is already singular from frontend ('element', 'character', 'puzzle', 'timeline')
+          const mapperName = `toNotion${parentType.charAt(0).toUpperCase()}${parentType.slice(1)}Properties`;
+          const parentMapper = (mappers as any)[mapperName];
+          
+          if (!parentMapper) {
+            throw new Error(`No mapper found for parent type: ${parentType}`);
+          }
+          
+          // Get the parent's current data
+          const parentPage = await notion.pages.retrieve({ page_id: parentId }) as NotionPage;
+          
+          // Get the correct Notion property name using the mapper
+          // Create a dummy update object to leverage the existing mapper logic
+          const dummyUpdate = { [fieldKey]: [] };
+          const mappedProps = parentMapper(dummyUpdate);
+          const notionPropertyName = Object.keys(mappedProps)[0];
+          
+          // Extract current relation IDs using the correct property name
+          const currentRelation = parentPage.properties[notionPropertyName];
+          const currentIds = currentRelation?.type === 'relation' 
+            ? currentRelation.relation.map((r: any) => r.id)
+            : [];
+          
+          // Add the new entity ID to the relation
+          const updatedIds = [...currentIds, response.id];
+          
+          // Update the parent with the new relationship
+          // Bug fix #1: fieldKey already includes 'Ids', don't append it again
+          const updateProps = { [fieldKey]: updatedIds };
+          const parentProperties = parentMapper(updateProps);
+          
+          await notion.pages.update({
+            page_id: parentId,
+            properties: parentProperties
+          });
+          
+          // Invalidate parent entity cache
+          await cacheService.invalidateEntity(parentType, parentId);
+        } catch (error) {
+          // If parent update fails, delete the created entity to maintain atomicity
+          log.error('Failed to update parent relation, rolling back entity creation', {
+            entityId: response.id,
+            parentType: _parentRelation.parentType,
+            parentId: _parentRelation.parentId,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          
+          // Archive the created entity (Notion doesn't have delete, only archive)
+          await notion.pages.update({ 
+            page_id: response.id,
+            archived: true
+          });
+          
+          // Re-throw the error
+          throw new Error(`Failed to create entity with parent relationship: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      
+      // Update inverse relations if configured
+      if (config.inverseRelations && config.inverseRelations.length > 0) {
+        await updateInverseRelations(
+          response.id,
+          null, // No old data for creation
+          transformed,
+          config.inverseRelations
+        );
+      }
+      
+      // Invalidate list cache to ensure new entity appears
+      // Must invalidate both collection keys (colon format) and single entity keys (underscore format)
+      await cacheService.invalidatePattern(`${config.entityName}:*`); // Collection caches: "elements:20:null"
+      await cacheService.invalidatePattern(`${config.entityName}_*`); // Single entity caches: "elements_abc123:20:null"
+      
+      res.status(201).json(transformed);
+    }));
+  }
   
   // PUT /:id - Update entity (if mapper provided)
   if (config.toNotionProps) {

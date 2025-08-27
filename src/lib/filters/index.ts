@@ -333,6 +333,116 @@ export interface CharacterJourneyFilters {
   contentFilters?: ContentFilters;
 }
 
+/**
+ * Check if a newly created entity would pass the current filters
+ * Used for optimistic updates to avoid showing entities that would be filtered out
+ */
+export function wouldEntityPassFilters<T extends { id: string; name?: string }>(
+  entity: T,
+  entityType: 'character' | 'element' | 'puzzle' | 'timeline',
+  filters: {
+    characterFilters?: CharacterFilters;
+    puzzleFilters?: PuzzleFilters;
+    contentFilters?: ContentFilters;
+    searchTerm?: string;
+  }
+): boolean {
+  // Check search filter first (applies to all entity types)
+  if (filters.searchTerm) {
+    const searchLower = filters.searchTerm.toLowerCase().trim();
+    const name = (entity as any).name || '';
+    if (!name.toLowerCase().includes(searchLower)) {
+      return false;
+    }
+  }
+
+  // Check entity-specific filters
+  switch (entityType) {
+    case 'character': {
+      const char = entity as unknown as Character;
+      if (!filters.characterFilters) return true;
+      
+      // Check tier filter
+      if (filters.characterFilters.selectedTiers.size > 0) {
+        if (!char.tier || !filters.characterFilters.selectedTiers.has(char.tier)) {
+          return false;
+        }
+      }
+      
+      // Check character type filter
+      if (filters.characterFilters.characterType !== 'all') {
+        const isPlayer = char.type === 'Player';
+        const shouldBePlayer = filters.characterFilters.characterType === 'Player';
+        if (isPlayer !== shouldBePlayer) {
+          return false;
+        }
+      }
+      
+      // Skip ownership status check for new entities (no relationships yet)
+      // Skip selected character check (new entity can't be the selected one)
+      
+      return true;
+    }
+    
+    case 'puzzle': {
+      const puzzle = entity as unknown as Puzzle;
+      if (!filters.puzzleFilters) return true;
+      
+      // Check act filter
+      if (filters.puzzleFilters.selectedActs.size > 0) {
+        if (!puzzle.timing || puzzle.timing.length === 0) {
+          return false;
+        }
+        const hasMatchingAct = puzzle.timing.some(act => 
+          act && Array.from(filters.puzzleFilters!.selectedActs).some(selectedAct => 
+            act.toLowerCase().includes(selectedAct.toLowerCase())
+          )
+        );
+        if (!hasMatchingAct) {
+          return false;
+        }
+      }
+      
+      // Skip completion status check (new puzzles have no status yet)
+      // Skip selected puzzle check (new entity can't be the selected one)
+      
+      return true;
+    }
+    
+    case 'element': {
+      const element = entity as unknown as Element;
+      if (!filters.contentFilters) return true;
+      
+      // Check element status filter
+      if (filters.contentFilters.elementStatus.size > 0) {
+        if (!element.status || !filters.contentFilters.elementStatus.has(element.status)) {
+          return false;
+        }
+      }
+      
+      // Check element type filter
+      if (filters.contentFilters.elementBasicTypes.size > 0) {
+        if (!element.basicType || !filters.contentFilters.elementBasicTypes.has(element.basicType)) {
+          return false;
+        }
+      }
+      
+      // Skip has issues check (too complex for new entities)
+      // Skip last edited range (new entities are always "now")
+      
+      return true;
+    }
+    
+    case 'timeline': {
+      // Timeline events typically have no filters
+      return true;
+    }
+    
+    default:
+      return true;
+  }
+}
+
 export function applyCharacterJourneyFilters(
   data: {
     characters: Character[];

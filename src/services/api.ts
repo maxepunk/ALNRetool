@@ -22,6 +22,19 @@ import type {
 import { requestBatcher } from './requestBatcher';
 import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 
+/**
+ * Metadata for atomic parent relationship creation.
+ * When creating an entity from a relation field, this ensures
+ * the new entity is automatically added to the parent's relation.
+ */
+type ParentRelationMetadata = {
+  _parentRelation?: {
+    parentType: string;
+    parentId: string;
+    fieldKey: string;
+  };
+};
+
 
 
 /**
@@ -296,6 +309,19 @@ export const charactersApi = {
       body: JSON.stringify(updates),
     });
   },
+
+  /**
+   * Create a new character
+   */
+  create: async (data: Partial<Character> & ParentRelationMetadata): Promise<Character> => {
+    return fetcher<Character>('/notion/characters', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
 };
 
 /**
@@ -366,6 +392,19 @@ export const elementsApi = {
       body: JSON.stringify(updates),
     });
   },
+
+  /**
+   * Create a new element
+   */
+  create: async (data: Partial<Element> & ParentRelationMetadata): Promise<Element> => {
+    return fetcher<Element>('/notion/elements', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+  },
 };
 
 /**
@@ -408,6 +447,19 @@ export const puzzlesApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(updates),
+    });
+  },
+
+  /**
+   * Create a new puzzle
+   */
+  create: async (data: Partial<Puzzle> & ParentRelationMetadata): Promise<Puzzle> => {
+    return fetcher<Puzzle>('/notion/puzzles', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
     });
   },
 };
@@ -475,6 +527,19 @@ export const timelineApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(updates),
+    });
+  },
+
+  /**
+   * Create a new timeline event
+   */
+  create: async (data: Partial<TimelineEvent> & ParentRelationMetadata): Promise<TimelineEvent> => {
+    return fetcher<TimelineEvent>('/notion/timeline', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
     });
   },
 };

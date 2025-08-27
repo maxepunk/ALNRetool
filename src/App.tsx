@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import AppRouter from './router/AppRouter';
 import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 import { ViewContextProvider } from '@/contexts/ViewContext';
+import { CreatePanelPortal } from '@/components/CreatePanelPortal';
 // GraphContextProvider removed in Phase 3 cleanup
 
 // Create a client instance
@@ -58,6 +59,7 @@ function App() {
           },
         }}
       />
+      <CreatePanelPortal />
     </QueryClientProvider>
   );
 }

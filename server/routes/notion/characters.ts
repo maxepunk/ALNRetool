@@ -28,9 +28,10 @@
  * - Extended: Optional characters
  */
 
-import { createEntityRouter } from './createEntityRouter.js';
+import { createEntityRouter, type InverseRelation } from './createEntityRouter.js';
 import { buildCharacterFilters } from '../../services/filterBuilder.js';
-import { transformCharacter, characterToNotionProps } from '../../../src/types/notion/transforms.js';
+import { transformCharacter } from '../../../src/types/notion/transforms.js';
+import { toNotionCharacterProperties } from '../../services/notionPropertyMappers.js';
 import config from '../../config/index.js';
 
 /**
@@ -38,6 +39,41 @@ import config from '../../config/index.js';
  * @constant {string}
  */
 const CHARACTERS_DATABASE_ID = config.notionDatabaseIds.characters;
+
+/**
+ * Notion database ID for elements collection.
+ * Used for inverse relation updates.
+ * @constant {string}
+ */
+const ELEMENTS_DATABASE_ID = config.notionDatabaseIds.elements;
+
+/**
+ * Inverse relation configuration for characters.
+ * Defines how character updates propagate to related elements.
+ * 
+ * @constant {InverseRelation[]} characterInverseRelations
+ * 
+ * **Relation Types:**
+ * 1. **ownedElementIds**: Elements owned by this character
+ *    - Updates Element.Owner field
+ *    - Many-to-one bidirectional (many elements can have one owner)
+ * 
+ * Note: associatedElementIds is a rollup from timeline events
+ * and cannot be directly edited, so no inverse relation is needed.
+ * 
+ * **Synchronization:**
+ * When a character's owned elements change, the corresponding
+ * element records are automatically updated to maintain consistency.
+ */
+const characterInverseRelations: InverseRelation[] = [
+  {
+    sourceField: 'ownedElementIds',
+    targetDatabaseId: ELEMENTS_DATABASE_ID,
+    targetField: 'Owner',
+    relationType: 'one-to-many',
+    bidirectional: true
+  }
+];
 
 /**
  * Create Express router for character endpoints.
@@ -49,23 +85,24 @@ const CHARACTERS_DATABASE_ID = config.notionDatabaseIds.characters;
  * - Transform: Converts Notion → App format
  * - ToNotionProps: Converts App → Notion format
  * - BuildFilters: Constructs Notion query filters
- * - InverseRelations: Empty array (no inverse relations yet)
+ * - InverseRelations: Bidirectional sync with Elements
  * 
  * **Request Flow:**
  * 1. Request hits router endpoint
  * 2. Pagination/filter validation
  * 3. Notion API query with filters
  * 4. Transform response to app format
- * 5. Return formatted response
+ * 5. Handle inverse relations on mutations
+ * 6. Return formatted response
  * 
  * **Filter Support:**
  * - tiers: Filter by character tier (Core, Standard, Extended)
  * - type: Filter by character type (Player, NPC)
  * - lastEdited: Filter by modification date
  * 
- * **Future Expansion:**
- * The inverse relations array is empty but the infrastructure is ready
- * for future bidirectional relationships with other entities.
+ * **Relationships:**
+ * - ownedElementIds ↔ Element.Owner (many-to-one)
+ * - associatedElementIds (read-only rollup from timeline)
  * 
  * @see {@link createEntityRouter} for factory implementation
  * @see {@link transformCharacter} for data transformation
@@ -75,9 +112,9 @@ const router = createEntityRouter({
   databaseId: CHARACTERS_DATABASE_ID,
   entityName: 'characters',
   transform: transformCharacter,
-  toNotionProps: characterToNotionProps,
+  toNotionProps: toNotionCharacterProperties,
   buildFilters: buildCharacterFilters,
-  inverseRelations: [] // No inverse relations for characters yet
+  inverseRelations: characterInverseRelations
 });
 
 export default router;

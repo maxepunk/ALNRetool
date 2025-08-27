@@ -24,6 +24,13 @@ import type {
   Act
 } from './app';
 
+import {
+  CharacterProperties,
+  ElementProperties,
+  PuzzleProperties,
+  TimelineProperties
+} from './schema-mapping';
+
 // Property extraction helpers
 /**
  * Extracts plain text from a Notion title property
@@ -192,49 +199,49 @@ export function transformCharacter(page: NotionPage): Character {
   
   return {
     id: page.id,
-    name: getTitle(props['Name']),
+    name: getTitle(props[CharacterProperties.NAME]),
     lastEdited: page.last_edited_time,
-    type: (getSelect(props['Type']) || 'NPC') as Character['type'],
-    tier: (getSelect(props['Tier']) || 'Tertiary') as Character['tier'],
-    ownedElementIds: getRelationIds(props['Owned Elements']),
-    associatedElementIds: getRelationIds(props['Associated Elements']),
-    characterPuzzleIds: getRelationIds(props['Character Puzzles']),
-    eventIds: getRelationIds(props['Events']),
-    connections: getRollupStrings(props['Connections']),
-    primaryAction: getRichText(props['Primary Action']),
-    characterLogline: getRichText(props['Character Logline']),
-    overview: getRichText(props['Overview & Key Relationships']),
-    emotionTowardsCEO: getRichText(props['Emotion towards CEO & others'])
+    type: (getSelect(props[CharacterProperties.TYPE]) || 'NPC') as Character['type'],
+    tier: (getSelect(props[CharacterProperties.TIER]) || 'Tertiary') as Character['tier'],
+    ownedElementIds: getRelationIds(props[CharacterProperties.OWNED_ELEMENTS]),
+    associatedElementIds: getRelationIds(props[CharacterProperties.ASSOCIATED_ELEMENTS]),
+    characterPuzzleIds: getRelationIds(props[CharacterProperties.CHARACTER_PUZZLES]),
+    eventIds: getRelationIds(props[CharacterProperties.EVENTS]),
+    connections: getRollupStrings(props[CharacterProperties.CONNECTIONS]),
+    primaryAction: getRichText(props[CharacterProperties.PRIMARY_ACTION]),
+    characterLogline: getRichText(props[CharacterProperties.CHARACTER_LOGLINE]),
+    overview: getRichText(props[CharacterProperties.OVERVIEW]),
+    emotionTowardsCEO: getRichText(props[CharacterProperties.EMOTION_TOWARDS_CEO])
   };
 }
 
 export function transformElement(page: NotionPage): Element {
   const props = page.properties;
-  const descriptionText = getRichText(props['Description/Text']);
+  const descriptionText = getRichText(props[ElementProperties.DESCRIPTION]);
   
   return {
     id: page.id,
-    name: getTitle(props['Name']),
+    name: getTitle(props[ElementProperties.NAME]),
     lastEdited: page.last_edited_time,
     descriptionText,
     sfPatterns: parseSFPatterns(descriptionText),
-    basicType: (getSelect(props['Basic Type']) || 'Prop') as ElementBasicType,
-    ownerId: getRelationIds(props['Owner'])[0],
-    containerId: getRelationIds(props['Container'])[0],
-    contentIds: getRelationIds(props['Contents']),
-    timelineEventId: getRelationIds(props['Timeline Event'])[0],
-    status: (getStatus(props['Status']) || 'Idea/Placeholder') as ElementStatus,
-    firstAvailable: getSelect(props['First Available']) as Act,
-    requiredForPuzzleIds: getRelationIds(props['Required For (Puzzle)']),
-    rewardedByPuzzleIds: getRelationIds(props['Rewarded by (Puzzle)']),
-    containerPuzzleId: getRelationIds(props['Container Puzzle'])[0],
-    narrativeThreads: getMultiSelect(props['Narrative Threads']),
-    associatedCharacterIds: getRollupStrings(props['Associated Characters']),
-    puzzleChain: getRollupStrings(props['Puzzle Chain']),
-    productionNotes: getRichText(props['Production/Puzzle Notes']),
+    basicType: (getSelect(props[ElementProperties.BASIC_TYPE]) || 'Prop') as ElementBasicType,
+    ownerId: getRelationIds(props[ElementProperties.OWNER])[0],
+    containerId: getRelationIds(props[ElementProperties.CONTAINER])[0],
+    contentIds: getRelationIds(props[ElementProperties.CONTENTS]),
+    timelineEventId: getRelationIds(props[ElementProperties.TIMELINE_EVENT])[0],
+    status: (getStatus(props[ElementProperties.STATUS]) || 'Idea/Placeholder') as ElementStatus,
+    firstAvailable: getSelect(props[ElementProperties.FIRST_AVAILABLE]) as Act,
+    requiredForPuzzleIds: getRelationIds(props[ElementProperties.REQUIRED_FOR_PUZZLE]),
+    rewardedByPuzzleIds: getRelationIds(props[ElementProperties.REWARDED_BY_PUZZLE]),
+    containerPuzzleId: getRelationIds(props[ElementProperties.CONTAINER_PUZZLE])[0],
+    narrativeThreads: getMultiSelect(props[ElementProperties.NARRATIVE_THREADS]),
+    associatedCharacterIds: getRollupStrings(props[ElementProperties.ASSOCIATED_CHARACTERS]),
+    puzzleChain: getRollupStrings(props[ElementProperties.PUZZLE_CHAIN]),
+    productionNotes: getRichText(props[ElementProperties.PRODUCTION_NOTES]),
     filesMedia: [], // TODO: Parse files when needed
-    contentLink: getUrl(props['Content Link']) || undefined,
-    isContainer: getFormula(props['Container?']) === true
+    contentLink: getUrl(props[ElementProperties.CONTENT_LINK]) || undefined,
+    isContainer: getFormula(props[ElementProperties.IS_CONTAINER]) === true
   };
 }
 
@@ -243,251 +250,38 @@ export function transformPuzzle(page: NotionPage): Puzzle {
   
   return {
     id: page.id,
-    name: getTitle(props['Puzzle']),
+    name: getTitle(props[PuzzleProperties.PUZZLE]),
     lastEdited: page.last_edited_time,
-    descriptionSolution: getRichText(props['Description/Solution']),
-    puzzleElementIds: getRelationIds(props['Puzzle Elements']),
-    lockedItemId: getRelationIds(props['Locked Item'])[0],
-    ownerId: getRollupStrings(props['Owner'])[0],
-    rewardIds: getRelationIds(props['Rewards']),
-    parentItemId: getRelationIds(props['Parent item'])[0],
-    subPuzzleIds: getRelationIds(props['Sub-Puzzles']),
-    storyReveals: getRollupStrings(props['Story Reveals']),
-    timing: getRollupStrings(props['Timing']) as Act[],
-    narrativeThreads: getRollupStrings(props['Narrative Threads']),
-    assetLink: getUrl(props['Asset Link']) || undefined
+    descriptionSolution: getRichText(props[PuzzleProperties.DESCRIPTION_SOLUTION]),
+    puzzleElementIds: getRelationIds(props[PuzzleProperties.PUZZLE_ELEMENTS]),
+    lockedItemId: getRelationIds(props[PuzzleProperties.LOCKED_ITEM])[0],
+    ownerId: getRollupStrings(props[PuzzleProperties.OWNER])[0],
+    rewardIds: getRelationIds(props[PuzzleProperties.REWARDS]),
+    parentItemId: getRelationIds(props[PuzzleProperties.PARENT_ITEM])[0],
+    subPuzzleIds: getRelationIds(props[PuzzleProperties.SUB_PUZZLES]),
+    storyReveals: getRollupStrings(props[PuzzleProperties.STORY_REVEALS]),
+    timing: getRollupStrings(props[PuzzleProperties.TIMING]) as Act[],
+    narrativeThreads: getRollupStrings(props[PuzzleProperties.NARRATIVE_THREADS]),
+    assetLink: getUrl(props[PuzzleProperties.ASSET_LINK]) || undefined
   };
 }
 
 export function transformTimelineEvent(page: NotionPage): TimelineEvent {
   const props = page.properties;
-  const description = getTitle(props['Description']);
+  const description = getTitle(props[TimelineProperties.DESCRIPTION]);
   
   return {
     id: page.id,
     name: description || 'Untitled Event', // Add name field
     lastEdited: page.last_edited_time,
     description: description || '',
-    date: getDate(props['Date']) || '',
-    charactersInvolvedIds: getRelationIds(props['Characters Involved']),
-    memoryEvidenceIds: getRelationIds(props['Memory/Evidence']),
-    memTypes: getRollupStrings(props['mem type']) as ElementBasicType[],
-    notes: getRichText(props['Notes']),
+    date: getDate(props[TimelineProperties.DATE]) || '',
+    charactersInvolvedIds: getRelationIds(props[TimelineProperties.CHARACTERS_INVOLVED]),
+    memoryEvidenceIds: getRelationIds(props[TimelineProperties.MEMORY_EVIDENCE]),
+    memTypes: getRollupStrings(props[TimelineProperties.MEM_TYPE]) as ElementBasicType[],
+    notes: getRichText(props[TimelineProperties.NOTES]),
     lastEditedTime: page.last_edited_time
   };
 }
-/**
- * Convert Element entity to Notion properties for updates
- */
-export function elementToNotionProps(element: Partial<Element>): any {
-  const properties: any = {};
-  
-  if (element.name !== undefined) {
-    properties['Name'] = {
-      title: [{ text: { content: element.name } }]
-    };
-  }
-  
-  if (element.descriptionText !== undefined) {
-    properties['Description/Text'] = {
-      rich_text: [{ text: { content: element.descriptionText } }]
-    };
-  }
-  
-  if (element.basicType !== undefined) {
-    properties['Basic Type'] = {
-      select: { name: element.basicType }
-    };
-  }
-  
-  if (element.status !== undefined) {
-    properties['Status'] = {
-      status: { name: element.status }
-    };
-  }
-  
-  if (element.firstAvailable !== undefined) {
-    properties['First Available'] = {
-      select: { name: element.firstAvailable }
-    };
-  }
-  
-  if (element.narrativeThreads !== undefined) {
-    properties['Narrative Threads'] = {
-      multi_select: element.narrativeThreads.map(thread => ({ name: thread }))
-    };
-  }
-  
-  if (element.productionNotes !== undefined) {
-    properties['Production/Puzzle Notes'] = {
-      rich_text: [{ text: { content: element.productionNotes } }]
-    };
-  }
-  
-  if (element.contentLink !== undefined) {
-    properties['Content Link'] = {
-      url: element.contentLink
-    };
-  }
-  
-  // Handle relation fields
-  if (element.ownerId !== undefined) {
-    properties['Owner'] = {
-      relation: element.ownerId ? [{ id: element.ownerId }] : []
-    };
-  }
-  
-  if (element.containerId !== undefined) {
-    properties['Container'] = {
-      relation: element.containerId ? [{ id: element.containerId }] : []
-    };
-  }
-  
-  if (element.contentIds !== undefined) {
-    properties['Contents'] = {
-      relation: element.contentIds.map(id => ({ id }))
-    };
-  }
-  
-  if (element.timelineEventId !== undefined) {
-    properties['Timeline Event'] = {
-      relation: element.timelineEventId ? [{ id: element.timelineEventId }] : []
-    };
-  }
-  
-  if (element.requiredForPuzzleIds !== undefined) {
-    properties['Required For (Puzzle)'] = {
-      relation: element.requiredForPuzzleIds.map(id => ({ id }))
-    };
-  }
-  
-  if (element.rewardedByPuzzleIds !== undefined) {
-    properties['Rewarded by (Puzzle)'] = {
-      relation: element.rewardedByPuzzleIds.map(id => ({ id }))
-    };
-  }
-  
-  if (element.containerPuzzleId !== undefined) {
-    properties['Container Puzzle'] = {
-      relation: element.containerPuzzleId ? [{ id: element.containerPuzzleId }] : []
-    };
-  }
-  
-  return properties;
-}
-
-/**
- * Convert Puzzle entity to Notion properties for updates
- */
-export function puzzleToNotionProps(puzzle: Partial<Puzzle>): any {
-  const properties: any = {};
-  
-  if (puzzle.name !== undefined) {
-    properties['Puzzle'] = {
-      title: [{ text: { content: puzzle.name } }]
-    };
-  }
-  
-  if (puzzle.descriptionSolution !== undefined) {
-    properties['Description/Solution'] = {
-      rich_text: [{ text: { content: puzzle.descriptionSolution } }]
-    };
-  }
-  
-  if (puzzle.assetLink !== undefined) {
-    properties['Asset Link'] = {
-      url: puzzle.assetLink
-    };
-  }
-  
-  // Handle relation fields
-  if (puzzle.puzzleElementIds !== undefined) {
-    properties['Puzzle Elements'] = {
-      relation: puzzle.puzzleElementIds.map((id: string) => ({ id }))
-    };
-  }
-  
-  if (puzzle.lockedItemId !== undefined) {
-    properties['Locked Item'] = {
-      relation: puzzle.lockedItemId ? [{ id: puzzle.lockedItemId }] : []
-    };
-  }
-  
-  if (puzzle.rewardIds !== undefined) {
-    properties['Rewards'] = {
-      relation: puzzle.rewardIds.map((id: string) => ({ id }))
-    };
-  }
-  
-  if (puzzle.parentItemId !== undefined) {
-    properties['Parent Item'] = {
-      relation: puzzle.parentItemId ? [{ id: puzzle.parentItemId }] : []
-    };
-  }
-  
-  if (puzzle.subPuzzleIds !== undefined) {
-    properties['Sub-puzzles'] = {
-      relation: puzzle.subPuzzleIds.map((id: string) => ({ id }))
-    };
-  }
-  
-  return properties;
-}
-
-/**
- * Convert Character entity to Notion properties for updates
- */
-export function characterToNotionProps(character: Partial<Character>): any {
-  const properties: any = {};
-  
-  if (character.name !== undefined) {
-    properties['Name'] = {
-      title: [{ text: { content: character.name } }]
-    };
-  }
-  
-  if (character.tier !== undefined) {
-    properties['Tier'] = {
-      select: { name: character.tier }
-    };
-  }
-  
-  if (character.primaryAction !== undefined) {
-    properties['Primary Action'] = {
-      rich_text: [{ text: { content: character.primaryAction } }]
-    };
-  }
-  
-  if (character.characterLogline !== undefined) {
-    properties['Character Logline'] = {
-      rich_text: [{ text: { content: character.characterLogline } }]
-    };
-  }
-  
-  if (character.overview !== undefined) {
-    properties['Overview & Key Relationships'] = {
-      rich_text: [{ text: { content: character.overview } }]
-    };
-  }
-  
-  if (character.emotionTowardsCEO !== undefined) {
-    properties['Emotion towards CEO & others'] = {
-      rich_text: [{ text: { content: character.emotionTowardsCEO } }]
-    };
-  }
-  
-  // Handle relation fields
-  if (character.characterPuzzleIds !== undefined) {
-    properties['Character Puzzles'] = {
-      relation: character.characterPuzzleIds.map((id: string) => ({ id }))
-    };
-  }
-  
-  if (character.eventIds !== undefined) {
-    properties['Events'] = {
-      relation: character.eventIds.map((id: string) => ({ id }))
-    };
-  }
-  
-  return properties;
-}
+// Note: Property mapping functions moved to server/services/notionPropertyMappers.ts
+// The backend handles all Notion property transformations to maintain a single source of truth
