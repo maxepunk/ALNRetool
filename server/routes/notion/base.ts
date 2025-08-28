@@ -38,6 +38,8 @@ export async function handleCachedNotionRequest<T>(
     if (cachedResponse) {
       res.setHeader('X-Cache-Hit', 'true');
       res.setHeader('X-Cache-Version', cacheService.getVersion());
+      res.setHeader('X-Entity-Type', endpointName);
+      res.setHeader('X-Entity-Version', cacheService.getEntityVersion(endpointName, 'list') || cacheService.getVersion());
       res.json(cachedResponse);
       return;
     }
@@ -55,6 +57,8 @@ export async function handleCachedNotionRequest<T>(
   cacheService.set(cacheKey, response);
   res.setHeader('X-Cache-Hit', 'false');
   res.setHeader('X-Cache-Version', cacheService.getVersion());
+  res.setHeader('X-Entity-Type', endpointName);
+  res.setHeader('X-Entity-Version', cacheService.getEntityVersion(endpointName, 'list') || cacheService.getVersion());
   res.json(response);
 }
 

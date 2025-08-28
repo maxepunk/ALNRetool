@@ -45,6 +45,8 @@ npm start               # Start production server (NODE_ENV=production)
 ```
 
 ### Testing Commands
+
+#### Unit & Integration Tests (Vitest)
 ```bash
 npm test                # Run tests in watch mode
 npm run test:run        # Run all unit tests once (with increased memory)
@@ -61,6 +63,32 @@ npm run test:batch:components  # Test components only
 npm run test:batch:hooks      # Test hooks only
 npm run test:batch:lib        # Test lib only
 npm run test:batch:all        # Run all batches sequentially
+```
+
+#### E2E Tests (Playwright)
+```bash
+# Install Playwright
+npm install --save-dev @playwright/test
+npx playwright install
+
+# Run E2E tests
+npx playwright test                    # Run all tests
+npx playwright test --headed           # Run in headed mode
+npx playwright test --ui               # Interactive UI mode
+npx playwright test --debug            # Debug mode
+npx playwright test --trace on         # With trace for debugging
+
+# Run specific tests
+npx playwright test graph-editing      # Run tests matching name
+npx playwright test tests/e2e/specific.spec.ts  # Run specific file
+npx playwright test -g "should edit"   # Run tests matching title
+
+# Generate code
+npx playwright codegen http://localhost:5173  # Record actions to generate test code
+
+# View reports
+npx playwright show-report             # View HTML report
+npx playwright show-trace trace.zip    # View trace file
 ```
 
 ### Running Single Tests
@@ -179,11 +207,18 @@ src/hooks/
 │   ├── entityMutations.ts # Entity-specific mutations
 │   └── updateRelationship.ts # Relationship updates
 ├── detail-panel/         # Detail panel specific hooks
-├── useCharacters.ts      # Entity-specific hooks
-├── useElements.ts
-├── usePuzzles.ts
-├── useTimeline.ts
-└── useEntitySave.ts      # Save coordination hook
+│   └── useEntityForm.ts  # Form state management
+├── graph/                # Graph-specific hooks
+│   ├── useFilteredEntities.ts # Entity filtering logic
+│   ├── useGraphRelationships.ts # Relationship processing
+│   ├── useGraphVisibility.ts # Visibility state
+│   └── useLayoutEngine.ts # Layout calculations
+├── useEntitySave.ts      # Save coordination hook
+├── useGraphLayout.ts     # Layout management
+├── useViewConfig.ts      # View configuration access
+├── useFilterSelectors.ts # Filter state selectors
+├── useCacheSync.ts       # Cache synchronization
+└── useDebounce.ts        # Debouncing utility
 ```
 
 ### Environment Configuration
@@ -340,7 +375,7 @@ tsx scripts/integration-test.ts       # Full integration test
 - Inverse relation handler bypass in some mutation flows
 - Sequential entity fetching performance (N+1 queries)
 
-**Active Development (Transformermutationrefactor branch)**:
+**Active Development (entity-creation-feature branch)**:
 - Entity creation system implementation
 - Mutation hook consolidation
 - Creation flow optimization
@@ -434,27 +469,81 @@ mcp__notion__notion_update_page_properties({page_id: "...", properties: {...}})
 ```
 **⚠️ Warning**: Direct Notion updates bypass cache invalidation. Prefer Express API for mutations.
 
-#### 5. Playwright Generic MCP - Browser Automation Testing
-```javascript
-// Start dev server first
-npm run dev
+#### 5. Playwright Testing - Browser Automation
+Instead of using Playwright MCP directly, create test scripts following Playwright best practices:
 
-// Example testing flow:
-mcp__playwright-generic__playwright_navigate({url: "http://localhost:5173"})
-mcp__playwright-generic__playwright_screenshot({name: "initial-graph"})
-mcp__playwright-generic__playwright_click({selector: ".react-flow__node"})
-mcp__playwright-generic__playwright_get_visible_text()  // Verify DetailPanel
-mcp__playwright-generic__playwright_fill({selector: "input[name='name']", value: "New Name"})
-mcp__playwright-generic__playwright_click({selector: "button:has-text('Save')"})
-mcp__playwright-generic__playwright_console_logs({type: "error"})
+**Setup Playwright Tests**:
+```bash
+npm install --save-dev @playwright/test
+npx playwright install  # Install browsers
+```
+
+**Create test file `tests/e2e/graph-editing.spec.ts`**:
+```typescript
+import { test, expect } from '@playwright/test';
+
+test.describe('Graph Editing', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('http://localhost:5173');
+    // Wait for graph to load
+    await page.waitForSelector('.react-flow__node');
+  });
+
+  test('should edit node properties', async ({ page }) => {
+    // Click on a character node
+    await page.click('.react-flow__node-characterNode');
+    
+    // Verify detail panel opens
+    await expect(page.locator('.detail-panel')).toBeVisible();
+    
+    // Edit the name field
+    await page.fill('input[name="name"]', 'Updated Character');
+    
+    // Save changes
+    await page.click('button:has-text("Save")');
+    
+    // Verify success toast or feedback
+    await expect(page.locator('.toast-success')).toBeVisible();
+  });
+
+  test('should create new entity', async ({ page }) => {
+    // Click FAB
+    await page.click('.floating-action-button');
+    
+    // Select entity type
+    await page.selectOption('select[name="type"]', 'character');
+    
+    // Fill form
+    await page.fill('input[name="name"]', 'New Character');
+    
+    // Submit
+    await page.click('button:has-text("Create")');
+    
+    // Verify new node appears
+    await expect(page.locator('.react-flow__node:has-text("New Character")')).toBeVisible();
+  });
+});
 ```
 
 **Key Selectors for ALNRetool**:
 - `.react-flow__node` - Graph nodes
+- `.react-flow__node-characterNode` - Character nodes specifically
 - `.detail-panel` - Detail panel container
 - `.filter-panel input` - Filter inputs
 - `.floating-action-button` - Creation trigger
 - `.create-panel` - Creation form
+
+**Run tests**:
+```bash
+# Run in headed mode for debugging
+npx playwright test --headed
+
+# Run with UI mode for better debugging
+npx playwright test --ui
+
+# Run with trace for CI debugging
+npx playwright test --trace on
+```
 
 #### 6. Magic MCP - UI Component Generation
 ```javascript
@@ -486,35 +575,6 @@ Task("Count total lines of code in src/lib/graph/*")
 ❌ Task("Implement the feature")  # Too vague
 ```
 
-#### Effective Agent Patterns for ALNRetool
-
-**1. Code Quality Audit**:
-```bash
-Task("code-quality-auditor", "Review src/components/field-editors/* for:
-- TypeScript strict compliance
-- Consistent error handling
-- React best practices
-- Performance optimizations
-Write findings to _audit-field-editors.md")
-```
-
-**2. Refactoring Analysis**:
-```bash
-Task("Analyze src/lib/graph/* for:
-- Unused exports
-- Circular dependencies  
-- Opportunities to simplify
-- Dead code
-Output: List of specific refactoring recommendations")
-```
-
-**3. Test Coverage Check**:
-```bash
-Task("Review test coverage for:
-- src/hooks/mutations/*
-- src/components/DetailPanel.tsx
-- src/lib/graph/relationships.ts
-Report which functions lack tests")
 ```
 
 #### Agent Best Practices for This Codebase
@@ -543,63 +603,288 @@ Report which functions lack tests")
    Task("Find all custom hooks")
    ```
 
-### MCP + Agent Workflow Examples for ALNRetool
+### Testing Workflow Examples for ALNRetool
 
-#### Example 1: Testing Graph Editing End-to-End
-```javascript
-// 1. Start server
-Bash("npm run dev")
+#### Example 1: Create End-to-End Test Script
+```typescript
+// tests/e2e/full-workflow.spec.ts
+import { test, expect } from '@playwright/test';
 
-// 2. Use Playwright MCP to test UI
-mcp__playwright-generic__playwright_navigate({url: "http://localhost:5173"})
-mcp__playwright-generic__playwright_click({selector: ".react-flow__node-characterNode"})
-mcp__playwright-generic__playwright_screenshot({name: "detail-panel-open"})
-mcp__playwright-generic__playwright_fill({selector: "input[name='name']", value: "Updated Character"})
-mcp__playwright-generic__playwright_click({selector: "button:has-text('Save')"})
-
-// 3. Check for errors
-mcp__playwright-generic__playwright_console_logs({type: "error"})
-
-// 4. Verify in Notion (use with caution - prefer API verification)
-mcp__notion__notion_retrieve_page({page_id: "character-page-id"})
+test.describe('Full Graph Editing Workflow', () => {
+  test('complete editing workflow', async ({ page }) => {
+    // 1. Navigate to app
+    await page.goto('http://localhost:5173');
+    
+    // 2. Wait for graph to load
+    await page.waitForSelector('.react-flow__node');
+    
+    // 3. Take screenshot for visual regression
+    await expect(page).toHaveScreenshot('initial-graph.png');
+    
+    // 4. Click on a character node
+    await page.click('.react-flow__node-characterNode');
+    
+    // 5. Edit properties
+    const nameInput = page.locator('input[name="name"]');
+    await nameInput.clear();
+    await nameInput.fill('Updated Character');
+    
+    // 6. Save changes
+    await page.click('button:has-text("Save")');
+    
+    // 7. Check for console errors
+    const consoleErrors: string[] = [];
+    page.on('console', msg => {
+      if (msg.type() === 'error') consoleErrors.push(msg.text());
+    });
+    
+    // 8. Verify no errors occurred
+    expect(consoleErrors).toHaveLength(0);
+    
+    // 9. Verify changes persisted (check node text updated)
+    await expect(page.locator('.react-flow__node:has-text("Updated Character")')).toBeVisible();
+  });
+});
 ```
 
-#### Example 2: Testing Entity Creation Flow
-```javascript
-// 1. Start server
-Bash("npm run dev")
+#### Example 2: Create Page Object Model for Better Maintainability
+```typescript
+// tests/pages/GraphPage.ts
+import { Page, Locator } from '@playwright/test';
 
-// 2. Test creation flow
-mcp__playwright-generic__playwright_navigate({url: "http://localhost:5173"})
-mcp__playwright-generic__playwright_click({selector: ".floating-action-button"})
-mcp__playwright-generic__playwright_screenshot({name: "creation-modal-open"})
-mcp__playwright-generic__playwright_select({selector: "select[name='type']", value: "character"})
-mcp__playwright-generic__playwright_fill({selector: "input[name='name']", value: "New Character"})
-mcp__playwright-generic__playwright_click({selector: "button:has-text('Create')"})
+export class GraphPage {
+  readonly page: Page;
+  readonly graphCanvas: Locator;
+  readonly detailPanel: Locator;
+  readonly fab: Locator;
+  readonly saveButton: Locator;
 
-// 3. Verify creation
-mcp__playwright-generic__playwright_get_visible_text()
-mcp__playwright-generic__playwright_console_logs({type: "all"})
+  constructor(page: Page) {
+    this.page = page;
+    this.graphCanvas = page.locator('.react-flow');
+    this.detailPanel = page.locator('.detail-panel');
+    this.fab = page.locator('.floating-action-button');
+    this.saveButton = page.locator('button:has-text("Save")');
+  }
+
+  async goto() {
+    await this.page.goto('http://localhost:5173');
+    await this.page.waitForSelector('.react-flow__node');
+  }
+
+  async selectNode(nodeType: string) {
+    await this.page.click(`.react-flow__node-${nodeType}`);
+    await this.detailPanel.waitFor({ state: 'visible' });
+  }
+
+  async editField(fieldName: string, value: string) {
+    const input = this.page.locator(`input[name="${fieldName}"]`);
+    await input.clear();
+    await input.fill(value);
+  }
+
+  async save() {
+    await this.saveButton.click();
+    // Wait for save to complete (adjust based on your app's behavior)
+    await this.page.waitForResponse(resp => resp.url().includes('/api/') && resp.status() === 200);
+  }
+}
+
+// tests/e2e/using-page-object.spec.ts
+import { test, expect } from '@playwright/test';
+import { GraphPage } from '../pages/GraphPage';
+
+test('edit character using page object', async ({ page }) => {
+  const graphPage = new GraphPage(page);
+  
+  await graphPage.goto();
+  await graphPage.selectNode('characterNode');
+  await graphPage.editField('name', 'New Name');
+  await graphPage.save();
+  
+  // Verify the change
+  await expect(page.locator('.react-flow__node:has-text("New Name")')).toBeVisible();
+});
 ```
 
-#### Example 3: Comprehensive Code Review with Zen MCP
-```javascript
-// 1. Deep code review of mutation system
-mcp__zen__codereview({
-  step: "Review src/hooks/mutations/* for data integrity issues",
-  step_number: 1,
-  total_steps: 1,
-  next_step_required: false,
-  findings: "",
-  model: "gemini-2.5-pro"
-})
+#### Example 3: Playwright Configuration Best Practices
+```typescript
+// playwright.config.ts
+import { defineConfig, devices } from '@playwright/test';
 
-// 2. Analyze refactoring opportunities
-mcp__zen__refactor({
-  step: "Analyze src/lib/graph/* for simplification opportunities",
-  refactor_type: "codesmells",
-  model: "gemini-2.5-flash"
-})
+export default defineConfig({
+  testDir: './tests/e2e',
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 2 : 0,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: 'html',
+  
+  use: {
+    baseURL: 'http://localhost:5173',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+  },
+
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+  ],
+
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+  },
+});
+```
+
+#### Example 4: Test Data Management
+```typescript
+// tests/fixtures/test-data.ts
+export const testEntities = {
+  character: {
+    name: 'Test Character',
+    type: 'NPC',
+    description: 'A test character for E2E tests',
+  },
+  puzzle: {
+    name: 'Test Puzzle',
+    difficulty: 'Medium',
+    solution: 'Test solution',
+  },
+  element: {
+    name: 'Test Element',
+    category: 'Clue',
+    details: 'Test element details',
+  },
+};
+
+// tests/e2e/data-driven.spec.ts
+import { test, expect } from '@playwright/test';
+import { testEntities } from '../fixtures/test-data';
+
+for (const [entityType, data] of Object.entries(testEntities)) {
+  test(`should create ${entityType}`, async ({ page }) => {
+    await page.goto('http://localhost:5173');
+    await page.click('.floating-action-button');
+    await page.selectOption('select[name="type"]', entityType);
+    
+    for (const [field, value] of Object.entries(data)) {
+      await page.fill(`input[name="${field}"]`, value.toString());
+    }
+    
+    await page.click('button:has-text("Create")');
+    await expect(page.locator(`.react-flow__node:has-text("${data.name}")`)).toBeVisible();
+  });
+}
+```
+
+#### Example 5: API Mocking for Isolated Testing
+```typescript
+// tests/e2e/with-mocking.spec.ts
+import { test, expect } from '@playwright/test';
+
+test('should handle API errors gracefully', async ({ page }) => {
+  // Mock API failure
+  await page.route('**/api/characters/*', route => {
+    route.fulfill({
+      status: 500,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'Internal Server Error' }),
+    });
+  });
+
+  await page.goto('http://localhost:5173');
+  await page.click('.react-flow__node-characterNode');
+  
+  // Try to save
+  await page.fill('input[name="name"]', 'Updated Name');
+  await page.click('button:has-text("Save")');
+  
+  // Verify error handling
+  await expect(page.locator('.toast-error')).toBeVisible();
+  await expect(page.locator('.toast-error')).toContainText('Failed to save');
+});
+
+test('should work with mocked successful response', async ({ page }) => {
+  // Mock successful API response
+  await page.route('**/api/characters', route => {
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: [
+          { id: '1', name: 'Mocked Character', type: 'NPC' },
+        ],
+      }),
+    });
+  });
+
+  await page.goto('http://localhost:5173');
+  await expect(page.locator('.react-flow__node:has-text("Mocked Character")')).toBeVisible();
+});
+```
+
+### Playwright Best Practices for ALNRetool
+
+#### 1. Test Isolation
+```typescript
+test.describe('Isolated tests', () => {
+  test.beforeEach(async ({ page }) => {
+    // Clean state for each test
+    await page.goto('http://localhost:5173');
+    await page.evaluate(() => localStorage.clear());
+    await page.reload();
+  });
+});
+```
+
+#### 2. Use Web-First Assertions
+```typescript
+// ✅ Good - waits for condition
+await expect(page.locator('.detail-panel')).toBeVisible();
+
+// ❌ Bad - checks immediately
+const isVisible = await page.locator('.detail-panel').isVisible();
+expect(isVisible).toBe(true);
+```
+
+#### 3. Avoid Hard Waits
+```typescript
+// ✅ Good - wait for specific condition
+await page.waitForSelector('.react-flow__node');
+await page.waitForResponse(resp => resp.url().includes('/api/characters'));
+
+// ❌ Bad - arbitrary wait
+await page.waitForTimeout(5000);
+```
+
+#### 4. Debugging Techniques
+```bash
+# Run single test file
+npx playwright test tests/e2e/graph-editing.spec.ts
+
+# Debug specific test
+npx playwright test --debug tests/e2e/graph-editing.spec.ts:10
+
+# Generate trace for debugging
+npx playwright test --trace on
+
+# View test report
+npx playwright show-report
+```
 
 // 3. Get documentation for best practices
 mcp__context7__get-library-docs({
@@ -608,37 +893,73 @@ mcp__context7__get-library-docs({
 })
 ```
 
-#### Example 4: Debug Performance Issues
-```javascript
-// 1. Use Zen to investigate
-mcp__zen__debug({
-  step: "Graph rendering is slow with 100+ nodes",
-  hypothesis: "Layout calculation blocking main thread",
-  step_number: 1,
-  total_steps: 3,
-  next_step_required: true,
-  findings: "",
-  model: "o3-mini"
-})
+#### Example 7: Performance Testing with Playwright
+```typescript
+// tests/e2e/performance.spec.ts
+import { test, expect } from '@playwright/test';
 
-// 2. Profile with Playwright
-mcp__playwright-generic__playwright_evaluate({
-  script: "performance.mark('layout-start')"
-})
-mcp__playwright-generic__playwright_click({selector: ".filter-checkbox"})
-mcp__playwright-generic__playwright_evaluate({
-  script: "performance.measure('filter-time', 'layout-start'); return performance.getEntriesByType('measure')"
-})
+test('should handle large graphs efficiently', async ({ page }) => {
+  // Start performance measurement
+  await page.goto('http://localhost:5173');
+  
+  // Measure initial load time
+  const loadMetrics = await page.evaluate(() => {
+    const perf = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    return {
+      domContentLoaded: perf.domContentLoadedEventEnd - perf.domContentLoadedEventStart,
+      loadComplete: perf.loadEventEnd - perf.loadEventStart,
+    };
+  });
+  
+  expect(loadMetrics.loadComplete).toBeLessThan(3000); // 3 second max
+  
+  // Measure layout calculation time
+  await page.evaluate(() => performance.mark('layout-start'));
+  await page.click('.filter-checkbox'); // Trigger re-layout
+  
+  const layoutTime = await page.evaluate(() => {
+    performance.mark('layout-end');
+    performance.measure('layout-time', 'layout-start', 'layout-end');
+    const measure = performance.getEntriesByName('layout-time')[0];
+    return measure.duration;
+  });
+  
+  expect(layoutTime).toBeLessThan(500); // 500ms max for layout
+  
+  // Check memory usage doesn't exceed threshold
+  const memoryUsage = await page.evaluate(() => {
+    if ('memory' in performance) {
+      return (performance as any).memory.usedJSHeapSize;
+    }
+    return 0;
+  });
+  
+  expect(memoryUsage).toBeLessThan(100 * 1024 * 1024); // 100MB max
+});
 
-// 3. Analyze with Zen
-mcp__zen__analyze({
-  step: "Analyze src/lib/graph/layout/dagre.ts for performance bottlenecks",
-  analysis_type: "performance",
-  model: "gemini-2.5-pro"
-})
+// Use Zen for deeper performance analysis
+test('analyze performance bottlenecks', async () => {
+  // Create a performance test script that Zen can analyze
+  const performanceScript = `
+    // tests/performance/analyze-layout.ts
+    import { measureLayoutPerformance } from '../utils/performance';
+    
+    test('layout performance', async () => {
+      const metrics = await measureLayoutPerformance();
+      console.log('Layout metrics:', metrics);
+    });
+  `;
+  
+  // Then use Zen to analyze the results
+  // mcp__zen__analyze({
+  //   step: "Analyze src/lib/graph/layout/dagre.ts for performance bottlenecks",
+  //   analysis_type: "performance",
+  //   model: "gemini-2.5-pro"
+  // })
+});
 ```
 
-#### Example 5: Generate Tests with Zen MCP
+#### Example 8: Generate Tests with Zen MCP
 ```javascript
 // Generate comprehensive tests for critical components
 mcp__zen__testgen({
@@ -658,24 +979,5 @@ mcp__zen__testgen({
   total_steps: 1,
   next_step_required: false,
   model: "o3"
-})
-```
-
-#### Example 6: UI Component Enhancement with Magic MCP
-```javascript
-// Refine existing component UI
-mcp__magic__21st_magic_component_refiner({
-  absolutePathToRefiningFile: "/home/spide/projects/GitHub/ALNRetool/src/components/FilterPanel.tsx",
-  userMessage: "Make the filter panel more intuitive with better visual hierarchy",
-  context: "Current panel has all filters at same visual weight"
-})
-
-// Generate new component
-mcp__magic__21st_magic_component_builder({
-  searchQuery: "timeline visualization",
-  absolutePathToCurrentFile: "/home/spide/projects/GitHub/ALNRetool/src/components/graph/TimelineView.tsx",
-  absolutePathToProjectDirectory: "/home/spide/projects/GitHub/ALNRetool",
-  message: "Create a timeline view component for character journeys",
-  standaloneRequestQuery: "Timeline component showing character progression through puzzles"
 })
 ```

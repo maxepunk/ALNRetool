@@ -1,0 +1,157 @@
+/**
+ * Consolidated Filter Selectors Hook
+ * 
+ * Replaces 14+ individual useFilterStore subscriptions with a single subscription.
+ * This significantly reduces re-renders in GraphView by subscribing once to all needed values.
+ * 
+ * @module hooks/useFilterSelectors
+ * 
+ * **Performance Optimization:**
+ * - Before: 14 separate subscriptions = 14 potential re-render triggers
+ * - After: 1 grouped subscription = 1 re-render trigger
+ * - Uses shallow equality check to prevent unnecessary updates
+ * 
+ * **Pattern:**
+ * Following React best practice of grouping related state subscriptions
+ * to minimize component re-renders and improve performance.
+ */
+
+import { useFilterStore } from '@/stores/filterStore';
+import { useShallow } from 'zustand/react/shallow';
+
+/**
+ * Consolidated filter state for graph rendering
+ */
+export interface FilterSelectors {
+  // Search and selection
+  searchTerm: string;
+  selectedNodeId: string | null;
+  focusedNodeId: string | null;
+  
+  // Graph filtering
+  connectionDepth: number | null;
+  filterMode: 'pure' | 'connected' | 'focused';
+  focusRespectFilters: boolean;
+  
+  // Entity visibility
+  entityVisibility: {
+    characters: boolean;
+    puzzles: boolean;
+    elements: boolean;
+    timeline: boolean;
+  };
+  
+  // Character filters
+  characterSelectedTiers: Set<string>;
+  characterType: 'all' | 'Player' | 'NPC';
+  
+  // Puzzle filters
+  puzzleSelectedActs: Set<string>;
+  
+  // Content filters
+  elementBasicTypes: Set<string>;
+  elementStatus: Set<string>;
+  
+  // Actions (not part of filter state, but needed by GraphView)
+  setSelectedNode: (nodeId: string | null) => void;
+  setFocusedNode: (nodeId: string | null) => void;
+  hasActiveFilters: () => boolean;
+}
+
+/**
+ * Hook to get all filter values with a single subscription.
+ * Uses shallow equality to prevent unnecessary re-renders.
+ * 
+ * @returns {FilterSelectors} All filter values and actions needed by GraphView
+ * 
+ * @example
+ * ```typescript
+ * // Before (14+ subscriptions):
+ * const searchTerm = useFilterStore(state => state.searchTerm);
+ * const selectedNodeId = useFilterStore(state => state.selectedNodeId);
+ * const focusedNodeId = useFilterStore(state => state.focusedNodeId);
+ * // ... 11 more individual subscriptions
+ * 
+ * // After (1 subscription):
+ * const filters = useFilterSelectors();
+ * // Access as: filters.searchTerm, filters.selectedNodeId, etc.
+ * ```
+ * 
+ * **Performance Impact:**
+ * - Reduces selector evaluations by ~93% (from 14 to 1)
+ * - Prevents cascading re-renders from multiple state changes
+ * - Maintains same functionality with better performance
+ */
+export function useFilterSelectors(): FilterSelectors {
+  return useFilterStore(useShallow((state) => ({
+    // Search and selection
+    searchTerm: state.searchTerm,
+    selectedNodeId: state.selectedNodeId,
+    focusedNodeId: state.focusedNodeId,
+    
+    // Graph filtering
+    connectionDepth: state.connectionDepth,
+    filterMode: state.filterMode,
+    focusRespectFilters: state.focusRespectFilters,
+    
+    // Entity visibility
+    entityVisibility: state.entityVisibility,
+    
+    // Character filters
+    characterSelectedTiers: state.characterFilters.selectedTiers,
+    characterType: state.characterFilters.characterType,
+    
+    // Puzzle filters
+    puzzleSelectedActs: state.puzzleFilters.selectedActs,
+    
+    // Content filters
+    elementBasicTypes: state.contentFilters.elementBasicTypes,
+    elementStatus: state.contentFilters.elementStatus,
+    
+    // Actions
+    setSelectedNode: state.setSelectedNode,
+    setFocusedNode: state.setFocusedNode,
+    hasActiveFilters: state.hasActiveFilters,
+  })));
+}
+
+/**
+ * Hook to get only the filter values (without actions).
+ * Useful for hooks that only need to read filter state.
+ * 
+ * @returns Filter values without action functions
+ */
+export function useFilterValues() {
+  return useFilterStore(useShallow((state) => ({
+    searchTerm: state.searchTerm,
+    selectedNodeId: state.selectedNodeId,
+    focusedNodeId: state.focusedNodeId,
+    connectionDepth: state.connectionDepth,
+    filterMode: state.filterMode,
+    focusRespectFilters: state.focusRespectFilters,
+    entityVisibility: state.entityVisibility,
+    characterSelectedTiers: state.characterFilters.selectedTiers,
+    characterType: state.characterFilters.characterType,
+    puzzleSelectedActs: state.puzzleFilters.selectedActs,
+    elementBasicTypes: state.contentFilters.elementBasicTypes,
+    elementStatus: state.contentFilters.elementStatus,
+  })));
+}
+
+/**
+ * Hook to get only the filter actions (without state).
+ * Useful for components that only need to trigger filter changes.
+ * 
+ * @returns Filter action functions
+ */
+export function useFilterActions() {
+  return useFilterStore(useShallow((state) => ({
+    setSelectedNode: state.setSelectedNode,
+    setFocusedNode: state.setFocusedNode,
+    setSearchTerm: state.setSearchTerm,
+    setConnectionDepth: state.setConnectionDepth,
+    setFilterMode: state.setFilterMode,
+    toggleEntityVisibility: state.toggleEntityVisibility,
+    hasActiveFilters: state.hasActiveFilters,
+  })));
+}

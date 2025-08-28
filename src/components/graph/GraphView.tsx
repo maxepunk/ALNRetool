@@ -38,13 +38,10 @@ import {
   Background,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
   BackgroundVariant,
   ReactFlowProvider
 } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
-import type { Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import PuzzleNode from './nodes/PuzzleNode';
@@ -57,6 +54,7 @@ import { useQuery } from '@tanstack/react-query';
 import { charactersApi, puzzlesApi, elementsApi, timelineApi } from '@/services/api';
 import { useViewportManager } from '@/hooks/useGraphState';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
+import { useFilterSelectors } from '@/hooks/useFilterSelectors';
 import { useFilterStore } from '@/stores/filterStore';
 import { FilterStatusBar } from './FilterStatusBar';
 import { FloatingActionButton } from './FloatingActionButton';
@@ -170,31 +168,27 @@ function GraphViewComponent() {
     // Not needed for now
   };
   
-  // Filter state from store - use individual selectors to avoid unstable references
-  const searchTerm = useFilterStore(state => state.searchTerm);
-  const selectedNodeId = useFilterStore(state => state.selectedNodeId);
-  const focusedNodeId = useFilterStore(state => state.focusedNodeId);
-  const setSelectedNode = useFilterStore(state => state.setSelectedNode);
-  const setFocusedNode = useFilterStore(state => state.setFocusedNode);
-  const connectionDepth = useFilterStore(state => state.connectionDepth);
-  const filterMode = useFilterStore(state => state.filterMode);
-  const focusRespectFilters = useFilterStore(state => state.focusRespectFilters);
+  // Use consolidated filter selector for better performance (1 subscription vs 14+)
+  const filters = useFilterSelectors();
   
-  // Entity visibility selectors
-  const entityVisibility = useFilterStore(state => state.entityVisibility);
-  
-  // Character filter selectors
-  const characterSelectedTiers = useFilterStore(state => state.characterFilters.selectedTiers);
-  const characterType = useFilterStore(state => state.characterFilters.characterType);
-  
-  // Puzzle filter selectors
-  const puzzleSelectedActs = useFilterStore(state => state.puzzleFilters.selectedActs);
-  
-  // Content filter selectors
-  const elementBasicTypes = useFilterStore(state => state.contentFilters.elementBasicTypes);
-  const elementStatus = useFilterStore(state => state.contentFilters.elementStatus);
-  
-  // Individual filter values are passed directly to avoid object recreation
+  // Destructure commonly used values for cleaner code
+  const {
+    searchTerm,
+    selectedNodeId,
+    focusedNodeId,
+    setSelectedNode,
+    setFocusedNode,
+    connectionDepth,
+    filterMode,
+    focusRespectFilters,
+    entityVisibility,
+    characterSelectedTiers,
+    characterType,
+    puzzleSelectedActs,
+    elementBasicTypes,
+    elementStatus,
+    hasActiveFilters
+  } = filters;
   
   
   // Removed graphVersion anti-pattern that caused infinite re-renders
@@ -236,20 +230,11 @@ function GraphViewComponent() {
     elementStatus
   });
 
-  // React Flow state - initialize with empty state to avoid race conditions
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
-
-  // Sync computed values to React Flow state atomically to prevent race conditions
-  useEffect(() => {
-    // Update both nodes and edges in a single effect to ensure atomic updates
-    // This prevents React Flow from rendering incomplete graph state that breaks
-    // minimap and edge rendering during layout transitions
-    // Using React's automatic batching (React 18+) for synchronous updates
-    
-    setNodes(layoutedNodes as Node[]);
-    setEdges(filteredEdges);
-  }, [layoutedNodes, filteredEdges]); // Fixed infinite loop - removed setNodes, setEdges from deps
+  // Direct pass-through of computed nodes and edges to React Flow
+  // This eliminates the race condition caused by useEffect synchronization delay
+  // React Flow will always render with the current computed values
+  const reactFlowNodes = layoutedNodes as Node[];
+  const reactFlowEdges = filteredEdges;
 
   // Derive selected entity from selectedNodeId
   const selectedEntity = useMemo(() => {
@@ -308,8 +293,7 @@ function GraphViewComponent() {
     return { id: node.id, name: node.data.label };
   }, [focusedNodeId, layoutedNodes]);
 
-  // Check if there are active filters
-  const hasActiveFilters = useFilterStore(state => state.hasActiveFilters);
+  // hasActiveFilters is now part of the filters object
 
   // Gate rendering until all data is loaded to prevent progressive rendering
   // Only show skeleton on initial load, not during updates
@@ -347,16 +331,14 @@ function GraphViewComponent() {
           totalNodes={totalUniverseNodes}
           visibleNodes={layoutedNodes.length}
           filterMode={filterMode}
-          connectionDepth={connectionDepth}
+          connectionDepth={connectionDepth ?? 0}
           focusedNode={focusedNodeData}
           hasActiveFilters={hasActiveFilters()}
         />
         
         <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          nodes={reactFlowNodes}
+          edges={reactFlowEdges}
           onNodeClick={(_, node) => onNodeClick(node.id)}
           onEdgeClick={onEdgeClick}
           nodeTypes={nodeTypes}
@@ -368,7 +350,7 @@ function GraphViewComponent() {
             selectedNodeId={selectedNodeId}
             focusedNodeId={focusedNodeId}
             connectionDepth={connectionDepth}
-            nodes={nodes}
+            nodes={reactFlowNodes}
           />
           <Background 
             variant={BackgroundVariant.Dots} 
@@ -398,8 +380,8 @@ function GraphViewComponent() {
               width: 200,
               height: 150,
               // Hide MiniMap only when we have no nodes to show
-              opacity: nodes.length === 0 ? 0 : 1,
-              pointerEvents: nodes.length === 0 ? 'none' : 'auto'
+              opacity: reactFlowNodes.length === 0 ? 0 : 1,
+              pointerEvents: reactFlowNodes.length === 0 ? 'none' : 'auto'
             }}
           />
         </ReactFlow>

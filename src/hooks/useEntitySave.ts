@@ -33,11 +33,11 @@
 
 import { useCallback } from 'react';
 import { 
-  useUpdateCharacter, 
-  useUpdateElement, 
-  useUpdatePuzzle, 
-  useUpdateTimelineEvent 
-} from '@/hooks/mutations';
+  useUpdateCharacterExplicit, 
+  useUpdateElementExplicit, 
+  useUpdatePuzzleExplicit, 
+  useUpdateTimelineEventExplicit 
+} from '@/hooks/mutations/explicit';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 
 /**
@@ -82,11 +82,11 @@ type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
  * };
  */
 export function useEntitySave() {
-  // Get all mutation hooks
-  const updateCharacter = useUpdateCharacter();
-  const updatePuzzle = useUpdatePuzzle();
-  const updateElement = useUpdateElement();
-  const updateTimeline = useUpdateTimelineEvent();
+  // Get all mutation hooks (using explicit hooks)
+  const updateCharacter = useUpdateCharacterExplicit();
+  const updatePuzzle = useUpdatePuzzleExplicit();
+  const updateElement = useUpdateElementExplicit();
+  const updateTimeline = useUpdateTimelineEventExplicit();
 
   /**
    * Unified save handler for all entity types.

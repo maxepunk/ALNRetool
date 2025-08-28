@@ -141,13 +141,6 @@ async function fetcherImpl<T>(
 ): Promise<T> {
   const apiKey = import.meta.env.VITE_NOTION_API_KEY || localStorage.getItem('notionApiKey');
   
-  // Debug: Log the API key status
-  console.log('[API] Auth check:', {
-    hasEnvKey: !!import.meta.env.VITE_NOTION_API_KEY,
-    hasLocalStorageKey: !!localStorage.getItem('notionApiKey'),
-    apiKeyLength: apiKey?.length || 0,
-    isLocalDev: window.location.hostname === 'localhost'
-  });
   
   // In production, the backend handles API key authentication
   // Only require API key in development
@@ -169,11 +162,6 @@ async function fetcherImpl<T>(
   // Merge any additional headers from options
   if (options?.headers) {
     Object.assign(headers, options.headers);
-  }
-
-  // Debug: Log headers for PUT requests
-  if (options?.method === 'PUT') {
-    console.log('[API] PUT request headers:', headers);
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {

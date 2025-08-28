@@ -704,7 +704,6 @@ export function createRewardEdges(
   puzzles.forEach(puzzle => {
     if (!puzzle.rewardIds || puzzle.rewardIds.length === 0) return;
     
-    // Removed console.log to prevent console spam during infinite loop
     
     puzzle.rewardIds.forEach(elementId => {
       // Check if element exists

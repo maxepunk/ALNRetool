@@ -10,6 +10,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
 import { queryKeys } from '@/lib/queryKeys';
+import { 
+  updateEntityCaches, 
+  type EntityType,
+  type Entity 
+} from '@/lib/cache/mutations';
 import toast from 'react-hot-toast';
 
 /**
@@ -18,10 +23,13 @@ import toast from 'react-hot-toast';
 function getApiForType(entityType: string): any {
   switch (entityType) {
     case 'character':
+    case 'characters':
       return charactersApi;
     case 'element':
+    case 'elements':
       return elementsApi;
     case 'puzzle':
+    case 'puzzles':
       return puzzlesApi;
     case 'timeline':
       return timelineApi;
@@ -31,38 +39,25 @@ function getApiForType(entityType: string): any {
 }
 
 /**
- * Map field keys to their target entity types
- * Used to invalidate the correct caches when relationships change
+ * Convert singular entity type to plural for EntityType
  */
-function getEntityTypeFromFieldKey(fieldKey: string): string | null {
-  const fieldMap: Record<string, string> = {
-    // Character fields
-    'ownedElementIds': 'element',
-    'associatedElementIds': 'element',
-    'characterPuzzleIds': 'puzzle',
-    'eventIds': 'timeline',
-    'connections': 'character',
-    // Element fields
-    'ownerId': 'character',
-    'containerId': 'element',
-    'contentIds': 'element',
-    'timelineEventId': 'timeline',
-    'requiredForPuzzleIds': 'puzzle',
-    'rewardedByPuzzleIds': 'puzzle',
-    'containerPuzzleId': 'puzzle',
-    'associatedCharacterIds': 'character',
-    // Puzzle fields
-    'puzzleElementIds': 'element',
-    'lockedItemId': 'element',
-    'rewardIds': 'element',
-    'parentItemId': 'puzzle',
-    'subPuzzleIds': 'puzzle',
-    // Timeline fields
-    'charactersInvolvedIds': 'character',
-    'memoryEvidenceIds': 'element',
-  };
-  return fieldMap[fieldKey] || null;
+function toEntityType(type: string): EntityType {
+  switch (type) {
+    case 'character':
+      return 'characters';
+    case 'element':
+      return 'elements';
+    case 'puzzle':
+      return 'puzzles';
+    case 'timeline':
+      return 'timeline';
+    default:
+      return 'timeline'; // fallback
+  }
 }
+
+// Field mapping now handled by centralized cache utilities
+// See: src/lib/cache/mutations.ts - FIELD_TO_ENTITY_TYPE_MAP
 
 /**
  * Hook for updating entity relationships.
@@ -151,39 +146,17 @@ export function useUpdateRelationship() {
       });
     },
     
-    onSuccess: async (_, variables) => {
-      console.log('[UpdateRelationship] Success', variables);
+    onSuccess: async (updatedEntity: Entity, variables) => {
+      // Convert parent type to EntityType format
+      const parentEntityType = toEntityType(variables.parentType);
       
-      // Get proper query key for parent entity
-      const queryKey = 
-        variables.parentType === 'character' ? queryKeys.characters() :
-        variables.parentType === 'element' ? queryKeys.elements() :
-        variables.parentType === 'puzzle' ? queryKeys.puzzles() :
-        queryKeys.timeline();
+      // Surgically update the parent entity in cache
+      updateEntityCaches(queryClient, parentEntityType, updatedEntity);
       
-      // Invalidate parent entity type
-      await queryClient.invalidateQueries({ queryKey });
-      
-      // Invalidate specific entity
-      await queryClient.invalidateQueries({
-        queryKey: [...queryKey, variables.parentId]
-      });
-      
-      // CRITICAL: Invalidate graph to trigger re-render
-      await queryClient.invalidateQueries({ 
-        queryKey: queryKeys.graphData() 
-      });
-      
-      // Invalidate the child entity type too (the new relationship target)
-      const childType = getEntityTypeFromFieldKey(variables.fieldKey);
-      if (childType) {
-        const childQueryKey = 
-          childType === 'character' ? queryKeys.characters() :
-          childType === 'element' ? queryKeys.elements() :
-          childType === 'puzzle' ? queryKeys.puzzles() :
-          queryKeys.timeline();
-        await queryClient.invalidateQueries({ queryKey: childQueryKey });
-      }
+      // Note: Child entity caches don't need updating here since
+      // the child entity itself hasn't changed - only the parent's
+      // reference to it. If bidirectional updates are needed,
+      // they should be handled by the backend or in a separate mutation.
       
       toast.success('Relationship updated');
     },

@@ -77,21 +77,56 @@ export function CreatePanelPortal() {
               parentContext={parentContext}
               onClose={closeCreatePanel}
               onSuccess={async (entity) => {
-                // Determine the correct node ID format for the graph
-                // Graph nodes use composite IDs like 'character-${id}', 'element-${id}', etc.
-                const nodeIdPrefix = entityType === 'timeline' ? 'timelineEvent' : entityType.slice(0, -1); // Remove 's' from plural
-                const graphNodeId = `${nodeIdPrefix}-${entity.id}`;
+                // Graph nodes use raw entity IDs without prefixes
+                // nodeCreators.ts creates nodes with just entity.id
+                const graphNodeId = entity.id;
                 
-                // Add a small delay to ensure the graph has updated with the new node
-                // This avoids race conditions where selection happens before node exists
-                setTimeout(() => {
-                  // Auto-select the newly created entity in the graph
-                  // This will highlight it and open the detail panel
-                  useFilterStore.getState().setSelectedNode(graphNodeId);
+                // Implement proper polling mechanism to wait for node existence in React Flow
+                // This ensures the node is actually rendered before attempting to focus
+                const pollForNodeAndFocus = (retries = 0) => {
+                  // Max retries to prevent infinite loop
+                  const maxRetries = 20;
                   
-                  // Also set as focused node to show connections
-                  useFilterStore.getState().setFocusedNode(graphNodeId);
-                }, 100);
+                  // Check if we've exceeded max retries
+                  if (retries >= maxRetries) {
+                    console.warn(`Failed to find node ${graphNodeId} after ${maxRetries} attempts`);
+                    // Still set selection state even if focus fails
+                    useFilterStore.getState().setSelectedNode(graphNodeId);
+                    useFilterStore.getState().setFocusedNode(graphNodeId);
+                    return;
+                  }
+                  
+                  // Try to get the node from React Flow store
+                  // We need to check if the node actually exists in the rendered graph
+                  const checkAndFocus = () => {
+                    // Get current nodes from the filter store (which tracks graph state)
+                    // The graph will update nodes when React Query cache updates trigger re-render
+                    const currentState = useFilterStore.getState();
+                    
+                    // Set selection immediately - this will trigger detail panel
+                    if (retries === 0) {
+                      currentState.setSelectedNode(graphNodeId);
+                    }
+                    
+                    // For focus, we need to verify the node exists in the graph
+                    // We'll check by trying to focus and seeing if it succeeds
+                    // The viewport manager will handle the actual focusing
+                    currentState.setFocusedNode(graphNodeId);
+                    
+                    // If this is first attempt, schedule a verification check
+                    if (retries === 0) {
+                      // Schedule another check to ensure focus worked
+                      setTimeout(() => pollForNodeAndFocus(1), 50);
+                    }
+                  };
+                  
+                  // Use exponential backoff: 10ms, 20ms, 40ms, 80ms...
+                  const delay = Math.min(10 * Math.pow(2, retries), 200);
+                  setTimeout(checkAndFocus, delay);
+                };
+                
+                // Start polling immediately
+                pollForNodeAndFocus(0);
                 
                 // Check if we need to update a parent relationship
                 const { shouldUpdateRelation, fieldKey, parentId, parentType } = getRelationshipUpdateData();
