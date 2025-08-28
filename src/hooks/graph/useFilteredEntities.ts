@@ -120,13 +120,16 @@ export function useFilteredEntities({
     entityVisibility.timeline,
     // Character filters
     characterType,
-    Array.from(characterSelectedTiers).join(','),
+    characterSelectedTiers.size, // Use size instead of converting to array
     // Puzzle filters
-    Array.from(puzzleSelectedActs).join(','),
+    puzzleSelectedActs.size, // Use size instead of converting to array
     // Element filters
-    Array.from(elementBasicTypes).join(','),
-    Array.from(elementStatus).join(','),
-    // View config
-    JSON.stringify(viewConfig)
+    elementBasicTypes.size, // Use size instead of converting to array
+    elementStatus.size, // Use size instead of converting to array
+    // View config - use stable references instead of JSON.stringify
+    viewConfig.name,
+    viewConfig.filters,
+    viewConfig.layout,
+    viewConfig.display
   ]);
 }
