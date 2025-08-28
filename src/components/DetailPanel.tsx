@@ -197,7 +197,7 @@ interface DetailPanelProps {
  *   allEntities={allEntities}
  * />
  */
-export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
+export const DetailPanel: React.FC<DetailPanelProps> = ({
   entity,
   entityType,
   onClose,
@@ -738,4 +738,4 @@ export const DetailPanelRefactored: React.FC<DetailPanelProps> = ({
   );
 };
 
-export default DetailPanelRefactored;
+export default DetailPanel;

@@ -45,24 +45,22 @@ import {
 } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
 import type { Edge } from '@xyflow/react';
-import { useQuery } from '@tanstack/react-query';
 import '@xyflow/react/dist/style.css';
 
 import PuzzleNode from './nodes/PuzzleNode';
 import CharacterNode from './nodes/CharacterNode';
 import ElementNode from './nodes/ElementNode';
 import TimelineNode from './nodes/TimelineNode';
-import { DetailPanelRefactored } from '@/components/DetailPanel';
-import { useUnifiedEntityData } from '@/hooks/useUnifiedEntityData';
+import { DetailPanel } from '@/components/DetailPanel';
 import { useViewConfig } from '@/hooks/useViewConfig';
-import type { Character, Puzzle, TimelineEvent, Element } from '@/types/notion/app';
+import { useQuery } from '@tanstack/react-query';
+import { charactersApi, puzzlesApi, elementsApi, timelineApi } from '@/services/api';
 import { useViewportManager } from '@/hooks/useGraphState';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
 import { useFilterStore } from '@/stores/filterStore';
 import { FilterStatusBar } from './FilterStatusBar';
 import { FloatingActionButton } from './FloatingActionButton';
 import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
-import { queryKeys } from '@/lib/queryKeys';
 
 /**
  * Custom node component mapping for React Flow.
@@ -141,15 +139,36 @@ function GraphViewComponent() {
   const { config: viewConfig } = useViewConfig();
   
   // Use unified data loading to prevent progressive rendering
-  const { 
-    characters, 
-    elements, 
-    puzzles, 
-    timeline,
-    isInitialLoading,
-    hasAnyError,
-    refetchAll 
-  } = useUnifiedEntityData(viewConfig);
+  // Fetch all entity data using individual API calls
+  const { data: characters = [], isLoading: loadingCharacters } = useQuery({
+    queryKey: ['characters', 'all'],
+    queryFn: () => charactersApi.listAll(),
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const { data: puzzles = [], isLoading: loadingPuzzles } = useQuery({
+    queryKey: ['puzzles', 'all'],
+    queryFn: () => puzzlesApi.listAll(),
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const { data: elements = [], isLoading: loadingElements } = useQuery({
+    queryKey: ['elements', 'all'],
+    queryFn: () => elementsApi.listAll(),
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const { data: timeline = [], isLoading: loadingTimeline } = useQuery({
+    queryKey: ['timeline', 'all'],
+    queryFn: () => timelineApi.listAll(),
+    staleTime: 5 * 60 * 1000,
+  });
+  
+  const isInitialLoading = loadingCharacters || loadingPuzzles || loadingElements || loadingTimeline;
+  const hasAnyError = false; // For now, we'll handle errors differently
+  const refetchAll = () => {
+    // Not needed for now
+  };
   
   // Filter state from store - use individual selectors to avoid unstable references
   const searchTerm = useFilterStore(state => state.searchTerm);
@@ -170,7 +189,6 @@ function GraphViewComponent() {
   
   // Puzzle filter selectors
   const puzzleSelectedActs = useFilterStore(state => state.puzzleFilters.selectedActs);
-  const puzzleCompletionStatus = useFilterStore(state => state.puzzleFilters.completionStatus);
   
   // Content filter selectors
   const elementBasicTypes = useFilterStore(state => state.contentFilters.elementBasicTypes);
@@ -187,7 +205,7 @@ function GraphViewComponent() {
     if (viewConfig) {
       useFilterStore.getState().initializeFiltersForView(viewConfig);
     }
-  }, [viewConfig.name]); // Re-initialize when view changes
+  }, [viewConfig?.name]); // Re-initialize when view changes
 
 
 
@@ -203,7 +221,6 @@ function GraphViewComponent() {
     viewConfig,
     // Individual filter values to avoid object recreation
     searchTerm,
-    selectedNodeId,
     focusedNodeId,
     connectionDepth,
     filterMode,
@@ -214,7 +231,6 @@ function GraphViewComponent() {
     characterSelectedTiers,
     // Puzzle filters as primitives
     puzzleSelectedActs,
-    puzzleCompletionStatus,
     // Element filters as primitives
     elementBasicTypes,
     elementStatus
@@ -396,7 +412,7 @@ function GraphViewComponent() {
       
       {/* Detail Panel */}
       {selectedEntity && (
-        <DetailPanelRefactored
+        <DetailPanel
           entity={selectedEntity.entity}
           entityType={selectedEntity.entityType}
           onClose={handleDetailPanelClose}

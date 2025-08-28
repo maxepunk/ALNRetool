@@ -47,18 +47,6 @@ export interface MutationPayload<T extends Entity> {
   }>;
 }
 
-// API response types
-interface MutationResponse<T extends Entity> {
-  data: T;
-  message?: string;
-}
-
-// Batch mutation response type
-interface BatchMutationResponse<T extends Entity> {
-  data: T[];
-  message?: string;
-}
-
 // Error response
 interface MutationError {
   message: string;
@@ -412,11 +400,6 @@ export function useBatchEntityMutation<T extends Entity>(
           });
         }
       }
-      
-      // Invalidate graph to trigger re-render with updated data
-      await queryClient.invalidateQueries({ 
-        queryKey: queryKeys.graphData() 
-      });
     }
   });
 }

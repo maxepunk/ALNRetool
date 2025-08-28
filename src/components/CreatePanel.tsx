@@ -12,6 +12,7 @@ import {
 } from '@/hooks/mutations';
 import type { ParentContext } from '@/stores/creationStore';
 import { zIndex } from '@/config/zIndex';
+import { validateFields, fieldValidationConfigs } from '@/utils/fieldValidation';
 
 interface CreatePanelProps {
   entityType: 'character' | 'element' | 'puzzle' | 'timeline';
@@ -94,14 +95,17 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
   };
 
   const handleSave = async () => {
-    // Validate required fields
-    const newErrors: Record<string, string> = {};
+    // Build validation rules for each field
+    const fieldRules: Record<string, any[]> = {};
     fields.forEach(field => {
-      if (field.required && !formData[field.key]) {
-        newErrors[field.key] = `${field.label} is required`;
+      if (field.required) {
+        fieldRules[field.key] = fieldValidationConfigs.text.required;
       }
     });
 
+    // Validate all fields
+    const newErrors = validateFields(formData, fieldRules);
+    
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;

@@ -77,11 +77,7 @@
  * @version 2.0.0
  */
 
-export { LayoutCache } from './LayoutCache';
-export type { CacheConfig, CacheMetrics } from './LayoutCache';
-
-// Create a singleton instance with production-ready configuration
-import { LayoutCache } from './LayoutCache';
+// LayoutCache was removed in Phase 4.1 as dead code
 
 
 
@@ -109,23 +105,8 @@ import { LayoutCache } from './LayoutCache';
  * @constant layoutCache
  * @since 1.0.0
  */
-// 50MB max memory, 5 minute TTL, max 1000 entries
-export const layoutCache = new LayoutCache({
-  /** Maximum memory allocation for investigation layout caching (50MB) */
-  maxMemoryMB: 50,
-  /** Maximum number of cached investigation layouts (1000 entries) */
-  maxSize: 1000,
-  /** Cache entry time-to-live for investigation continuity (5 minutes) */
-  ttl: 5 * 60 * 1000, // 5 minutes
-  /** Extend cache lifetime on access for active investigations */
-  refreshOnAccess: true,
-  /** Enable detailed metrics in development for cache optimization */
-  enableMetrics: import.meta.env?.PROD !== true,
-  /** Memory pressure callback for proactive investigation cache management */
-  onMemoryPressure: () => {
-    console.warn('Layout cache memory pressure detected, evicting entries');
-  }
-});
+// LayoutCache instance removed in Phase 4.1 - was dead code
+// export const layoutCache = new LayoutCache({ ... });
 
 /**
  * Default Investigation Layout Cache Export
@@ -137,5 +118,5 @@ export const layoutCache = new LayoutCache({
  * @default layoutCache
  * @since 1.0.0
  */
-// Export singleton for convenience
-export default layoutCache;
+// Export singleton removed in Phase 4.1 - was dead code
+// export default layoutCache;

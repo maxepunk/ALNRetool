@@ -1000,6 +1000,7 @@ export function createContainerEdges(
         // Add metadata for container relationship
         edge.data = {
           ...edge.data,
+          relationshipType: RELATIONSHIP_TYPES.CONTAINER,
         };
         edges.push(edge);
       }

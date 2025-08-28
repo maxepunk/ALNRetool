@@ -9,14 +9,23 @@
 
 import type { GraphNode } from './types';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
-import type { FilterState } from '@/stores/filterStore';
+
+// Type for entity visibility toggles
+type EntityVisibility = {
+  characters: boolean;
+  puzzles: boolean;
+  elements: boolean;
+  timeline: boolean;
+};
 
 /**
  * Create graph nodes for puzzles
  */
 export function createPuzzleNodes(
   puzzles: Puzzle[],
-  filters: FilterState,
+  searchTerm: string,
+  entityVisibility: EntityVisibility,
+  puzzleSelectedActs: Set<string>,
   viewConfig: { filters: { entityTypes?: string[] } }
 ): GraphNode[] {
   const shouldInclude = viewConfig.filters.entityTypes?.includes('all') ||
@@ -26,21 +35,16 @@ export function createPuzzleNodes(
 
   return puzzles
     .filter(puzzle => {
-      // Always show the focused node
-      if (filters.focusedNodeId && puzzle.id === filters.focusedNodeId) {
-        return true;
-      }
-      
       // Check entity visibility toggle
-      if (!filters.entityVisibility.puzzles) {
+      if (!entityVisibility.puzzles) {
         return false;
       }
       
       // Check act filter
-      if (filters.puzzleFilters.selectedActs.size > 0) {
+      if (puzzleSelectedActs.size > 0) {
         const puzzleActs = puzzle.timing || [];
         const hasMatchingAct = puzzleActs.some((act) => {
-          return act && filters.puzzleFilters.selectedActs.has(act);
+          return act && puzzleSelectedActs.has(act);
         });
         
         if (!hasMatchingAct) {
@@ -61,12 +65,11 @@ export function createPuzzleNodes(
         entity: puzzle,
         metadata: {
           entityType: 'puzzle',
-          searchMatch: filters.searchTerm ? (
-            puzzle.name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            puzzle.description?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            puzzle.id.toLowerCase().includes(filters.searchTerm.toLowerCase())
+          searchMatch: searchTerm ? (
+            puzzle.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            puzzle.id.toLowerCase().includes(searchTerm.toLowerCase())
           ) : true,
-          isFocused: puzzle.id === filters.focusedNodeId,
+          isFocused: false,
         },
       },
     }));
@@ -77,7 +80,10 @@ export function createPuzzleNodes(
  */
 export function createCharacterNodes(
   characters: Character[],
-  filters: FilterState,
+  searchTerm: string,
+  entityVisibility: EntityVisibility,
+  characterType: string,
+  characterSelectedTiers: Set<string>,
   viewConfig: { filters: { entityTypes?: string[] } }
 ): GraphNode[] {
   const shouldInclude = viewConfig.filters.entityTypes?.includes('all') ||
@@ -87,28 +93,23 @@ export function createCharacterNodes(
 
   return characters
     .filter(character => {
-      // Always show the focused node
-      if (filters.focusedNodeId && character.id === filters.focusedNodeId) {
-        return true;
-      }
-      
       // Check entity visibility toggle
-      if (!filters.entityVisibility.characters) {
+      if (!entityVisibility.characters) {
         return false;
       }
       
       // Check tier filter
-      if (filters.characterFilters.selectedTiers.size > 0) {
+      if (characterSelectedTiers.size > 0) {
         const tier = character.tier || 'Standard';
-        if (!filters.characterFilters.selectedTiers.has(tier as any)) {
+        if (!characterSelectedTiers.has(tier as any)) {
           return false;
         }
       }
       
       // Check type filter
-      if (filters.characterFilters.characterType !== 'all') {
+      if (characterType !== 'all') {
         const type = character.type || 'Player';
-        if (type !== filters.characterFilters.characterType) {
+        if (type !== characterType) {
           return false;
         }
       }
@@ -126,12 +127,11 @@ export function createCharacterNodes(
         entity: character,
         metadata: {
           entityType: 'character',
-          searchMatch: filters.searchTerm ? (
-            character.name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            character.description?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            character.id.toLowerCase().includes(filters.searchTerm.toLowerCase())
+          searchMatch: searchTerm ? (
+            character.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            character.id.toLowerCase().includes(searchTerm.toLowerCase())
           ) : true,
-          isFocused: character.id === filters.focusedNodeId,
+          isFocused: false,
         },
       },
     }));
@@ -142,7 +142,10 @@ export function createCharacterNodes(
  */
 export function createElementNodes(
   elements: Element[],
-  filters: FilterState,
+  searchTerm: string,
+  entityVisibility: EntityVisibility,
+  elementBasicTypes: Set<string>,
+  elementStatus: Set<string>,
   viewConfig: { filters: { entityTypes?: string[] } }
 ): GraphNode[] {
   const shouldInclude = viewConfig.filters.entityTypes?.includes('all') ||
@@ -152,28 +155,23 @@ export function createElementNodes(
 
   return elements
     .filter(element => {
-      // Always show the focused node
-      if (filters.focusedNodeId && element.id === filters.focusedNodeId) {
-        return true;
-      }
-      
       // Check entity visibility toggle
-      if (!filters.entityVisibility.elements) {
+      if (!entityVisibility.elements) {
         return false;
       }
       
       // Check basic type filter
-      if (filters.contentFilters.elementBasicTypes.size > 0) {
+      if (elementBasicTypes.size > 0) {
         const basicType = element.basicType || '';
-        if (!filters.contentFilters.elementBasicTypes.has(basicType)) {
+        if (!elementBasicTypes.has(basicType)) {
           return false;
         }
       }
       
       // Check status filter
-      if (filters.contentFilters.elementStatus.size > 0) {
+      if (elementStatus.size > 0) {
         const status = element.status || '';
-        if (!filters.contentFilters.elementStatus.has(status)) {
+        if (!elementStatus.has(status)) {
           return false;
         }
       }
@@ -191,12 +189,11 @@ export function createElementNodes(
         entity: element,
         metadata: {
           entityType: 'element',
-          searchMatch: filters.searchTerm ? (
-            element.name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            element.description?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            element.id.toLowerCase().includes(filters.searchTerm.toLowerCase())
+          searchMatch: searchTerm ? (
+            element.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            element.id.toLowerCase().includes(searchTerm.toLowerCase())
           ) : true,
-          isFocused: element.id === filters.focusedNodeId,
+          isFocused: false,
         },
       },
     }));
@@ -207,7 +204,8 @@ export function createElementNodes(
  */
 export function createTimelineNodes(
   timeline: TimelineEvent[],
-  filters: FilterState,
+  searchTerm: string,
+  entityVisibility: EntityVisibility,
   viewConfig: { filters: { entityTypes?: string[] } }
 ): GraphNode[] {
   const shouldInclude = viewConfig.filters.entityTypes?.includes('all') ||
@@ -216,14 +214,9 @@ export function createTimelineNodes(
   if (!shouldInclude) return [];
 
   return timeline
-    .filter(event => {
-      // Always show the focused node
-      if (filters.focusedNodeId && event.id === filters.focusedNodeId) {
-        return true;
-      }
-      
+    .filter(_ => {
       // Check entity visibility toggle
-      if (!filters.entityVisibility.timeline) {
+      if (!entityVisibility.timeline) {
         return false;
       }
       
@@ -240,12 +233,11 @@ export function createTimelineNodes(
         entity: event,
         metadata: {
           entityType: 'timeline',
-          searchMatch: filters.searchTerm ? (
-            event.name?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            event.description?.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-            event.id.toLowerCase().includes(filters.searchTerm.toLowerCase())
+          searchMatch: searchTerm ? (
+            event.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            event.id.toLowerCase().includes(searchTerm.toLowerCase())
           ) : true,
-          isFocused: event.id === filters.focusedNodeId,
+          isFocused: false,
         },
       },
     }));
@@ -259,13 +251,22 @@ export function createAllNodes(
   elements: Element[],
   puzzles: Puzzle[],
   timeline: TimelineEvent[],
-  filters: FilterState,
+  // Individual filter parameters
+  searchTerm: string,
+  entityVisibility: EntityVisibility,
+  characterType: string,
+  characterSelectedTiers: Set<string>,
+  puzzleSelectedActs: Set<string>,
+  elementBasicTypes: Set<string>,
+  elementStatus: Set<string>,
+  // Note: connectionDepth, focusedNodeId, filterMode, focusRespectFilters
+  // are used for filtering AFTER node creation in useGraphLayout, not here
   viewConfig: { filters: { entityTypes?: string[] } }
 ): GraphNode[] {
   return [
-    ...createPuzzleNodes(puzzles, filters, viewConfig),
-    ...createCharacterNodes(characters, filters, viewConfig),
-    ...createElementNodes(elements, filters, viewConfig),
-    ...createTimelineNodes(timeline, filters, viewConfig),
+    ...createPuzzleNodes(puzzles, searchTerm, entityVisibility, puzzleSelectedActs, viewConfig),
+    ...createCharacterNodes(characters, searchTerm, entityVisibility, characterType, characterSelectedTiers, viewConfig),
+    ...createElementNodes(elements, searchTerm, entityVisibility, elementBasicTypes, elementStatus, viewConfig),
+    ...createTimelineNodes(timeline, searchTerm, entityVisibility, viewConfig),
   ];
 }

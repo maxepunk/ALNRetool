@@ -39,7 +39,6 @@ export {
 } from './types';
 
 // Import and re-export existing utilities
-export { extractSFMetadata, hasSFPatterns } from './patterns';
 export { LAYOUT_PRESETS } from './layouts';
 export { filterEdgesByType, getConnectedEdges, calculateConnectivity } from './relationships';
 export { hasError, isEntityType as isEntity } from './guards';
