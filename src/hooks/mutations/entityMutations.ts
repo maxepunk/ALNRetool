@@ -11,12 +11,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationOptions } from '@tanstack/react-query';
 import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
 import { queryKeys } from '@/lib/queryKeys';
+import { 
+  getRelatedEntityTypes as getRelatedTypes,
+} from '@/lib/cache/mutations';
 import type { 
   Character, 
   Element, 
   Puzzle, 
   TimelineEvent 
 } from '@/types/notion/app';
+
+// Import performance logging utility if available
+const perfLog = typeof window !== 'undefined' ? (window as any).perfLog : null;
 
 // Entity type union
 export type EntityType = 'characters' | 'elements' | 'puzzles' | 'timeline';
@@ -98,6 +104,11 @@ export function createEntityMutation<T extends Entity>(
         
         // Surgical cache update based on mutation type
         if (mutationType === 'create') {
+          // Track cache updates for performance monitoring
+          if (perfLog) {
+            perfLog.cacheUpdates++;
+          }
+          
           // Add new entity to list cache
           queryClient.setQueryData(entityQueryKey, (oldData: T[] | undefined) => {
             if (!oldData) return [entity];
@@ -107,37 +118,8 @@ export function createEntityMutation<T extends Entity>(
           // Set individual entity cache
           queryClient.setQueryData([...entityQueryKey, entity.id], entity);
           
-          // If this was created with a parent relation, update the parent entity's cache
-          if (variables._parentRelation) {
-            const { parentType, parentId, fieldKey } = variables._parentRelation;
-            const parentQueryKey = getQueryKeyForType(parentType as EntityType);
-            
-            // Update parent entity in list cache
-            queryClient.setQueryData(parentQueryKey, (oldData: any[] | undefined) => {
-              if (!oldData) return oldData;
-              return oldData.map((item: any) => {
-                if (item.id === parentId) {
-                  // Add the new entity ID to the parent's relation field
-                  const currentValue = item[fieldKey] || [];
-                  const updatedValue = Array.isArray(currentValue) 
-                    ? [...currentValue, entity.id]
-                    : entity.id;
-                  return { ...item, [fieldKey]: updatedValue };
-                }
-                return item;
-              });
-            });
-            
-            // Update parent individual cache
-            queryClient.setQueryData([...parentQueryKey, parentId], (oldParent: any) => {
-              if (!oldParent) return oldParent;
-              const currentValue = oldParent[fieldKey] || [];
-              const updatedValue = Array.isArray(currentValue)
-                ? [...currentValue, entity.id]
-                : entity.id;
-              return { ...oldParent, [fieldKey]: updatedValue };
-            });
-          }
+          // Parent relation updates are handled server-side atomically
+          // This prevents dual cache updates and race conditions
         } 
         else if (mutationType === 'update') {
           // Update entity in list cache
@@ -163,11 +145,14 @@ export function createEntityMutation<T extends Entity>(
           });
         }
         
-        // For relationship changes, surgically update related entities
+        // For relationship changes, we still use invalidation for related entities
+        // This is intentional: We don't have the full related entity data here to do
+        // surgical updates. The backend handles bidirectional updates, so we need to
+        // refetch to get the latest state of related entities.
+        // TODO: Phase 3 will add version-based cache coordination to optimize this
         if (variables && mutationType === 'update') {
           const relatedTypes = getRelatedEntityTypes(variables);
           for (const type of relatedTypes) {
-            // Only invalidate related entity types since relationship updates are complex
             await queryClient.invalidateQueries({ 
               queryKey: getQueryKeyForType(type)
             });
@@ -230,58 +215,16 @@ function getQueryKeyForType(entityType: EntityType) {
   }
 }
 
-/**
- * Explicit mapping from relation fields to their target entity types.
- * This ensures reliable cache invalidation without brittle string matching.
- */
-const FIELD_TO_ENTITY_TYPE_MAP: Record<string, EntityType> = {
-  // Character relation fields
-  ownedElementIds: 'elements',
-  associatedElementIds: 'elements', 
-  characterPuzzleIds: 'puzzles',
-  eventIds: 'timeline',
-  connections: 'characters',
-  
-  // Element relation fields
-  ownerId: 'characters',
-  containerId: 'elements',
-  contentIds: 'elements',
-  timelineEventId: 'timeline',
-  requiredForPuzzleIds: 'puzzles',
-  rewardedByPuzzleIds: 'puzzles',
-  containerPuzzleId: 'puzzles',
-  associatedCharacterIds: 'characters',
-  
-  // Puzzle relation fields
-  puzzleElementIds: 'elements',
-  lockedItemId: 'elements',
-  rewardIds: 'elements',
-  parentItemId: 'puzzles',
-  subPuzzleIds: 'puzzles',
-  
-  // Timeline relation fields
-  charactersInvolvedIds: 'characters',
-  memoryEvidenceIds: 'elements'
-};
+// Field mapping and related entity detection now handled by centralized cache utilities
+// See: src/lib/cache/mutations.ts
 
 /**
- * Helper to determine related entity types based on updated fields.
- * Uses explicit mapping instead of string pattern matching for reliability.
+ * Helper wrapper for centralized getRelatedEntityTypes
  */
-function getRelatedEntityTypes(
-  updates: Partial<Entity>
-): EntityType[] {
-  const related: Set<EntityType> = new Set();
-  
-  // Check each updated field against the explicit mapping
-  for (const field in updates) {
-    const targetEntityType = FIELD_TO_ENTITY_TYPE_MAP[field];
-    if (targetEntityType) {
-      related.add(targetEntityType);
-    }
-  }
-  
-  return Array.from(related);
+function getRelatedEntityTypes(updates: Partial<Entity>): EntityType[] {
+  const updatedFields = Object.keys(updates);
+  // Pass entityType as 'characters' as a placeholder - the function will check the actual fields
+  return Array.from(getRelatedTypes('characters', updatedFields));
 }
 
 // Pre-configured hooks for each entity type and operation
@@ -387,6 +330,9 @@ export function useBatchEntityMutation<T extends Entity>(
       });
       
       // If relationships changed, invalidate related entity types
+      // For relationship changes in batch updates, invalidate related entities
+      // This is intentional - see comment in single entity mutation above
+      // TODO: Phase 3 will optimize this with version-based coordination
       if (hasRelationshipChanges) {
         const allRelatedTypes = new Set<EntityType>();
         for (const update of variables) {
