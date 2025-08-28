@@ -64,7 +64,7 @@ const limiter = new Bottleneck({
   reservoir: 3, // 3 requests available
   reservoirRefreshAmount: 3, // refill to 3
   reservoirRefreshInterval: 1000, // every 1 second
-  maxConcurrent: 1, // sequential for safety
+  maxConcurrent: 3, // Allow full parallelism within rate limit
 });
 
 /**

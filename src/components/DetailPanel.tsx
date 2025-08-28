@@ -51,11 +51,11 @@ import type {
   TimelineEvent,
 } from '@/types/notion/app';
 import {
-  useUpdateCharacterExplicit,
-  useUpdateElementExplicit,
-  useUpdatePuzzleExplicit,
-  useUpdateTimelineEventExplicit,
-} from '@/hooks/mutations/explicit';
+  useUpdateCharacter,
+  useUpdateElement,
+  useUpdatePuzzle,
+  useUpdateTimelineEvent,
+} from '@/hooks/mutations';
 import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
 
 /**
@@ -221,11 +221,11 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // Graph animation context
   const graphAnimation = useGraphAnimation();
 
-  // Get appropriate mutation hook based on entity type (using explicit hooks)
-  const updateCharacter = useUpdateCharacterExplicit();
-  const updateElement = useUpdateElementExplicit();
-  const updatePuzzle = useUpdatePuzzleExplicit();
-  const updateTimeline = useUpdateTimelineEventExplicit();
+  // Get appropriate mutation hook based on entity type
+  const updateCharacter = useUpdateCharacter();
+  const updateElement = useUpdateElement();
+  const updatePuzzle = useUpdatePuzzle();
+  const updateTimeline = useUpdateTimelineEvent();
 
   // Select the right mutation based on entity type
   const mutation = useMemo(() => {

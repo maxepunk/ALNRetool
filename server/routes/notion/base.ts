@@ -3,6 +3,9 @@
  * Provides shared helpers for caching, pagination, and request handling
  */
 
+// Performance monitoring counter
+let apiCallCounter = 0;
+
 import type { Request, Response } from 'express';
 import { notion } from '../../services/notion.js';
 import { cacheService } from '../../services/cache.js';
@@ -69,6 +72,7 @@ async function fetchCompleteRelationProperty(
   pageId: string,
   propertyId: string
 ): Promise<NotionRelationProperty> {
+  console.log(`[PERF] Notion API call #${++apiCallCounter} - Fetching relation ${propertyId}`);
   const allRelations: Array<{ id: string }> = [];
   let cursor: string | undefined;
   
@@ -105,6 +109,10 @@ export async function fetchAllPages(
   startCursor?: string,
   filter?: any
 ): Promise<{ pages: NotionPage[], hasMore: boolean, nextCursor: string | null }> {
+  // Reset counter for this request
+  apiCallCounter = 0;
+  console.log('[PERF] Starting new request - API call counter reset');
+  
   const pages: NotionPage[] = [];
   let cursor: string | undefined = startCursor;
   let totalFetched = 0;
@@ -125,19 +133,39 @@ export async function fetchAllPages(
     
     const response = await notion.databases.query(queryParams) as NotionListResponse<NotionPage>;
     
-    // Process each page to fetch complete relation properties
-    for (const page of response.results) {
-      // Check for relation properties with has_more = true
-      for (const [propName, prop] of Object.entries(page.properties)) {
-        if (prop.type === 'relation' && (prop).has_more) {
-          // Fetch complete relation data
-          const completeRelation = await fetchCompleteRelationProperty(page.id, prop.id);
-          // Replace the truncated relation with complete data
-          page.properties[propName] = completeRelation;
-        }
-      }
-      pages.push(page);
+    // NEW CODE (PARALLEL) - Fix N+1 Query Problem
+    // Collect all relation fetches needed
+    const relationFetches = response.results.flatMap(page => 
+      Object.entries(page.properties)
+        .filter(([_, prop]) => prop.type === 'relation' && (prop as any).has_more)
+        .map(([propName, prop]) => ({
+          pageId: page.id,
+          propId: prop.id,
+          propName,
+          page
+        }))
+    );
+    
+    // Log if we found any relations to fetch
+    if (relationFetches.length > 0) {
+      console.log(`[PERF] Found ${relationFetches.length} relations with has_more=true to fetch`);
+      console.log(`[PERF] Using PARALLEL fetching (Phase 4 optimization)`);
     }
+    
+    // Fetch all relations in parallel
+    const relationResults = await Promise.all(
+      relationFetches.map(({ pageId, propId }) => 
+        fetchCompleteRelationProperty(pageId, propId)
+      )
+    );
+    
+    // Apply results back to pages
+    relationFetches.forEach((fetch, index) => {
+      fetch.page.properties[fetch.propName] = relationResults[index];
+    });
+    
+    // Add pages to results
+    pages.push(...response.results);
     
     totalFetched += response.results.length;
     cursor = response.next_cursor || undefined;

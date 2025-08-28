@@ -5,11 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectItem } from '@/components/ui/select';
 import {
-  useCreateCharacterExplicit,
-  useCreateElementExplicit,
-  useCreatePuzzleExplicit,
-  useCreateTimelineEventExplicit
-} from '@/hooks/mutations/explicit';
+  useCreateCharacter,
+  useCreateElement,
+  useCreatePuzzle,
+  useCreateTimelineEvent
+} from '@/hooks/mutations';
 import type { ParentContext } from '@/stores/creationStore';
 import { zIndex } from '@/config/zIndex';
 import { validateFields, fieldValidationConfigs } from '@/utils/fieldValidation';
@@ -74,11 +74,11 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Get create mutation based on type (using explicit hooks)
-  const createCharacter = useCreateCharacterExplicit();
-  const createElement = useCreateElementExplicit();
-  const createPuzzle = useCreatePuzzleExplicit();
-  const createTimelineEvent = useCreateTimelineEventExplicit();
+  // Get create mutation based on type
+  const createCharacter = useCreateCharacter();
+  const createElement = useCreateElement();
+  const createPuzzle = useCreatePuzzle();
+  const createTimelineEvent = useCreateTimelineEvent();
 
   const createMutation =
     entityType === 'character' ? createCharacter :

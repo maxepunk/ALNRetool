@@ -60,127 +60,12 @@ interface MutationError {
   details?: unknown;
 }
 
-/**
- * Factory function to create entity-specific mutation hooks
- */
-export function createEntityMutation<T extends Entity>(
-  entityType: EntityType,
-  mutationType: MutationType
-) {
-  return function useEntityMutation(
-    options?: UseMutationOptions<T, MutationError, Partial<T> & ParentRelationMetadata>
-  ) {
-    const queryClient = useQueryClient();
-
-    return useMutation<T, MutationError, Partial<T> & ParentRelationMetadata>({
-      mutationFn: async (data: Partial<T> & ParentRelationMetadata) => {
-        // Get the appropriate API module
-        const apiModule = getApiModule(entityType);
-        
-        let result: any;
-        switch (mutationType) {
-          case 'create':
-            result = await apiModule.create(data as any);
-            break;
-          case 'update':
-            if (!data.id) throw new Error('ID required for update');
-            result = await apiModule.update(data.id, data as any);
-            break;
-          case 'delete':
-            if (!data.id) throw new Error('ID required for delete');
-            // Most APIs don't have delete yet, throw error
-            throw new Error(`Delete not implemented for ${entityType}`);
-          default:
-            throw new Error(`Unknown mutation type: ${mutationType}`);
-        }
-        
-        // Return the entity directly - API already returns unwrapped entities
-        return result as T;
-      },
-      
-      onSuccess: async (response, variables) => {
-        const entityQueryKey = getQueryKeyForType(entityType);
-        const entity = response; // Response is the entity directly, not wrapped
-        
-        // Surgical cache update based on mutation type
-        if (mutationType === 'create') {
-          // Track cache updates for performance monitoring
-          if (perfLog) {
-            perfLog.cacheUpdates++;
-          }
-          
-          // Add new entity to list cache
-          queryClient.setQueryData(entityQueryKey, (oldData: T[] | undefined) => {
-            if (!oldData) return [entity];
-            return [...oldData, entity];
-          });
-          
-          // Set individual entity cache
-          queryClient.setQueryData([...entityQueryKey, entity.id], entity);
-          
-          // Parent relation updates are handled server-side atomically
-          // This prevents dual cache updates and race conditions
-        } 
-        else if (mutationType === 'update') {
-          // Update entity in list cache
-          queryClient.setQueryData(entityQueryKey, (oldData: T[] | undefined) => {
-            if (!oldData) return [entity];
-            return oldData.map(item => item.id === entity.id ? entity : item);
-          });
-          
-          // Update individual entity cache
-          queryClient.setQueryData([...entityQueryKey, entity.id], entity);
-        }
-        else if (mutationType === 'delete' && variables?.id) {
-          // Remove entity from list cache
-          queryClient.setQueryData(entityQueryKey, (oldData: T[] | undefined) => {
-            if (!oldData) return [];
-            return oldData.filter(item => item.id !== variables.id);
-          });
-          
-          // Remove individual entity cache
-          queryClient.removeQueries({ 
-            queryKey: [...entityQueryKey, variables.id],
-            exact: true
-          });
-        }
-        
-        // For relationship changes, we still use invalidation for related entities
-        // This is intentional: We don't have the full related entity data here to do
-        // surgical updates. The backend handles bidirectional updates, so we need to
-        // refetch to get the latest state of related entities.
-        // TODO: Phase 3 will add version-based cache coordination to optimize this
-        if (variables && mutationType === 'update') {
-          const relatedTypes = getRelatedEntityTypes(variables);
-          for (const type of relatedTypes) {
-            await queryClient.invalidateQueries({ 
-              queryKey: getQueryKeyForType(type)
-            });
-          }
-        }
-        
-        // Removed graph data invalidation that caused infinite re-render loop
-        // Graph will update naturally when entity queries are invalidated
-        
-        // Call custom onSuccess if provided
-        options?.onSuccess?.(response, variables, undefined);
-      },
-      
-      onError: (error, variables, context) => {
-        console.error(`${entityType} ${mutationType} failed:`, error);
-        
-        // Call custom onError if provided
-        options?.onError?.(error, variables, context);
-      },
-      
-      // Rest of options passed through (but onSuccess, onError are handled above)
-    });
-  };
+// Helper function for getting related entity types
+function getRelatedEntityTypes(entityType: EntityType, updatedFields: string[]): EntityType[] {
+  return Array.from(getRelatedTypes(entityType, updatedFields));
 }
 
-/**
- * Get the appropriate API module for an entity type
- */
+// Helper function to get API module for entity type
 function getApiModule(entityType: EntityType) {
   switch (entityType) {
     case 'characters':
@@ -196,10 +81,7 @@ function getApiModule(entityType: EntityType) {
   }
 }
 
-/**
- * Get the proper query key for an entity type
- * Ensures consistency across the application
- */
+// Helper function to get query key for entity type
 function getQueryKeyForType(entityType: EntityType) {
   switch (entityType) {
     case 'characters':
@@ -215,39 +97,398 @@ function getQueryKeyForType(entityType: EntityType) {
   }
 }
 
-// Field mapping and related entity detection now handled by centralized cache utilities
-// See: src/lib/cache/mutations.ts
+// ============================================================================
+// CHARACTER MUTATIONS
+// ============================================================================
 
 /**
- * Helper wrapper for centralized getRelatedEntityTypes
+ * Create a new character
  */
-function getRelatedEntityTypes(updates: Partial<Entity>): EntityType[] {
-  const updatedFields = Object.keys(updates);
-  // Pass entityType as 'characters' as a placeholder - the function will check the actual fields
-  return Array.from(getRelatedTypes('characters', updatedFields));
+export function useCreateCharacter(
+  options?: UseMutationOptions<Character, MutationError, Partial<Character> & ParentRelationMetadata>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<Character, MutationError, Partial<Character> & ParentRelationMetadata>({
+    mutationFn: async (data) => {
+      return await charactersApi.create(data as any);
+    },
+    
+    onSuccess: (character, variables) => {
+      // Track cache updates for performance monitoring
+      if (perfLog) {
+        perfLog.cacheUpdates++;
+      }
+      
+      // Add to list cache
+      queryClient.setQueryData(
+        queryKeys.characters(),
+        (old: Character[] = []) => [...old, character]
+      );
+      
+      // Set individual cache
+      queryClient.setQueryData(
+        queryKeys.character(character.id),
+        character
+      );
+      
+      // Parent relation updates are handled server-side atomically
+      // This prevents dual cache updates and race conditions
+      
+      options?.onSuccess?.(character, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Character creation failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
 }
 
-// Pre-configured hooks for each entity type and operation
+/**
+ * Update an existing character
+ */
+export function useUpdateCharacter(
+  options?: UseMutationOptions<Character, MutationError, Partial<Character> & { id: string }>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<Character, MutationError, Partial<Character> & { id: string }>({
+    mutationFn: async ({ id, ...data }) => {
+      return await charactersApi.update(id, data as any);
+    },
+    
+    onSuccess: async (character, variables) => {
+      // Update list cache
+      queryClient.setQueryData(
+        queryKeys.characters(),
+        (old: Character[] = []) => 
+          old.map(c => c.id === character.id ? character : c)
+      );
+      
+      // Update individual cache
+      queryClient.setQueryData(
+        queryKeys.character(character.id),
+        character
+      );
+      
+      // Handle relationship invalidation if needed
+      const relatedTypes = getRelatedTypes('characters', Object.keys(variables));
+      for (const type of relatedTypes) {
+        const key = type === 'elements' ? queryKeys.elements() :
+                   type === 'puzzles' ? queryKeys.puzzles() :
+                   type === 'timeline' ? queryKeys.timeline() :
+                   queryKeys.characters();
+        await queryClient.invalidateQueries({ queryKey: key });
+      }
+      
+      options?.onSuccess?.(character, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Character update failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
+}
 
-// Character mutations
-export const useCreateCharacter = createEntityMutation<Character>('characters', 'create');
-export const useUpdateCharacter = createEntityMutation<Character>('characters', 'update');
-export const useDeleteCharacter = createEntityMutation<Character>('characters', 'delete');
+// Character delete not implemented yet
+export function useDeleteCharacter() {
+  throw new Error('Delete not implemented for characters');
+}
 
-// Element mutations
-export const useCreateElement = createEntityMutation<Element>('elements', 'create');
-export const useUpdateElement = createEntityMutation<Element>('elements', 'update');
-export const useDeleteElement = createEntityMutation<Element>('elements', 'delete');
+// ============================================================================
+// ELEMENT MUTATIONS
+// ============================================================================
 
-// Puzzle mutations
-export const useCreatePuzzle = createEntityMutation<Puzzle>('puzzles', 'create');
-export const useUpdatePuzzle = createEntityMutation<Puzzle>('puzzles', 'update');
-export const useDeletePuzzle = createEntityMutation<Puzzle>('puzzles', 'delete');
+/**
+ * Create a new element
+ */
+export function useCreateElement(
+  options?: UseMutationOptions<Element, MutationError, Partial<Element> & ParentRelationMetadata>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<Element, MutationError, Partial<Element> & ParentRelationMetadata>({
+    mutationFn: async (data) => {
+      return await elementsApi.create(data as any);
+    },
+    
+    onSuccess: (element, variables) => {
+      if (perfLog) {
+        perfLog.cacheUpdates++;
+      }
+      
+      // Add to list cache
+      queryClient.setQueryData(
+        queryKeys.elements(),
+        (old: Element[] = []) => [...old, element]
+      );
+      
+      // Set individual cache
+      queryClient.setQueryData(
+        queryKeys.element(element.id),
+        element
+      );
+      
+      options?.onSuccess?.(element, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Element creation failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
+}
 
-// Timeline mutations
-export const useCreateTimeline = createEntityMutation<TimelineEvent>('timeline', 'create');
-export const useUpdateTimeline = createEntityMutation<TimelineEvent>('timeline', 'update');
-export const useDeleteTimeline = createEntityMutation<TimelineEvent>('timeline', 'delete');
+/**
+ * Update an existing element
+ */
+export function useUpdateElement(
+  options?: UseMutationOptions<Element, MutationError, Partial<Element> & { id: string }>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<Element, MutationError, Partial<Element> & { id: string }>({
+    mutationFn: async ({ id, ...data }) => {
+      return await elementsApi.update(id, data as any);
+    },
+    
+    onSuccess: async (element, variables) => {
+      // Update list cache
+      queryClient.setQueryData(
+        queryKeys.elements(),
+        (old: Element[] = []) => 
+          old.map(e => e.id === element.id ? element : e)
+      );
+      
+      // Update individual cache
+      queryClient.setQueryData(
+        queryKeys.element(element.id),
+        element
+      );
+      
+      // Handle relationship invalidation if needed
+      const relatedTypes = getRelatedTypes('elements', Object.keys(variables));
+      for (const type of relatedTypes) {
+        const key = type === 'characters' ? queryKeys.characters() :
+                   type === 'puzzles' ? queryKeys.puzzles() :
+                   type === 'timeline' ? queryKeys.timeline() :
+                   queryKeys.elements();
+        await queryClient.invalidateQueries({ queryKey: key });
+      }
+      
+      options?.onSuccess?.(element, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Element update failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
+}
+
+// Element delete not implemented yet
+export function useDeleteElement() {
+  throw new Error('Delete not implemented for elements');
+}
+
+// ============================================================================
+// PUZZLE MUTATIONS
+// ============================================================================
+
+/**
+ * Create a new puzzle
+ */
+export function useCreatePuzzle(
+  options?: UseMutationOptions<Puzzle, MutationError, Partial<Puzzle> & ParentRelationMetadata>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<Puzzle, MutationError, Partial<Puzzle> & ParentRelationMetadata>({
+    mutationFn: async (data) => {
+      return await puzzlesApi.create(data as any);
+    },
+    
+    onSuccess: (puzzle, variables) => {
+      if (perfLog) {
+        perfLog.cacheUpdates++;
+      }
+      
+      // Add to list cache
+      queryClient.setQueryData(
+        queryKeys.puzzles(),
+        (old: Puzzle[] = []) => [...old, puzzle]
+      );
+      
+      // Set individual cache
+      queryClient.setQueryData(
+        queryKeys.puzzle(puzzle.id),
+        puzzle
+      );
+      
+      options?.onSuccess?.(puzzle, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Puzzle creation failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
+}
+
+/**
+ * Update an existing puzzle
+ */
+export function useUpdatePuzzle(
+  options?: UseMutationOptions<Puzzle, MutationError, Partial<Puzzle> & { id: string }>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<Puzzle, MutationError, Partial<Puzzle> & { id: string }>({
+    mutationFn: async ({ id, ...data }) => {
+      return await puzzlesApi.update(id, data as any);
+    },
+    
+    onSuccess: async (puzzle, variables) => {
+      // Update list cache
+      queryClient.setQueryData(
+        queryKeys.puzzles(),
+        (old: Puzzle[] = []) => 
+          old.map(p => p.id === puzzle.id ? puzzle : p)
+      );
+      
+      // Update individual cache
+      queryClient.setQueryData(
+        queryKeys.puzzle(puzzle.id),
+        puzzle
+      );
+      
+      // Handle relationship invalidation if needed
+      const relatedTypes = getRelatedTypes('puzzles', Object.keys(variables));
+      for (const type of relatedTypes) {
+        const key = type === 'characters' ? queryKeys.characters() :
+                   type === 'elements' ? queryKeys.elements() :
+                   type === 'timeline' ? queryKeys.timeline() :
+                   queryKeys.puzzles();
+        await queryClient.invalidateQueries({ queryKey: key });
+      }
+      
+      options?.onSuccess?.(puzzle, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Puzzle update failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
+}
+
+// Puzzle delete not implemented yet
+export function useDeletePuzzle() {
+  throw new Error('Delete not implemented for puzzles');
+}
+
+// ============================================================================
+// TIMELINE MUTATIONS
+// ============================================================================
+
+/**
+ * Create a new timeline event
+ */
+export function useCreateTimeline(
+  options?: UseMutationOptions<TimelineEvent, MutationError, Partial<TimelineEvent> & ParentRelationMetadata>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<TimelineEvent, MutationError, Partial<TimelineEvent> & ParentRelationMetadata>({
+    mutationFn: async (data) => {
+      return await timelineApi.create(data as any);
+    },
+    
+    onSuccess: (event, variables) => {
+      if (perfLog) {
+        perfLog.cacheUpdates++;
+      }
+      
+      // Add to list cache
+      queryClient.setQueryData(
+        queryKeys.timeline(),
+        (old: TimelineEvent[] = []) => [...old, event]
+      );
+      
+      // Set individual cache
+      queryClient.setQueryData(
+        queryKeys.timelineEvent(event.id),
+        event
+      );
+      
+      options?.onSuccess?.(event, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Timeline event creation failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
+}
+
+/**
+ * Update an existing timeline event
+ */
+export function useUpdateTimeline(
+  options?: UseMutationOptions<TimelineEvent, MutationError, Partial<TimelineEvent> & { id: string }>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<TimelineEvent, MutationError, Partial<TimelineEvent> & { id: string }>({
+    mutationFn: async ({ id, ...data }) => {
+      return await timelineApi.update(id, data as any);
+    },
+    
+    onSuccess: async (event, variables) => {
+      // Update list cache
+      queryClient.setQueryData(
+        queryKeys.timeline(),
+        (old: TimelineEvent[] = []) => 
+          old.map(e => e.id === event.id ? event : e)
+      );
+      
+      // Update individual cache
+      queryClient.setQueryData(
+        queryKeys.timelineEvent(event.id),
+        event
+      );
+      
+      // Handle relationship invalidation if needed
+      const relatedTypes = getRelatedTypes('timeline', Object.keys(variables));
+      for (const type of relatedTypes) {
+        const key = type === 'characters' ? queryKeys.characters() :
+                   type === 'elements' ? queryKeys.elements() :
+                   type === 'puzzles' ? queryKeys.puzzles() :
+                   queryKeys.timeline();
+        await queryClient.invalidateQueries({ queryKey: key });
+      }
+      
+      options?.onSuccess?.(event, variables, undefined);
+    },
+    
+    onError: (error, variables, context) => {
+      console.error('Timeline event update failed:', error);
+      options?.onError?.(error, variables, context);
+    }
+  });
+}
+
+// Timeline delete not implemented yet
+export function useDeleteTimeline() {
+  throw new Error('Delete not implemented for timeline');
+}
+
+// Aliases for backward compatibility
+export const useCreateTimelineEvent = useCreateTimeline;
+export const useUpdateTimelineEvent = useUpdateTimeline;
+export const useDeleteTimelineEvent = useDeleteTimeline;
 
 /**
  * Generic mutation hook that determines type at runtime
@@ -325,7 +566,7 @@ export function useBatchEntityMutation<T extends Entity>(
       
       // Check if any updates involved relationship fields
       const hasRelationshipChanges = variables.some(update => {
-        const relatedTypes = getRelatedEntityTypes(update);
+        const relatedTypes = getRelatedEntityTypes(entityType, Object.keys(update));
         return relatedTypes.length > 0;
       });
       
@@ -336,7 +577,7 @@ export function useBatchEntityMutation<T extends Entity>(
       if (hasRelationshipChanges) {
         const allRelatedTypes = new Set<EntityType>();
         for (const update of variables) {
-          const relatedTypes = getRelatedEntityTypes(update);
+          const relatedTypes = getRelatedEntityTypes(entityType, Object.keys(update));
           relatedTypes.forEach(type => allRelatedTypes.add(type));
         }
         

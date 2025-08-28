@@ -50,7 +50,7 @@ import ElementNode from './nodes/ElementNode';
 import TimelineNode from './nodes/TimelineNode';
 import { DetailPanel } from '@/components/DetailPanel';
 import { useViewConfig } from '@/hooks/useViewConfig';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { charactersApi, puzzlesApi, elementsApi, timelineApi } from '@/services/api';
 import { useViewportManager } from '@/hooks/useGraphState';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
@@ -136,36 +136,47 @@ function GraphViewComponent() {
   // Get view configuration from route
   const { config: viewConfig } = useViewConfig();
   
-  // Use unified data loading to prevent progressive rendering
-  // Fetch all entity data using individual API calls
-  const { data: characters = [], isLoading: loadingCharacters } = useQuery({
-    queryKey: ['characters', 'all'],
-    queryFn: () => charactersApi.listAll(),
-    staleTime: 5 * 60 * 1000,
+  // PHASE 5 FIX: Use parallel queries with useQueries to eliminate waterfall loading
+  // This fetches all entity data simultaneously instead of sequentially
+  const entityQueries = useQueries({
+    queries: [
+      {
+        queryKey: ['characters', 'all'],
+        queryFn: () => charactersApi.listAll(),
+        staleTime: 5 * 60 * 1000,
+      },
+      {
+        queryKey: ['puzzles', 'all'], 
+        queryFn: () => puzzlesApi.listAll(),
+        staleTime: 5 * 60 * 1000,
+      },
+      {
+        queryKey: ['elements', 'all'],
+        queryFn: () => elementsApi.listAll(),
+        staleTime: 5 * 60 * 1000,
+      },
+      {
+        queryKey: ['timeline', 'all'],
+        queryFn: () => timelineApi.listAll(),
+        staleTime: 5 * 60 * 1000,
+      },
+    ],
   });
+
+  // Extract data from parallel query results
+  const [
+    { data: characters = [] },
+    { data: puzzles = [] },
+    { data: elements = [] },
+    { data: timeline = [] },
+  ] = entityQueries;
   
-  const { data: puzzles = [], isLoading: loadingPuzzles } = useQuery({
-    queryKey: ['puzzles', 'all'],
-    queryFn: () => puzzlesApi.listAll(),
-    staleTime: 5 * 60 * 1000,
-  });
-  
-  const { data: elements = [], isLoading: loadingElements } = useQuery({
-    queryKey: ['elements', 'all'],
-    queryFn: () => elementsApi.listAll(),
-    staleTime: 5 * 60 * 1000,
-  });
-  
-  const { data: timeline = [], isLoading: loadingTimeline } = useQuery({
-    queryKey: ['timeline', 'all'],
-    queryFn: () => timelineApi.listAll(),
-    staleTime: 5 * 60 * 1000,
-  });
-  
-  const isInitialLoading = loadingCharacters || loadingPuzzles || loadingElements || loadingTimeline;
-  const hasAnyError = false; // For now, we'll handle errors differently
+  // Check loading and error states across all queries
+  const isInitialLoading = entityQueries.some(q => q.isLoading);
+  const hasAnyError = entityQueries.some(q => q.isError);
   const refetchAll = () => {
-    // Not needed for now
+    // Refetch all queries in parallel
+    entityQueries.forEach(q => q.refetch());
   };
   
   // Use consolidated filter selector for better performance (1 subscription vs 14+)
