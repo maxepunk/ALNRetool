@@ -3,9 +3,6 @@
  * All environment variables should be accessed through this module
  */
 
-// Removed logger import to break circular dependency
-// Will use console.log for config validation instead
-
 /**
  * Redacts sensitive configuration values before logging
  * Filters out keys matching /key|token|secret/i pattern
