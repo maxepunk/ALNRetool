@@ -74,12 +74,11 @@ export const INVERSE_RELATIONSHIP_MAP: Record<string, string> = {
   
   // Puzzle -> Element relationships  
   puzzleElementIds: 'containerPuzzleId',  // Puzzle contains Elements -> Element in Puzzle
-  lockedItemId: 'lockedByPuzzleId',      // Puzzle locks Element -> Element locked by Puzzle
+  // Note: lockedByPuzzleId field doesn't exist in our schema, removed inverse mapping
   rewardIds: 'rewardedByPuzzleIds',      // Puzzle rewards Elements -> Elements rewarded by Puzzle
   
   // Element -> Puzzle relationships
   containerPuzzleId: 'puzzleElementIds',  // Element in Puzzle -> Puzzle contains Element
-  lockedByPuzzleId: 'lockedItemId',      // Element locked by Puzzle -> Puzzle locks Element
   rewardedByPuzzleIds: 'rewardIds',      // Element rewarded by Puzzles -> Puzzles reward Element
   
   // Character -> Puzzle relationships
@@ -182,18 +181,52 @@ export function updateRelatedEntities(
   for (const entityType of relatedTypes) {
     const queryKey = getQueryKeyForEntityType(entityType);
     
-    // For now, we'll use surgical updates when we have the full entities
-    // In practice, this might need to fetch the related entities first
-    // or work with partial updates
+    // Update related entities with proper inverse relationships
     queryClient.setQueryData(queryKey, (oldData: Entity[] | undefined) => {
       if (!oldData) return oldData;
       
-      // This is a simplified update - in practice you'd update
-      // the inverse relationship fields on the related entities
       return oldData.map(item => {
-        // Check if this item is related to the source entity
-        // and update its inverse relationship fields
-        // This logic would be entity-specific
+        // Check each updated field for inverse relationships
+        for (const field in updatedFields) {
+          const inverseField = INVERSE_RELATIONSHIP_MAP[`${entityType}.${field}`] || 
+                               INVERSE_RELATIONSHIP_MAP[field];
+          
+          if (inverseField) {
+            const fieldValue = updatedFields[field as keyof Entity];
+            
+            // Handle array fields (many-to-many relationships)
+            if (Array.isArray(fieldValue)) {
+              // Check if this item is in the related IDs
+              if (fieldValue.includes(item.id)) {
+                // Add source entity to inverse field if not already present
+                const currentInverse = (item as any)[inverseField] || [];
+                if (Array.isArray(currentInverse) && !currentInverse.includes(_sourceEntity.id)) {
+                  return {
+                    ...item,
+                    [inverseField]: [...currentInverse, _sourceEntity.id]
+                  };
+                }
+              } else {
+                // Remove source entity from inverse field if present
+                const currentInverse = (item as any)[inverseField];
+                if (Array.isArray(currentInverse) && currentInverse.includes(_sourceEntity.id)) {
+                  return {
+                    ...item,
+                    [inverseField]: currentInverse.filter((id: string) => id !== _sourceEntity.id)
+                  };
+                }
+              }
+            }
+            // Handle single value fields (one-to-many relationships)
+            else if (typeof fieldValue === 'string' && fieldValue === item.id) {
+              return {
+                ...item,
+                [inverseField]: _sourceEntity.id
+              };
+            }
+          }
+        }
+        
         return item;
       });
     });

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Relationship Resolution</title>
+</head>
+<body>
+    <h1>Testing Entity Relationships</h1>
+    <pre id="output"></pre>
+    
+    <script>
+        async function testRelationships() {
+            const output = document.getElementById('output');
+            
+            try {
+                // Fetch all entities
+                const [charResponse, elemResponse] = await Promise.all([
+                    fetch('http://localhost:3001/api/notion/characters', {
+                        headers: { 'Origin': 'http://localhost:5173' }
+                    }),
+                    fetch('http://localhost:3001/api/notion/elements', {
+                        headers: { 'Origin': 'http://localhost:5173' }
+                    })
+                ]);
+                
+                const charData = await charResponse.json();
+                const elemData = await elemResponse.json();
+                
+                const characters = charData.data;
+                const elements = elemData.data;
+                
+                output.textContent += `Fetched ${characters.length} characters and ${elements.length} elements\n\n`;
+                
+                // Build lookup map
+                const charMap = new Map(characters.map(c => [c.id, c]));
+                
+                // Check relationships
+                let errors = [];
+                let successes = 0;
+                
+                elements.forEach(element => {
+                    if (element.ownerId) {
+                        const owner = charMap.get(element.ownerId);
+                        if (!owner) {
+                            errors.push({
+                                element: element.name,
+                                elementId: element.id,
+                                ownerId: element.ownerId
+                            });
+                        } else {
+                            successes++;
+                        }
+                    }
+                });
+                
+                output.textContent += `Results:\n`;
+                output.textContent += `✓ ${successes} successful ownership relationships\n`;
+                output.textContent += `✗ ${errors.length} failed ownership relationships\n\n`;
+                
+                if (errors.length > 0) {
+                    output.textContent += `Failed relationships:\n`;
+                    errors.slice(0, 5).forEach(err => {
+                        output.textContent += `- Element "${err.element}" (${err.elementId})\n`;
+                        output.textContent += `  Looking for owner: ${err.ownerId}\n`;
+                        
+                        // Check if ID exists in different format
+                        const exists = Array.from(charMap.keys()).some(id => 
+                            id === err.ownerId || 
+                            id.replace(/-/g, '') === err.ownerId.replace(/-/g, '')
+                        );
+                        
+                        if (exists) {
+                            output.textContent += `  ⚠️ Owner exists with different ID format!\n`;
+                        }
+                    });
+                    
+                    output.textContent += `\n\nSample character IDs:\n`;
+                    Array.from(charMap.keys()).slice(0, 5).forEach(id => {
+                        output.textContent += `- ${id}\n`;
+                    });
+                }
+                
+            } catch (error) {
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+        
+        testRelationships();
+    </script>
+</body>
+</html>

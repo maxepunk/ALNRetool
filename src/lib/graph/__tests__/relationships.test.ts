@@ -151,8 +151,9 @@ describe('Relationship Resolution', () => {
       const lookupMaps = buildLookupMaps(characters, elements, [], []);
       const edges = createOwnershipEdges(elements, lookupMaps);
 
-      expect(edges[0]?.data?.strength).toBe(0.9); // Core tier (EdgeBuilder calculates differently)
-      expect(edges[1]?.data?.strength).toBe(0.9); // Secondary tier (EdgeBuilder gives same weight)
+      // Strength is not set in current implementation - tier-based weighting was removed
+      expect(edges[0]?.data?.relationshipType).toBe('ownership');
+      expect(edges[1]?.data?.relationshipType).toBe('ownership');
     });
   });
 
@@ -190,7 +191,7 @@ describe('Relationship Resolution', () => {
       expect(edges[0]?.source).toBe('p1');
       expect(edges[0]?.target).toBe('e1');
       expect(edges[0]?.data?.relationshipType).toBe('reward');
-      expect(edges[0]?.data?.label).toBe('rewards'); // EdgeBuilder uses 'rewards' label
+      expect(edges[0]?.label).toBe('reward'); // EDGE_STYLES uses 'reward' label
       expect(edges[0]?.animated).toBe(true);
     });
   });
@@ -209,7 +210,7 @@ describe('Relationship Resolution', () => {
       expect(edges[0]?.source).toBe('e1');
       expect(edges[0]?.target).toBe('t1');
       expect(edges[0]?.data?.relationshipType).toBe('timeline');
-      expect(edges[0]?.data?.label).toBe('timeline'); // EdgeBuilder uses 'timeline' label
+      expect(edges[0]?.label).toBeUndefined(); // EDGE_STYLES for timeline has no label
     });
   });
 

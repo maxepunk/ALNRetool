@@ -27,7 +27,7 @@ import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
  * When creating an entity from a relation field, this ensures
  * the new entity is automatically added to the parent's relation.
  */
-type ParentRelationMetadata = {
+export type ParentRelationMetadata = {
   _parentRelation?: {
     parentType: string;
     parentId: string;
@@ -301,13 +301,22 @@ export const charactersApi = {
   /**
    * Create a new character
    */
-  create: async (data: Partial<Character> & ParentRelationMetadata): Promise<Character> => {
+  create: async (data: Partial<Character>): Promise<Character> => {
     return fetcher<Character>('/notion/characters', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete (archive) a character
+   */
+  delete: async (id: string): Promise<void> => {
+    await fetcher<void>(`/notion/characters/${id}`, {
+      method: 'DELETE',
     });
   },
 };
@@ -384,13 +393,22 @@ export const elementsApi = {
   /**
    * Create a new element
    */
-  create: async (data: Partial<Element> & ParentRelationMetadata): Promise<Element> => {
+  create: async (data: Partial<Element>): Promise<Element> => {
     return fetcher<Element>('/notion/elements', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete (archive) an element
+   */
+  delete: async (id: string): Promise<void> => {
+    await fetcher<void>(`/notion/elements/${id}`, {
+      method: 'DELETE',
     });
   },
 };
@@ -441,13 +459,22 @@ export const puzzlesApi = {
   /**
    * Create a new puzzle
    */
-  create: async (data: Partial<Puzzle> & ParentRelationMetadata): Promise<Puzzle> => {
+  create: async (data: Partial<Puzzle>): Promise<Puzzle> => {
     return fetcher<Puzzle>('/notion/puzzles', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete (archive) a puzzle
+   */
+  delete: async (id: string): Promise<void> => {
+    await fetcher<void>(`/notion/puzzles/${id}`, {
+      method: 'DELETE',
     });
   },
 };
@@ -521,13 +548,22 @@ export const timelineApi = {
   /**
    * Create a new timeline event
    */
-  create: async (data: Partial<TimelineEvent> & ParentRelationMetadata): Promise<TimelineEvent> => {
+  create: async (data: Partial<TimelineEvent>): Promise<TimelineEvent> => {
     return fetcher<TimelineEvent>('/notion/timeline', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+    });
+  },
+
+  /**
+   * Delete (archive) a timeline event
+   */
+  delete: async (id: string): Promise<void> => {
+    await fetcher<void>(`/notion/timeline/${id}`, {
+      method: 'DELETE',
     });
   },
 };

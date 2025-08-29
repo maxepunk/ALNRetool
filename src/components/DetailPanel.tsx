@@ -35,10 +35,57 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { X, Save, XCircle, ChevronDown, ChevronRight, Loader2, Check, AlertCircle } from 'lucide-react';
+import { X, Save, XCircle, ChevronDown, ChevronRight, Loader2, Check, AlertCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+// Simple confirmation dialog component (inline since alert-dialog doesn't exist)
+const ConfirmDialog = ({ 
+  open, 
+  onClose, 
+  onConfirm, 
+  title, 
+  description, 
+  confirmText = "Delete", 
+  cancelText = "Cancel" 
+}: {
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  description: string;
+  confirmText?: string;
+  cancelText?: string;
+}) => {
+  if (!open) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 animate-in fade-in duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      
+      {/* Dialog Container */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full animate-in zoom-in-95 duration-200">
+          <h2 className="text-lg font-semibold mb-2">{title}</h2>
+          <p className="text-muted-foreground mb-6">{description}</p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="outline" onClick={onClose}>
+              {cancelText}
+            </Button>
+            <Button variant="destructive" onClick={onConfirm}>
+              {confirmText}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+};
 import { cn } from '@/lib/utils';
 import { useGraphAnimation } from '@/contexts/GraphAnimationContext';
 import { FieldEditor } from '@/components/field-editors';
@@ -55,6 +102,10 @@ import {
   useUpdateElement,
   useUpdatePuzzle,
   useUpdateTimelineEvent,
+  useDeleteCharacter,
+  useDeleteElement,
+  useDeletePuzzle,
+  useDeleteTimelineEvent,
 } from '@/hooks/mutations';
 import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
 
@@ -220,12 +271,38 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
   // Graph animation context
   const graphAnimation = useGraphAnimation();
+  
+  // Delete confirmation state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Get appropriate mutation hook based on entity type
   const updateCharacter = useUpdateCharacter();
   const updateElement = useUpdateElement();
   const updatePuzzle = useUpdatePuzzle();
   const updateTimeline = useUpdateTimelineEvent();
+  
+  // Get delete mutation hooks
+  const deleteCharacter = useDeleteCharacter({
+    onSuccess: () => {
+      onClose();
+    }
+  });
+  const deleteElement = useDeleteElement({
+    onSuccess: () => {
+      onClose();
+    }
+  });
+  const deletePuzzle = useDeletePuzzle({
+    onSuccess: () => {
+      onClose();
+    }
+  });
+  const deleteTimeline = useDeleteTimelineEvent({
+    onSuccess: () => {
+      onClose();
+    }
+  });
 
   // Select the right mutation based on entity type
   const mutation = useMemo(() => {
@@ -242,6 +319,22 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         return null;
     }
   }, [entityType, updateCharacter, updateElement, updatePuzzle, updateTimeline]);
+  
+  // Select the right delete mutation based on entity type
+  const deleteMutation = useMemo(() => {
+    switch (entityType) {
+      case 'character':
+        return deleteCharacter;
+      case 'element':
+        return deleteElement;
+      case 'puzzle':
+        return deletePuzzle;
+      case 'timeline':
+        return deleteTimeline;
+      default:
+        return null;
+    }
+  }, [entityType, deleteCharacter, deleteElement, deletePuzzle, deleteTimeline]);
 
   // Combine external and internal saving states
   const isSaving = externalIsSaving || mutation?.isPending || false;
@@ -484,6 +577,25 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   }, [formData, entity, mutation, onSave, validateForm, entityType]);
 
   /**
+   * Delete handler to remove the entity.
+   * Shows confirmation dialog, then deletes entity on confirm.
+   */
+  const handleDelete = useCallback(async () => {
+    if (!entity || !deleteMutation) {
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      await deleteMutation.mutateAsync(entity.id);
+      // onClose is called from the mutation's onSuccess callback
+    } catch (error) {
+      // Error is already shown via toast in the mutation
+      setIsDeleting(false);
+    }
+  }, [entity, deleteMutation]);
+
+  /**
    * Cancel handler to reset form to original state.
    * Discards all unsaved changes and clears validation errors.
    */
@@ -547,14 +659,30 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          className="hover:bg-white/10"
-        >
-          <X className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="hover:bg-destructive/20 text-destructive"
+            title="Delete entity"
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="hover:bg-white/10"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Content */}
@@ -734,6 +862,17 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           </Button>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Are you sure?"
+        description={`This will permanently delete this ${entityType}${entity && 'name' in entity && entity.name ? ` "${entity.name}"` : ''}. This action cannot be undone.`}
+        confirmText={isDeleting ? "Deleting..." : "Delete"}
+        cancelText="Cancel"
+      />
     </div>
   );
 };

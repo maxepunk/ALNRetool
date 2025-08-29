@@ -9,10 +9,12 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationOptions } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
 import { queryKeys } from '@/lib/queryKeys';
 import { 
-  getRelatedEntityTypes as getRelatedTypes,
+  updateRelatedEntities,
+  removeEntityFromCaches
 } from '@/lib/cache/mutations';
 import type { 
   Character, 
@@ -60,10 +62,6 @@ interface MutationError {
   details?: unknown;
 }
 
-// Helper function for getting related entity types
-function getRelatedEntityTypes(entityType: EntityType, updatedFields: string[]): EntityType[] {
-  return Array.from(getRelatedTypes(entityType, updatedFields));
-}
 
 // Helper function to get API module for entity type
 function getApiModule(entityType: EntityType) {
@@ -111,7 +109,47 @@ export function useCreateCharacter(
   
   return useMutation<Character, MutationError, Partial<Character> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      return await charactersApi.create(data as any);
+      // Extract parent relation metadata if present
+      const { _parentRelation, ...entityData } = data;
+      
+      // Validate relationships in parallel if needed
+      const needsElementValidation = entityData.ownedElementIds?.length || entityData.associatedElementIds?.length;
+      const needsPuzzleValidation = entityData.characterPuzzleIds?.length;
+      
+      if (needsElementValidation || needsPuzzleValidation) {
+        // Fetch both element and puzzle lists in parallel
+        const [elements, puzzles] = await Promise.all([
+          needsElementValidation ? elementsApi.listAll() : Promise.resolve([]),
+          needsPuzzleValidation ? puzzlesApi.listAll() : Promise.resolve([])
+        ]);
+        
+        // Validate element relationships
+        if (needsElementValidation) {
+          const elementIds = elements.map(e => e.id);
+          
+          const invalidOwned = entityData.ownedElementIds?.filter(id => !elementIds.includes(id)) || [];
+          const invalidAssoc = entityData.associatedElementIds?.filter(id => !elementIds.includes(id)) || [];
+          
+          if (invalidOwned.length > 0) {
+            throw new Error(`Invalid owned element IDs: ${invalidOwned.join(', ')}`);
+          }
+          if (invalidAssoc.length > 0) {
+            throw new Error(`Invalid associated element IDs: ${invalidAssoc.join(', ')}`);
+          }
+        }
+        
+        // Validate puzzle relationships
+        if (needsPuzzleValidation) {
+          const puzzleIds = puzzles.map(p => p.id);
+          
+          const invalidPuzzles = entityData.characterPuzzleIds!.filter(id => !puzzleIds.includes(id));
+          if (invalidPuzzles.length > 0) {
+            throw new Error(`Invalid puzzle IDs: ${invalidPuzzles.join(', ')}`);
+          }
+        }
+      }
+      
+      return await charactersApi.create(entityData);
     },
     
     onSuccess: (character, variables) => {
@@ -135,11 +173,12 @@ export function useCreateCharacter(
       // Parent relation updates are handled server-side atomically
       // This prevents dual cache updates and race conditions
       
+      toast.success(`Created ${character.name || 'character'}`);
       options?.onSuccess?.(character, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Character creation failed:', error);
+      toast.error(error.message || 'Failed to create character');
       options?.onError?.(error, variables, context);
     }
   });
@@ -155,7 +194,7 @@ export function useUpdateCharacter(
   
   return useMutation<Character, MutationError, Partial<Character> & { id: string }>({
     mutationFn: async ({ id, ...data }) => {
-      return await charactersApi.update(id, data as any);
+      return await charactersApi.update(id, data);
     },
     
     onSuccess: async (character, variables) => {
@@ -172,29 +211,55 @@ export function useUpdateCharacter(
         character
       );
       
-      // Handle relationship invalidation if needed
-      const relatedTypes = getRelatedTypes('characters', Object.keys(variables));
-      for (const type of relatedTypes) {
-        const key = type === 'elements' ? queryKeys.elements() :
-                   type === 'puzzles' ? queryKeys.puzzles() :
-                   type === 'timeline' ? queryKeys.timeline() :
-                   queryKeys.characters();
-        await queryClient.invalidateQueries({ queryKey: key });
+      // Update related entities with bidirectional relationships
+      const updatedFields = Object.entries(variables).reduce<Partial<Character>>((acc, [key, value]) => {
+        if (key !== 'id' && value !== undefined) {
+          return { ...acc, [key]: value };
+        }
+        return acc;
+      }, {});
+      
+      if (Object.keys(updatedFields).length > 0) {
+        updateRelatedEntities(queryClient, 'characters', character, updatedFields);
       }
       
+      toast.success(`Updated ${character.name || 'character'}`);
       options?.onSuccess?.(character, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Character update failed:', error);
+      toast.error(error.message || 'Failed to update character');
       options?.onError?.(error, variables, context);
     }
   });
 }
 
-// Character delete not implemented yet
-export function useDeleteCharacter() {
-  throw new Error('Delete not implemented for characters');
+/**
+ * Delete a character
+ */
+export function useDeleteCharacter(
+  options?: UseMutationOptions<void, MutationError, string>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<void, MutationError, string>({
+    mutationFn: async (id: string) => {
+      return await charactersApi.delete(id);
+    },
+    
+    onSuccess: (_, id) => {
+      // Remove from caches
+      removeEntityFromCaches(queryClient, 'characters', id);
+      
+      toast.success('Character deleted');
+      options?.onSuccess?.(undefined, id, undefined);
+    },
+    
+    onError: (error, id, context) => {
+      toast.error(error.message || 'Failed to delete character');
+      options?.onError?.(error, id, context);
+    }
+  });
 }
 
 // ============================================================================
@@ -211,7 +276,9 @@ export function useCreateElement(
   
   return useMutation<Element, MutationError, Partial<Element> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      return await elementsApi.create(data as any);
+      // Extract parent relation metadata if present
+      const { _parentRelation, ...entityData } = data;
+      return await elementsApi.create(entityData);
     },
     
     onSuccess: (element, variables) => {
@@ -231,11 +298,12 @@ export function useCreateElement(
         element
       );
       
+      toast.success(`Created ${element.name || 'element'}`);
       options?.onSuccess?.(element, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Element creation failed:', error);
+      toast.error(error.message || 'Failed to create element');
       options?.onError?.(error, variables, context);
     }
   });
@@ -251,7 +319,7 @@ export function useUpdateElement(
   
   return useMutation<Element, MutationError, Partial<Element> & { id: string }>({
     mutationFn: async ({ id, ...data }) => {
-      return await elementsApi.update(id, data as any);
+      return await elementsApi.update(id, data);
     },
     
     onSuccess: async (element, variables) => {
@@ -268,29 +336,55 @@ export function useUpdateElement(
         element
       );
       
-      // Handle relationship invalidation if needed
-      const relatedTypes = getRelatedTypes('elements', Object.keys(variables));
-      for (const type of relatedTypes) {
-        const key = type === 'characters' ? queryKeys.characters() :
-                   type === 'puzzles' ? queryKeys.puzzles() :
-                   type === 'timeline' ? queryKeys.timeline() :
-                   queryKeys.elements();
-        await queryClient.invalidateQueries({ queryKey: key });
+      // Update related entities with bidirectional relationships
+      const updatedFields = Object.entries(variables).reduce<Partial<Element>>((acc, [key, value]) => {
+        if (key !== 'id' && value !== undefined) {
+          return { ...acc, [key]: value };
+        }
+        return acc;
+      }, {});
+      
+      if (Object.keys(updatedFields).length > 0) {
+        updateRelatedEntities(queryClient, 'elements', element, updatedFields);
       }
       
+      toast.success(`Updated ${element.name || 'element'}`);
       options?.onSuccess?.(element, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Element update failed:', error);
+      toast.error(error.message || 'Failed to update element');
       options?.onError?.(error, variables, context);
     }
   });
 }
 
-// Element delete not implemented yet
-export function useDeleteElement() {
-  throw new Error('Delete not implemented for elements');
+/**
+ * Delete an element
+ */
+export function useDeleteElement(
+  options?: UseMutationOptions<void, MutationError, string>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<void, MutationError, string>({
+    mutationFn: async (id: string) => {
+      return await elementsApi.delete(id);
+    },
+    
+    onSuccess: (_, id) => {
+      // Remove from caches
+      removeEntityFromCaches(queryClient, 'elements', id);
+      
+      toast.success('Element deleted');
+      options?.onSuccess?.(undefined, id, undefined);
+    },
+    
+    onError: (error, id, context) => {
+      toast.error(error.message || 'Failed to delete element');
+      options?.onError?.(error, id, context);
+    }
+  });
 }
 
 // ============================================================================
@@ -307,7 +401,38 @@ export function useCreatePuzzle(
   
   return useMutation<Puzzle, MutationError, Partial<Puzzle> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      return await puzzlesApi.create(data as any);
+      // Extract parent relation metadata if present
+      const { _parentRelation, ...entityData } = data;
+      
+      // Validate relationships - using Promise.all pattern for consistency and future expansion
+      const needsElementValidation = entityData.rewardIds?.length || entityData.puzzleElementIds?.length;
+      
+      if (needsElementValidation) {
+        // Fetch element list (could add more validations in parallel in future)
+        const [elements] = await Promise.all([
+          elementsApi.listAll()
+        ]);
+        
+        const elementIds = elements.map(e => e.id);
+        
+        // Validate reward elements
+        if (entityData.rewardIds?.length) {
+          const invalidRewards = entityData.rewardIds.filter(id => !elementIds.includes(id));
+          if (invalidRewards.length > 0) {
+            throw new Error(`Invalid reward element IDs: ${invalidRewards.join(', ')}`);
+          }
+        }
+        
+        // Validate puzzle elements (requirements)
+        if (entityData.puzzleElementIds?.length) {
+          const invalidRequirements = entityData.puzzleElementIds.filter(id => !elementIds.includes(id));
+          if (invalidRequirements.length > 0) {
+            throw new Error(`Invalid puzzle element IDs: ${invalidRequirements.join(', ')}`);
+          }
+        }
+      }
+      
+      return await puzzlesApi.create(entityData);
     },
     
     onSuccess: (puzzle, variables) => {
@@ -327,11 +452,12 @@ export function useCreatePuzzle(
         puzzle
       );
       
+      toast.success(`Created ${puzzle.name || 'puzzle'}`);
       options?.onSuccess?.(puzzle, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Puzzle creation failed:', error);
+      toast.error(error.message || 'Failed to create puzzle');
       options?.onError?.(error, variables, context);
     }
   });
@@ -347,7 +473,7 @@ export function useUpdatePuzzle(
   
   return useMutation<Puzzle, MutationError, Partial<Puzzle> & { id: string }>({
     mutationFn: async ({ id, ...data }) => {
-      return await puzzlesApi.update(id, data as any);
+      return await puzzlesApi.update(id, data);
     },
     
     onSuccess: async (puzzle, variables) => {
@@ -364,29 +490,55 @@ export function useUpdatePuzzle(
         puzzle
       );
       
-      // Handle relationship invalidation if needed
-      const relatedTypes = getRelatedTypes('puzzles', Object.keys(variables));
-      for (const type of relatedTypes) {
-        const key = type === 'characters' ? queryKeys.characters() :
-                   type === 'elements' ? queryKeys.elements() :
-                   type === 'timeline' ? queryKeys.timeline() :
-                   queryKeys.puzzles();
-        await queryClient.invalidateQueries({ queryKey: key });
+      // Update related entities with bidirectional relationships
+      const updatedFields = Object.entries(variables).reduce<Partial<Puzzle>>((acc, [key, value]) => {
+        if (key !== 'id' && value !== undefined) {
+          return { ...acc, [key]: value };
+        }
+        return acc;
+      }, {});
+      
+      if (Object.keys(updatedFields).length > 0) {
+        updateRelatedEntities(queryClient, 'puzzles', puzzle, updatedFields);
       }
       
+      toast.success(`Updated ${puzzle.name || 'puzzle'}`);
       options?.onSuccess?.(puzzle, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Puzzle update failed:', error);
+      toast.error(error.message || 'Failed to update puzzle');
       options?.onError?.(error, variables, context);
     }
   });
 }
 
-// Puzzle delete not implemented yet
-export function useDeletePuzzle() {
-  throw new Error('Delete not implemented for puzzles');
+/**
+ * Delete a puzzle
+ */
+export function useDeletePuzzle(
+  options?: UseMutationOptions<void, MutationError, string>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<void, MutationError, string>({
+    mutationFn: async (id: string) => {
+      return await puzzlesApi.delete(id);
+    },
+    
+    onSuccess: (_, id) => {
+      // Remove from caches
+      removeEntityFromCaches(queryClient, 'puzzles', id);
+      
+      toast.success('Puzzle deleted');
+      options?.onSuccess?.(undefined, id, undefined);
+    },
+    
+    onError: (error, id, context) => {
+      toast.error(error.message || 'Failed to delete puzzle');
+      options?.onError?.(error, id, context);
+    }
+  });
 }
 
 // ============================================================================
@@ -403,7 +555,9 @@ export function useCreateTimeline(
   
   return useMutation<TimelineEvent, MutationError, Partial<TimelineEvent> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      return await timelineApi.create(data as any);
+      // Extract parent relation metadata if present
+      const { _parentRelation, ...entityData } = data;
+      return await timelineApi.create(entityData);
     },
     
     onSuccess: (event, variables) => {
@@ -423,11 +577,12 @@ export function useCreateTimeline(
         event
       );
       
+      toast.success('Created timeline event');
       options?.onSuccess?.(event, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Timeline event creation failed:', error);
+      toast.error(error.message || 'Failed to create timeline event');
       options?.onError?.(error, variables, context);
     }
   });
@@ -443,7 +598,7 @@ export function useUpdateTimeline(
   
   return useMutation<TimelineEvent, MutationError, Partial<TimelineEvent> & { id: string }>({
     mutationFn: async ({ id, ...data }) => {
-      return await timelineApi.update(id, data as any);
+      return await timelineApi.update(id, data);
     },
     
     onSuccess: async (event, variables) => {
@@ -460,29 +615,55 @@ export function useUpdateTimeline(
         event
       );
       
-      // Handle relationship invalidation if needed
-      const relatedTypes = getRelatedTypes('timeline', Object.keys(variables));
-      for (const type of relatedTypes) {
-        const key = type === 'characters' ? queryKeys.characters() :
-                   type === 'elements' ? queryKeys.elements() :
-                   type === 'puzzles' ? queryKeys.puzzles() :
-                   queryKeys.timeline();
-        await queryClient.invalidateQueries({ queryKey: key });
+      // Update related entities with bidirectional relationships
+      const updatedFields = Object.entries(variables).reduce<Partial<TimelineEvent>>((acc, [key, value]) => {
+        if (key !== 'id' && value !== undefined) {
+          return { ...acc, [key]: value };
+        }
+        return acc;
+      }, {});
+      
+      if (Object.keys(updatedFields).length > 0) {
+        updateRelatedEntities(queryClient, 'timeline', event, updatedFields);
       }
       
+      toast.success('Updated timeline event');
       options?.onSuccess?.(event, variables, undefined);
     },
     
     onError: (error, variables, context) => {
-      console.error('Timeline event update failed:', error);
+      toast.error(error.message || 'Failed to update timeline event');
       options?.onError?.(error, variables, context);
     }
   });
 }
 
-// Timeline delete not implemented yet
-export function useDeleteTimeline() {
-  throw new Error('Delete not implemented for timeline');
+/**
+ * Delete a timeline event
+ */
+export function useDeleteTimeline(
+  options?: UseMutationOptions<void, MutationError, string>
+) {
+  const queryClient = useQueryClient();
+  
+  return useMutation<void, MutationError, string>({
+    mutationFn: async (id: string) => {
+      return await timelineApi.delete(id);
+    },
+    
+    onSuccess: (_, id) => {
+      // Remove from caches
+      removeEntityFromCaches(queryClient, 'timeline', id);
+      
+      toast.success('Timeline event deleted');
+      options?.onSuccess?.(undefined, id, undefined);
+    },
+    
+    onError: (error, id, context) => {
+      toast.error(error.message || 'Failed to delete timeline event');
+      options?.onError?.(error, id, context);
+    }
+  });
 }
 
 // Aliases for backward compatibility
@@ -490,38 +671,9 @@ export const useCreateTimelineEvent = useCreateTimeline;
 export const useUpdateTimelineEvent = useUpdateTimeline;
 export const useDeleteTimelineEvent = useDeleteTimeline;
 
-/**
- * Generic mutation hook that determines type at runtime
- */
-export function useEntityMutation(
-  entityType: EntityType,
-  mutationType: MutationType
-) {
-  switch (entityType) {
-    case 'characters':
-      if (mutationType === 'create') return useCreateCharacter();
-      if (mutationType === 'update') return useUpdateCharacter();
-      if (mutationType === 'delete') return useDeleteCharacter();
-      break;
-    case 'elements':
-      if (mutationType === 'create') return useCreateElement();
-      if (mutationType === 'update') return useUpdateElement();
-      if (mutationType === 'delete') return useDeleteElement();
-      break;
-    case 'puzzles':
-      if (mutationType === 'create') return useCreatePuzzle();
-      if (mutationType === 'update') return useUpdatePuzzle();
-      if (mutationType === 'delete') return useDeletePuzzle();
-      break;
-    case 'timeline':
-      if (mutationType === 'create') return useCreateTimeline();
-      if (mutationType === 'update') return useUpdateTimeline();
-      if (mutationType === 'delete') return useDeleteTimeline();
-      break;
-  }
-  
-  throw new Error(`Unknown entity type: ${entityType} or mutation type: ${mutationType}`);
-}
+// Note: Generic entity mutation hook was removed as it violated React's rules of hooks
+// by calling hooks conditionally. Use the specific hooks directly instead:
+// useCreateCharacter, useUpdateCharacter, useDeleteCharacter, etc.
 
 /**
  * Batch mutation for updating multiple entities
@@ -537,7 +689,8 @@ export function useBatchEntityMutation<T extends Entity>(
       const results = await Promise.all(
         updates.map(update => {
           if (!update.id) throw new Error('ID required for batch update');
-          return apiModule.update(update.id, update as any);
+          const { _parentRelation, ...entityData } = update;
+          return apiModule.update(update.id, entityData);
         })
       );
       
@@ -564,27 +717,26 @@ export function useBatchEntityMutation<T extends Entity>(
         queryClient.setQueryData([...entityQueryKey, entity.id], entity);
       }
       
-      // Check if any updates involved relationship fields
-      const hasRelationshipChanges = variables.some(update => {
-        const relatedTypes = getRelatedEntityTypes(entityType, Object.keys(update));
-        return relatedTypes.length > 0;
-      });
-      
-      // If relationships changed, invalidate related entity types
-      // For relationship changes in batch updates, invalidate related entities
-      // This is intentional - see comment in single entity mutation above
-      // TODO: Phase 3 will optimize this with version-based coordination
-      if (hasRelationshipChanges) {
-        const allRelatedTypes = new Set<EntityType>();
-        for (const update of variables) {
-          const relatedTypes = getRelatedEntityTypes(entityType, Object.keys(update));
-          relatedTypes.forEach(type => allRelatedTypes.add(type));
-        }
+      // Update related entities for each updated entity
+      // Use surgical cache updates instead of broad invalidation
+      for (let i = 0; i < updatedEntities.length; i++) {
+        const entity = updatedEntities[i];
+        const originalUpdate = variables[i];
         
-        for (const type of allRelatedTypes) {
-          await queryClient.invalidateQueries({ 
-            queryKey: getQueryKeyForType(type)
-          });
+        // Skip if no matching update or entity
+        if (!entity || !originalUpdate) continue;
+        
+        // Extract the fields that were actually updated (excluding id and metadata)
+        const updatedFields = Object.entries(originalUpdate).reduce<Partial<T>>((acc, [key, value]) => {
+          if (key !== 'id' && key !== '_parentRelation' && value !== undefined) {
+            return { ...acc, [key]: value };
+          }
+          return acc;
+        }, {});
+        
+        // If any fields were updated, surgically update related entities
+        if (Object.keys(updatedFields).length > 0) {
+          updateRelatedEntities(queryClient, entityType, entity, updatedFields);
         }
       }
     }

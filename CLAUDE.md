@@ -311,9 +311,47 @@ tsx scripts/integration-test.ts       # Full integration test
 ## Key Features & Configurations
 
 ### Cache Management
-- **Backend Cache**: node-cache with 5-minute TTL (configurable via `CACHE_TTL_SECONDS`)
-- **Frontend Cache**: React Query with stale time and cache time
-- **Cache Invalidation**: Available via `/api/cache` endpoints with admin key
+
+#### Backend Cache Strategy
+- **node-cache**: 5-minute TTL (configurable via `CACHE_TTL_SECONDS`)
+- **Surgical Invalidation**: Pattern-based cache invalidation using entity IDs
+  ```javascript
+  // Good: Surgical invalidation
+  cacheService.invalidatePattern(`*_${entityId}`);
+  cacheService.invalidatePattern(`${entityType}_*`);
+  
+  // Bad: Nuclear invalidation (NEVER DO THIS)
+  // cacheService.invalidatePattern('*:*'); // This nukes entire cache!
+  ```
+
+#### Frontend Cache Patterns (React Query)
+- **Optimistic Updates**: Immediate UI updates with rollback on error
+- **Surgical Cache Updates**: Update specific entities without broad invalidation
+  ```typescript
+  // Update specific entity in list cache
+  queryClient.setQueryData(
+    queryKeys.characters(),
+    (old: Character[] = []) => 
+      old.map(c => c.id === character.id ? character : c)
+  );
+  
+  // Update individual entity cache
+  queryClient.setQueryData(
+    queryKeys.character(character.id),
+    character
+  );
+  ```
+
+#### Cache Coordination
+- **CacheCoordinator**: Manages intelligent cache invalidation across related entities
+- **updateRelatedEntities**: Updates bidirectional relationships in cache
+- **removeEntityFromCaches**: Cleanly removes entity from all relevant caches
+
+#### Best Practices
+1. **Never use global invalidation** - Always target specific patterns
+2. **Update, don't invalidate** - Prefer surgical updates over invalidation
+3. **Batch related updates** - Use Promise.all for parallel fetching
+4. **Handle missing entities gracefully** - Don't crash on missing references
 
 ### Rate Limiting
 - **API Rate Limit**: Configurable via env vars (default: 100 requests/minute)

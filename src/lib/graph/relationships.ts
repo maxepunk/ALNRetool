@@ -82,10 +82,8 @@ import type {
   GraphEdge, 
   EntityLookupMaps, 
   RelationshipType,
-  EntityType,
-  PlaceholderNodeData
+  EntityType
 } from './types';
-import type { Node } from '@xyflow/react';
 import { createEdge } from './edges';
 
 /**
@@ -162,7 +160,7 @@ export type { EntityLookupMaps } from './types';
  *   const targetExists = lookupMap.has(targetId);
  *   
  *   if (!targetExists) {
- *     console.warn(`Missing ${entityType}: ${targetId} referenced by ${sourceId}`);
+ *     // Missing entity - handle gracefully without warnings
  *     return false;
  *   }
  *   
@@ -212,148 +210,6 @@ export function buildLookupMaps(
   };
 }
 
-// ============================================================================
-// Placeholder Node Creation
-// ============================================================================
-
-/**
- * Create visual placeholder node for missing entities in investigation network.
- * 
- * Generates red-styled placeholder nodes to represent missing or broken entity
- * references within the murder mystery investigation graph, enabling visual
- * debugging and data integrity assessment for investigation workflow quality.
- * 
- * **Placeholder Design Strategy:**
- * - **Visual Distinction**: Red color scheme and dashed borders for immediate recognition
- * - **Information Display**: Truncated entity ID and missing reason for debugging context
- * - **Layout Integration**: Positioned by layout algorithms like normal nodes
- * - **Accessibility**: High contrast red styling for clear visual identification
- * - **Debug Information**: Comprehensive metadata for investigation troubleshooting
- * 
- * **Missing Entity Categories:**
- * - **character**: Missing suspects, witnesses, or key investigation figures
- * - **element**: Missing evidence, story items, or investigation clues
- * - **puzzle**: Missing investigation challenges or puzzle dependencies
- * - **timeline**: Missing temporal events or alibi information
- * 
- * @param id Entity ID of the missing reference
- * @param entityType Type of missing entity for appropriate labeling
- * @param referencedBy Optional ID of entity that references this missing entity
- * @returns Fully configured placeholder node for graph visualization
- * 
- * @complexity O(1) - constant time placeholder node construction
- * 
- * @example
- * ```typescript
- * // Create placeholder for missing character
- * const missingCharacter = createPlaceholderNode(
- *   'missing-suspect-abc123def456',
- *   'character',
- *   'witness-statement-001'
- * );
- * 
- * console.log(missingCharacter);
- * // Output: {
- * //   id: 'missing-suspect-abc123def456',
- * //   type: 'placeholder',
- * //   data: {
- * //     label: 'Missing character: abc123de...',
- * //     metadata: {
- * //       entityType: 'character',
- * //       isPlaceholder: true,
- * //       missingReason: 'Referenced character not found in Notion (referenced by: witness-statement-001)'
- * //     }
- * //   },
- * //   style: { background: '#fee2e2', border: '2px dashed #dc2626' }
- * // }
- * 
- * // Handle missing entity during relationship processing
- * const processRelationship = (sourceId: string, targetId: string) => {
- *   const targetEntity = lookupMaps.elements.get(targetId);
- *   
- *   if (!targetEntity) {
- *     // Create placeholder for missing evidence
- *     const placeholder = createPlaceholderNode(targetId, 'element', sourceId);
- *     console.warn('Created placeholder for missing evidence:', targetId);
- *     return { node: placeholder, isPlaceholder: true };
- *   }
- *   
- *   return { entity: targetEntity, isPlaceholder: false };
- * };
- * 
- * // Batch placeholder creation for data quality analysis
- * const createPlaceholdersForMissing = (missingRefs: Array<{id: string, type: EntityType, referencedBy: string}>) => {
- *   return missingRefs.map(ref => createPlaceholderNode(ref.id, ref.type, ref.referencedBy));
- * };
- * 
- * // Investigation data quality report
- * const generateQualityReport = (placeholders: Node<PlaceholderNodeData>[]) => {
- *   const byType = placeholders.reduce((acc, placeholder) => {
- *     const type = placeholder.data.metadata.entityType;
- *     acc[type] = (acc[type] || 0) + 1;
- *     return acc;
- *   }, {} as Record<string, number>);
- *   
- *   console.log('Data quality report:', {
- *     totalMissing: placeholders.length,
- *     byType,
- *     details: placeholders.map(p => ({
- *       id: p.id,
- *       type: p.data.metadata.entityType,
- *       reason: p.data.metadata.missingReason
- *     }))
- *   });
- * };
- * ```
- * 
- * @see {@link PlaceholderNodeData} For placeholder node data structure
- * @see {@link EntityType} For supported entity type enumeration
- * @see {@link buildLookupMaps} For entity resolution context
- * 
- * @remarks
- * **Visual Design Rationale:**
- * - **Red color (#dc2626)**: Universal danger/error color for immediate attention
- * - **Dashed border**: Distinguishes placeholder from solid regular nodes
- * - **Reduced opacity (0.8)**: Indicates placeholder status while maintaining visibility
- * - **Small size**: De-emphasizes placeholder nodes vs actual investigation entities
- * 
- * **Data Integrity Benefits:**
- * - Visual identification of data quality issues in investigation networks
- * - Debugging support for missing entity references in Notion data
- * - Investigation continuity despite incomplete data relationships
- * - Quality assurance feedback for investigation data management
- */
-export function createPlaceholderNode(
-  id: string, 
-  entityType: EntityType,
-  referencedBy?: string
-): Node<PlaceholderNodeData> {
-  return {
-    id,
-    type: RELATIONSHIP_TYPES.PLACEHOLDER,
-    position: { x: 0, y: 0 }, // Will be positioned by layout
-    data: {
-      label: `Missing ${entityType}: ${id.slice(0, 8)}...`,
-      metadata: {
-        entityType,
-        entityId: id,
-        isPlaceholder: true,
-        missingReason: `Referenced ${entityType} not found in Notion (referenced by: ${referencedBy || 'unknown'})`,
-      },
-      visualHints: {
-        color: '#dc2626', // Red for missing
-        size: 'small',
-        shape: 'circle',
-      },
-    },
-    style: {
-      background: '#fee2e2', // Light red background
-      border: '2px dashed #dc2626',
-      opacity: 0.8,
-    },
-    className: 'node-placeholder',
-  };
-}
 
 // ============================================================================
 // Edge Creation Functions
@@ -427,7 +283,6 @@ export function createPlaceholderNode(
  * 
  * @see {@link EdgeBuilder} For edge creation with consistent data structure
  * @see {@link EntityLookupMaps} For entity resolution and validation
- * @see {@link createPlaceholderNode} For handling missing entity references
  * 
  * @remarks
  * **Backward Compatibility:**
@@ -454,7 +309,9 @@ export function createOwnershipEdges(
     // Check if owner exists
     const owner = lookupMaps.characters.get(element.ownerId);
     if (!owner) {
-      console.warn(`Element ${element.name} has unknown owner: ${element.ownerId}`);
+      // Skip edge creation if owner doesn't exist
+      // This prevents console warnings and invalid edges
+      console.debug(`Skipping ownership edge for element "${element.name}" (${element.id}) - owner not found: ${element.ownerId}`);
       return;
     }
     
@@ -578,7 +435,8 @@ export function createRequirementEdges(
       // Check if element exists
       const element = lookupMaps.elements.get(elementId);
       if (!element) {
-        console.warn(`Puzzle ${puzzle.name} requires unknown element: ${elementId}`);
+        // Skip edge creation if element doesn't exist
+        // This prevents console warnings and invalid edges
         return;
       }
       
@@ -709,7 +567,8 @@ export function createRewardEdges(
       // Check if element exists
       const element = lookupMaps.elements.get(elementId);
       if (!element) {
-        console.warn(`Puzzle ${puzzle.name} rewards unknown element: ${elementId}`);
+        // Skip edge creation if element doesn't exist
+        // This prevents console warnings and invalid edges
         return;
       }
       
@@ -978,14 +837,15 @@ export function createContainerEdges(
     element.contentIds.forEach(contentId => {
       // Skip self-referential edges
       if (element.id === contentId) {
-        console.warn(`Self-referential edge ignored: Element ${element.name} cannot contain itself`);
+        // Self-referential edges are invalid and should be skipped
         return;
       }
       
       // Check if content element exists
       const contentElement = lookupMaps.elements.get(contentId);
       if (!contentElement) {
-        console.warn(`Element ${element.name} contains unknown element: ${contentId}`);
+        // Skip edge creation if content element doesn't exist
+        // This prevents console warnings and invalid edges
         return;
       }
       
@@ -1047,9 +907,8 @@ export function createCharacterPuzzleEdges(
           undefined, // targetNode
           { weight: 2 } // Medium weight
         ));
-      } else {
-        console.warn(`Character ${character.name} references missing puzzle: ${puzzleId}`);
       }
+      // Skip edge creation if puzzle doesn't exist (no warning needed)
     });
   });
   
@@ -1112,9 +971,8 @@ export function createCharacterConnectionEdges(
         if (edge) {
           edges.push(edge as GraphEdge);
         }
-      } else {
-        console.warn(`Character ${character.name} has unknown connection: ${connectedCharId}`);
       }
+      // Skip edge creation if connected character doesn't exist (no warning needed)
     });
   });
   

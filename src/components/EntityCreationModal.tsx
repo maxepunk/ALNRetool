@@ -15,9 +15,6 @@ interface EntityCreationModalProps {
 }
 
 export function EntityCreationModal({ entityType, onClose, onSuccess }: EntityCreationModalProps) {
-  // Early return if no entity type
-  if (!entityType) return null;
-
   // Handle ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -37,6 +34,9 @@ export function EntityCreationModal({ entityType, onClose, onSuccess }: EntityCr
       onClose();
     }
   }, [onClose]);
+
+  // Early return if no entity type
+  if (!entityType) return null;
 
   return (
     <>

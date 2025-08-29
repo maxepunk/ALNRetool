@@ -31,6 +31,29 @@ import {
   TimelineProperties
 } from './schema-mapping';
 
+/**
+ * Normalizes a UUID string to the canonical 8-4-4-4-12 format with hyphens.
+ * Handles both hyphenated and non-hyphenated UUID formats from Notion API.
+ * 
+ * @param id - The ID string to normalize
+ * @returns The normalized UUID string with hyphens, or original if not a valid UUID
+ */
+function normalizeUuid(id: string): string {
+  if (typeof id !== 'string') return id;
+  
+  // Remove any existing hyphens
+  const cleanedId = id.replace(/-/g, '');
+  
+  // Check if it's a 32-character hex string (UUID without hyphens)
+  if (cleanedId.length !== 32 || !/^[0-9a-f]+$/i.test(cleanedId)) {
+    // Not a valid UUID format, return as-is
+    return id;
+  }
+  
+  // Insert hyphens at the correct positions: 8-4-4-4-12
+  return `${cleanedId.substring(0, 8)}-${cleanedId.substring(8, 12)}-${cleanedId.substring(12, 16)}-${cleanedId.substring(16, 20)}-${cleanedId.substring(20)}`;
+}
+
 // Property extraction helpers
 /**
  * Extracts plain text from a Notion title property
@@ -89,7 +112,8 @@ export function getStatus(prop: NotionProperty | undefined): string | null {
  */
 export function getRelationIds(prop: NotionProperty | undefined): string[] {
   if (!prop || prop.type !== 'relation') return [];
-  return prop.relation.map(r => r.id);
+  // Normalize all relation IDs to ensure consistent format
+  return prop.relation.map(r => normalizeUuid(r.id));
 }
 
 export function getRollupArray(prop: NotionProperty | undefined): NotionProperty[] {
@@ -198,7 +222,7 @@ export function transformCharacter(page: NotionPage): Character {
   const props = page.properties;
   
   return {
-    id: page.id,
+    id: normalizeUuid(page.id),
     name: getTitle(props[CharacterProperties.NAME]),
     lastEdited: page.last_edited_time,
     type: (getSelect(props[CharacterProperties.TYPE]) || 'NPC') as Character['type'],
@@ -220,7 +244,7 @@ export function transformElement(page: NotionPage): Element {
   const descriptionText = getRichText(props[ElementProperties.DESCRIPTION]);
   
   return {
-    id: page.id,
+    id: normalizeUuid(page.id),
     name: getTitle(props[ElementProperties.NAME]),
     lastEdited: page.last_edited_time,
     descriptionText,
@@ -249,7 +273,7 @@ export function transformPuzzle(page: NotionPage): Puzzle {
   const props = page.properties;
   
   return {
-    id: page.id,
+    id: normalizeUuid(page.id),
     name: getTitle(props[PuzzleProperties.PUZZLE]),
     lastEdited: page.last_edited_time,
     descriptionSolution: getRichText(props[PuzzleProperties.DESCRIPTION_SOLUTION]),
@@ -271,7 +295,7 @@ export function transformTimelineEvent(page: NotionPage): TimelineEvent {
   const description = getTitle(props[TimelineProperties.DESCRIPTION]);
   
   return {
-    id: page.id,
+    id: normalizeUuid(page.id),
     name: description || 'Untitled Event', // Add name field
     lastEdited: page.last_edited_time,
     description: description || '',

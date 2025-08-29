@@ -95,8 +95,8 @@ async function updateInverseRelations<T>(
             }
           });
           
-          // Invalidate target cache (both patterns)
-          cacheService.invalidatePattern(`*:*`); // Invalidate collection caches that might contain this entity
+          // Invalidate target cache
+          // Invalidate the specific entity and any cache keys containing its ID
           cacheService.invalidatePattern(`*_${targetId}`);
         }
       } catch (error) {
@@ -130,8 +130,8 @@ async function updateInverseRelations<T>(
             }
           });
           
-          // Invalidate target cache (both patterns)
-          cacheService.invalidatePattern(`*:*`); // Invalidate collection caches that might contain this entity
+          // Invalidate target cache
+          // Invalidate the specific entity and any cache keys containing its ID
           cacheService.invalidatePattern(`*_${targetId}`);
         }
       } catch (error) {
@@ -287,6 +287,49 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       res.status(201).json(transformed);
     }));
   }
+  
+  // DELETE /:id - Archive entity in Notion
+  router.delete('/:id', asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    
+    // If we have inverse relations, get the entity data before deletion
+    let entityData: any = null;
+    if (config.inverseRelations && config.inverseRelations.length > 0) {
+      try {
+        const page = await notion.pages.retrieve({ page_id: id }) as NotionPage;
+        entityData = config.transform(page);
+      } catch (error) {
+        log.error('Failed to retrieve entity for inverse relation cleanup', {
+          entityId: id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
+    
+    // Archive in Notion (no true delete, just soft delete)
+    await notion.pages.update({
+      page_id: id,
+      archived: true
+    });
+    
+    // Clean up inverse relations if entity data was retrieved
+    if (entityData && config.inverseRelations) {
+      // For deletion, we need to remove this entity from all related entities
+      await updateInverseRelations(
+        id,
+        entityData,  // Old data has the relationships
+        {},          // New data is empty (entity is deleted)
+        config.inverseRelations
+      );
+    }
+    
+    // Invalidate cache for this entity
+    await cacheService.invalidateEntity(config.entityName, id);
+    // Also invalidate list caches
+    await cacheService.invalidatePattern(`${config.entityName}:*`);
+    
+    res.status(204).send();
+  }));
   
   // PUT /:id - Update entity (if mapper provided)
   if (config.toNotionProps) {
