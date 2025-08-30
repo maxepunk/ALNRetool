@@ -11,11 +11,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { UseMutationOptions } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
-import { queryKeys } from '@/lib/queryKeys';
-import { 
-  updateRelatedEntities,
-  removeEntityFromCaches
-} from '@/lib/cache/mutations';
 import type { 
   Character, 
   Element, 
@@ -23,8 +18,6 @@ import type {
   TimelineEvent 
 } from '@/types/notion/app';
 
-// Import performance logging utility if available
-const perfLog = typeof window !== 'undefined' ? (window as any).perfLog : null;
 
 // Entity type union
 export type EntityType = 'characters' | 'elements' | 'puzzles' | 'timeline';
@@ -79,21 +72,6 @@ function getApiModule(entityType: EntityType) {
   }
 }
 
-// Helper function to get query key for entity type
-function getQueryKeyForType(entityType: EntityType) {
-  switch (entityType) {
-    case 'characters':
-      return queryKeys.characters();
-    case 'elements':
-      return queryKeys.elements();
-    case 'puzzles':
-      return queryKeys.puzzles();
-    case 'timeline':
-      return queryKeys.timeline();
-    default:
-      throw new Error(`Unknown entity type: ${entityType}`);
-  }
-}
 
 // ============================================================================
 // CHARACTER MUTATIONS
@@ -109,12 +87,12 @@ export function useCreateCharacter(
   
   return useMutation<Character, MutationError, Partial<Character> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      // Extract parent relation metadata if present
-      const { _parentRelation, ...entityData } = data;
+      // Don't extract _parentRelation - pass complete data to API
+      // The backend handles _parentRelation atomically
       
       // Validate relationships in parallel if needed
-      const needsElementValidation = entityData.ownedElementIds?.length || entityData.associatedElementIds?.length;
-      const needsPuzzleValidation = entityData.characterPuzzleIds?.length;
+      const needsElementValidation = data.ownedElementIds?.length || data.associatedElementIds?.length;
+      const needsPuzzleValidation = data.characterPuzzleIds?.length;
       
       if (needsElementValidation || needsPuzzleValidation) {
         // Fetch both element and puzzle lists in parallel
@@ -127,8 +105,8 @@ export function useCreateCharacter(
         if (needsElementValidation) {
           const elementIds = elements.map(e => e.id);
           
-          const invalidOwned = entityData.ownedElementIds?.filter(id => !elementIds.includes(id)) || [];
-          const invalidAssoc = entityData.associatedElementIds?.filter(id => !elementIds.includes(id)) || [];
+          const invalidOwned = data.ownedElementIds?.filter(id => !elementIds.includes(id)) || [];
+          const invalidAssoc = data.associatedElementIds?.filter(id => !elementIds.includes(id)) || [];
           
           if (invalidOwned.length > 0) {
             throw new Error(`Invalid owned element IDs: ${invalidOwned.join(', ')}`);
@@ -142,36 +120,21 @@ export function useCreateCharacter(
         if (needsPuzzleValidation) {
           const puzzleIds = puzzles.map(p => p.id);
           
-          const invalidPuzzles = entityData.characterPuzzleIds!.filter(id => !puzzleIds.includes(id));
+          const invalidPuzzles = data.characterPuzzleIds!.filter(id => !puzzleIds.includes(id));
           if (invalidPuzzles.length > 0) {
             throw new Error(`Invalid puzzle IDs: ${invalidPuzzles.join(', ')}`);
           }
         }
       }
       
-      return await charactersApi.create(entityData);
+      return await charactersApi.create(data);
     },
     
-    onSuccess: (character, variables) => {
-      // Track cache updates for performance monitoring
-      if (perfLog) {
-        perfLog.cacheUpdates++;
-      }
-      
-      // Add to list cache
-      queryClient.setQueryData(
-        queryKeys.characters(),
-        (old: Character[] = []) => [...old, character]
-      );
-      
-      // Set individual cache
-      queryClient.setQueryData(
-        queryKeys.character(character.id),
-        character
-      );
-      
-      // Parent relation updates are handled server-side atomically
-      // This prevents dual cache updates and race conditions
+    onSuccess: async (character, variables) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success(`Created ${character.name || 'character'}`);
       options?.onSuccess?.(character, variables, undefined);
@@ -198,30 +161,10 @@ export function useUpdateCharacter(
     },
     
     onSuccess: async (character, variables) => {
-      // Update list cache
-      queryClient.setQueryData(
-        queryKeys.characters(),
-        (old: Character[] = []) => 
-          old.map(c => c.id === character.id ? character : c)
-      );
-      
-      // Update individual cache
-      queryClient.setQueryData(
-        queryKeys.character(character.id),
-        character
-      );
-      
-      // Update related entities with bidirectional relationships
-      const updatedFields = Object.entries(variables).reduce<Partial<Character>>((acc, [key, value]) => {
-        if (key !== 'id' && value !== undefined) {
-          return { ...acc, [key]: value };
-        }
-        return acc;
-      }, {});
-      
-      if (Object.keys(updatedFields).length > 0) {
-        updateRelatedEntities(queryClient, 'characters', character, updatedFields);
-      }
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success(`Updated ${character.name || 'character'}`);
       options?.onSuccess?.(character, variables, undefined);
@@ -247,9 +190,11 @@ export function useDeleteCharacter(
       return await charactersApi.delete(id);
     },
     
-    onSuccess: (_, id) => {
-      // Remove from caches
-      removeEntityFromCaches(queryClient, 'characters', id);
+    onSuccess: async (_, id) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success('Character deleted');
       options?.onSuccess?.(undefined, id, undefined);
@@ -276,27 +221,16 @@ export function useCreateElement(
   
   return useMutation<Element, MutationError, Partial<Element> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      // Extract parent relation metadata if present
-      const { _parentRelation, ...entityData } = data;
-      return await elementsApi.create(entityData);
+      // Don't extract _parentRelation - pass complete data to API
+      // The backend handles _parentRelation atomically
+      return await elementsApi.create(data);
     },
     
-    onSuccess: (element, variables) => {
-      if (perfLog) {
-        perfLog.cacheUpdates++;
-      }
-      
-      // Add to list cache
-      queryClient.setQueryData(
-        queryKeys.elements(),
-        (old: Element[] = []) => [...old, element]
-      );
-      
-      // Set individual cache
-      queryClient.setQueryData(
-        queryKeys.element(element.id),
-        element
-      );
+    onSuccess: async (element, variables) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success(`Created ${element.name || 'element'}`);
       options?.onSuccess?.(element, variables, undefined);
@@ -323,30 +257,10 @@ export function useUpdateElement(
     },
     
     onSuccess: async (element, variables) => {
-      // Update list cache
-      queryClient.setQueryData(
-        queryKeys.elements(),
-        (old: Element[] = []) => 
-          old.map(e => e.id === element.id ? element : e)
-      );
-      
-      // Update individual cache
-      queryClient.setQueryData(
-        queryKeys.element(element.id),
-        element
-      );
-      
-      // Update related entities with bidirectional relationships
-      const updatedFields = Object.entries(variables).reduce<Partial<Element>>((acc, [key, value]) => {
-        if (key !== 'id' && value !== undefined) {
-          return { ...acc, [key]: value };
-        }
-        return acc;
-      }, {});
-      
-      if (Object.keys(updatedFields).length > 0) {
-        updateRelatedEntities(queryClient, 'elements', element, updatedFields);
-      }
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success(`Updated ${element.name || 'element'}`);
       options?.onSuccess?.(element, variables, undefined);
@@ -372,9 +286,11 @@ export function useDeleteElement(
       return await elementsApi.delete(id);
     },
     
-    onSuccess: (_, id) => {
-      // Remove from caches
-      removeEntityFromCaches(queryClient, 'elements', id);
+    onSuccess: async (_, id) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success('Element deleted');
       options?.onSuccess?.(undefined, id, undefined);
@@ -401,11 +317,11 @@ export function useCreatePuzzle(
   
   return useMutation<Puzzle, MutationError, Partial<Puzzle> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      // Extract parent relation metadata if present
-      const { _parentRelation, ...entityData } = data;
+      // Don't extract _parentRelation - pass complete data to API
+      // The backend handles _parentRelation atomically
       
       // Validate relationships - using Promise.all pattern for consistency and future expansion
-      const needsElementValidation = entityData.rewardIds?.length || entityData.puzzleElementIds?.length;
+      const needsElementValidation = data.rewardIds?.length || data.puzzleElementIds?.length;
       
       if (needsElementValidation) {
         // Fetch element list (could add more validations in parallel in future)
@@ -416,41 +332,30 @@ export function useCreatePuzzle(
         const elementIds = elements.map(e => e.id);
         
         // Validate reward elements
-        if (entityData.rewardIds?.length) {
-          const invalidRewards = entityData.rewardIds.filter(id => !elementIds.includes(id));
+        if (data.rewardIds?.length) {
+          const invalidRewards = data.rewardIds.filter(id => !elementIds.includes(id));
           if (invalidRewards.length > 0) {
             throw new Error(`Invalid reward element IDs: ${invalidRewards.join(', ')}`);
           }
         }
         
         // Validate puzzle elements (requirements)
-        if (entityData.puzzleElementIds?.length) {
-          const invalidRequirements = entityData.puzzleElementIds.filter(id => !elementIds.includes(id));
+        if (data.puzzleElementIds?.length) {
+          const invalidRequirements = data.puzzleElementIds.filter(id => !elementIds.includes(id));
           if (invalidRequirements.length > 0) {
             throw new Error(`Invalid puzzle element IDs: ${invalidRequirements.join(', ')}`);
           }
         }
       }
       
-      return await puzzlesApi.create(entityData);
+      return await puzzlesApi.create(data);
     },
     
-    onSuccess: (puzzle, variables) => {
-      if (perfLog) {
-        perfLog.cacheUpdates++;
-      }
-      
-      // Add to list cache
-      queryClient.setQueryData(
-        queryKeys.puzzles(),
-        (old: Puzzle[] = []) => [...old, puzzle]
-      );
-      
-      // Set individual cache
-      queryClient.setQueryData(
-        queryKeys.puzzle(puzzle.id),
-        puzzle
-      );
+    onSuccess: async (puzzle, variables) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success(`Created ${puzzle.name || 'puzzle'}`);
       options?.onSuccess?.(puzzle, variables, undefined);
@@ -477,30 +382,10 @@ export function useUpdatePuzzle(
     },
     
     onSuccess: async (puzzle, variables) => {
-      // Update list cache
-      queryClient.setQueryData(
-        queryKeys.puzzles(),
-        (old: Puzzle[] = []) => 
-          old.map(p => p.id === puzzle.id ? puzzle : p)
-      );
-      
-      // Update individual cache
-      queryClient.setQueryData(
-        queryKeys.puzzle(puzzle.id),
-        puzzle
-      );
-      
-      // Update related entities with bidirectional relationships
-      const updatedFields = Object.entries(variables).reduce<Partial<Puzzle>>((acc, [key, value]) => {
-        if (key !== 'id' && value !== undefined) {
-          return { ...acc, [key]: value };
-        }
-        return acc;
-      }, {});
-      
-      if (Object.keys(updatedFields).length > 0) {
-        updateRelatedEntities(queryClient, 'puzzles', puzzle, updatedFields);
-      }
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success(`Updated ${puzzle.name || 'puzzle'}`);
       options?.onSuccess?.(puzzle, variables, undefined);
@@ -526,9 +411,11 @@ export function useDeletePuzzle(
       return await puzzlesApi.delete(id);
     },
     
-    onSuccess: (_, id) => {
-      // Remove from caches
-      removeEntityFromCaches(queryClient, 'puzzles', id);
+    onSuccess: async (_, id) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success('Puzzle deleted');
       options?.onSuccess?.(undefined, id, undefined);
@@ -555,27 +442,16 @@ export function useCreateTimeline(
   
   return useMutation<TimelineEvent, MutationError, Partial<TimelineEvent> & ParentRelationMetadata>({
     mutationFn: async (data) => {
-      // Extract parent relation metadata if present
-      const { _parentRelation, ...entityData } = data;
-      return await timelineApi.create(entityData);
+      // Don't extract _parentRelation - pass complete data to API
+      // The backend handles _parentRelation atomically
+      return await timelineApi.create(data);
     },
     
-    onSuccess: (event, variables) => {
-      if (perfLog) {
-        perfLog.cacheUpdates++;
-      }
-      
-      // Add to list cache
-      queryClient.setQueryData(
-        queryKeys.timeline(),
-        (old: TimelineEvent[] = []) => [...old, event]
-      );
-      
-      // Set individual cache
-      queryClient.setQueryData(
-        queryKeys.timelineEvent(event.id),
-        event
-      );
+    onSuccess: async (event, variables) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success('Created timeline event');
       options?.onSuccess?.(event, variables, undefined);
@@ -602,30 +478,10 @@ export function useUpdateTimeline(
     },
     
     onSuccess: async (event, variables) => {
-      // Update list cache
-      queryClient.setQueryData(
-        queryKeys.timeline(),
-        (old: TimelineEvent[] = []) => 
-          old.map(e => e.id === event.id ? event : e)
-      );
-      
-      // Update individual cache
-      queryClient.setQueryData(
-        queryKeys.timelineEvent(event.id),
-        event
-      );
-      
-      // Update related entities with bidirectional relationships
-      const updatedFields = Object.entries(variables).reduce<Partial<TimelineEvent>>((acc, [key, value]) => {
-        if (key !== 'id' && value !== undefined) {
-          return { ...acc, [key]: value };
-        }
-        return acc;
-      }, {});
-      
-      if (Object.keys(updatedFields).length > 0) {
-        updateRelatedEntities(queryClient, 'timeline', event, updatedFields);
-      }
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success('Updated timeline event');
       options?.onSuccess?.(event, variables, undefined);
@@ -651,9 +507,11 @@ export function useDeleteTimeline(
       return await timelineApi.delete(id);
     },
     
-    onSuccess: (_, id) => {
-      // Remove from caches
-      removeEntityFromCaches(queryClient, 'timeline', id);
+    onSuccess: async (_, id) => {
+      // Simple: just invalidate the graph
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
+      });
       
       toast.success('Timeline event deleted');
       options?.onSuccess?.(undefined, id, undefined);
@@ -689,56 +547,21 @@ export function useBatchEntityMutation<T extends Entity>(
       const results = await Promise.all(
         updates.map(update => {
           if (!update.id) throw new Error('ID required for batch update');
-          const { _parentRelation, ...entityData } = update;
-          return apiModule.update(update.id, entityData);
+          // Pass complete update including any metadata
+          return apiModule.update(update.id, update);
         })
       );
       
       return results as T[];
     },
     
-    onSuccess: async (response, variables) => {
-      const entityQueryKey = getQueryKeyForType(entityType);
-      const updatedEntities = response; // Response is the array directly
-      
-      // Surgical batch update in list cache
-      queryClient.setQueryData(entityQueryKey, (oldData: T[] | undefined) => {
-        if (!oldData) return updatedEntities;
-        
-        // Create map of updated entities for efficient lookup
-        const updateMap = new Map(updatedEntities.map(e => [e.id, e]));
-        
-        // Replace updated entities in the list
-        return oldData.map(item => updateMap.get(item.id) || item);
+    onSuccess: async (response) => {
+      // Simple: just invalidate the graph after batch update
+      await queryClient.invalidateQueries({ 
+        queryKey: ['graph', 'complete'] 
       });
       
-      // Update individual entity caches
-      for (const entity of updatedEntities) {
-        queryClient.setQueryData([...entityQueryKey, entity.id], entity);
-      }
-      
-      // Update related entities for each updated entity
-      // Use surgical cache updates instead of broad invalidation
-      for (let i = 0; i < updatedEntities.length; i++) {
-        const entity = updatedEntities[i];
-        const originalUpdate = variables[i];
-        
-        // Skip if no matching update or entity
-        if (!entity || !originalUpdate) continue;
-        
-        // Extract the fields that were actually updated (excluding id and metadata)
-        const updatedFields = Object.entries(originalUpdate).reduce<Partial<T>>((acc, [key, value]) => {
-          if (key !== 'id' && key !== '_parentRelation' && value !== undefined) {
-            return { ...acc, [key]: value };
-          }
-          return acc;
-        }, {});
-        
-        // If any fields were updated, surgically update related entities
-        if (Object.keys(updatedFields).length > 0) {
-          updateRelatedEntities(queryClient, entityType, entity, updatedFields);
-        }
-      }
+      toast.success(`Updated ${response.length} entities`);
     }
   });
 }

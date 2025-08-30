@@ -259,7 +259,7 @@ export function createAllNodes(
   puzzleSelectedActs: Set<string>,
   elementBasicTypes: Set<string>,
   elementStatus: Set<string>,
-  // Note: connectionDepth, focusedNodeId, filterMode, focusRespectFilters
+  // Note: connectionDepth and selectedNodeId
   // are used for filtering AFTER node creation in useGraphLayout, not here
   viewConfig: { filters: { entityTypes?: string[] } }
 ): GraphNode[] {

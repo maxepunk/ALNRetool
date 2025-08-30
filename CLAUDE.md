@@ -113,6 +113,9 @@ npx cz                  # Interactive commit with conventional format
 
 ## Important Patterns
 
+- In dev, you need to set origin as localhost for scripts/curl/etc to get through the auth middleware.
+- **Read the FULL file you are working with EVERY time to ensure you understand the context and structure of the code you're working on. **
+
 ### Simplified Graph Architecture (Post-Refactor)
 ```
 src/lib/graph/

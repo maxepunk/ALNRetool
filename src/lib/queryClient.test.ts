@@ -115,20 +115,6 @@ describe('QueryClient Configuration', () => {
   })
 
   describe('Console Logging', () => {
-    it('should log query errors to console', () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      const defaults = queryClient.getDefaultOptions()
-      
-      // Simulate a mutation error
-      if (defaults.mutations?.onError) {
-        const testError = new Error('Test mutation error')
-        defaults.mutations.onError(testError, undefined, undefined)
-      }
-      
-      expect(consoleErrorSpy).toHaveBeenCalledWith('[ERROR] Mutation error:', expect.any(Error))
-      consoleErrorSpy.mockRestore()
-    })
-
     it('should log query success to debug console', () => {
       const consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
       

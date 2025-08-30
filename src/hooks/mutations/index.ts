@@ -64,6 +64,3 @@ export {
   type Entity,
   type MutationPayload
 } from './entityMutations';
-
-// Also export relationship update hook and validation
-export { useUpdateRelationship } from './updateRelationship';

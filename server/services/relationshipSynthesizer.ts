@@ -1,14 +1,16 @@
-import type { Element, Puzzle } from '../../src/types/notion/app.js';
+import type { Character, Element, Puzzle, TimelineEvent } from '../../src/types/notion/app.js';
 
 /**
- * Synthesizes bidirectional relationships between puzzles and elements.
+ * Synthesizes bidirectional relationships between puzzles, elements, timeline events, and characters.
  * Since Notion doesn't maintain bidirectional relations automatically,
  * we need to compute the reverse relationships from the forward ones.
  */
 export function synthesizeBidirectionalRelationships(
   elements: Element[],
-  puzzles: Puzzle[]
-): { elements: Element[], puzzles: Puzzle[] } {
+  puzzles: Puzzle[],
+  timeline: TimelineEvent[] = [],
+  characters: Character[] = []
+): { elements: Element[], puzzles: Puzzle[], timeline: TimelineEvent[], characters: Character[] } {
   // Create a map for quick lookup
   const elementMap = new Map(elements.map(e => [e.id, e]));
   const puzzleMap = new Map(puzzles.map(p => [p.id, p]));
@@ -16,6 +18,8 @@ export function synthesizeBidirectionalRelationships(
   // Clone arrays to avoid mutating originals
   const synthesizedElements = elements.map(e => ({ ...e }));
   const synthesizedPuzzles = puzzles.map(p => ({ ...p }));
+  const synthesizedTimeline = timeline.map(t => ({ ...t }));
+  const synthesizedCharacters = characters.map(c => ({ ...c }));
   
   // Build reverse relationships from puzzles to elements
   for (const puzzle of synthesizedPuzzles) {
@@ -145,8 +149,94 @@ export function synthesizeBidirectionalRelationships(
     }
   }
   
+  // Synthesize puzzle -> timeline relationships
+  for (const puzzle of synthesizedPuzzles) {
+    // If this puzzle has story reveals (timeline events), create inverse relationship
+    if (puzzle.storyReveals && puzzle.storyReveals.length > 0) {
+      for (const timelineId of puzzle.storyReveals) {
+        const timelineEvent = synthesizedTimeline.find(t => t.id === timelineId);
+        if (timelineEvent) {
+          // Ensure the array exists
+          if (!timelineEvent.associatedPuzzles) {
+            timelineEvent.associatedPuzzles = [];
+          }
+          // Add puzzle ID if not already present
+          if (!timelineEvent.associatedPuzzles.includes(puzzle.id)) {
+            timelineEvent.associatedPuzzles.push(puzzle.id);
+          }
+        }
+      }
+    }
+  }
+  
+  // Synthesize Timeline -> Character bidirectional relationships
+  for (const timelineEvent of synthesizedTimeline) {
+    // Process characters involved
+    if (timelineEvent.charactersInvolvedIds?.length) {
+      for (const characterId of timelineEvent.charactersInvolvedIds) {
+        const character = synthesizedCharacters.find(c => c.id === characterId);
+        if (character) {
+          if (!character.eventIds) {
+            character.eventIds = [];
+          }
+          if (!character.eventIds.includes(timelineEvent.id)) {
+            character.eventIds.push(timelineEvent.id);
+          }
+        }
+      }
+    }
+    
+    // Process memory/evidence elements
+    if (timelineEvent.memoryEvidenceIds?.length) {
+      for (const elementId of timelineEvent.memoryEvidenceIds) {
+        const element = synthesizedElements.find(e => e.id === elementId);
+        if (element) {
+          // Element.timelineEventId is single value, not array
+          // Only set if not already set (preserve existing)
+          if (!element.timelineEventId) {
+            element.timelineEventId = timelineEvent.id;
+          }
+        }
+      }
+    }
+  }
+  
+  // Also ensure reverse: Character -> Timeline
+  for (const character of synthesizedCharacters) {
+    if (character.eventIds?.length) {
+      for (const eventId of character.eventIds) {
+        const timeline = synthesizedTimeline.find(t => t.id === eventId);
+        if (timeline) {
+          if (!timeline.charactersInvolvedIds) {
+            timeline.charactersInvolvedIds = [];
+          }
+          if (!timeline.charactersInvolvedIds.includes(character.id)) {
+            timeline.charactersInvolvedIds.push(character.id);
+          }
+        }
+      }
+    }
+  }
+  
+  // And Element -> Timeline
+  for (const element of synthesizedElements) {
+    if (element.timelineEventId) {
+      const timeline = synthesizedTimeline.find(t => t.id === element.timelineEventId);
+      if (timeline) {
+        if (!timeline.memoryEvidenceIds) {
+          timeline.memoryEvidenceIds = [];
+        }
+        if (!timeline.memoryEvidenceIds.includes(element.id)) {
+          timeline.memoryEvidenceIds.push(element.id);
+        }
+      }
+    }
+  }
+  
   return {
     elements: synthesizedElements,
-    puzzles: synthesizedPuzzles
+    puzzles: synthesizedPuzzles,
+    timeline: synthesizedTimeline,
+    characters: synthesizedCharacters  // Now returning modified characters too
   };
 }

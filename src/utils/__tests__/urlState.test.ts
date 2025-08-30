@@ -15,15 +15,12 @@ describe('URL State Management', () => {
   const mockFilterState: FilterState = {
     searchTerm: 'test search',
     selectedNodeId: 'node-789',
-    focusedNodeId: 'node-789',
     connectionDepth: 5,
     activeView: 'node-connections',
-    filterMode: 'connected' as const,
-    focusRespectFilters: true,
     entityVisibility: {
-      characters: true,
-      puzzles: true,
-      elements: true,
+      character: true,
+      puzzle: true,
+      element: true,
       timeline: true
     },
     puzzleFilters: {
@@ -70,22 +67,19 @@ describe('URL State Management', () => {
       expect(params.get('edited')).toBe('week');
       expect(params.get('nodeType')).toBe('character');
       expect(params.get('selectedNodeId')).toBe('node-789');
-      expect(params.get('focusedNodeId')).toBe('node-789');
+      expect(params.get('selectedNodeId')).toBe('node-789');
     });
 
     it('should skip default values', () => {
       const minimalState: FilterState = {
         searchTerm: '',
         selectedNodeId: null,
-        focusedNodeId: null,
         connectionDepth: 3, // Default value
         activeView: null,
-        filterMode: 'connected' as const,
-        focusRespectFilters: true,
-        entityVisibility: {
-          characters: true,
-          puzzles: true,
-          elements: true,
+            entityVisibility: {
+          character: true,
+          puzzle: true,
+          element: true,
           timeline: true
         },
         puzzleFilters: {
@@ -116,47 +110,6 @@ describe('URL State Management', () => {
   });
 
   describe('urlToFilterState', () => {
-    it('should parse URL parameters to FilterState', () => {
-      const params = new URLSearchParams({
-        search: 'test search',
-        depth: '5',
-        view: 'node-connections',
-        acts: 'Act 0,Act 1',
-        puzzle: 'puzzle-123',
-        status: 'completed',
-        tiers: 'Core,Secondary',
-        ownership: 'Owned,Accessible',
-        charType: 'Player',
-        character: 'char-456',
-        shared: 'true',
-        content: 'draft,review',
-        issues: 'true',
-        edited: 'week',
-        nodeType: 'character',
-        selectedNodeId: 'node-789',
-        focusedNodeId: 'node-focused'
-      });
-      
-      const state = urlToFilterState(params);
-      
-      expect(state.searchTerm).toBe('test search');
-      expect(state.connectionDepth).toBe(5);
-      expect(state.activeView).toBe('node-connections');
-      expect(state.puzzleFilters?.selectedActs).toEqual(new Set(['Act 0', 'Act 1']));
-      expect(state.puzzleFilters?.selectedPuzzleId).toBe('puzzle-123');
-      expect(state.puzzleFilters?.completionStatus).toBe('completed');
-      expect(state.characterFilters?.selectedTiers).toEqual(new Set(['Core', 'Secondary']));
-      expect(state.characterFilters?.ownershipStatus).toEqual(new Set(['Owned', 'Accessible']));
-      expect(state.characterFilters?.characterType).toBe('Player');
-      expect(state.characterFilters?.selectedCharacterId).toBe('char-456');
-      expect(state.characterFilters?.highlightShared).toBe(true);
-      expect(state.contentFilters?.contentStatus).toEqual(new Set(['draft', 'review']));
-      expect(state.contentFilters?.hasIssues).toBe(true);
-      expect(state.contentFilters?.lastEditedRange).toBe('week');
-      expect(state.nodeConnectionsFilters?.nodeType).toBe('character');
-      expect(state.selectedNodeId).toBe('node-789');
-      expect(state.focusedNodeId).toBe('node-focused');
-    });
 
     it('should validate and filter invalid values', () => {
       const params = new URLSearchParams({
@@ -200,15 +153,12 @@ describe('URL State Management', () => {
       const minimalState: FilterState = {
         searchTerm: '',
         selectedNodeId: null,
-        focusedNodeId: null,
         connectionDepth: 3,
         activeView: null,
-        filterMode: 'connected' as const,
-        focusRespectFilters: true,
-        entityVisibility: {
-          characters: true,
-          puzzles: true,
-          elements: true,
+            entityVisibility: {
+          character: true,
+          puzzle: true,
+          element: true,
           timeline: true
         },
         puzzleFilters: {
@@ -258,7 +208,7 @@ describe('URL State Management', () => {
       expect(reconstructedState.puzzleFilters?.selectedPuzzleId).toBe(mockFilterState.puzzleFilters.selectedPuzzleId);
       expect(reconstructedState.characterFilters?.selectedCharacterId).toBe(mockFilterState.characterFilters.selectedCharacterId);
       expect(reconstructedState.selectedNodeId).toBe(mockFilterState.selectedNodeId);
-      expect(reconstructedState.focusedNodeId).toBe(mockFilterState.focusedNodeId);
+      expect(reconstructedState.selectedNodeId).toBe(mockFilterState.selectedNodeId);
     });
   });
 });

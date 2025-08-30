@@ -185,6 +185,7 @@ export interface TimelineEvent {
   memTypes: ElementBasicType[]; // From rollup
   notes: string;
   lastEditedTime: string;
+  associatedPuzzles?: string[]; // Synthesized from puzzle.storyReveals
 }
 
 // API response types

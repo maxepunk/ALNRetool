@@ -45,6 +45,43 @@ import {
 } from '../../src/types/notion/schema-mapping.js';
 
 /**
+ * Explicit field-to-property mapping for direct lookup
+ * Eliminates need for "dummy object" pattern in createEntityRouter
+ */
+export const FIELD_TO_NOTION_PROPERTY = {
+  puzzle: {
+    puzzleElementIds: PuzzleProperties.PUZZLE_ELEMENTS,
+    rewardIds: PuzzleProperties.REWARDS,
+    lockedItemId: PuzzleProperties.LOCKED_ITEM,
+    parentItemId: PuzzleProperties.PARENT_ITEM,
+    subPuzzleIds: PuzzleProperties.SUB_PUZZLES,
+    // Note: characterIds doesn't exist in Notion schema
+    // The relationship is stored on characters as characterPuzzleIds
+    // This mapping is here for completeness but should not be used
+    characterIds: 'Characters' // This field doesn't actually exist in Notion
+  },
+  element: {
+    ownerId: ElementProperties.OWNER,
+    containerId: ElementProperties.CONTAINER,
+    contentIds: ElementProperties.CONTENTS,
+    timelineEventId: ElementProperties.TIMELINE_EVENT,
+    containerPuzzleId: ElementProperties.CONTAINER_PUZZLE,
+    requiredForPuzzleIds: ElementProperties.REQUIRED_FOR_PUZZLE,
+    rewardedByPuzzleIds: ElementProperties.REWARDED_BY_PUZZLE
+  },
+  character: {
+    ownedElementIds: CharacterProperties.OWNED_ELEMENTS,
+    associatedElementIds: CharacterProperties.ASSOCIATED_ELEMENTS,
+    characterPuzzleIds: CharacterProperties.CHARACTER_PUZZLES,
+    eventIds: CharacterProperties.EVENTS
+  },
+  timeline: {
+    charactersInvolvedIds: TimelineProperties.CHARACTERS_INVOLVED,
+    memoryEvidenceIds: TimelineProperties.MEMORY_EVIDENCE
+  }
+} as const;
+
+/**
  * Convert plain text to Notion title property format.
  * Title properties are used for primary identifiers (Name fields).
  * 

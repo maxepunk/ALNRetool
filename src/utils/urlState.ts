@@ -126,10 +126,6 @@ export function filterStateToUrl(state: FilterState): URLSearchParams {
     params.set('selectedNodeId', state.selectedNodeId);
   }
   
-  if (state.focusedNodeId) {
-    params.set('focusedNodeId', state.focusedNodeId);
-  }
-  
   return params;
 }
 
@@ -265,11 +261,6 @@ export function urlToFilterState(params: URLSearchParams): Partial<FilterState> 
   const selectedNodeId = params.get('selectedNodeId');
   if (selectedNodeId) {
     state.selectedNodeId = selectedNodeId;
-  }
-  
-  const focusedNodeId = params.get('focusedNodeId');
-  if (focusedNodeId) {
-    state.focusedNodeId = focusedNodeId;
   }
   
   return state;

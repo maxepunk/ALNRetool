@@ -26,7 +26,7 @@
  * - memoryEvidenceIds: Related evidence/memories
  */
 
-import { createEntityRouter } from './createEntityRouter.js';
+import { createEntityRouter, type InverseRelation } from './createEntityRouter.js';
 import { transformTimelineEvent } from '../../../src/types/notion/transforms.js';
 import { toNotionTimelineProperties } from '../../services/notionPropertyMappers.js';
 import config from '../../config/index.js';
@@ -38,6 +38,56 @@ import config from '../../config/index.js';
 const TIMELINE_DATABASE_ID = config.notionDatabaseIds.timeline;
 
 /**
+ * Notion database ID for characters collection.
+ * Used for inverse relation updates.
+ * @constant {string}
+ */
+const CHARACTERS_DATABASE_ID = config.notionDatabaseIds.characters;
+
+/**
+ * Notion database ID for elements collection.
+ * Used for inverse relation updates.
+ * @constant {string}
+ */
+const ELEMENTS_DATABASE_ID = config.notionDatabaseIds.elements;
+
+/**
+ * Inverse relation configuration for timeline events.
+ * Defines how timeline updates propagate to related characters and elements.
+ * 
+ * @constant {InverseRelation[]} timelineInverseRelations
+ * 
+ * **Relation Types:**
+ * 1. **charactersInvolvedIds**: Characters involved in this timeline event
+ *    - Updates Character.Events field
+ *    - Many-to-many bidirectional
+ * 
+ * 2. **memoryEvidenceIds**: Elements that are memories/evidence from this event
+ *    - Updates Element.TimelineEvent field
+ *    - Many-to-one bidirectional (many elements can reference one timeline event)
+ * 
+ * **Synchronization:**
+ * When a timeline event's relationships change, the corresponding
+ * character and element records are automatically updated to maintain consistency.
+ */
+const timelineInverseRelations: InverseRelation[] = [
+  {
+    sourceField: 'charactersInvolvedIds',
+    targetDatabaseId: CHARACTERS_DATABASE_ID,
+    targetField: 'Events',
+    relationType: 'many-to-many',
+    bidirectional: true
+  },
+  {
+    sourceField: 'memoryEvidenceIds',
+    targetDatabaseId: ELEMENTS_DATABASE_ID,
+    targetField: 'Timeline Event',
+    relationType: 'many-to-many',  // Many elements can be evidence from many timeline events
+    bidirectional: true
+  }
+];
+
+/**
  * Create Express router for timeline event endpoints.
  * Minimal configuration as timeline events are straightforward.
  * 
@@ -47,7 +97,7 @@ const TIMELINE_DATABASE_ID = config.notionDatabaseIds.timeline;
  * - Transform: Converts Notion → App format
  * - ToNotionProps: Converts App → Notion format
  * - No filters: Timeline events are typically shown in chronological order
- * - No inverse relations: Relationships are one-way references
+ * - InverseRelations: Bidirectional sync with Characters and Elements
  * 
  * **Request Flow:**
  * 1. Request hits router endpoint
@@ -69,5 +119,6 @@ export default createEntityRouter({
   databaseId: TIMELINE_DATABASE_ID,
   entityName: 'timeline',
   transform: transformTimelineEvent,
-  toNotionProps: toNotionTimelineProperties
+  toNotionProps: toNotionTimelineProperties,
+  inverseRelations: timelineInverseRelations
 });

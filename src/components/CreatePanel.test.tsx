@@ -93,29 +93,7 @@ describe('CreatePanel - Refactored Creation Pipeline', () => {
     );
   };
   
-  describe('Field Name Mapping', () => {
-    it('should send lowercase field names for elements', async () => {
-      renderCreatePanel({ entityType: 'element' });
-      
-      // Fill in the name field
-      const nameInput = screen.getByLabelText('Name');
-      fireEvent.change(nameInput, { target: { value: 'Test Element' } });
-      
-      // Click create button
-      const createButton = screen.getByText('Create');
-      fireEvent.click(createButton);
-      
-      await waitFor(() => {
-        expect(mockCreateElement).toHaveBeenCalledWith(
-          expect.objectContaining({
-            name: 'Test Element',
-            status: 'Complete', // Default value with lowercase
-            basicType: 'Prop'   // Default value with camelCase
-          })
-        );
-      });
-    });
-    
+  describe('Puzzle Act Field', () => {
     it('should handle act field for puzzles correctly', async () => {
       renderCreatePanel({ entityType: 'puzzle' });
       

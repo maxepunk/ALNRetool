@@ -39,44 +39,37 @@ export function getNodesWithinDepth(
 }
 
 /**
- * Determine which nodes should be visible based on filter mode.
- * Consolidates all filter mode logic into a single pure function.
+ * Determine which nodes should be visible based on selection and connection depth.
+ * Simplified logic without filter modes.
  */
 export function getVisibleNodeIds(
-  mode: 'pure' | 'connected' | 'focused',
   filteredNodeIds: Set<string>,
   edges: Edge[],
-  focusNodeId: string | null,
-  connectionDepth: number | null,
-  respectFilters: boolean
+  selectedNodeId: string | null,
+  connectionDepth: number
 ): Set<string> {
-  // Pure mode: only show filtered nodes
-  if (mode === 'pure' || !connectionDepth || connectionDepth <= 0) {
+  // No connection depth? Just show filtered nodes
+  if (!connectionDepth || connectionDepth === 0) {
     return filteredNodeIds;
   }
   
-  // Focus mode: show N hops from focused node
-  if (mode === 'focused' && focusNodeId) {
-    const edgesToUse = respectFilters 
-      ? edges.filter(e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target))
-      : edges;
-    return getNodesWithinDepth(focusNodeId, edgesToUse, connectionDepth);
+  // Node selected? Show connections from that node only
+  if (selectedNodeId && filteredNodeIds.has(selectedNodeId)) {
+    // Use all edges to find connections (not just filtered edges)
+    // This ensures we can see the full neighborhood of the selected node
+    return getNodesWithinDepth(selectedNodeId, edges, connectionDepth);
   }
   
-  // Connected mode: show filtered nodes + N hops from each
-  if (mode === 'connected') {
-    const connectedIds = new Set(filteredNodeIds);
-    const baseFilteredEdges = edges.filter(
-      e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)
-    );
-    
-    for (const nodeId of filteredNodeIds) {
-      const nodesFromStart = getNodesWithinDepth(nodeId, baseFilteredEdges, connectionDepth);
-      nodesFromStart.forEach(id => connectedIds.add(id));
-    }
-    return connectedIds;
+  // No selection? Show connections from ALL filtered nodes
+  const connectedIds = new Set(filteredNodeIds);
+  const baseFilteredEdges = edges.filter(
+    e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)
+  );
+  
+  for (const nodeId of filteredNodeIds) {
+    const connections = getNodesWithinDepth(nodeId, baseFilteredEdges, connectionDepth);
+    connections.forEach(id => connectedIds.add(id));
   }
   
-  // Default fallback
-  return filteredNodeIds;
+  return connectedIds;
 }

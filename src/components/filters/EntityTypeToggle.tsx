@@ -37,7 +37,7 @@ const EntityTypeToggle = memo(() => {
   
   const entityConfig = [
     {
-      key: 'characters' as const,
+      key: 'character' as const,
       label: 'Characters',
       icon: Users,
       color: 'text-green-600',
@@ -45,7 +45,7 @@ const EntityTypeToggle = memo(() => {
       borderColor: 'border-green-200'
     },
     {
-      key: 'puzzles' as const,
+      key: 'puzzle' as const,
       label: 'Puzzles',
       icon: Puzzle,
       color: 'text-amber-600',
@@ -53,7 +53,7 @@ const EntityTypeToggle = memo(() => {
       borderColor: 'border-amber-200'
     },
     {
-      key: 'elements' as const,
+      key: 'element' as const,
       label: 'Elements',
       icon: Package,
       color: 'text-purple-600',

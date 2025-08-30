@@ -40,7 +40,7 @@ export {
 
 // Import and re-export existing utilities
 export { LAYOUT_PRESETS } from './layouts';
-export { filterEdgesByType, getConnectedEdges, calculateConnectivity } from './relationships';
+// Relationship utilities now handled server-side
 export { hasError, isEntityType as isEntity } from './guards';
 
 // Removed unused utility functions - direct implementations are used instead

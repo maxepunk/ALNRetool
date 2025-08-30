@@ -33,6 +33,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
 import notionRoutes from './routes/notion/index.js';
+import graphRoutes from './routes/graph.js';
 import cacheRoutes from './routes/cache.js';
 import { apiKeyAuth } from './middleware/auth.js';
 // CSRF middleware removed - using API key authentication only
@@ -168,6 +169,20 @@ app.get('/healthz', (req, res) => {
  * - PUT /api/notion/:entityType/:id - Update entity
  */
 app.use('/api/notion', validatePagination, apiKeyAuth, notionRoutes);
+
+/**
+ * Graph API routes for complete graph data.
+ * Returns pre-computed nodes and edges with server-side relationship resolution.
+ * 
+ * @route /api/graph/*
+ * @protected Requires valid API key
+ * @middleware apiKeyAuth
+ * 
+ * **Available Endpoints:**
+ * - GET /api/graph/complete - Get complete graph with all nodes and edges
+ * - GET /api/graph/health - Health check for graph service
+ */
+app.use('/api/graph', apiKeyAuth, graphRoutes);
 
 /**
  * Cache management routes for manual cache control.

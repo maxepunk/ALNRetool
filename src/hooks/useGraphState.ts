@@ -153,21 +153,20 @@ function useGraphViewport() {
  * Hook for intelligent viewport management with priority-based focusing
  * 
  * Implements smart viewport logic:
- * - Selected node (from search dropdown) takes highest priority
+ * - Selected node takes highest priority
  * - Search results take high priority
- * - Focused nodes (connection depth filtering) take medium priority  
  * - All visible nodes take lowest priority
  * 
  * @param searchTerm Current search query
- * @param selectedNodeId Specifically selected node from search
- * @param focusedNodeId Currently focused node for connection depth
+ * @param selectedNodeId Selected node
+ * @param focusedNodeId Deprecated - kept for compatibility
  * @param connectionDepth Depth level for connection filtering
- * @param visibleNodes Currently visible nodes after all filtering (for proper depth view fitting)
+ * @param visibleNodes Currently visible nodes after all filtering
  */
 export function useViewportManager(
   searchTerm: string,
   selectedNodeId: string | null,
-  focusedNodeId: string | null,
+  _focusedNodeId: string | null, // Deprecated - kept for compatibility
   connectionDepth: number | null,
   visibleNodes?: Node[]
 ) {
@@ -181,7 +180,6 @@ export function useViewportManager(
   const previousState = useRef({
     searchTerm: '',
     selectedNodeId: null as string | null,
-    focusedNodeId: null as string | null,
     connectionDepth: null as number | null
   });
   
@@ -190,11 +188,10 @@ export function useViewportManager(
    * Higher number = higher priority
    */
   const getCurrentPriority = useCallback(() => {
-    if (selectedNodeId) return 4; // Highest: specifically selected node
-    if (searchTerm && searchTerm.trim()) return 3; // High: search results
-    if (focusedNodeId && connectionDepth) return 2; // Medium: focused connections
+    if (selectedNodeId) return 3; // Highest: selected node
+    if (searchTerm && searchTerm.trim()) return 2; // High: search results
     return 1; // Lowest: all visible nodes
-  }, [selectedNodeId, searchTerm, focusedNodeId, connectionDepth]);
+  }, [selectedNodeId, searchTerm]);
   
   /**
    * Execute viewport change with smooth transitions
@@ -204,7 +201,7 @@ export function useViewportManager(
     
     setTimeout(() => {
       switch (priority) {
-        case 4: // Selected specific node
+        case 3: // Selected node
           if (selectedNodeId) {
             if (import.meta.env.DEV) {
               console.debug('[ViewportManager] Focusing on selected node:', selectedNodeId);
@@ -213,7 +210,7 @@ export function useViewportManager(
           }
           break;
           
-        case 3: // Search results
+        case 2: // Search results
           if (searchTerm?.trim()) {
             if (import.meta.env.DEV) {
               console.debug('[ViewportManager] Focusing on search results:', searchTerm);
@@ -222,32 +219,21 @@ export function useViewportManager(
           }
           break;
           
-        case 2: // Focused connections
-          if (focusedNodeId && visibleNodes && visibleNodes.length > 0) {
-            if (import.meta.env.DEV) {
-              console.debug('[ViewportManager] Focusing on connections for node:', focusedNodeId, 'with', visibleNodes.length, 'visible nodes');
-            }
-            // Fit to all visible nodes when connection depth is active
-            fitToNodes(visibleNodes.map(n => n.id), { padding: 0.3, duration: 600 });
-          } else if (focusedNodeId) {
-            // Fallback to just the focused node if visibleNodes not provided
-            if (import.meta.env.DEV) {
-              console.debug('[ViewportManager] Focusing on single node (fallback):', focusedNodeId);
-            }
-            fitToNodes([focusedNodeId], { padding: 0.3, duration: 600 });
-          }
-          break;
-          
-        case 1: // All nodes
+        case 1: // All visible nodes
         default:
           if (import.meta.env.DEV) {
             console.debug('[ViewportManager] Fitting all visible nodes');
           }
-          zoomToFit();
+          // If we have specific visible nodes, fit to them
+          if (visibleNodes && visibleNodes.length > 0) {
+            fitToNodes(visibleNodes.map(n => n.id), { padding: 0.3, duration: 600 });
+          } else {
+            zoomToFit();
+          }
           break;
       }
     }, delay);
-  }, [selectedNodeId, searchTerm, focusedNodeId, visibleNodes, fitToSearchResults, fitToNodes, zoomToFit]);
+  }, [selectedNodeId, searchTerm, visibleNodes, fitToSearchResults, fitToNodes, zoomToFit]);
   
   // Performance optimization: throttle rapid successive changes
   const throttleRef = useRef<NodeJS.Timeout | null>(null);
@@ -263,11 +249,10 @@ export function useViewportManager(
     // Check what changed
     const searchChanged = searchTerm !== prev.searchTerm;
     const selectedChanged = selectedNodeId !== prev.selectedNodeId;
-    const focusChanged = focusedNodeId !== prev.focusedNodeId;
     const depthChanged = connectionDepth !== prev.connectionDepth;
     
     // Performance optimization: Only trigger for meaningful changes
-    if (searchChanged || selectedChanged || focusChanged || depthChanged) {
+    if (searchChanged || selectedChanged || depthChanged) {
       // Edge case: Handle empty/whitespace-only search terms
       const normalizedSearch = searchTerm?.trim() || '';
       const normalizedPrevSearch = prev.searchTerm?.trim() || '';
@@ -285,12 +270,10 @@ export function useViewportManager(
         console.debug('[ViewportManager] State change detected:', {
           searchChanged,
           selectedChanged,
-          focusChanged, 
           depthChanged,
           currentPriority,
           searchTerm: normalizedSearch || 'none',
           selectedNodeId: selectedNodeId || 'none',
-          focusedNodeId: focusedNodeId || 'none',
           connectionDepth: connectionDepth || 'none'
         });
       }
@@ -323,11 +306,10 @@ export function useViewportManager(
       previousState.current = {
         searchTerm: normalizedSearch,
         selectedNodeId,
-        focusedNodeId,
         connectionDepth
       };
     }
-  }, [searchTerm, selectedNodeId, focusedNodeId, connectionDepth, getCurrentPriority, executeViewportChange]);
+  }, [searchTerm, selectedNodeId, connectionDepth, getCurrentPriority, executeViewportChange]);
   
   // Cleanup throttle timeout
   useEffect(() => {

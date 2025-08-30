@@ -142,6 +142,9 @@ async function updateInverseRelations<T>(
       }
     }
   }
+  
+  // Invalidate graph cache after inverse relations are updated
+  cacheService.invalidatePattern('graph_complete*');
 }
 
 /**
@@ -172,7 +175,6 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     
     if (cached) {
       res.setHeader('X-Cache-Hit', 'true');
-      res.setHeader('X-Cache-Version', cacheService.getVersion());
       return res.json(cached);
     }
     
@@ -184,7 +186,6 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     cacheService.set(cacheKey, transformed);
     
     res.setHeader('X-Cache-Hit', 'false');
-    res.setHeader('X-Cache-Version', cacheService.getVersion());
     res.json(transformed);
   }));
   
@@ -194,7 +195,21 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       // Extract parent relationship metadata from request
       const { _parentRelation, ...entityData } = req.body;
       
-      // Create the Notion page
+      // Handle parent relation if present - set relationship on child entity if needed
+      if (_parentRelation) {
+        const { parentType, parentId, fieldKey } = _parentRelation;
+        
+        // Special handling for relationships stored on the child entity
+        // For puzzle->character creation, the relationship is stored on the character
+        if (parentType === 'puzzle' && config.entityName === 'characters' && fieldKey === 'characterIds') {
+          // The relationship is actually stored as characterPuzzleIds on the character
+          entityData.characterPuzzleIds = [parentId];
+        }
+        // Add more child-side relationship mappings as needed
+        // e.g., timeline->character, element->element, etc.
+      }
+      
+      // Create the Notion page with potentially modified entity data
       const properties = config.toNotionProps!(entityData);
       const response = await notion.pages.create({
         parent: { database_id: config.databaseId },
@@ -205,12 +220,20 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       const transformed = config.transform(response);
       
       // If this was created from a parent relationship, update the parent atomically
-      if (_parentRelation) {
+      // Skip if we already handled the relationship on the child entity
+      const handledOnChild = _parentRelation && 
+        _parentRelation.parentType === 'puzzle' && 
+        config.entityName === 'characters' && 
+        _parentRelation.fieldKey === 'characterIds';
+      
+      if (_parentRelation && !handledOnChild) {
         const { parentType, parentId, fieldKey } = _parentRelation;
         
         try {
-          // Import the appropriate mapper function dynamically
+          // Import the appropriate mapper function and field mapping
           const mappers = await import('../../services/notionPropertyMappers.js');
+          const { FIELD_TO_NOTION_PROPERTY } = mappers;
+          
           // parentType is already singular from frontend ('element', 'character', 'puzzle', 'timeline')
           const mapperName = `toNotion${parentType.charAt(0).toUpperCase()}${parentType.slice(1)}Properties`;
           const parentMapper = (mappers as any)[mapperName];
@@ -222,11 +245,15 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
           // Get the parent's current data
           const parentPage = await notion.pages.retrieve({ page_id: parentId }) as NotionPage;
           
-          // Get the correct Notion property name using the mapper
-          // Create a dummy update object to leverage the existing mapper logic
-          const dummyUpdate = { [fieldKey]: [] };
-          const mappedProps = parentMapper(dummyUpdate);
-          const notionPropertyName = Object.keys(mappedProps)[0];
+          // Get the correct Notion property name from explicit mapping
+          const typeMapping = FIELD_TO_NOTION_PROPERTY[parentType as keyof typeof FIELD_TO_NOTION_PROPERTY];
+          if (!typeMapping) {
+            throw new Error(`No mapping found for parent type: ${parentType}`);
+          }
+          const notionPropertyName = (typeMapping as any)[fieldKey];
+          if (!notionPropertyName) {
+            throw new Error(`No property mapping found for ${parentType}.${fieldKey}`);
+          }
           
           // Extract current relation IDs using the correct property name
           const currentRelation = parentPage.properties[notionPropertyName];
@@ -247,8 +274,12 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
             properties: parentProperties
           });
           
-          // Invalidate parent entity cache
-          await cacheService.invalidateEntity(parentType, parentId);
+          // Invalidate parent entity cache  
+          cacheService.invalidatePattern(`${parentType}:*`);
+          cacheService.invalidatePattern(`${parentType}_${parentId}`);
+          
+          // Invalidate graph cache immediately since parent relationship changed
+          cacheService.invalidatePattern('graph_complete*');
         } catch (error) {
           // If parent update fails, delete the created entity to maintain atomicity
           log.error('Failed to update parent relation, rolling back entity creation', {
@@ -281,8 +312,11 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       
       // Invalidate list cache to ensure new entity appears
       // Must invalidate both collection keys (colon format) and single entity keys (underscore format)
-      await cacheService.invalidatePattern(`${config.entityName}:*`); // Collection caches: "elements:20:null"
-      await cacheService.invalidatePattern(`${config.entityName}_*`); // Single entity caches: "elements_abc123:20:null"
+      cacheService.invalidatePattern(`${config.entityName}:*`); // Collection caches: "elements:20:null"
+      cacheService.invalidatePattern(`${config.entityName}_*`); // Single entity caches: "elements_abc123:20:null"
+      
+      // Invalidate graph cache to ensure graph reflects new entity
+      cacheService.invalidatePattern('graph_complete*'); // Graph caches: "graph_complete_all", "graph_complete_{viewConfig}"
       
       res.status(201).json(transformed);
     }));
@@ -323,12 +357,14 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       );
     }
     
-    // Invalidate cache for this entity
-    await cacheService.invalidateEntity(config.entityName, id);
-    // Also invalidate list caches
-    await cacheService.invalidatePattern(`${config.entityName}:*`);
+    // Invalidate cache for this entity and lists
+    cacheService.invalidatePattern(`${config.entityName}_${id}`);
+    cacheService.invalidatePattern(`${config.entityName}:*`);
     
-    res.status(204).send();
+    // Invalidate graph cache to ensure graph reflects deletion
+    cacheService.invalidatePattern('graph_complete*');
+    
+    res.status(200).json({ success: true });
   }));
   
   // PUT /:id - Update entity (if mapper provided)
@@ -370,34 +406,27 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         );
       }
       
-      // Invalidate caches for this entity and related patterns
-      await cacheService.invalidateEntity(config.entityName, req.params.id);
+      // Invalidate caches for this entity
+      cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
+      cacheService.invalidatePattern(`${config.entityName}:*`);
+      
+      // Invalidate graph cache to ensure graph reflects updates
+      cacheService.invalidatePattern('graph_complete*');
       
       // If we have inverse relations, invalidate those entity types too
       if (config.inverseRelations) {
-        const relatedEntities: Array<{ type: string; ids: string[] }> = [];
-        
         for (const relation of config.inverseRelations) {
           // Extract entity name from the target database ID pattern
           const targetEntityName = relation.targetDatabaseId.includes('element') ? 'elements' :
                                    relation.targetDatabaseId.includes('puzzle') ? 'puzzles' :
                                    relation.targetDatabaseId.includes('character') ? 'characters' : 
-                                   'unknown';
+                                   'timeline';
           
-          // Collect related IDs for batch invalidation
-          const relatedIds = transformed[relation.sourceField as keyof typeof transformed] as string[] || [];
-          if (relatedIds.length > 0) {
-            relatedEntities.push({ type: targetEntityName, ids: relatedIds });
-          }
-        }
-        
-        // Batch invalidate related entities
-        if (relatedEntities.length > 0) {
-          await cacheService.invalidateRelated(config.entityName, req.params.id, relatedEntities);
+          // Invalidate the target entity type caches
+          cacheService.invalidatePattern(`${targetEntityName}:*`);
         }
       }
       
-      res.setHeader('X-Cache-Version', cacheService.getVersion());
       res.json(transformed);
     }));
   }

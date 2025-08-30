@@ -42,6 +42,18 @@ import { urlToFilterState, filterStateToUrl, updateBrowserUrl } from '@/utils/ur
 import type { ViewConfig } from '@/lib/viewConfigs';
 
 /**
+ * Default entity visibility configuration.
+ * Single source of truth for initial state and filter resets.
+ * Timeline is hidden by default to reduce visual clutter.
+ */
+const DEFAULT_ENTITY_VISIBILITY = {
+  character: true,
+  puzzle: true,
+  element: true,
+  timeline: false,  // Hidden by default until user explicitly enables
+};
+
+/**
  * Puzzle-specific filter configuration.
  * @interface PuzzleFilters
  * 
@@ -117,18 +129,15 @@ export interface FilterState {
   // Universal filters
   searchTerm: string;
   selectedNodeId: string | null; // Universal node selection (search, click, detail panel)
-  focusedNodeId: string | null; // Node for connection depth filtering
   
   // Graph view settings (universal across views)
   connectionDepth: number;
-  filterMode: 'pure' | 'connected' | 'focused'; // How depth filtering behaves
-  focusRespectFilters: boolean; // Whether focus mode respects entity filters or shows all connections
   
   // Entity visibility toggles (Option 2)
   entityVisibility: {
-    characters: boolean;
-    puzzles: boolean;
-    elements: boolean;
+    character: boolean;
+    puzzle: boolean;
+    element: boolean;
     timeline: boolean;
   };
   
@@ -152,16 +161,13 @@ export interface FilterActions {
   setSearchTerm: (term: string) => void;
   clearSearch: () => void;
   setSelectedNode: (nodeId: string | null) => void;
-  setFocusedNode: (nodeId: string | null) => void;
   
   // Graph view settings actions
   setConnectionDepth: (depth: number) => void;
-  setFilterMode: (mode: 'pure' | 'connected' | 'focused') => void;
-  setFocusRespectFilters: (respect: boolean) => void;
   
   // Entity visibility actions (Option 2)
-  toggleEntityVisibility: (entityType: 'characters' | 'puzzles' | 'elements' | 'timeline') => void;
-  setEntityVisibility: (entityType: 'characters' | 'puzzles' | 'elements' | 'timeline', visible: boolean) => void;
+  toggleEntityVisibility: (entityType: 'character' | 'puzzle' | 'element' | 'timeline') => void;
+  setEntityVisibility: (entityType: 'character' | 'puzzle' | 'element' | 'timeline', visible: boolean) => void;
   showAllEntities: () => void;
   hideAllEntities: () => void;
   
@@ -268,16 +274,8 @@ export const useFilterStore = create<FilterStore>()(
         // Initial state
         searchTerm: '',
         selectedNodeId: null,
-        focusedNodeId: null,
         connectionDepth: 3, // Default to 3 hops
-        filterMode: 'connected' as const, // Default to connected mode
-        focusRespectFilters: true, // Default to respecting filters in focus mode
-        entityVisibility: {
-          characters: true,
-          puzzles: true,
-          elements: true,
-          timeline: true,
-        },
+        entityVisibility: DEFAULT_ENTITY_VISIBILITY,
         puzzleFilters: {
           selectedActs: new Set(),
           selectedPuzzleId: null,
@@ -304,33 +302,9 @@ export const useFilterStore = create<FilterStore>()(
         setSearchTerm: (term) => set({ searchTerm: term }),
         clearSearch: () => set({ searchTerm: '' }),
         setSelectedNode: (nodeId) => set({ selectedNodeId: nodeId }),
-        setFocusedNode: (nodeId) => {
-          // Update filter mode when focus changes
-          const state = get();
-          if (nodeId) {
-            // When a node is focused, switch to focused mode
-            set({ focusedNodeId: nodeId, filterMode: 'focused' });
-          } else {
-            // When focus is cleared, switch back based on depth
-            const newMode = state.connectionDepth === 0 ? 'pure' : 'connected';
-            set({ focusedNodeId: nodeId, filterMode: newMode });
-          }
-        },
 
         // Graph view settings actions
-        setConnectionDepth: (depth) => {
-          // Automatically set filter mode based on depth and focus state
-          const state = get();
-          if (depth === 0) {
-            set({ connectionDepth: depth, filterMode: 'pure' });
-          } else if (state.focusedNodeId) {
-            set({ connectionDepth: depth, filterMode: 'focused' });
-          } else {
-            set({ connectionDepth: depth, filterMode: 'connected' });
-          }
-        },
-        setFilterMode: (mode) => set({ filterMode: mode }),
-        setFocusRespectFilters: (respect) => set({ focusRespectFilters: respect }),
+        setConnectionDepth: (depth) => set({ connectionDepth: depth }),
         
         // Entity visibility actions (Option 2)
         toggleEntityVisibility: (entityType) => set((state) => ({
@@ -347,17 +321,17 @@ export const useFilterStore = create<FilterStore>()(
         })),
         showAllEntities: () => set({
           entityVisibility: {
-            characters: true,
-            puzzles: true,
-            elements: true,
+            character: true,
+            puzzle: true,
+            element: true,
             timeline: true
           }
         }),
         hideAllEntities: () => set({
           entityVisibility: {
-            characters: false,
-            puzzles: false,
-            elements: false,
+            character: false,
+            puzzle: false,
+            element: false,
             timeline: false
           }
         }),
@@ -470,15 +444,8 @@ export const useFilterStore = create<FilterStore>()(
         clearAllFilters: () => set({
           searchTerm: '',
           selectedNodeId: null,
-          focusedNodeId: null,
           connectionDepth: 3,
-          filterMode: 'connected',
-          entityVisibility: {
-            characters: true,
-            puzzles: true,
-            elements: true,
-            timeline: true,
-          },
+          entityVisibility: DEFAULT_ENTITY_VISIBILITY,
           puzzleFilters: {
             selectedActs: new Set(),
             selectedPuzzleId: null,
@@ -794,8 +761,7 @@ export const useFilterStore = create<FilterStore>()(
             state.contentFilters.hasIssues !== null ||
             state.contentFilters.lastEditedRange !== 'all' ||
             state.contentFilters.elementBasicTypes.size > 0 ||
-            state.contentFilters.elementStatus.size > 0 ||
-            state.focusedNodeId !== null
+            state.contentFilters.elementStatus.size > 0
           );
         },
 
@@ -817,7 +783,6 @@ export const useFilterStore = create<FilterStore>()(
           if (state.contentFilters.lastEditedRange !== 'all') count++;
           count += state.contentFilters.elementBasicTypes.size;
           count += state.contentFilters.elementStatus.size;
-          if (state.focusedNodeId) count++;
           
           return count;
         },        getActiveFiltersForView: () => {
@@ -874,8 +839,8 @@ export const useFilterStore = create<FilterStore>()(
               if (state.nodeConnectionsFilters?.nodeType) {
                 filters.push(`Type: ${state.nodeConnectionsFilters.nodeType}`);
               }
-              if (state.focusedNodeId) {
-                filters.push('Node focused');
+              if (state.selectedNodeId) {
+                filters.push('Node selected');
               }
               break;
           }

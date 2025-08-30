@@ -26,18 +26,15 @@ export interface FilterSelectors {
   // Search and selection
   searchTerm: string;
   selectedNodeId: string | null;
-  focusedNodeId: string | null;
   
   // Graph filtering
   connectionDepth: number | null;
-  filterMode: 'pure' | 'connected' | 'focused';
-  focusRespectFilters: boolean;
   
   // Entity visibility
   entityVisibility: {
-    characters: boolean;
-    puzzles: boolean;
-    elements: boolean;
+    character: boolean;
+    puzzle: boolean;
+    element: boolean;
     timeline: boolean;
   };
   
@@ -54,7 +51,6 @@ export interface FilterSelectors {
   
   // Actions (not part of filter state, but needed by GraphView)
   setSelectedNode: (nodeId: string | null) => void;
-  setFocusedNode: (nodeId: string | null) => void;
   hasActiveFilters: () => boolean;
 }
 
@@ -87,12 +83,9 @@ export function useFilterSelectors(): FilterSelectors {
     // Search and selection
     searchTerm: state.searchTerm,
     selectedNodeId: state.selectedNodeId,
-    focusedNodeId: state.focusedNodeId,
     
     // Graph filtering
     connectionDepth: state.connectionDepth,
-    filterMode: state.filterMode,
-    focusRespectFilters: state.focusRespectFilters,
     
     // Entity visibility
     entityVisibility: state.entityVisibility,
@@ -110,7 +103,6 @@ export function useFilterSelectors(): FilterSelectors {
     
     // Actions
     setSelectedNode: state.setSelectedNode,
-    setFocusedNode: state.setFocusedNode,
     hasActiveFilters: state.hasActiveFilters,
   })));
 }
@@ -125,10 +117,7 @@ export function useFilterValues() {
   return useFilterStore(useShallow((state) => ({
     searchTerm: state.searchTerm,
     selectedNodeId: state.selectedNodeId,
-    focusedNodeId: state.focusedNodeId,
     connectionDepth: state.connectionDepth,
-    filterMode: state.filterMode,
-    focusRespectFilters: state.focusRespectFilters,
     entityVisibility: state.entityVisibility,
     characterSelectedTiers: state.characterFilters.selectedTiers,
     characterType: state.characterFilters.characterType,
@@ -147,10 +136,8 @@ export function useFilterValues() {
 export function useFilterActions() {
   return useFilterStore(useShallow((state) => ({
     setSelectedNode: state.setSelectedNode,
-    setFocusedNode: state.setFocusedNode,
     setSearchTerm: state.setSearchTerm,
     setConnectionDepth: state.setConnectionDepth,
-    setFilterMode: state.setFilterMode,
     toggleEntityVisibility: state.toggleEntityVisibility,
     hasActiveFilters: state.hasActiveFilters,
   })));

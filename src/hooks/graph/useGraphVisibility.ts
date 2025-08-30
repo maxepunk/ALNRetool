@@ -27,10 +27,8 @@ interface UseGraphVisibilityParams {
   allEdges: GraphEdge[];
   
   // Visibility controls
-  filterMode: 'pure' | 'connected' | 'focused';
-  focusedNodeId: string | null;
+  selectedNodeId: string | null;
   connectionDepth: number | null;
-  focusRespectFilters: boolean;
 }
 
 interface UseGraphVisibilityResult {
@@ -44,40 +42,34 @@ interface UseGraphVisibilityResult {
  * Encapsulates the visibility logic from useGraphLayout.
  * 
  * @param params - Nodes, edges, and visibility controls
- * @returns Visible nodes and edges based on filter mode
+ * @returns Visible nodes and edges based on selection and depth
  * 
  * @example
  * ```typescript
  * const { visibleNodes, visibleEdges } = useGraphVisibility({
  *   filteredNodes,
  *   allEdges,
- *   filterMode,
- *   focusedNodeId,
- *   connectionDepth,
- *   focusRespectFilters
+ *   selectedNodeId,
+ *   connectionDepth
  * });
  * ```
  */
 export function useGraphVisibility({
   filteredNodes,
   allEdges,
-  filterMode,
-  focusedNodeId,
+  selectedNodeId,
   connectionDepth,
-  focusRespectFilters,
 }: UseGraphVisibilityParams): UseGraphVisibilityResult {
   return useMemo(() => {
     // Step 1: Get IDs of filtered nodes
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
     
-    // Step 2: Apply visibility rules based on filter mode
+    // Step 2: Apply visibility rules based on selection and depth
     const visibleNodeIds = getVisibleNodeIds(
-      filterMode,
       filteredNodeIds,
       allEdges,
-      focusedNodeId,
-      connectionDepth,
-      focusRespectFilters
+      selectedNodeId,
+      connectionDepth || 0
     );
     
     // Step 3: Build final nodes with metadata
@@ -92,7 +84,7 @@ export function useGraphVisibility({
           metadata: {
             ...node.data.metadata,
             isFiltered: filteredNodeIds.has(node.id),
-            isFocused: node.id === focusedNodeId
+            isSelected: node.id === selectedNodeId
           }
         }
       }));
@@ -112,9 +104,7 @@ export function useGraphVisibility({
     filteredNodes,
     allEdges,
     // Visibility controls
-    filterMode,
-    focusedNodeId,
-    connectionDepth,
-    focusRespectFilters
+    selectedNodeId,
+    connectionDepth
   ]);
 }

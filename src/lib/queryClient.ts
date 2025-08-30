@@ -1,5 +1,4 @@
 import { QueryClient, QueryCache, MutationCache } from '@tanstack/react-query'
-import { cacheVersionManager } from '@/lib/cache/CacheVersionManager'
 
 
 
@@ -95,15 +94,12 @@ export const queryClient = new QueryClient({
   },
 })
 
-// Initialize CacheVersionManager with the QueryClient
-cacheVersionManager.initialize(queryClient)
 
 // Helper function to reset the query client (useful for tests and logout)
 export const resetQueryClient = () => {
   queryClient.clear()
   queryClient.resetQueries()
   queryClient.removeQueries()
-  cacheVersionManager.reset()
 }
 
 // Helper function to prefetch common queries on app load

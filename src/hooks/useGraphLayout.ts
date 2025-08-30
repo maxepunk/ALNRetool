@@ -19,32 +19,25 @@
 
 import { useMemo } from 'react';
 import type { GraphNode } from '@/lib/graph/types';
-import type { Edge } from '@xyflow/react';
-import type { Character, Puzzle, TimelineEvent, Element } from '@/types/notion/app';
+import type { Node, Edge } from '@xyflow/react';
 import type { ViewConfig } from '@/lib/viewConfigs';
 
-// Import the 4 composable hooks
-import { useFilteredEntities } from './graph/useFilteredEntities';
-import { useGraphRelationships } from './graph/useGraphRelationships';
+// Import the 2 composable hooks (filtering is now inline, relationships come from server)
 import { useGraphVisibility } from './graph/useGraphVisibility';
 import { useLayoutEngine } from './graph/useLayoutEngine';
 
 interface UseGraphLayoutParams {
-  characters: Character[];
-  elements: Element[];
-  puzzles: Puzzle[];
-  timeline: TimelineEvent[];
+  nodes: Node[];
+  edges: Edge[];
   viewConfig: ViewConfig;
   // Individual filter values to avoid object recreation
   searchTerm: string;
-  focusedNodeId: string | null;
+  selectedNodeId: string | null;
   connectionDepth: number | null;
-  filterMode: 'pure' | 'connected' | 'focused';
-  focusRespectFilters: boolean;
   entityVisibility: {
-    characters: boolean;
-    elements: boolean;
-    puzzles: boolean;
+    character: boolean;
+    element: boolean;
+    puzzle: boolean;
     timeline: boolean;
   };
   // Character filter primitives
@@ -68,8 +61,8 @@ interface UseGraphLayoutResult {
  * Each sub-hook manages its own memoization for optimal performance.
  * 
  * **Pipeline:**
- * 1. useFilteredEntities → Create filtered nodes
- * 2. useGraphRelationships → Generate edges
+ * 1. Apply filters to server-provided nodes
+ * 2. Use server-provided edges directly
  * 3. useGraphVisibility → Apply visibility rules
  * 4. useLayoutEngine → Position nodes
  * 
@@ -89,16 +82,12 @@ interface UseGraphLayoutResult {
  * ```
  */
 export const useGraphLayout = ({
-  characters,
-  elements,
-  puzzles,
-  timeline,
+  nodes,
+  edges,
   viewConfig,
   searchTerm,
-  focusedNodeId,
+  selectedNodeId,
   connectionDepth,
-  filterMode,
-  focusRespectFilters,
   entityVisibility,
   characterType,
   characterSelectedTiers,
@@ -107,41 +96,87 @@ export const useGraphLayout = ({
   elementStatus,
 }: UseGraphLayoutParams): UseGraphLayoutResult => {
   
-  // Step 1: Create filtered nodes
-  // This hook memoizes based on entities and filter criteria
-  const filteredNodes = useFilteredEntities({
-    characters,
-    elements,
-    puzzles,
-    timeline,
-    viewConfig,
-    searchTerm,
-    entityVisibility,
-    characterType,
-    characterSelectedTiers,
-    puzzleSelectedActs,
-    elementBasicTypes,
-    elementStatus,
-  });
+  // Step 1: Apply filters to server-provided nodes
+  // Convert server nodes to GraphNodes and apply filters
+  const filteredNodes = useMemo(() => {
+    return nodes
+      .filter((node: any) => {
+        // Skip placeholder nodes unless we want to show them
+        if (node.data?.metadata?.isPlaceholder) {
+          // TODO: Add option to show/hide placeholder nodes
+          return true; // Show them for now to visualize data issues
+        }
+        
+        // Apply search filter
+        const label = node.data?.label;
+        if (searchTerm && label && typeof label === 'string') {
+          if (!label.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+          }
+        }
+        
+        // Apply entity visibility filters
+        const entityType = node.data?.metadata?.entityType;
+        if (entityType && typeof entityType === 'string') {
+          if (!entityVisibility[entityType as keyof typeof entityVisibility]) {
+            return false;
+          }
+          
+          // Apply entity-specific filters
+          const entity = node.data?.entity;
+          if (entity) {
+            switch (entityType) {
+              case 'character':
+                // Character type filter
+                if (characterType && characterType !== 'all' && entity.type !== characterType) {
+                  return false;
+                }
+                // Character tier filter
+                if (characterSelectedTiers.size > 0 && !characterSelectedTiers.has(entity.tier || '')) {
+                  return false;
+                }
+                break;
+                
+              case 'puzzle':
+                // Puzzle act filter
+                if (puzzleSelectedActs.size > 0 && !puzzleSelectedActs.has(entity.act || '')) {
+                  return false;
+                }
+                break;
+                
+              case 'element':
+                // Element type filter
+                if (elementBasicTypes.size > 0 && !elementBasicTypes.has(entity.basicType || '')) {
+                  return false;
+                }
+                // Element status filter
+                if (elementStatus.size > 0 && !elementStatus.has(entity.status || '')) {
+                  return false;
+                }
+                break;
+            }
+          }
+        }
+        
+        return true;
+      })
+      .map(node => ({
+        ...node,
+        type: node.type || 'default',
+      } as GraphNode));
+  }, [nodes, searchTerm, entityVisibility, characterType, characterSelectedTiers, 
+      puzzleSelectedActs, elementBasicTypes, elementStatus]);
   
-  // Step 2: Create all edges from relationships
-  // This hook memoizes based on entity data only
-  const allEdges = useGraphRelationships({
-    characters,
-    elements,
-    puzzles,
-    timeline,
-  });
+  // Step 2: Use server-provided edges directly, ensuring type compatibility
+  const allEdges = edges as any[];
   
   // Step 3: Apply visibility rules
-  // This hook memoizes based on filter mode and focus
+  // This hook memoizes based on selection and connection depth
   const { visibleNodes, visibleEdges } = useGraphVisibility({
     filteredNodes,
     allEdges,
-    filterMode,
-    focusedNodeId,
+    selectedNodeId,
     connectionDepth,
-    focusRespectFilters,
   });
   
   // Step 4: Apply layout to visible nodes
@@ -153,7 +188,7 @@ export const useGraphLayout = ({
   });
   
   // Calculate total universe size for UI feedback
-  const totalUniverseNodes = characters.length + elements.length + puzzles.length + timeline.length;
+  const totalUniverseNodes = nodes.length;
   
   // Safely map GraphEdge[] to Edge[] for React Flow compatibility
   // This ensures data integrity is preserved during the conversion

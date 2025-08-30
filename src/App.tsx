@@ -2,7 +2,6 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import AppRouter from './router/AppRouter';
-import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 import { ViewContextProvider } from '@/contexts/ViewContext';
 import { CreatePanelPortal } from '@/components/CreatePanelPortal';
 // GraphContextProvider removed in Phase 3 cleanup
@@ -20,8 +19,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Initialize cache version manager with query client
-cacheVersionManager.initialize(queryClient);
 
 function App() {
   return (

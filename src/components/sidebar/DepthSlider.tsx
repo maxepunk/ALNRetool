@@ -1,39 +1,26 @@
 /**
  * DepthSlider Component
- * Enhanced connection depth slider with mode indication and tick marks
+ * Connection depth slider with tick marks and descriptions
  */
 
 import { useFilterStore } from '@/stores/filterStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export function DepthSlider() {
   const connectionDepth = useFilterStore(state => state.connectionDepth);
   const setConnectionDepth = useFilterStore(state => state.setConnectionDepth);
-  const filterMode = useFilterStore(state => state.filterMode);
-  const focusedNodeId = useFilterStore(state => state.focusedNodeId);
+  const selectedNodeId = useFilterStore(state => state.selectedNodeId);
 
-  const getModeDescription = () => {
-    if (focusedNodeId) {
-      return `Showing ${connectionDepth} ${connectionDepth === 1 ? 'level' : 'levels'} from focused node`;
+  const getDescription = () => {
+    if (selectedNodeId) {
+      return `Showing ${connectionDepth} ${connectionDepth === 1 ? 'level' : 'levels'} from selected node`;
     } else if (connectionDepth === 0) {
-      return 'Showing only filtered nodes (no connections)';
+      return 'Showing only filtered nodes';
     } else {
       return `Showing filtered nodes + ${connectionDepth} ${connectionDepth === 1 ? 'level' : 'levels'} of connections`;
-    }
-  };
-
-  const getModeBadge = () => {
-    switch (filterMode) {
-      case 'pure':
-        return <Badge variant="secondary" className="bg-blue-100 text-blue-700">Pure Filter</Badge>;
-      case 'focused':
-        return <Badge variant="secondary" className="bg-yellow-100 text-yellow-700">Focus Mode</Badge>;
-      case 'connected':
-        return <Badge variant="secondary" className="bg-green-100 text-green-700">Connected</Badge>;
     }
   };
 
@@ -42,16 +29,13 @@ export function DepthSlider() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle>Connection Depth</CardTitle>
-          {getModeBadge()}
-        </div>
+        <CardTitle>Connection Depth</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Mode description */}
+        {/* Description */}
         <div className="flex items-start gap-2 text-sm text-muted-foreground">
           <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-          <span>{getModeDescription()}</span>
+          <span>{getDescription()}</span>
         </div>
 
         {/* Slider with value */}
@@ -120,10 +104,10 @@ export function DepthSlider() {
           </div>
         </div>
 
-        {/* Tips based on mode */}
-        {focusedNodeId && (
-          <div className="p-2 bg-yellow-50 border border-yellow-200 rounded-md text-xs">
-            <strong>Focus Mode Active:</strong> Showing connections from the focused node only. Clear focus to see all filtered nodes.
+        {/* Tips based on selection */}
+        {selectedNodeId && (
+          <div className="p-2 bg-blue-50 border border-blue-200 rounded-md text-xs">
+            <strong>Node Selected:</strong> Showing connections from the selected node only. Deselect to see all filtered nodes.
           </div>
         )}
       </CardContent>

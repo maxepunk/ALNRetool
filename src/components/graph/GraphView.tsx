@@ -50,8 +50,8 @@ import ElementNode from './nodes/ElementNode';
 import TimelineNode from './nodes/TimelineNode';
 import { DetailPanel } from '@/components/DetailPanel';
 import { useViewConfig } from '@/hooks/useViewConfig';
-import { useQueries } from '@tanstack/react-query';
-import { charactersApi, puzzlesApi, elementsApi, timelineApi } from '@/services/api';
+import { useQuery } from '@tanstack/react-query';
+import { graphApi } from '@/services/graphApi';
 import { useViewportManager } from '@/hooks/useGraphState';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
 import { useFilterSelectors } from '@/hooks/useFilterSelectors';
@@ -80,17 +80,15 @@ const nodeTypes = {
 function ViewportController({ 
   searchTerm,
   selectedNodeId,
-  focusedNodeId, 
   connectionDepth,
   nodes 
 }: { 
   searchTerm: string;
   selectedNodeId: string | null;
-  focusedNodeId: string | null;
   connectionDepth: number | null;
   nodes: Node[];
 }) {
-  const viewportControls = useViewportManager(searchTerm, selectedNodeId, focusedNodeId, connectionDepth, nodes);
+  const viewportControls = useViewportManager(searchTerm, selectedNodeId, null, connectionDepth, nodes);
   
   // Initial fit to view on mount or when nodes change significantly
   const hasNodes = nodes.length > 0;
@@ -136,48 +134,59 @@ function GraphViewComponent() {
   // Get view configuration from route
   const { config: viewConfig } = useViewConfig();
   
-  // PHASE 5 FIX: Use parallel queries with useQueries to eliminate waterfall loading
-  // This fetches all entity data simultaneously instead of sequentially
-  const entityQueries = useQueries({
-    queries: [
-      {
-        queryKey: ['characters', 'all'],
-        queryFn: () => charactersApi.listAll(),
-        staleTime: 5 * 60 * 1000,
-      },
-      {
-        queryKey: ['puzzles', 'all'], 
-        queryFn: () => puzzlesApi.listAll(),
-        staleTime: 5 * 60 * 1000,
-      },
-      {
-        queryKey: ['elements', 'all'],
-        queryFn: () => elementsApi.listAll(),
-        staleTime: 5 * 60 * 1000,
-      },
-      {
-        queryKey: ['timeline', 'all'],
-        queryFn: () => timelineApi.listAll(),
-        staleTime: 5 * 60 * 1000,
-      },
-    ],
+  // NEW: Single query to fetch complete graph from server
+  // Server handles all relationship resolution and returns nodes + edges
+  const { 
+    data: graphData, 
+    isLoading: isInitialLoading, 
+    isError: hasAnyError,
+    refetch: refetchAll 
+  } = useQuery({
+    queryKey: ['graph', 'complete', viewConfig?.name],
+    queryFn: () => graphApi.getComplete(viewConfig),
+    staleTime: 5 * 60 * 1000,
+    enabled: !!viewConfig, // Only fetch when we have a view config
   });
-
-  // Extract data from parallel query results
-  const [
-    { data: characters = [] },
-    { data: puzzles = [] },
-    { data: elements = [] },
-    { data: timeline = [] },
-  ] = entityQueries;
   
-  // Check loading and error states across all queries
-  const isInitialLoading = entityQueries.some(q => q.isLoading);
-  const hasAnyError = entityQueries.some(q => q.isError);
-  const refetchAll = () => {
-    // Refetch all queries in parallel
-    entityQueries.forEach(q => q.refetch());
-  };
+  // Extract nodes and edges from graph response
+  const serverNodes = graphData?.nodes || [];
+  const serverEdges = graphData?.edges || [];
+  
+  // Extract entities from nodes for DetailPanel
+  const allEntities = useMemo(() => {
+    const characters: any[] = [];
+    const elements: any[] = [];
+    const puzzles: any[] = [];
+    const timeline: any[] = [];
+    
+    serverNodes.forEach((node: any) => {
+      if (node.data?.entity && node.data?.metadata?.entityType) {
+        switch (node.data.metadata.entityType) {
+          case 'character':
+            characters.push(node.data.entity);
+            break;
+          case 'element':
+            elements.push(node.data.entity);
+            break;
+          case 'puzzle':
+            puzzles.push(node.data.entity);
+            break;
+          case 'timeline':
+            timeline.push(node.data.entity);
+            break;
+        }
+      }
+    });
+    
+    return { characters, elements, puzzles, timeline };
+  }, [serverNodes]);
+  
+  // Log metadata if available
+  useEffect(() => {
+    if (graphData?.metadata?.missingEntities?.length) {
+      console.warn('[GraphView] Missing entities detected:', graphData.metadata.missingEntities);
+    }
+  }, [graphData?.metadata]);
   
   // Use consolidated filter selector for better performance (1 subscription vs 14+)
   const filters = useFilterSelectors();
@@ -186,12 +195,8 @@ function GraphViewComponent() {
   const {
     searchTerm,
     selectedNodeId,
-    focusedNodeId,
     setSelectedNode,
-    setFocusedNode,
     connectionDepth,
-    filterMode,
-    focusRespectFilters,
     entityVisibility,
     characterSelectedTiers,
     characterType,
@@ -216,20 +221,16 @@ function GraphViewComponent() {
 
   /**
    * Use the new consolidated graph layout hook to calculate everything in one go.
-   * This eliminates the 11-stage deferred rendering pipeline and visual desync issues.
+   * Now using server-provided nodes and edges!
    */
   const { layoutedNodes, filteredEdges, totalUniverseNodes } = useGraphLayout({
-    characters,
-    elements,
-    puzzles,
-    timeline,
+    nodes: serverNodes,
+    edges: serverEdges,
     viewConfig,
     // Individual filter values to avoid object recreation
     searchTerm,
-    focusedNodeId,
+    selectedNodeId,
     connectionDepth,
-    filterMode,
-    focusRespectFilters,
     entityVisibility,
     // Character filters as primitives
     characterType,
@@ -273,36 +274,26 @@ function GraphViewComponent() {
 
   // Click handlers for node interaction
   const onNodeClick = (nodeId: string) => {
-    // Always open detail panel for the clicked node
+    // Open detail panel for the clicked node
     setSelectedNode(nodeId);
-    
-    // Toggle focused node for depth filtering
-    if (focusedNodeId === nodeId) {
-      // Clicking the same focused node again unfocuses it
-      setFocusedNode(null);
-    } else {
-      // Set as focused node for depth filtering
-      setFocusedNode(nodeId);
-    }
   };
   
   const onEdgeClick = () => {
     // Edge click handler - currently no action needed
   };
 
-  // Handle detail panel close - only clears selection, not focus
+  // Handle detail panel close - clears selection
   const handleDetailPanelClose = () => {
     setSelectedNode(null);
-    // Keep focusedNodeId - user might want to maintain the filtered view
   };
 
-  // Get focused node details for status bar
-  const focusedNodeData = useMemo(() => {
-    if (!focusedNodeId) return null;
-    const node = layoutedNodes.find(n => n.id === focusedNodeId);
+  // Get selected node details for status bar
+  const selectedNodeData = useMemo(() => {
+    if (!selectedNodeId) return null;
+    const node = layoutedNodes.find(n => n.id === selectedNodeId);
     if (!node) return null;
     return { id: node.id, name: node.data.label };
-  }, [focusedNodeId, layoutedNodes]);
+  }, [selectedNodeId, layoutedNodes]);
 
   // hasActiveFilters is now part of the filters object
 
@@ -324,7 +315,7 @@ function GraphViewComponent() {
         <div className="text-center">
           <p className="text-red-500 mb-4">Error loading graph data</p>
           <button 
-            onClick={refetchAll}
+            onClick={() => refetchAll()}
             className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Retry
@@ -341,9 +332,8 @@ function GraphViewComponent() {
         <FilterStatusBar
           totalNodes={totalUniverseNodes}
           visibleNodes={layoutedNodes.length}
-          filterMode={filterMode}
           connectionDepth={connectionDepth ?? 0}
-          focusedNode={focusedNodeData}
+          selectedNode={selectedNodeData}
           hasActiveFilters={hasActiveFilters()}
         />
         
@@ -359,7 +349,6 @@ function GraphViewComponent() {
           <ViewportController 
             searchTerm={searchTerm}
             selectedNodeId={selectedNodeId}
-            focusedNodeId={focusedNodeId}
             connectionDepth={connectionDepth}
             nodes={reactFlowNodes}
           />
@@ -409,12 +398,7 @@ function GraphViewComponent() {
           entity={selectedEntity.entity}
           entityType={selectedEntity.entityType}
           onClose={handleDetailPanelClose}
-          allEntities={{
-            characters,
-            elements,
-            puzzles,
-            timeline
-          }}
+          allEntities={allEntities}
         />
       )}
     </div>

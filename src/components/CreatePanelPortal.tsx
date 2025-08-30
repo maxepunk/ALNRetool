@@ -92,7 +92,7 @@ export function CreatePanelPortal() {
                     console.warn(`Failed to find node ${graphNodeId} after ${maxRetries} attempts`);
                     // Still set selection state even if focus fails
                     useFilterStore.getState().setSelectedNode(graphNodeId);
-                    useFilterStore.getState().setFocusedNode(graphNodeId);
+                    useFilterStore.getState().setSelectedNode(graphNodeId);
                     return;
                   }
                   
@@ -111,7 +111,7 @@ export function CreatePanelPortal() {
                     // For focus, we need to verify the node exists in the graph
                     // We'll check by trying to focus and seeing if it succeeds
                     // The viewport manager will handle the actual focusing
-                    currentState.setFocusedNode(graphNodeId);
+                    currentState.setSelectedNode(graphNodeId);
                     
                     // If this is first attempt, schedule a verification check
                     if (retries === 0) {

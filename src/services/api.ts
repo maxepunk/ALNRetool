@@ -20,7 +20,6 @@ import type {
   TimelineEvent,
 } from '@/types/notion/app';
 import { requestBatcher } from './requestBatcher';
-import { cacheVersionManager } from '@/lib/cache/CacheVersionManager';
 
 /**
  * Metadata for atomic parent relationship creation.
@@ -151,7 +150,6 @@ async function fetcherImpl<T>(
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...cacheVersionManager.getRequestHeaders(), // Add cache version headers
   };
 
   // Only send API key header if we have one (for local dev)
@@ -179,8 +177,6 @@ async function fetcherImpl<T>(
     );
   }
 
-  // Process cache version headers
-  cacheVersionManager.processResponseHeaders(response.headers);
   
   const data = await response.json();
 

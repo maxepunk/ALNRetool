@@ -48,8 +48,15 @@ const CHARACTERS_DATABASE_ID = config.notionDatabaseIds.characters;
 const ELEMENTS_DATABASE_ID = config.notionDatabaseIds.elements;
 
 /**
+ * Notion database ID for puzzles collection.
+ * Used for inverse relation updates.
+ * @constant {string}
+ */
+const PUZZLES_DATABASE_ID = config.notionDatabaseIds.puzzles;
+
+/**
  * Inverse relation configuration for characters.
- * Defines how character updates propagate to related elements.
+ * Defines how character updates propagate to related elements and puzzles.
  * 
  * @constant {InverseRelation[]} characterInverseRelations
  * 
@@ -58,12 +65,18 @@ const ELEMENTS_DATABASE_ID = config.notionDatabaseIds.elements;
  *    - Updates Element.Owner field
  *    - Many-to-one bidirectional (many elements can have one owner)
  * 
+ * 2. **characterPuzzleIds**: Puzzles this character can access
+ *    - Note: Puzzles don't have a reciprocal "Characters" field in Notion
+ *    - This is a one-way relationship from Character to Puzzle
+ *    - Bidirectional is set to false as puzzles can't update back
+ * 
  * Note: associatedElementIds is a rollup from timeline events
  * and cannot be directly edited, so no inverse relation is needed.
  * 
  * **Synchronization:**
  * When a character's owned elements change, the corresponding
  * element records are automatically updated to maintain consistency.
+ * Character-puzzle relationships are one-way only.
  */
 const characterInverseRelations: InverseRelation[] = [
   {
@@ -73,6 +86,9 @@ const characterInverseRelations: InverseRelation[] = [
     relationType: 'one-to-many',
     bidirectional: true
   }
+  // Note: characterPuzzleIds cannot have a bidirectional inverse relation
+  // because puzzles don't have a "Characters" field in the Notion schema.
+  // The relationship is handled during creation via _parentRelation logic.
 ];
 
 /**
