@@ -1,4 +1,5 @@
 import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { notionHandlers } from '@/test/mocks/notion-handlers';
 
 /**
  * E2E Tests for Edge Mutation Fixes
