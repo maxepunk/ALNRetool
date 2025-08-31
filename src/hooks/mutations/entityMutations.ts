@@ -239,8 +239,22 @@ function createEntityMutation<T extends Entity | void = Entity>(
         const ctx = context as MutationContext | undefined;
         
         if (ctx?.previousGraphData) {
-          // Primary: restore exact previous state
-          queryClient.setQueryData(ctx.queryKey, ctx.previousGraphData);
+          // If this was a CREATE (no id), remove the optimistic node
+          if (!variables.id && ctx.tempId) {
+            queryClient.setQueryData(ctx.queryKey, (old: any) => {
+              if (!old) return old;
+              return {
+                ...old,
+                nodes: old.nodes.filter((n: any) => n.id !== ctx.tempId),
+                edges: old.edges.filter((e: any) => 
+                  !e.source.includes(ctx.tempId) && 
+                  !e.target.includes(ctx.tempId)
+                )
+              };
+            });
+          } else {
+            queryClient.setQueryData(ctx.queryKey, ctx.previousGraphData);
+          }
         } else if (ctx) {
           // Fallback: clean up optimistic artifacts
           queryClient.setQueryData(ctx.queryKey, (current: any) => {
