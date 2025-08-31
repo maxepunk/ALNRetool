@@ -10,6 +10,9 @@ import { notion } from '../../services/notion.js';
 import { cacheService } from '../../services/cache.js';
 import { log } from '../../utils/logger.js';
 import type { NotionPage } from '../../../src/types/notion/raw.js';
+import { captureGraphState } from '../../services/graphStateCapture.js';
+import { deltaCalculator } from '../../services/deltaCalculator.js';
+import type { GraphState } from '../../types/delta.js';
 
 /**
  * Configuration for inverse relation updates
@@ -54,7 +57,7 @@ export interface EntityRouterConfig<T> {
 /**
  * Updates inverse relations when an entity is modified
  */
-async function updateInverseRelations<T>(
+async function updateInverseRelations(
   entityId: string,
   oldData: any,
   newData: any,
@@ -318,13 +321,37 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       // Invalidate graph cache to ensure graph reflects new entity
       cacheService.invalidatePattern('graph_complete*'); // Graph caches: "graph_complete_all", "graph_complete_{viewConfig}"
       
-      res.status(201).json(transformed);
+      // Return consistent response structure
+      // WHY: Standardized API responses across all mutations
+      res.status(201).json({
+        success: true,
+        data: transformed,
+        delta: undefined  // CREATE has no delta (everything is new)
+      });
     }));
   }
   
   // DELETE /:id - Archive entity in Notion
   router.delete('/:id', asyncHandler(async (req, res) => {
     const { id } = req.params;
+    let graphStateBefore: GraphState | null = null;
+    
+    // Capture graph state before deletion for delta calculation
+    // WHY: Need the before state to calculate what nodes/edges will be removed
+    try {
+      graphStateBefore = await captureGraphState(id, config.entityName);
+      log.info(`[Delta] Captured graph state before ${config.entityName} deletion`, {
+        entityId: id,
+        nodeCount: graphStateBefore?.nodes.length ?? 0,
+        edgeCount: graphStateBefore?.edges.length ?? 0
+      });
+    } catch (error) {
+      // Non-fatal: Continue without delta calculation
+      log.warn(`[Delta] Failed to capture graph state, will invalidate full cache`, {
+        entityId: id,
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
     
     // If we have inverse relations, get the entity data before deletion
     let entityData: any = null;
@@ -357,20 +384,84 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       );
     }
     
-    // Invalidate cache for this entity and lists
-    cacheService.invalidatePattern(`${config.entityName}_${id}`);
-    cacheService.invalidatePattern(`${config.entityName}:*`);
+    // Calculate delta for deletion if we have the before state
+    let delta = null;
+    if (graphStateBefore && entityData) {
+      try {
+        // For deletion, the after state has the node removed
+        // WHY: We simulate the deleted state by removing the entity from the graph
+        const graphStateAfter = {
+          nodes: graphStateBefore.nodes.filter((n: any) => n.id !== id),
+          edges: graphStateBefore.edges.filter((e: any) => e.source !== id && e.target !== id),
+          capturedAt: Date.now()
+        };
+        
+        // Calculate the delta showing what was deleted
+        delta = deltaCalculator.calculateGraphDelta(
+          graphStateBefore.nodes,
+          graphStateAfter.nodes,
+          graphStateBefore.edges,
+          graphStateAfter.edges,
+          entityData  // The deleted entity
+        );
+        
+        log.info(`[Delta] Calculated delta for ${config.entityName} deletion`, {
+          entityId: id,
+          nodesDeleted: delta?.changes.nodes.deleted.length ?? 0,
+          edgesDeleted: delta?.changes.edges.deleted.length ?? 0
+        });
+      } catch (error) {
+        log.error(`[Delta] Failed to calculate deletion delta`, {
+          entityId: id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
+    }
     
-    // Invalidate graph cache to ensure graph reflects deletion
-    cacheService.invalidatePattern('graph_complete*');
+    // Smart cache invalidation based on delta
+    if (delta) {
+      // Only invalidate the specific entity cache
+      cacheService.invalidatePattern(`${config.entityName}_${id}`);
+    } else {
+      // No delta - fall back to full cache invalidation
+      cacheService.invalidatePattern(`${config.entityName}_${id}`);
+      cacheService.invalidatePattern(`${config.entityName}:*`);
+      cacheService.invalidatePattern('graph_complete*');
+    }
     
-    res.status(200).json({ success: true });
+    // Return consistent response structure
+    // WHY: Standardized API responses make client code simpler and more predictable
+    const includeDelta = req.query.include_delta === 'true';
+    
+    res.status(200).json({ 
+      success: true,
+      data: entityData || { id, archived: true },  // Return what was deleted
+      delta: (includeDelta && delta) ? delta : undefined
+    });
   }));
   
   // PUT /:id - Update entity (if mapper provided)
   if (config.toNotionProps) {
     router.put('/:id', asyncHandler(async (req, res) => {
       let oldData: any = null;
+      let graphStateBefore: GraphState | null = null;
+      
+      // Capture graph state before mutation for delta calculation
+      // WHY: Need to compare before/after states to calculate minimal changes
+      try {
+        graphStateBefore = await captureGraphState(req.params.id, config.entityName);
+        log.info(`[Delta] Captured graph state before ${config.entityName} update`, {
+          entityId: req.params.id,
+          nodeCount: graphStateBefore?.nodes.length ?? 0,
+          edgeCount: graphStateBefore?.edges.length ?? 0
+        });
+      } catch (error) {
+        // Non-fatal: Continue without delta calculation
+        log.warn(`[Delta] Failed to capture graph state, will invalidate full cache`, {
+          entityId: req.params.id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
       
       // Get old data if we have inverse relations
       if (config.inverseRelations && config.inverseRelations.length > 0) {
@@ -406,28 +497,91 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         );
       }
       
-      // Invalidate caches for this entity
-      cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
-      cacheService.invalidatePattern(`${config.entityName}:*`);
-      
-      // Invalidate graph cache to ensure graph reflects updates
-      cacheService.invalidatePattern('graph_complete*');
-      
-      // If we have inverse relations, invalidate those entity types too
-      if (config.inverseRelations) {
-        for (const relation of config.inverseRelations) {
-          // Extract entity name from the target database ID pattern
-          const targetEntityName = relation.targetDatabaseId.includes('element') ? 'elements' :
-                                   relation.targetDatabaseId.includes('puzzle') ? 'puzzles' :
-                                   relation.targetDatabaseId.includes('character') ? 'characters' : 
-                                   'timeline';
+      // Calculate delta if we have the before state
+      let delta = null;
+      if (graphStateBefore) {
+        try {
+          // Optimize: If no inverse relations, construct after state in-memory
+          // WHY: Avoid second API call when only the target entity changed
+          let graphStateAfter: GraphState | null = null;
           
-          // Invalidate the target entity type caches
-          cacheService.invalidatePattern(`${targetEntityName}:*`);
+          if (!config.inverseRelations || config.inverseRelations.length === 0) {
+            // Simple update - only this entity changed, construct in-memory
+            graphStateAfter = {
+              nodes: graphStateBefore.nodes.map((n: any) => 
+                n.id === req.params.id ? { ...n, data: { ...n.data, entity: transformed } } : n
+              ),
+              edges: graphStateBefore.edges, // Edges unchanged for simple property updates
+              capturedAt: Date.now()
+            };
+          } else {
+            // Complex update - inverse relations modified other entities, must re-fetch
+            graphStateAfter = await captureGraphState(req.params.id, config.entityName);
+          }
+          
+          // Only calculate delta if we have both states
+          if (graphStateAfter) {
+            delta = deltaCalculator.calculateGraphDelta(
+              graphStateBefore.nodes,
+              graphStateAfter.nodes,
+              graphStateBefore.edges,
+              graphStateAfter.edges,
+              transformed as any  // Type assertion for generic constraint
+            );
+            
+            log.info(`[Delta] Calculated delta for ${config.entityName} update`, {
+              entityId: req.params.id,
+              nodesUpdated: delta?.changes.nodes.updated.length ?? 0,
+              nodesCreated: delta?.changes.nodes.created.length ?? 0,
+              nodesDeleted: delta?.changes.nodes.deleted.length ?? 0,
+              edgesCreated: delta?.changes.edges.created.length ?? 0,
+              edgesUpdated: delta?.changes.edges.updated.length ?? 0,
+              edgesDeleted: delta?.changes.edges.deleted.length ?? 0
+            });
+          }
+        } catch (error) {
+          log.error(`[Delta] Failed to calculate delta`, {
+            entityId: req.params.id,
+            error: error instanceof Error ? error.message : String(error)
+          });
         }
       }
       
-      res.json(transformed);
+      // If we calculated a delta successfully, skip heavy cache invalidation
+      // WHY: Delta will be applied directly, no need to refetch
+      if (delta) {
+        // Only invalidate the specific entity cache
+        cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
+      } else {
+        // No delta - fall back to full cache invalidation
+        cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
+        cacheService.invalidatePattern(`${config.entityName}:*`);
+        cacheService.invalidatePattern('graph_complete*');
+        
+        // If we have inverse relations, invalidate those entity types too
+        if (config.inverseRelations) {
+          for (const relation of config.inverseRelations) {
+            // Extract entity name from the target database ID pattern
+            const targetEntityName = relation.targetDatabaseId.includes('element') ? 'elements' :
+                                     relation.targetDatabaseId.includes('puzzle') ? 'puzzles' :
+                                     relation.targetDatabaseId.includes('character') ? 'characters' : 
+                                     'timeline';
+            
+            // Invalidate the target entity type caches
+            cacheService.invalidatePattern(`${targetEntityName}:*`);
+          }
+        }
+      }
+      
+      // Return consistent response structure  
+      // WHY: Standardized API responses make client code simpler and more predictable
+      const includeDelta = req.query.include_delta === 'true';
+      
+      res.json({
+        success: true,
+        data: transformed,
+        delta: (includeDelta && delta) ? delta : undefined
+      });
     }));
   }
   
