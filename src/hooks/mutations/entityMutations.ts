@@ -238,25 +238,44 @@ function createEntityMutation<T extends Entity | void = Entity>(
       onError: (error, variables, context) => {
         const ctx = context as MutationContext | undefined;
         
-        if (ctx?.previousGraphData) {
-          // If this was a CREATE (no id), remove the optimistic node
-          if (!variables.id && ctx.tempId) {
-            queryClient.setQueryData(ctx.queryKey, (old: any) => {
-              if (!old) return old;
-              return {
-                ...old,
-                nodes: old.nodes.filter((n: any) => n.id !== ctx.tempId),
-                edges: old.edges.filter((e: any) => 
-                  !e.source.includes(ctx.tempId) && 
-                  !e.target.includes(ctx.tempId)
-                )
-              };
-            });
-          } else {
-            queryClient.setQueryData(ctx.queryKey, ctx.previousGraphData);
-          }
-        } else if (ctx) {
-          // Fallback: clean up optimistic artifacts
+        if (!ctx) {
+          // Cannot rollback without context, just show error
+          toast.error(error.message || `Failed to ${mutationType} entity`);
+          options?.onError?.(error, variables, context);
+          return;
+        }
+
+        // 1. Handle CREATE failure: remove optimistic node and its associated edges
+        // This branch is taken if it was a CREATE operation (no original ID, but a tempId was generated)
+        if (!variables.id && ctx.tempId) {
+          queryClient.setQueryData(ctx.queryKey, (old: any) => {
+            if (!old) return old; // No old data, nothing to remove
+
+            const newNodes = old.nodes.filter((n: any) => n.id !== ctx.tempId);
+            let newEdges = (old.edges || []).filter((e: any) => 
+              e.source !== ctx.tempId && e.target !== ctx.tempId // Use strict equality
+            );
+
+            // Also remove any edges explicitly marked as created optimistically
+            if (ctx.createdEdges?.length) {
+              newEdges = newEdges.filter((e: any) => !ctx.createdEdges!.includes(e.id));
+            }
+
+            return {
+              ...old,
+              nodes: newNodes,
+              edges: newEdges
+            };
+          });
+        } 
+        // 2. Handle UPDATE/DELETE failure: restore previous state
+        // This branch is taken if previousGraphData was successfully captured (can be null or actual data)
+        else if (ctx.previousGraphData !== undefined) { // Check for explicit undefined, allowing null
+          queryClient.setQueryData(ctx.queryKey, ctx.previousGraphData);
+        } 
+        // 3. Fallback: clean up optimistic artifacts if previousGraphData was not available
+        // (e.g., onMutate failed before capturing, or other unexpected scenarios)
+        else { 
           queryClient.setQueryData(ctx.queryKey, (current: any) => {
             if (!current) return current;
             
@@ -272,9 +291,9 @@ function createEntityMutation<T extends Entity | void = Entity>(
                   }
                 }
               })),
-              // Remove optimistically created edges
+              // Remove optimistically created edges if any were tracked
               edges: ctx.createdEdges?.length 
-                ? current.edges.filter((e: any) => !ctx.createdEdges!.includes(e.id))
+                ? (current.edges || []).filter((e: any) => !ctx.createdEdges!.includes(e.id))
                 : current.edges
             };
           });
