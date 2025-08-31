@@ -265,19 +265,16 @@ export const charactersApi = {
     let hasMore = true;
     let pageCount = 0;
 
-    console.debug('[charactersApi.listAll] Starting to fetch all characters', undefined, filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
       const response = await charactersApi.list({ ...filters, limit: 100, cursor });
-      console.debug(`[charactersApi.listAll] Page ${pageCount}: ${response.data.length} items, hasMore: ${response.hasMore}`);
       
       allCharacters.push(...response.data);
       cursor = response.nextCursor || undefined;
       hasMore = response.hasMore;
     }
 
-    console.debug(`[charactersApi.listAll] Complete. Total: ${allCharacters.length}`);
     return allCharacters;
   },
 
@@ -338,13 +335,11 @@ export const elementsApi = {
     let hasMore = true;
     let pageCount = 0;
 
-    console.debug('[elementsApi.listAll] Starting to fetch all elements', undefined, filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
       
       const response = await elementsApi.list({ ...filters, limit: 100, cursor });
-      console.debug(`[elementsApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
       
       allElements.push(...response.data);
       cursor = response.nextCursor || undefined;
@@ -356,19 +351,8 @@ export const elementsApi = {
         hasMore = false;
       }
       
-      // Debug: Check if we should continue
-      console.debug(`[elementsApi.listAll] Continue? hasMore=${hasMore}, cursor=${cursor}`);
     }
 
-    console.debug(`[elementsApi.listAll] Complete. Total elements: ${allElements.length}`);
-    
-    // Debug: Check for the specific element we're looking for
-    const blackMarketCard = allElements.find(e => e.id === '1dc2f33d-583f-8056-bf34-c6a9922067d8');
-    if (blackMarketCard) {
-      console.debug('[elementsApi.listAll] Found Black Market Business card in fetched data!');
-    } else {
-      console.debug('[elementsApi.listAll] Black Market Business card NOT found in fetched data');
-    }
     
     return allElements;
   },
@@ -496,13 +480,11 @@ export const timelineApi = {
     let hasMore = true;
     let pageCount = 0;
 
-    console.debug('[timelineApi.listAll] Starting to fetch all timeline events', undefined, filters ? 'with filters' : 'no filters');
     
     while (hasMore) {
       pageCount++;
       
       const response = await timelineApi.list({ ...filters, limit: 100, cursor });
-      console.debug(`[timelineApi.listAll] Page ${pageCount} received: ${response.data.length} items, hasMore: ${response.hasMore}, nextCursor: ${response.nextCursor}`);
       
       allEvents.push(...response.data);
       cursor = response.nextCursor || undefined;
@@ -515,15 +497,6 @@ export const timelineApi = {
       }
     }
 
-    console.debug(`[timelineApi.listAll] Complete. Total timeline events: ${allEvents.length}`);
-    
-    // Debug: Check for the specific timeline event we're looking for
-    const missingEvent = allEvents.find(e => e.id === '1b52f33d-583f-80f0-a1f3-ecb9b9cdd040');
-    if (missingEvent) {
-      console.debug('[timelineApi.listAll] Found timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 in fetched data!');
-    } else {
-      console.debug('[timelineApi.listAll] Timeline event 1b52f33d-583f-80f0-a1f3-ecb9b9cdd040 NOT found in fetched data');
-    }
     
     return allEvents;
   },
@@ -616,22 +589,12 @@ export const synthesizedApi = {
     totalPuzzles: number;
   }> => {
     const queryString = filters ? buildQueryString(filters as Record<string, unknown>) : '';
-    console.debug('[synthesizedApi.getAll] Fetching synthesized data...', undefined, filters ? `with filters: ${queryString}` : 'no filters');
-    
     const result = await fetcher<{
       elements: Element[];
       puzzles: Puzzle[];
       totalElements: number;
       totalPuzzles: number;
     }>(`/notion/synthesized${queryString}`);
-    
-    console.debug(`[synthesizedApi.getAll] Complete. Elements: ${result.totalElements}, Puzzles: ${result.totalPuzzles}`);
-    
-    // Debug: Check relationship counts
-    const elementsWithPuzzleRefs = result.elements.filter(e => 
-      (e.requiredForPuzzleIds?.length > 0) || (e.rewardedByPuzzleIds?.length > 0)
-    );
-    console.debug(`[synthesizedApi.getAll] Elements with puzzle relationships: ${elementsWithPuzzleRefs.length}`);
     
     return result;
   },

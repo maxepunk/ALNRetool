@@ -19,6 +19,7 @@ const TimelineNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as GraphNodeData<TimelineEvent>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
+  const isOptimistic = (metadata as any).isOptimistic || false;
   
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -102,6 +103,10 @@ const TimelineNode = memo(({ data, selected }: NodeProps) => {
       headerSlot={badges}
       footerSlot={stats}
       handlePositions={handlePositions}
+      className={isOptimistic ? 'animate-pulse' : undefined}
+      outlineColor={isOptimistic ? '#10b981' : undefined}
+      outlineWidth={isOptimistic ? 3 : undefined}
+      opacity={isOptimistic ? 0.8 : undefined}
     >
       {content}
     </BaseNodeCard>

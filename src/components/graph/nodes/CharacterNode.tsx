@@ -20,6 +20,7 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as GraphNodeData<Character>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
+  const isOptimistic = (metadata as any).isOptimistic || false;
   
   // Use shared hook for filter styles
   const { 
@@ -94,9 +95,9 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
         isNPC={isNPC}
         headerSlot={headerSlot}
         footerSlot={footerSlot}
-        outlineColor={outlineColor}
-        outlineWidth={outlineWidth}
-        opacity={opacity}
+        outlineColor={isOptimistic ? '#10b981' : outlineColor}
+        outlineWidth={isOptimistic ? 3 : outlineWidth}
+        opacity={isOptimistic ? 0.8 : opacity}
       >
         {content}
       </HexagonCard>

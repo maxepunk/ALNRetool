@@ -76,7 +76,6 @@ function useGraphViewport() {
     });
     
     if (matchingNodes.length === 0) {
-      console.info('[useGraphViewport] No matching nodes found for search:', searchQuery);
       // Still fit to all visible nodes if no matches
       handleZoomToFit();
       return;
@@ -89,13 +88,6 @@ function useGraphViewport() {
       duration: options?.duration ?? 800
     });
     
-    if (import.meta.env.DEV) {
-      console.debug('[useGraphViewport] Fitted to search results:', {
-        query: searchQuery,
-        matchCount: matchingNodes.length,
-        nodeIds: matchingNodes.map(n => n.id)
-      });
-    }
   }, [getNodes, fitView, handleZoomToFit]);
   
   // Debouncing for rapid viewport changes
@@ -203,27 +195,18 @@ export function useViewportManager(
       switch (priority) {
         case 3: // Selected node
           if (selectedNodeId) {
-            if (import.meta.env.DEV) {
-              console.debug('[ViewportManager] Focusing on selected node:', selectedNodeId);
-            }
             fitToNodes([selectedNodeId], { padding: 0.2, duration: 600 });
           }
           break;
           
         case 2: // Search results
           if (searchTerm?.trim()) {
-            if (import.meta.env.DEV) {
-              console.debug('[ViewportManager] Focusing on search results:', searchTerm);
-            }
             fitToSearchResults(searchTerm, { padding: 0.25, duration: 600 });
           }
           break;
           
         case 1: // All visible nodes
         default:
-          if (import.meta.env.DEV) {
-            console.debug('[ViewportManager] Fitting all visible nodes');
-          }
           // If we have specific visible nodes, fit to them
           if (visibleNodes && visibleNodes.length > 0) {
             fitToNodes(visibleNodes.map(n => n.id), { padding: 0.3, duration: 600 });
@@ -259,30 +242,13 @@ export function useViewportManager(
       
       // Skip if both are effectively empty (performance optimization)
       if (!normalizedSearch && !normalizedPrevSearch && searchChanged) {
-        if (import.meta.env.DEV) {
-          console.debug('[ViewportManager] Ignoring whitespace-only search change');
-        }
         previousState.current.searchTerm = normalizedSearch;
         return;
       }
       
-      if (import.meta.env.DEV) {
-        console.debug('[ViewportManager] State change detected:', {
-          searchChanged,
-          selectedChanged,
-          depthChanged,
-          currentPriority,
-          searchTerm: normalizedSearch || 'none',
-          selectedNodeId: selectedNodeId || 'none',
-          connectionDepth: connectionDepth || 'none'
-        });
-      }
       
       // Throttle rapid changes to prevent viewport thrashing
       if (isThrottledRef.current) {
-        if (import.meta.env.DEV) {
-          console.debug('[ViewportManager] Throttling rapid viewport change');
-        }
         if (throttleRef.current) {
           clearTimeout(throttleRef.current);
         }
@@ -328,9 +294,6 @@ export function useViewportManager(
      * Force focus on search results (bypasses priority logic)
      */
     focusSearchResults: (query: string) => {
-      if (import.meta.env.DEV) {
-        console.debug('[ViewportManager] Manual focus on search:', query);
-      }
       fitToSearchResults(query, { padding: 0.25, duration: 600 });
     },
     
@@ -338,9 +301,6 @@ export function useViewportManager(
      * Force focus on specific nodes (bypasses priority logic)
      */
     focusNodes: (nodeIds: string[]) => {
-      if (import.meta.env.DEV) {
-        console.debug('[ViewportManager] Manual focus on nodes:', nodeIds);
-      }
       fitToNodes(nodeIds, { padding: 0.3, duration: 600 });
     },
     
@@ -348,9 +308,6 @@ export function useViewportManager(
      * Force fit all visible nodes (bypasses priority logic)
      */
     fitAll: () => {
-      if (import.meta.env.DEV) {
-        console.debug('[ViewportManager] Manual fit all nodes');
-      }
       zoomToFit();
     },
     

@@ -656,7 +656,6 @@ export function applyHierarchicalLayout(
     });
   });
   
-  console.debug(`Added ${nodesAdded} nodes to dagre graph`);
   
   // Add edges - only if both source and target exist
   let invalidEdgeCount = 0;

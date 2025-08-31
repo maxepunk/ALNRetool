@@ -3,13 +3,14 @@ import { X, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectItem } from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import {
   useCreateCharacter,
   useCreateElement,
   useCreatePuzzle,
   useCreateTimelineEvent
 } from '@/hooks/mutations';
+import { useViewConfig } from '@/hooks/useViewConfig';
 import type { ParentContext } from '@/stores/creationStore';
 import { zIndex } from '@/config/zIndex';
 import { validateFields, fieldValidationConfigs } from '@/utils/fieldValidation';
@@ -73,12 +74,16 @@ const REQUIRED_FIELDS = {
 export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: CreatePanelProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Get current view type for correct cache targeting
+  const { viewType } = useViewConfig();
 
-  // Get create mutation based on type
-  const createCharacter = useCreateCharacter();
-  const createElement = useCreateElement();
-  const createPuzzle = useCreatePuzzle();
-  const createTimelineEvent = useCreateTimelineEvent();
+  // Get create mutation based on type with viewName
+  // Use viewType (like 'full-graph') not config.name (like 'Full Graph') for cache keys
+  const createCharacter = useCreateCharacter({ viewName: viewType });
+  const createElement = useCreateElement({ viewName: viewType });
+  const createPuzzle = useCreatePuzzle({ viewName: viewType });
+  const createTimelineEvent = useCreateTimelineEvent({ viewName: viewType });
 
   const createMutation =
     entityType === 'character' ? createCharacter :
@@ -99,6 +104,9 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
     const fieldRules: Record<string, any[]> = {};
     fields.forEach(field => {
       if (field.required) {
+        // Use text.required for all types as it checks non-empty values
+        // This works for select and date fields too
+        // Structure allows for future type-specific rules if needed
         fieldRules[field.key] = fieldValidationConfigs.text.required;
       }
     });
@@ -155,14 +163,14 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
               disabled={createMutation.isPending}
             >
               {!formData[field.key] && (
-                <SelectItem value="" disabled>
+                <option value="" disabled>
                   Select {field.label.toLowerCase()}
-                </SelectItem>
+                </option>
               )}
               {field.options?.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <option key={option.value} value={option.value}>
                   {option.label}
-                </SelectItem>
+                </option>
               ))}
             </Select>
             {errors[field.key] && (

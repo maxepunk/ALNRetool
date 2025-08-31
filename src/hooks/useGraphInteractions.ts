@@ -135,12 +135,11 @@ export function useGraphInteractions({
   }, [readOnly, onNodeDoubleClick]);
   
   // Handle node context menu
-  const handleNodeContextMenu: NodeMouseHandler = useCallback((event, node) => {
+  const handleNodeContextMenu: NodeMouseHandler = useCallback((event, _node) => {
     event.preventDefault();
     event.stopPropagation();
     
     // Could open a context menu here
-    console.debug('Context menu for node:', undefined, node.id);
   }, []);
   
   // Handle edge click

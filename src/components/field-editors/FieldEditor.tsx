@@ -42,10 +42,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Select,
-  SelectItem,
-} from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { RelationFieldEditor } from './RelationFieldEditor';
 import { ArrayFieldEditor } from './ArrayFieldEditor';
@@ -177,14 +174,14 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
             className="bg-white/5 border-white/10 focus:border-white/20"
           >
             {!value && (
-              <SelectItem value="" disabled>
+              <option value="" disabled>
                 {field.placeholder || `Select ${field.label}`}
-              </SelectItem>
+              </option>
             )}
             {field.options?.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
+              <option key={option.value} value={option.value}>
                 {option.label}
-              </SelectItem>
+              </option>
             ))}
           </Select>
           {field.helperText && (

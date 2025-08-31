@@ -214,9 +214,7 @@ export function applyPureDagreLayout(
 ): GraphNode[] {
   const config = { ...DEFAULT_OPTIONS, ...options };
   
-  console.group('[Pure Dagre] Applying layout with natural flow');
-  // logger.debug('Configuration:', undefined, config);
-  // logger.debug('Input:', {  nodes: nodes.length, edges: edges.length  });
+  // Removed debug logging for cleaner code
   
   // Virtual edge injection removed in Phase 3 - using direct edges
   const enhancedEdges = edges;
@@ -249,7 +247,6 @@ export function applyPureDagreLayout(
   let edgeCount = 0;
   let virtualEdgeCount = 0;
   
-  console.group('[Dagre Edge Addition] Adding edges to Dagre graph');
   
   enhancedEdges.forEach(edge => {
     if (nodeIds.has(edge.source) && nodeIds.has(edge.target)) {
@@ -293,8 +290,6 @@ export function applyPureDagreLayout(
     }
   });
   
-  // logger.debug(`Total edges added: ${edgeCount} (including ${virtualEdgeCount} virtual edges)`);
-  console.groupEnd();
 
   // Run Dagre layout
   try {
@@ -304,8 +299,7 @@ export function applyPureDagreLayout(
     return nodes; // Return original nodes on failure
   }
 
-  // Log positions of specific puzzles we're tracking
-  console.group('[Dagre Position Analysis] Checking puzzle positions');
+  // Check positions of specific puzzles
   const queensNode = nodes.find(n => n.data.label?.includes('Queens/Sudoku'));
   const collabNode = nodes.find(n => n.data.label?.includes('Collab') && n.data.label?.includes('One Pagers'));
   
@@ -317,7 +311,6 @@ export function applyPureDagreLayout(
     // logger.debug(`Collab One Pagers position: x=${collabDagreNode?.x}, y=${collabDagreNode?.y}`);
     
     // Check what edges are connected to these puzzles
-    console.group('Edge Analysis for problematic puzzles');
     
     // Get all edges for Queens/Sudoku
     const queensIncoming = dagreGraph.inEdges(queensNode.id);
@@ -347,8 +340,6 @@ export function applyPureDagreLayout(
       // Edge debugging - variables removed for unused warning cleanup
     });
     
-    console.groupEnd();
-    
     if (queensDagreNode && collabDagreNode) {
       if (queensDagreNode.x > collabDagreNode.x) {
         // logger.error(`❌ LAYOUT ERROR: Queens/Sudoku (x=${queensDagreNode.x}) is to the RIGHT of Collab One Pagers (x=${collabDagreNode.x})`);
@@ -358,7 +349,6 @@ export function applyPureDagreLayout(
       }
     }
   }
-  console.groupEnd();
 
   // Extract and apply positions
   let positionedNodes = extractPositions(nodes, dagreGraph);
@@ -379,7 +369,6 @@ export function applyPureDagreLayout(
   
   // Layout quality metrics removed in Phase 3
   
-  console.groupEnd();
 
   return positionedNodes;
 }

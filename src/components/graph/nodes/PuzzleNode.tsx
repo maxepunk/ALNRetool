@@ -14,6 +14,7 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as GraphNodeData<Puzzle>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
+  const isOptimistic = (metadata as any).isOptimistic || false;
   
   // Use shared hook for filter styles
   const { 
@@ -81,9 +82,10 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
         complexity={getComplexity()}
         size="medium"
         maxCount={5}
-        outlineColor={outlineColor}
-        outlineWidth={outlineWidth}
-        opacity={opacity}
+        outlineColor={isOptimistic ? '#10b981' : outlineColor}
+        outlineWidth={isOptimistic ? 3 : outlineWidth}
+        opacity={isOptimistic ? 0.8 : opacity}
+        className={isOptimistic ? 'animate-pulse' : undefined}
       />
     </div>
   );

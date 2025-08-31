@@ -107,6 +107,7 @@ import {
   useDeletePuzzle,
   useDeleteTimelineEvent,
 } from '@/hooks/mutations';
+import { useViewConfig } from '@/hooks/useViewConfig';
 import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
 
 /**
@@ -272,33 +273,40 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // Graph animation context
   const graphAnimation = useGraphAnimation();
   
+  // Get current view config for correct cache targeting
+  const { config } = useViewConfig();
+  
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Get appropriate mutation hook based on entity type
-  const updateCharacter = useUpdateCharacter();
-  const updateElement = useUpdateElement();
-  const updatePuzzle = useUpdatePuzzle();
-  const updateTimeline = useUpdateTimelineEvent();
+  // Get appropriate mutation hook based on entity type with viewName
+  const updateCharacter = useUpdateCharacter({ viewName: config.name });
+  const updateElement = useUpdateElement({ viewName: config.name });
+  const updatePuzzle = useUpdatePuzzle({ viewName: config.name });
+  const updateTimeline = useUpdateTimelineEvent({ viewName: config.name });
   
-  // Get delete mutation hooks
+  // Get delete mutation hooks with viewName
   const deleteCharacter = useDeleteCharacter({
+    viewName: config.name,
     onSuccess: () => {
       onClose();
     }
   });
   const deleteElement = useDeleteElement({
+    viewName: config.name,
     onSuccess: () => {
       onClose();
     }
   });
   const deletePuzzle = useDeletePuzzle({
+    viewName: config.name,
     onSuccess: () => {
       onClose();
     }
   });
   const deleteTimeline = useDeleteTimelineEvent({
+    viewName: config.name,
     onSuccess: () => {
       onClose();
     }

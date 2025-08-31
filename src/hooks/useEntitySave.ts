@@ -103,10 +103,6 @@ export function useEntitySave() {
     entity?: Entity | null,
     entityType?: EntityType
   ): Promise<void> => {
-    // Log in dev mode
-    if (import.meta.env.DEV) {
-      console.debug('Saving entity updates:', undefined, { updates, entityType });
-    }
 
     // Get entity ID and type
     const entityId = (updates as any).id || (entity as any)?.id;
@@ -153,10 +149,6 @@ export function useEntitySave() {
           
         default:
           throw new Error(`Unknown entity type: ${type}`);
-      }
-      
-      if (import.meta.env.DEV) {
-        console.debug('Entity saved successfully:', undefined, { entityId, type });
       }
     } catch (error) {
       console.error('Failed to save entity:', undefined, error instanceof Error ? error : new Error(String(error)));

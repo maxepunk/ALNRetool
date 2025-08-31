@@ -132,7 +132,7 @@ function ViewportController({
  */
 function GraphViewComponent() {
   // Get view configuration from route
-  const { config: viewConfig } = useViewConfig();
+  const { config: viewConfig, viewType } = useViewConfig();
   
   // NEW: Single query to fetch complete graph from server
   // Server handles all relationship resolution and returns nodes + edges
@@ -142,7 +142,7 @@ function GraphViewComponent() {
     isError: hasAnyError,
     refetch: refetchAll 
   } = useQuery({
-    queryKey: ['graph', 'complete', viewConfig?.name],
+    queryKey: ['graph', 'complete', viewType],
     queryFn: () => graphApi.getComplete(viewConfig),
     staleTime: 5 * 60 * 1000,
     enabled: !!viewConfig, // Only fetch when we have a view config

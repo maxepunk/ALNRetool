@@ -85,21 +85,11 @@ export const graphApi = {
     
     const data: GraphResponse = await response.json();
     
-    // Log metadata if available for debugging
-    if (data.metadata) {
-      console.log('[Graph API] Graph fetched', {
-        nodes: data.metadata.totalNodes,
-        edges: data.metadata.totalEdges,
-        placeholders: data.metadata.placeholderNodes,
-        buildTime: `${data.metadata.buildTime}ms`,
-        cached: data.metadata.cached,
-      });
-      
-      if (data.metadata.missingEntities.length > 0) {
-        console.warn('[Graph API] Missing entities detected', 
-          data.metadata.missingEntities
-        );
-      }
+    // Keep warning for actual issues
+    if (data.metadata?.missingEntities && data.metadata.missingEntities.length > 0) {
+      console.warn('[Graph API] Missing entities detected', 
+        data.metadata.missingEntities
+      );
     }
     
     return data;

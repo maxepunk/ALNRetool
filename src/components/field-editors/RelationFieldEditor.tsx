@@ -11,10 +11,7 @@ import React, { useMemo, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectItem,
-} from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { FieldEditorProps } from './types';
 import { formatErrorMessage } from '@/utils/fieldValidation';
@@ -99,21 +96,27 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   // Format error message consistently
   const displayError = error ? formatErrorMessage(error) : undefined;
   
-  // Parse value into array of IDs
+  // Parse value into array of IDs (normalized to strings)
   const selectedIds = useMemo(() => {
     if (!value) return [];
-    if (isMultiple) {
-      return Array.isArray(value) ? value : [];
-    } else {
-      // Single relation - value is a single ID
-      return value ? [value] : [];
-    }
+    const rawIds = isMultiple 
+      ? (Array.isArray(value) ? value : [])
+      : (value ? [value] : []);
+    return rawIds.map(id => String(id));
   }, [value, isMultiple]);
 
-  // Get available entities for selection
+  // Get available entities for selection with deduplication
   const targetType = (field as any).entityType || entityType;
   const availableEntities = useMemo(() => {
-    return getEntitiesOfType(allEntities, targetType);
+    const list = getEntitiesOfType(allEntities, targetType) || [];
+    const byId = new Map<string, any>();
+    for (const entity of list) {
+      const id = String(entity?.id || '');
+      if (id && !byId.has(id)) {
+        byId.set(id, entity);
+      }
+    }
+    return Array.from(byId.values());
   }, [allEntities, targetType]);
 
   // Get selected entities
@@ -144,14 +147,19 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
       return;
     }
 
+    // Normalize the value to string for consistent comparison
+    const normalizedValue = String(value);
+    
     if (isMultiple) {
       // Multi-select: add if not already selected
-      if (!selectedIds.includes(value)) {
-        onChange([...selectedIds, value]);
+      if (!selectedIds.includes(normalizedValue)) {
+        // When saving, preserve the original format of the field
+        const newIds = [...selectedIds.map(id => id), normalizedValue];
+        onChange(newIds);
       }
     } else {
       // Single-select: replace selection
-      onChange(value);
+      onChange(normalizedValue);
     }
   }, [selectedIds, onChange, disabled, field.readOnly, isMultiple, targetType, currentEntityId, currentEntityType, openCreatePanel, field.key]);
 
@@ -159,17 +167,26 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   const handleRemove = useCallback((entityId: string) => {
     if (disabled || field.readOnly) return;
 
+    const normalizedId = String(entityId);
+    
     if (isMultiple) {
-      const newIds = selectedIds.filter(id => id !== entityId);
+      const newIds = selectedIds.filter(id => id !== normalizedId);
       onChange(newIds);
     } else {
       onChange(null);
     }
   }, [selectedIds, onChange, disabled, field.readOnly, isMultiple]);
 
-  // Get unselected entities for the dropdown
+  // Get unselected entities for the dropdown with normalized ID comparison
   const unselectedEntities = useMemo(() => {
-    return availableEntities.filter(entity => !selectedIds.includes(entity.id));
+    const byId = new Map<string, any>();
+    for (const entity of availableEntities) {
+      const id = String(entity?.id || '');
+      if (id && !selectedIds.includes(id) && !byId.has(id)) {
+        byId.set(id, entity);
+      }
+    }
+    return Array.from(byId.values());
   }, [availableEntities, selectedIds]);
 
   // Render read-only state
@@ -240,32 +257,36 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
         </div>
       )}
 
-      {/* Select dropdown for adding new items */}
-      {(isMultiple || selectedEntities.length === 0) && unselectedEntities.length > 0 && (
-        <Select
-          value=""
-          onValueChange={handleSelect}
-          disabled={disabled}
-          className="bg-white/5 border-white/10 focus:border-white/20"
-        >
-          <SelectItem value="" disabled>
-            {isMultiple 
-              ? `Add ${field.label.toLowerCase()}...` 
-              : field.placeholder || `Select ${field.label.toLowerCase()}...`}
-          </SelectItem>
-          {unselectedEntities.map((entity) => (
-            <SelectItem key={entity.id} value={entity.id}>
-              {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
-            </SelectItem>
-          ))}
-          {/* Add "Create new" option */}
-          {targetType && (
-            <SelectItem value="create-new" className="text-primary">
-              + Create new {targetType}
-            </SelectItem>
-          )}
-        </Select>
-      )}
+      {/* Select dropdown for adding new items - always rendered but hidden when not needed */}
+      <Select
+        value=""
+        onValueChange={handleSelect}
+        disabled={disabled || !((isMultiple || selectedEntities.length === 0) && unselectedEntities.length > 0)}
+        className={cn(
+          "bg-white/5 border-white/10 focus:border-white/20",
+          !((isMultiple || selectedEntities.length === 0) && unselectedEntities.length > 0) && "hidden"
+        )}
+      >
+        <option key="__placeholder__" value="" disabled>
+          {isMultiple 
+            ? `Add ${field.label.toLowerCase()}...` 
+            : field.placeholder || `Select ${field.label.toLowerCase()}...`}
+        </option>
+        {unselectedEntities.map((entity) => {
+          const id = String(entity.id);
+          return (
+            <option key={`opt-${id}`} value={id}>
+              {entity.name || entity.description || `ID: ${id.slice(0, 8)}...`}
+            </option>
+          );
+        })}
+        {/* Add "Create new" option */}
+        {targetType && (
+          <option key="__create-new__" value="create-new" className="text-primary">
+            + Create new {targetType}
+          </option>
+        )}
+      </Select>
 
       {/* Empty state for single relation when one is selected */}
       {!isMultiple && selectedEntities.length > 0 && unselectedEntities.length === 0 && (

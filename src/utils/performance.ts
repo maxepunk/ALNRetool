@@ -10,10 +10,12 @@ export const perfLog = {
   },
   
   report() {
-    console.log('=== Performance Report ===');
-    console.log(`API Calls: ${this.apiCalls}`);
-    console.log(`Cache Updates: ${this.cacheUpdates}`);
-    console.log('Component Renders:', Object.fromEntries(this.renders));
+    // Performance metrics available via perfLog in window object
+    return {
+      apiCalls: this.apiCalls,
+      cacheUpdates: this.cacheUpdates,
+      renders: Object.fromEntries(this.renders)
+    };
   }
 };
 

@@ -323,29 +323,3 @@ function isValidViewType(view: string): boolean {
 }
 
 
-/**
- * URL State Debugging Utilities
- */
-export const urlStateDebug = {
-  /**
-   * Log current URL state parsing
-   */
-  logCurrentState(): void {
-    console.group('URL State Debug');
-    console.log('Current URL:', window.location.href);
-    console.log('Parsed filters:', parseUrlFilters());
-    console.groupEnd();
-  },
-  
-  /**
-   * Test URL encoding/decoding round trip
-   */
-  testRoundTrip(state: FilterState): boolean {
-    const params = filterStateToUrl(state);
-    const reconstructed = urlToFilterState(params);
-    console.log('Original:', state);
-    console.log('URL Params:', params.toString());
-    console.log('Reconstructed:', reconstructed);
-    return JSON.stringify(state) === JSON.stringify(reconstructed);
-  }
-};

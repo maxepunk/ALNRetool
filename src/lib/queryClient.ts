@@ -28,11 +28,8 @@ const queryCache = new QueryCache({
     }, error instanceof Error ? error : undefined)
     // In production, this would trigger error reporting/monitoring
   },
-  onSuccess: (_data, query) => {
+  onSuccess: (_data, _query) => {
     // Global success handler (useful for analytics)
-    console.debug('Query success:', {
-      queryKey: query.queryKey,
-    })
   },
 })
 
@@ -44,11 +41,8 @@ const mutationCache = new MutationCache({
       mutationKey: JSON.stringify(mutation.options.mutationKey),
     }, error instanceof Error ? error : undefined)
   },
-  onSuccess: (_data, _variables, _context, mutation) => {
+  onSuccess: (_data, _variables, _context, _mutation) => {
     // Global success handler for mutations
-    console.debug('Mutation success:', {
-      mutationKey: mutation.options.mutationKey,
-    })
   },
 })
 

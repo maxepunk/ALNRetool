@@ -55,7 +55,6 @@ export class RequestBatcher {
     // Check if we have a pending request for this key
     const pending = this.pendingRequests.get(key);
     if (pending && Date.now() - pending.timestamp < this.maxCacheAge) {
-      console.debug(`[RequestBatcher] Deduplicating request: ${key}`);
       return pending.promise as Promise<T>;
     }
     

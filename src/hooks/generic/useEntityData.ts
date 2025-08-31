@@ -215,22 +215,13 @@ export function useAllEntityData<T>(
   api: EntityAPI<T>,
   queryKey: readonly unknown[],
   options: Omit<UseEntityDataOptions, 'limit' | 'cursor'> = {},
-  debug?: string
+  _debug?: string
 ) {
   const { enabled = true, staleTime = QUERY_STALE_TIME } = options;
 
   return useQuery({
     queryKey: [...queryKey, 'all'], // Different key from paginated version
-    queryFn: async () => {
-      if (debug) {
-        console.debug(`[${debug}] Starting to fetch all entities`);
-      }
-      const result = await api.listAll();
-      if (debug) {
-        console.debug(`[${debug}] Fetched total entities:`, undefined, result.length);
-      }
-      return result;
-    },
+    queryFn: () => api.listAll(),
     enabled,
     staleTime,
     gcTime: staleTime * 2,

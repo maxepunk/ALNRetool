@@ -1,11 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Select,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-} from '@/components/ui/select';
+import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useAllEntityData } from '@/hooks/generic/useEntityData';
 import { charactersApi } from '@/services/api';
@@ -72,7 +67,7 @@ export function CharacterSelector({ className }: CharacterSelectorProps) {
     return (
       <div className={className}>
         <Select disabled className="w-[280px]">
-          <SelectItem value="">Loading characters...</SelectItem>
+          <option value="">Loading characters...</option>
         </Select>
       </div>
     );
@@ -94,41 +89,38 @@ export function CharacterSelector({ className }: CharacterSelectorProps) {
         className="w-[280px]"
       >
         {!activeCharacterId && (
-          <SelectItem value="" disabled>
+          <option value="" disabled>
             Select a character to explore
-          </SelectItem>
+          </option>
         )}
         {charactersByTier.core.length > 0 && (
-          <SelectGroup>
-            <SelectLabel>Core Characters</SelectLabel>
+          <optgroup label="Core Characters">
             {charactersByTier.core.map((character) => (
-              <SelectItem key={character.id} value={character.id}>
+              <option key={character.id} value={character.id}>
                 {character.name} {character.type && `(${character.type})`}
-              </SelectItem>
+              </option>
             ))}
-          </SelectGroup>
+          </optgroup>
         )}
         
         {charactersByTier.secondary.length > 0 && (
-          <SelectGroup>
-            <SelectLabel>Secondary Characters</SelectLabel>
+          <optgroup label="Secondary Characters">
             {charactersByTier.secondary.map((character) => (
-              <SelectItem key={character.id} value={character.id}>
+              <option key={character.id} value={character.id}>
                 {character.name} {character.type && `(${character.type})`}
-              </SelectItem>
+              </option>
             ))}
-          </SelectGroup>
+          </optgroup>
         )}
         
         {charactersByTier.tertiary.length > 0 && (
-          <SelectGroup>
-            <SelectLabel>Tertiary Characters</SelectLabel>
+          <optgroup label="Tertiary Characters">
             {charactersByTier.tertiary.map((character) => (
-              <SelectItem key={character.id} value={character.id}>
+              <option key={character.id} value={character.id}>
                 {character.name} {character.type && `(${character.type})`}
-              </SelectItem>
+              </option>
             ))}
-          </SelectGroup>
+          </optgroup>
         )}
       </Select>
     </div>

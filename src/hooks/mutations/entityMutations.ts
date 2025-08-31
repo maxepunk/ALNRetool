@@ -55,6 +55,27 @@ interface MutationError {
   details?: unknown;
 }
 
+// Mutation options with viewName for correct cache targeting
+interface MutationOptions extends Partial<UseMutationOptions<any, MutationError, any>> {
+  viewName?: string;
+}
+
+// Context for mutation rollback
+interface MutationContext {
+  previousGraphData?: any;
+  queryKey: string[];
+  tempId?: string;
+  createdEdges?: string[];
+}
+
+// Node type mapping for correct entity type conversion
+const ENTITY_TO_NODE_TYPE_MAP: Record<EntityType, string> = {
+  'characters': 'character',
+  'elements': 'element',
+  'puzzles': 'puzzle',
+  'timeline': 'timelineEvent'
+};
+
 
 // Helper function to get API module for entity type
 function getApiModule(entityType: EntityType) {
@@ -72,462 +93,462 @@ function getApiModule(entityType: EntityType) {
   }
 }
 
+// ============================================================================
+// MUTATION FACTORY - Creates optimistic mutations for all entity types
+// ============================================================================
+
+/**
+ * Factory function to create entity mutations with optimistic updates.
+ * Eliminates code duplication across all 12 mutation hooks.
+ * 
+ * @param entityType - The type of entity (characters, elements, puzzles, timeline)
+ * @param mutationType - The type of mutation (create, update, delete)
+ * @returns Configured mutation hook with optimistic updates
+ */
+function createEntityMutation<T extends Entity | void = Entity>(
+  entityType: EntityType,
+  mutationType: MutationType
+) {
+  return function useEntityMutation(
+    options?: MutationOptions & UseMutationOptions<T, MutationError, any>
+  ) {
+    const queryClient = useQueryClient();
+    const apiModule = getApiModule(entityType);
+    
+    // Extract viewName with warning if not provided
+    const viewName = options?.viewName;
+    if (!viewName) {
+      console.warn('[Mutation] No viewName provided, optimistic updates may not work correctly');
+    }
+    // Use consistent query key that matches what GraphView uses
+    const queryKey = ['graph', 'complete', viewName || 'full-graph'];
+    
+    return useMutation<T, MutationError, any>({
+      mutationFn: async (data): Promise<any> => {
+        switch (mutationType) {
+          case 'create':
+            return await apiModule.create(data);
+          case 'update':
+            const { id, ...updateData } = data;
+            return await apiModule.update(id, updateData);
+          case 'delete':
+            return await apiModule.delete(data);
+          default:
+            throw new Error(`Unknown mutation type: ${mutationType}`);
+        }
+      },
+      
+      onMutate: async (variables) => {
+        // Cancel in-flight queries to prevent race conditions
+        await queryClient.cancelQueries({ queryKey });
+        
+        // Snapshot specific view cache for rollback
+        const previousData = queryClient.getQueryData(queryKey);
+        
+        // Generate unique temp ID for creates
+        const tempId = mutationType === 'create' ? `temp-${Date.now()}` : undefined;
+        const createdEdges: string[] = [];
+        
+        // Update specific view cache optimistically
+        queryClient.setQueryData(queryKey, (oldData: any) => {
+          if (!oldData) return oldData;
+          
+          const newData = { ...oldData };
+          const nodes = [...(newData.nodes || [])];
+          
+          if (mutationType === 'create' && tempId) {
+            // Create optimistic node with consistent tempId
+            const newNode = {
+              id: tempId,
+              type: ENTITY_TO_NODE_TYPE_MAP[entityType],
+              position: { x: 0, y: 0 },
+              data: {
+                label: variables.name || 'New Entity',
+                type: ENTITY_TO_NODE_TYPE_MAP[entityType],
+                id: tempId,
+                entity: variables,
+                metadata: {
+                  entityType: ENTITY_TO_NODE_TYPE_MAP[entityType],
+                  searchMatch: true,
+                  isFocused: false,
+                  isOptimistic: true, // Flag for visual feedback
+                },
+              },
+            };
+            nodes.push(newNode);
+            
+            // Add edge if parent relation exists
+            // Ensure edges array exists before adding new edge
+            if (!newData.edges) newData.edges = [];
+            if (variables._parentRelation) {
+              const edgeId = `e-${variables._parentRelation.parentId}-${tempId}`;
+              const newEdge = {
+                id: edgeId,
+                source: variables._parentRelation.parentId,
+                target: tempId,
+                type: 'relation',
+                data: {
+                  relationField: variables._parentRelation.fieldKey,
+                  isOptimistic: true
+                }
+              };
+              newData.edges = [...(newData.edges || []), newEdge];
+              createdEdges.push(edgeId);
+            }
+          } else if (mutationType === 'update') {
+            // Update existing node optimistically
+            const nodeIndex = nodes.findIndex(n => n.id === variables.id);
+            if (nodeIndex !== -1) {
+              nodes[nodeIndex] = {
+                ...nodes[nodeIndex],
+                data: {
+                  ...nodes[nodeIndex].data,
+                  entity: { ...nodes[nodeIndex].data.entity, ...variables },
+                  label: variables.name || nodes[nodeIndex].data.label,
+                  metadata: {
+                    ...nodes[nodeIndex].data.metadata,
+                    isOptimistic: true,
+                  },
+                },
+              };
+            }
+          } else if (mutationType === 'delete') {
+            // Remove node optimistically
+            const nodeIndex = nodes.findIndex(n => n.id === variables);
+            if (nodeIndex !== -1) {
+              nodes.splice(nodeIndex, 1);
+            }
+            // Also remove related edges
+            newData.edges = (newData.edges || []).filter(
+              (e: any) => e.source !== variables && e.target !== variables
+            );
+          }
+          
+          return { ...newData, nodes };
+        });
+        
+        return { 
+          previousGraphData: previousData, 
+          queryKey,
+          tempId,
+          createdEdges
+        } as MutationContext;
+      },
+      
+      onError: (error, variables, context) => {
+        const ctx = context as MutationContext | undefined;
+        
+        if (ctx?.previousGraphData) {
+          // Primary: restore exact previous state
+          queryClient.setQueryData(ctx.queryKey, ctx.previousGraphData);
+        } else if (ctx) {
+          // Fallback: clean up optimistic artifacts
+          queryClient.setQueryData(ctx.queryKey, (current: any) => {
+            if (!current) return current;
+            
+            return {
+              ...current,
+              nodes: current.nodes.map((node: any) => ({
+                ...node,
+                data: {
+                  ...node.data,
+                  metadata: {
+                    ...node.data.metadata,
+                    isOptimistic: false  // Remove all optimistic flags
+                  }
+                }
+              })),
+              // Remove optimistically created edges
+              edges: ctx.createdEdges?.length 
+                ? current.edges.filter((e: any) => !ctx.createdEdges!.includes(e.id))
+                : current.edges
+            };
+          });
+        }
+        
+        // Show error toast
+        const entityName = variables?.name || ENTITY_TO_NODE_TYPE_MAP[entityType];
+        toast.error(error.message || `Failed to ${mutationType} ${entityName}`);
+        options?.onError?.(error, variables, context);
+      },
+      
+      onSuccess: async (data, variables, context) => {
+        const ctx = context as MutationContext;
+        
+        // Manually update cache with server response instead of invalidating
+        queryClient.setQueryData(ctx.queryKey, (oldData: any) => {
+          if (!oldData) return oldData;
+          
+          let nodes = [...(oldData.nodes || [])];
+          let edges = [...(oldData.edges || [])];
+          
+          if (mutationType === 'create' && ctx.tempId && data && 'id' in data) {
+            // Find and replace temporary node with real data
+            const nodeIndex = nodes.findIndex(n => n.id === ctx.tempId);
+            if (nodeIndex !== -1) {
+              // Replace with real data from server
+              nodes[nodeIndex] = {
+                ...nodes[nodeIndex],
+                id: data.id,
+                data: {
+                  ...nodes[nodeIndex].data,
+                  id: data.id,
+                  entity: data,
+                  label: ('name' in data ? data.name : null) || nodes[nodeIndex].data.label,
+                  metadata: {
+                    ...nodes[nodeIndex].data.metadata,
+                    isOptimistic: false  // Remove optimistic flag
+                  }
+                }
+              };
+              
+              // Update all edges to use real ID
+              edges.forEach(edge => {
+                if (edge.source === ctx.tempId) edge.source = data.id;
+                if (edge.target === ctx.tempId) edge.target = data.id;
+              });
+            }
+            // Update parent entity's relationship array if this was created from a relation field
+            if (variables._parentRelation) {
+              const { parentId, fieldKey } = variables._parentRelation;
+              
+              // Use map for immutable update instead of direct array mutation
+              nodes = nodes.map((node) => {
+                // If this isn't the parent node, return it unchanged
+                if (node.id !== parentId) {
+                  return node;
+                }
+                
+                // It's the parent node, so update its relationship array
+                const currentIds = node.data.entity[fieldKey] || [];
+                
+                // Return original node if ID already exists (avoid duplicates)
+                if (currentIds.includes(data.id)) {
+                  return node;
+                }
+                
+                // Return updated parent node with new relationship
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    entity: {
+                      ...node.data.entity,
+                      [fieldKey]: [...currentIds, data.id]
+                    }
+                  }
+                };
+              });
+              
+              // After updating parent's array, create the edge
+              if (data && 'id' in data) {
+                // Determine edge type based on field name using explicit mapping
+                // This mapping uses exact field names from the schema for precision
+                const fieldKeyToEdgeType: Record<string, string> = {
+                  // Character fields
+                  'ownedElementIds': 'ownership',
+                  'characterPuzzleIds': 'puzzle',
+                  'eventIds': 'timeline',
+                  
+                  // Element fields
+                  'ownerId': 'ownership',
+                  'requiredForPuzzleIds': 'requirement',
+                  'rewardedByPuzzleIds': 'reward',
+                  'containerId': 'container',
+                  'contentIds': 'container',
+                  'timelineEventId': 'timeline',
+                  'containerPuzzleId': 'puzzle',
+                  
+                  // Puzzle fields
+                  'puzzleElementIds': 'requirement',
+                  'rewardIds': 'reward',
+                  'lockedItemId': 'container',
+                  'parentItemId': 'dependency',
+                  'subPuzzleIds': 'dependency',
+                  'characterIds': 'character',
+                  
+                  // Timeline fields
+                  'charactersInvolvedIds': 'character',
+                  'memoryEvidenceIds': 'timeline',
+                  
+                  // Fallback patterns for common naming conventions
+                  'elements': 'requirement',
+                  'rewards': 'reward',
+                  'characters': 'character',
+                  'puzzles': 'puzzle',
+                  'timeline': 'timeline',
+                  'events': 'timeline'
+                };
+                
+                // First try exact match, then try lowercase match, then default
+                let edgeType = fieldKeyToEdgeType[fieldKey] || 
+                               fieldKeyToEdgeType[fieldKey.toLowerCase()] || 
+                               'relationship';
+                
+                // Add edge to the edges array
+                // Use :: delimiter to avoid collisions when IDs contain hyphens
+                // Format: e::parentId::fieldKey::childId ensures uniqueness
+                const edgeId = `e::${parentId}::${fieldKey}::${data.id}`;
+                const edgeIndex = edges.findIndex(e => e.id === edgeId);
+                
+                if (edgeIndex === -1) {
+                  edges.push({
+                    id: edgeId,
+                    source: parentId,
+                    target: data.id,
+                    type: 'default',
+                    data: {
+                      relationshipType: edgeType,
+                      fieldKey,
+                      isOptimistic: false // Mark as not optimistic since it's from server data
+                    }
+                  });
+                }
+              }
+            }
+          } else if (mutationType === 'update' && data && 'id' in data) {
+            // Update existing node and remove optimistic flag
+            const nodeIndex = nodes.findIndex(n => n.id === variables.id);
+            if (nodeIndex !== -1) {
+              nodes[nodeIndex] = {
+                ...nodes[nodeIndex],
+                data: {
+                  ...nodes[nodeIndex].data,
+                  entity: data,
+                  label: ('name' in data ? data.name : null) || nodes[nodeIndex].data.label,
+                  metadata: {
+                    ...nodes[nodeIndex].data.metadata,
+                    isOptimistic: false
+                  }
+                }
+              };
+            }
+          }
+          // Delete operations don't need special handling here
+          
+          return { ...oldData, nodes, edges };
+        });
+        
+        // Force cache invalidation for graph queries to ensure server's synthesized data is fetched
+        await queryClient.invalidateQueries({ 
+          queryKey: ['graph'],
+          exact: false,
+          refetchType: 'active' // Force active refetch
+        });
+        
+        // Also invalidate the specific entity queries
+        await queryClient.invalidateQueries({
+          queryKey: [entityType],
+          exact: false
+        });
+        
+        // Show success toast
+        const entityName = (data && 'name' in data ? data.name : null) || 
+                          variables?.name || 
+                          ENTITY_TO_NODE_TYPE_MAP[entityType];
+        const action = mutationType === 'create' ? 'Created' : 
+                       mutationType === 'update' ? 'Updated' : 'Deleted';
+        toast.success(`${action} ${entityName}`);
+        
+        options?.onSuccess?.(data, variables, context);
+      },
+    });
+  };
+}
+
 
 // ============================================================================
 // CHARACTER MUTATIONS
 // ============================================================================
 
 /**
- * Create a new character
+ * Create a new character - uses optimistic mutation factory
  */
-export function useCreateCharacter(
-  options?: UseMutationOptions<Character, MutationError, Partial<Character> & ParentRelationMetadata>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<Character, MutationError, Partial<Character> & ParentRelationMetadata>({
-    mutationFn: async (data) => {
-      // Don't extract _parentRelation - pass complete data to API
-      // The backend handles _parentRelation atomically
-      
-      // Validate relationships in parallel if needed
-      const needsElementValidation = data.ownedElementIds?.length || data.associatedElementIds?.length;
-      const needsPuzzleValidation = data.characterPuzzleIds?.length;
-      
-      if (needsElementValidation || needsPuzzleValidation) {
-        // Fetch both element and puzzle lists in parallel
-        const [elements, puzzles] = await Promise.all([
-          needsElementValidation ? elementsApi.listAll() : Promise.resolve([]),
-          needsPuzzleValidation ? puzzlesApi.listAll() : Promise.resolve([])
-        ]);
-        
-        // Validate element relationships
-        if (needsElementValidation) {
-          const elementIds = elements.map(e => e.id);
-          
-          const invalidOwned = data.ownedElementIds?.filter(id => !elementIds.includes(id)) || [];
-          const invalidAssoc = data.associatedElementIds?.filter(id => !elementIds.includes(id)) || [];
-          
-          if (invalidOwned.length > 0) {
-            throw new Error(`Invalid owned element IDs: ${invalidOwned.join(', ')}`);
-          }
-          if (invalidAssoc.length > 0) {
-            throw new Error(`Invalid associated element IDs: ${invalidAssoc.join(', ')}`);
-          }
-        }
-        
-        // Validate puzzle relationships
-        if (needsPuzzleValidation) {
-          const puzzleIds = puzzles.map(p => p.id);
-          
-          const invalidPuzzles = data.characterPuzzleIds!.filter(id => !puzzleIds.includes(id));
-          if (invalidPuzzles.length > 0) {
-            throw new Error(`Invalid puzzle IDs: ${invalidPuzzles.join(', ')}`);
-          }
-        }
-      }
-      
-      return await charactersApi.create(data);
-    },
-    
-    onSuccess: async (character, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success(`Created ${character.name || 'character'}`);
-      options?.onSuccess?.(character, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to create character');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useCreateCharacter = (options?: MutationOptions) => 
+  createEntityMutation<Character>('characters', 'create')(options);
 
 /**
- * Update an existing character
+ * Update an existing character - uses optimistic mutation factory
  */
-export function useUpdateCharacter(
-  options?: UseMutationOptions<Character, MutationError, Partial<Character> & { id: string }>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<Character, MutationError, Partial<Character> & { id: string }>({
-    mutationFn: async ({ id, ...data }) => {
-      return await charactersApi.update(id, data);
-    },
-    
-    onSuccess: async (character, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success(`Updated ${character.name || 'character'}`);
-      options?.onSuccess?.(character, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to update character');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useUpdateCharacter = (options?: MutationOptions) => 
+  createEntityMutation<Character>('characters', 'update')(options);
 
 /**
- * Delete a character
+ * Delete a character - uses optimistic mutation factory
  */
-export function useDeleteCharacter(
-  options?: UseMutationOptions<void, MutationError, string>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<void, MutationError, string>({
-    mutationFn: async (id: string) => {
-      return await charactersApi.delete(id);
-    },
-    
-    onSuccess: async (_, id) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success('Character deleted');
-      options?.onSuccess?.(undefined, id, undefined);
-    },
-    
-    onError: (error, id, context) => {
-      toast.error(error.message || 'Failed to delete character');
-      options?.onError?.(error, id, context);
-    }
-  });
-}
+export const useDeleteCharacter = (options?: MutationOptions) => 
+  createEntityMutation('characters', 'delete')(options);
 
 // ============================================================================
 // ELEMENT MUTATIONS
 // ============================================================================
 
 /**
- * Create a new element
+ * Create a new element - uses optimistic mutation factory
  */
-export function useCreateElement(
-  options?: UseMutationOptions<Element, MutationError, Partial<Element> & ParentRelationMetadata>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<Element, MutationError, Partial<Element> & ParentRelationMetadata>({
-    mutationFn: async (data) => {
-      // Don't extract _parentRelation - pass complete data to API
-      // The backend handles _parentRelation atomically
-      return await elementsApi.create(data);
-    },
-    
-    onSuccess: async (element, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success(`Created ${element.name || 'element'}`);
-      options?.onSuccess?.(element, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to create element');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useCreateElement = (options?: MutationOptions) => 
+  createEntityMutation<Element>('elements', 'create')(options);
 
 /**
- * Update an existing element
+ * Update an existing element - uses optimistic mutation factory
  */
-export function useUpdateElement(
-  options?: UseMutationOptions<Element, MutationError, Partial<Element> & { id: string }>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<Element, MutationError, Partial<Element> & { id: string }>({
-    mutationFn: async ({ id, ...data }) => {
-      return await elementsApi.update(id, data);
-    },
-    
-    onSuccess: async (element, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success(`Updated ${element.name || 'element'}`);
-      options?.onSuccess?.(element, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to update element');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useUpdateElement = (options?: MutationOptions) => 
+  createEntityMutation<Element>('elements', 'update')(options);
 
 /**
- * Delete an element
+ * Delete an element - uses optimistic mutation factory
  */
-export function useDeleteElement(
-  options?: UseMutationOptions<void, MutationError, string>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<void, MutationError, string>({
-    mutationFn: async (id: string) => {
-      return await elementsApi.delete(id);
-    },
-    
-    onSuccess: async (_, id) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success('Element deleted');
-      options?.onSuccess?.(undefined, id, undefined);
-    },
-    
-    onError: (error, id, context) => {
-      toast.error(error.message || 'Failed to delete element');
-      options?.onError?.(error, id, context);
-    }
-  });
-}
+export const useDeleteElement = (options?: MutationOptions) => 
+  createEntityMutation('elements', 'delete')(options);
 
 // ============================================================================
 // PUZZLE MUTATIONS
 // ============================================================================
 
 /**
- * Create a new puzzle
+ * Create a new puzzle - uses optimistic mutation factory
  */
-export function useCreatePuzzle(
-  options?: UseMutationOptions<Puzzle, MutationError, Partial<Puzzle> & ParentRelationMetadata>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<Puzzle, MutationError, Partial<Puzzle> & ParentRelationMetadata>({
-    mutationFn: async (data) => {
-      // Don't extract _parentRelation - pass complete data to API
-      // The backend handles _parentRelation atomically
-      
-      // Validate relationships - using Promise.all pattern for consistency and future expansion
-      const needsElementValidation = data.rewardIds?.length || data.puzzleElementIds?.length;
-      
-      if (needsElementValidation) {
-        // Fetch element list (could add more validations in parallel in future)
-        const [elements] = await Promise.all([
-          elementsApi.listAll()
-        ]);
-        
-        const elementIds = elements.map(e => e.id);
-        
-        // Validate reward elements
-        if (data.rewardIds?.length) {
-          const invalidRewards = data.rewardIds.filter(id => !elementIds.includes(id));
-          if (invalidRewards.length > 0) {
-            throw new Error(`Invalid reward element IDs: ${invalidRewards.join(', ')}`);
-          }
-        }
-        
-        // Validate puzzle elements (requirements)
-        if (data.puzzleElementIds?.length) {
-          const invalidRequirements = data.puzzleElementIds.filter(id => !elementIds.includes(id));
-          if (invalidRequirements.length > 0) {
-            throw new Error(`Invalid puzzle element IDs: ${invalidRequirements.join(', ')}`);
-          }
-        }
-      }
-      
-      return await puzzlesApi.create(data);
-    },
-    
-    onSuccess: async (puzzle, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success(`Created ${puzzle.name || 'puzzle'}`);
-      options?.onSuccess?.(puzzle, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to create puzzle');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useCreatePuzzle = (options?: MutationOptions) => 
+  createEntityMutation<Puzzle>('puzzles', 'create')(options);
 
 /**
- * Update an existing puzzle
+ * Update an existing puzzle - uses optimistic mutation factory
  */
-export function useUpdatePuzzle(
-  options?: UseMutationOptions<Puzzle, MutationError, Partial<Puzzle> & { id: string }>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<Puzzle, MutationError, Partial<Puzzle> & { id: string }>({
-    mutationFn: async ({ id, ...data }) => {
-      return await puzzlesApi.update(id, data);
-    },
-    
-    onSuccess: async (puzzle, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success(`Updated ${puzzle.name || 'puzzle'}`);
-      options?.onSuccess?.(puzzle, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to update puzzle');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useUpdatePuzzle = (options?: MutationOptions) => 
+  createEntityMutation<Puzzle>('puzzles', 'update')(options);
 
 /**
- * Delete a puzzle
+ * Delete a puzzle - uses optimistic mutation factory
  */
-export function useDeletePuzzle(
-  options?: UseMutationOptions<void, MutationError, string>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<void, MutationError, string>({
-    mutationFn: async (id: string) => {
-      return await puzzlesApi.delete(id);
-    },
-    
-    onSuccess: async (_, id) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success('Puzzle deleted');
-      options?.onSuccess?.(undefined, id, undefined);
-    },
-    
-    onError: (error, id, context) => {
-      toast.error(error.message || 'Failed to delete puzzle');
-      options?.onError?.(error, id, context);
-    }
-  });
-}
+export const useDeletePuzzle = (options?: MutationOptions) => 
+  createEntityMutation('puzzles', 'delete')(options);
 
 // ============================================================================
 // TIMELINE MUTATIONS
 // ============================================================================
 
 /**
- * Create a new timeline event
+ * Create a new timeline event - uses optimistic mutation factory
  */
-export function useCreateTimeline(
-  options?: UseMutationOptions<TimelineEvent, MutationError, Partial<TimelineEvent> & ParentRelationMetadata>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<TimelineEvent, MutationError, Partial<TimelineEvent> & ParentRelationMetadata>({
-    mutationFn: async (data) => {
-      // Don't extract _parentRelation - pass complete data to API
-      // The backend handles _parentRelation atomically
-      return await timelineApi.create(data);
-    },
-    
-    onSuccess: async (event, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success('Created timeline event');
-      options?.onSuccess?.(event, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to create timeline event');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useCreateTimeline = (options?: MutationOptions) => 
+  createEntityMutation<TimelineEvent>('timeline', 'create')(options);
 
 /**
- * Update an existing timeline event
+ * Update an existing timeline event - uses optimistic mutation factory
  */
-export function useUpdateTimeline(
-  options?: UseMutationOptions<TimelineEvent, MutationError, Partial<TimelineEvent> & { id: string }>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<TimelineEvent, MutationError, Partial<TimelineEvent> & { id: string }>({
-    mutationFn: async ({ id, ...data }) => {
-      return await timelineApi.update(id, data);
-    },
-    
-    onSuccess: async (event, variables) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success('Updated timeline event');
-      options?.onSuccess?.(event, variables, undefined);
-    },
-    
-    onError: (error, variables, context) => {
-      toast.error(error.message || 'Failed to update timeline event');
-      options?.onError?.(error, variables, context);
-    }
-  });
-}
+export const useUpdateTimeline = (options?: MutationOptions) => 
+  createEntityMutation<TimelineEvent>('timeline', 'update')(options);
 
 /**
- * Delete a timeline event
+ * Delete a timeline event - uses optimistic mutation factory
  */
-export function useDeleteTimeline(
-  options?: UseMutationOptions<void, MutationError, string>
-) {
-  const queryClient = useQueryClient();
-  
-  return useMutation<void, MutationError, string>({
-    mutationFn: async (id: string) => {
-      return await timelineApi.delete(id);
-    },
-    
-    onSuccess: async (_, id) => {
-      // Simple: just invalidate the graph
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
-      });
-      
-      toast.success('Timeline event deleted');
-      options?.onSuccess?.(undefined, id, undefined);
-    },
-    
-    onError: (error, id, context) => {
-      toast.error(error.message || 'Failed to delete timeline event');
-      options?.onError?.(error, id, context);
-    }
-  });
-}
+export const useDeleteTimeline = (options?: MutationOptions) => 
+  createEntityMutation('timeline', 'delete')(options);
 
 // Aliases for backward compatibility
-export const useCreateTimelineEvent = useCreateTimeline;
-export const useUpdateTimelineEvent = useUpdateTimeline;
-export const useDeleteTimelineEvent = useDeleteTimeline;
+export const useCreateTimelineEvent = (options?: MutationOptions) => useCreateTimeline(options);
+export const useUpdateTimelineEvent = (options?: MutationOptions) => useUpdateTimeline(options);
+export const useDeleteTimelineEvent = (options?: MutationOptions) => useDeleteTimeline(options);
 
 // Note: Generic entity mutation hook was removed as it violated React's rules of hooks
 // by calling hooks conditionally. Use the specific hooks directly instead:
@@ -558,7 +579,7 @@ export function useBatchEntityMutation<T extends Entity>(
     onSuccess: async (response) => {
       // Simple: just invalidate the graph after batch update
       await queryClient.invalidateQueries({ 
-        queryKey: ['graph', 'complete'] 
+        queryKey: ['graph'] 
       });
       
       toast.success(`Updated ${response.length} entities`);

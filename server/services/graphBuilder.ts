@@ -91,6 +91,19 @@ const EDGE_STYLES = {
     animated: false,
     label: undefined,
   },
+  puzzle: {
+    stroke: '#9333ea',
+    strokeWidth: 2,
+    animated: false,
+    label: 'puzzle',
+  },
+  association: {
+    stroke: '#6366f1',
+    strokeWidth: 1.5,
+    strokeDasharray: '3,3',
+    animated: false,
+    label: 'associated',
+  },
 };
 
 /**
@@ -281,6 +294,42 @@ export function buildCompleteGraph(entities: {
     }
   };
   
+  // Process Character relationships
+  entities.characters.forEach(character => {
+    // Owned elements (character -> element)
+    if (character.ownedElementIds?.length) {
+      character.ownedElementIds.forEach(elementId => {
+        ensureNode(elementId, 'element', `character:${character.id}`);
+        createEdge(character.id, elementId, 'ownership', 10);
+      });
+    }
+    
+    // Associated elements (character <-> element)
+    // These are elements connected through timeline events (narrative connections)
+    if (character.associatedElementIds?.length) {
+      character.associatedElementIds.forEach(elementId => {
+        ensureNode(elementId, 'element', `character:${character.id}`);
+        createEdge(character.id, elementId, 'association', 6);
+      });
+    }
+    
+    // Character puzzles (character <-> puzzle)
+    if (character.characterPuzzleIds?.length) {
+      character.characterPuzzleIds.forEach(puzzleId => {
+        ensureNode(puzzleId, 'puzzle', `character:${character.id}`);
+        createEdge(character.id, puzzleId, 'puzzle', 7);
+      });
+    }
+    
+    // Timeline events (character <-> timeline)
+    if (character.eventIds?.length) {
+      character.eventIds.forEach(eventId => {
+        ensureNode(eventId, 'timeline', `character:${character.id}`);
+        createEdge(character.id, eventId, 'timeline', 6);
+      });
+    }
+  });
+
   // Process Element relationships
   entities.elements.forEach(element => {
     // Owner relationship
@@ -351,7 +400,7 @@ export function buildCompleteGraph(entities: {
     if (event.charactersInvolvedIds?.length) {
       event.charactersInvolvedIds.forEach(characterId => {
         ensureNode(characterId, 'character', `timeline:${event.id}`);
-        createEdge(event.id, characterId, 'relationship', 6);
+        createEdge(event.id, characterId, 'timeline', 6);
       });
     }
     
@@ -359,7 +408,7 @@ export function buildCompleteGraph(entities: {
     if (event.memoryEvidenceIds?.length) {
       event.memoryEvidenceIds.forEach(elementId => {
         ensureNode(elementId, 'element', `timeline:${event.id}`);
-        createEdge(event.id, elementId, 'relationship', 6);
+        createEdge(event.id, elementId, 'timeline', 6);
       });
     }
     
@@ -368,7 +417,7 @@ export function buildCompleteGraph(entities: {
     if (event.associatedPuzzles?.length) {
       event.associatedPuzzles.forEach(puzzleId => {
         ensureNode(puzzleId, 'puzzle', `timeline:${event.id}`);
-        createEdge(event.id, puzzleId, 'relationship', 5);
+        createEdge(event.id, puzzleId, 'timeline', 5);
       });
     }
   });

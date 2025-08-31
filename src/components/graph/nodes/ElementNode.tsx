@@ -33,6 +33,7 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
   const hasSF = entity.sfPatterns !== undefined && Object.keys(entity.sfPatterns).length > 0;
+  const isOptimistic = (metadata as any).isOptimistic || false;
   
   // Use shared hook for filter styles FIRST
   const { 
@@ -240,7 +241,8 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
   // Custom styling for the card wrapper
   const cardClassName = cn(
     isDualRole && 'ring-2 ring-purple-400/40 ring-offset-1',
-    entity.isContainer && 'shadow-lg'
+    entity.isContainer && 'shadow-lg',
+    isOptimistic && 'animate-pulse'
   );
 
   return (
@@ -261,9 +263,9 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
           source: Position.Right,
           target: Position.Left
         }}
-        outlineColor={outlineColor}
-        outlineWidth={outlineWidth}
-        opacity={opacity}
+        outlineColor={isOptimistic ? '#10b981' : outlineColor}
+        outlineWidth={isOptimistic ? 3 : outlineWidth}
+        opacity={isOptimistic ? 0.8 : opacity}
       >
         {content}
       </BaseNodeCard>
