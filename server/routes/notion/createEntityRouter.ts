@@ -12,7 +12,7 @@ import { log } from '../../utils/logger.js';
 import type { NotionPage } from '../../../src/types/notion/raw.js';
 import { captureGraphState } from '../../services/graphStateCapture.js';
 import { deltaCalculator } from '../../services/deltaCalculator.js';
-import type { GraphState } from '../../types/delta.js';
+import type { GraphState, GraphDelta } from '../../types/delta.js';
 
 /**
  * Configuration for inverse relation updates
@@ -385,7 +385,7 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     }
     
     // Calculate delta for deletion if we have the before state
-    let delta = null;
+    let delta: GraphDelta | null = null;
     if (graphStateBefore && entityData) {
       try {
         // For deletion, the after state has the node removed
@@ -498,20 +498,31 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       }
       
       // Calculate delta if we have the before state
-      let delta = null;
+      let delta: GraphDelta | null = null;
       if (graphStateBefore) {
         try {
+          // Import edge generation helper
+          const { generateEdgesForEntities } = await import('../../services/graphStateCapture.js');
+          
           // Optimize: If no inverse relations, construct after state in-memory
           // WHY: Avoid second API call when only the target entity changed
           let graphStateAfter: GraphState | null = null;
           
           if (!config.inverseRelations || config.inverseRelations.length === 0) {
-            // Simple update - only this entity changed, construct in-memory
+            // Simple update - regenerate edges in case relationships changed
+            // Collect all entities from the nodes for edge generation
+            const allEntities = graphStateBefore.nodes
+              .map((n: any) => n.id === req.params.id ? transformed : n.data.entity)
+              .filter((e: any) => e !== null);
+            
+            // Regenerate edges based on updated entity relationships
+            const updatedEdges = generateEdgesForEntities(allEntities);
+            
             graphStateAfter = {
               nodes: graphStateBefore.nodes.map((n: any) => 
                 n.id === req.params.id ? { ...n, data: { ...n.data, entity: transformed } } : n
               ),
-              edges: graphStateBefore.edges, // Edges unchanged for simple property updates
+              edges: updatedEdges,  // Use regenerated edges
               capturedAt: Date.now()
             };
           } else {

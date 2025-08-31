@@ -1,14 +1,12 @@
 import { buildCompleteGraph } from './graphBuilder.js';
-import { cacheService } from './cache.js';
-import { fetchAllPages } from '../routes/notion/base.js';
 import { 
   transformCharacter, 
   transformElement, 
   transformPuzzle, 
   transformTimelineEvent 
 } from '../../src/types/notion/transforms.js';
-import config from '../config/index.js';
 import type { Character, Element, Puzzle, TimelineEvent } from '../../src/types/notion/app.js';
+import type { Edge } from '@xyflow/react';
 
 /**
  * WHY: To calculate deltas, we need the graph state before mutation.
@@ -17,6 +15,70 @@ import type { Character, Element, Puzzle, TimelineEvent } from '../../src/types/
  * 
  * Focuses on the mutated entity and its immediate connections only.
  */
+
+/**
+ * Helper function to generate edges for a limited set of entities
+ * Extracted from graphBuilder to support in-memory graph updates
+ */
+export function generateEdgesForEntities(entities: any[]): Edge[] {
+  const edges: Edge[] = [];
+  const edgeSet = new Set<string>();
+  
+  // Build lookup maps
+  const entityMap = new Map<string, any>();
+  entities.forEach(e => {
+    if (e && e.id) entityMap.set(e.id, e);
+  });
+  
+  const createEdge = (source: string, target: string, type: string) => {
+    const edgeId = `${source}-${target}-${type}`;
+    if (!edgeSet.has(edgeId) && entityMap.has(source) && entityMap.has(target)) {
+      edgeSet.add(edgeId);
+      edges.push({
+        id: edgeId,
+        source,
+        target,
+        type: 'default',
+        animated: type === 'ownership',
+        data: { relationshipType: type }
+      });
+    }
+  };
+  
+  // Process all entities and their relationships
+  entities.forEach(entity => {
+    if (!entity) return;
+    
+    // Character relationships
+    if ('type' in entity) {
+      entity.ownedElementIds?.forEach((id: string) => createEdge(entity.id, id, 'ownership'));
+      entity.associatedElementIds?.forEach((id: string) => createEdge(entity.id, id, 'association'));
+      entity.characterPuzzleIds?.forEach((id: string) => createEdge(entity.id, id, 'puzzle'));
+      entity.timelineIds?.forEach((id: string) => createEdge(entity.id, id, 'timeline'));
+    }
+    
+    // Element relationships
+    if ('sourceCharacterIds' in entity) {
+      entity.sourceCharacterIds?.forEach((id: string) => createEdge(id, entity.id, 'source'));
+      entity.ownerCharacterIds?.forEach((id: string) => createEdge(id, entity.id, 'ownership'));
+      entity.puzzleIds?.forEach((id: string) => createEdge(entity.id, id, 'requirement'));
+    }
+    
+    // Puzzle relationships
+    if ('solution' in entity) {
+      entity.characterIds?.forEach((id: string) => createEdge(id, entity.id, 'puzzle'));
+      entity.requiredElementIds?.forEach((id: string) => createEdge(id, entity.id, 'requirement'));
+      entity.rewardElementIds?.forEach((id: string) => createEdge(entity.id, id, 'reward'));
+    }
+    
+    // Timeline relationships
+    if ('time' in entity) {
+      entity.characterIds?.forEach((id: string) => createEdge(id, entity.id, 'timeline'));
+    }
+  });
+  
+  return edges;
+}
 export async function captureGraphState(entityId: string, entityType: string): Promise<any | null> {
   try {
     // CRITICAL: Do NOT cache pre-mutation state!
