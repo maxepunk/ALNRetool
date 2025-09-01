@@ -1,0 +1,998 @@
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { renderHook, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import React from 'react';
+import toast from 'react-hot-toast';
+import { useUpdateCharacter, useCreateCharacter, useCreateElement, useDeleteCharacter } from './entityMutations';
+import { ApiError } from '@/services/api';
+
+// Mock external dependencies
+vi.mock('react-hot-toast', () => ({
+  default: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+// Mock the API module - must be done without referencing external variables
+vi.mock('@/services/api', () => ({
+  charactersApi: {
+    update: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  },
+  elementsApi: {
+    update: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  },
+  puzzlesApi: {
+    update: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  },
+  timelineApi: {
+    update: vi.fn(),
+    create: vi.fn(),
+    delete: vi.fn(),
+  },
+  ApiError: class ApiError extends Error {
+    public statusCode: number;
+    public code: string;
+    constructor(statusCode: number, code: string, message: string) {
+      super(message);
+      this.name = 'ApiError';
+      this.statusCode = statusCode;
+      this.code = code;
+    }
+  },
+}));
+
+// Get the mocked API after the mock is defined
+import { charactersApi, elementsApi, ApiError } from '@/services/api';
+const mockApi = charactersApi as any;
+const mockElementsApi = elementsApi as any;
+
+// Test setup: create a new QueryClient for each test
+const createTestQueryClient = () => new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false, // Disable retries for tests
+    },
+    mutations: {
+      retry: false, // Disable retries for mutations
+    },
+  },
+});
+
+// Wrapper component to provide QueryClient context to hooks
+const createWrapper = (client: QueryClient) => {
+  const Wrapper = ({ children }: { children: React.ReactNode }) => 
+    React.createElement(QueryClientProvider, { client }, children);
+  Wrapper.displayName = 'QueryClientWrapper';
+  return Wrapper;
+};
+
+describe('createEntityMutation (via useUpdateCharacter)', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = createTestQueryClient();
+    // Reset mocks before each test
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    // Ensure query client is shut down
+    queryClient.clear();
+  });
+
+  const MOCK_VIEW_NAME = 'test-view';
+  const QUERY_KEY = ['graph', 'complete', MOCK_VIEW_NAME];
+  const MOCK_CHARACTER_ID = 'char_1';
+  const MOCK_INITIAL_DATA = {
+    nodes: [{
+      id: MOCK_CHARACTER_ID,
+      data: {
+        id: MOCK_CHARACTER_ID,
+        label: 'Old Name',
+        entity: { id: MOCK_CHARACTER_ID, name: 'Old Name', version: 1 },
+        metadata: { isOptimistic: false },
+      },
+    }],
+    edges: [],
+  };
+
+  describe('Version Header Management', () => {
+    it('should send If-Match header when a version is provided', async () => {
+      // Arrange
+      mockApi.update.mockResolvedValue({ id: MOCK_CHARACTER_ID, name: 'New Name', version: 2 });
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'New Name', version: 1 });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert - Version extraction and header creation (lines 132-137)
+      expect(mockApi.update).toHaveBeenCalledWith(
+        MOCK_CHARACTER_ID,
+        { name: 'New Name' }, // id and version are correctly stripped from the body
+        { 'If-Match': '1' }   // version is correctly passed as If-Match header
+      );
+      expect(toast.success).toHaveBeenCalledWith('Updated New Name');
+    });
+
+    it('should NOT send If-Match header when version is undefined', async () => {
+      // Arrange
+      mockApi.update.mockResolvedValue({ id: MOCK_CHARACTER_ID, name: 'New Name' });
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'New Name' }); // No version provided
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert
+      expect(mockApi.update).toHaveBeenCalledWith(
+        MOCK_CHARACTER_ID,
+        { name: 'New Name' },
+        undefined // No headers object should be passed
+      );
+    });
+
+    it('should handle version 0 correctly', async () => {
+      // Arrange
+      mockApi.update.mockResolvedValue({ id: MOCK_CHARACTER_ID, name: 'New Name', version: 1 });
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'New Name', version: 0 });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert - Version 0 is valid and should create header
+      expect(mockApi.update).toHaveBeenCalledWith(
+        MOCK_CHARACTER_ID,
+        { name: 'New Name' },
+        { 'If-Match': '0' }
+      );
+    });
+  });
+
+  describe('409 Conflict Handling', () => {
+    it('should show specific conflict error and NOT roll back cache on 409 conflict', async () => {
+      // Arrange
+      const conflictError = new ApiError(409, 'CONFLICT', 'Version conflict');
+      mockApi.update.mockRejectedValue(conflictError);
+
+      // Set initial data in the cache to verify it's not rolled back
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act: Trigger the mutation which will optimistically update the cache
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Optimistic Name', version: 1 });
+
+      // Wait for the mutation to fail
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - 409 Conflict handling (lines 245-255)
+      expect(toast.error).toHaveBeenCalledWith(
+        'This item has been modified by another user. Please refresh the page and try again.',
+        { duration: 5000 }
+      );
+
+      // Verify the cache was NOT rolled back. The optimistic update should remain.
+      const finalCacheData: any = queryClient.getQueryData(QUERY_KEY);
+      const updatedNode = finalCacheData?.nodes?.find((n: any) => n.id === MOCK_CHARACTER_ID);
+      
+      // Since we return early on 409, the optimistic update remains
+      expect(updatedNode?.data?.label).toBe('Optimistic Name');
+      expect(updatedNode?.data?.metadata?.isOptimistic).toBe(true);
+    });
+
+    it('should verify exact toast message content for conflicts', async () => {
+      // Arrange
+      const conflictError = new ApiError(409, 'CONFLICT', 'Version mismatch');
+      mockApi.update.mockRejectedValue(conflictError);
+      
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Test', version: 1 });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Exact message verification
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(toast.error).toHaveBeenCalledWith(
+        'This item has been modified by another user. Please refresh the page and try again.',
+        { duration: 5000 }
+      );
+    });
+
+    it('should call original onError callback once on 409', async () => {
+      // Arrange
+      const conflictError = new ApiError(409, 'CONFLICT', 'Version conflict');
+      mockApi.update.mockRejectedValue(conflictError);
+      const onErrorSpy = vi.fn();
+      
+      const { result } = renderHook(
+        () => useUpdateCharacter({ viewName: MOCK_VIEW_NAME, onError: onErrorSpy }),
+        { wrapper: createWrapper(queryClient) }
+      );
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Test', version: 1 });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert
+      expect(onErrorSpy).toHaveBeenCalledTimes(1);
+      expect(onErrorSpy).toHaveBeenCalledWith(
+        conflictError,
+        expect.objectContaining({ id: MOCK_CHARACTER_ID }),
+        expect.anything()
+      );
+    });
+  });
+
+  describe('Generic Error Handling', () => {
+    it('should show generic error and roll back cache on 500 server error', async () => {
+      // Arrange
+      const serverError = new ApiError(500, 'SERVER_ERROR', 'Internal Server Error');
+      mockApi.update.mockRejectedValue(serverError);
+
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Optimistic Fail Name', version: 1 });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Generic error handling with rollback (lines 287-290)
+      expect(toast.error).toHaveBeenCalledWith('Internal Server Error');
+
+      // Verify the cache WAS rolled back to its original state
+      const finalCacheData: any = queryClient.getQueryData(QUERY_KEY);
+      const finalNode = finalCacheData?.nodes?.find((n: any) => n.id === MOCK_CHARACTER_ID);
+
+      expect(finalNode?.data?.label).toBe('Old Name'); // Rolled back
+      expect(finalNode?.data?.metadata?.isOptimistic).toBe(false); // Optimistic flag removed
+      expect(finalCacheData).toEqual(MOCK_INITIAL_DATA);
+    });
+
+    it('should handle network errors appropriately', async () => {
+      // Arrange
+      const networkError = new Error('Network error');
+      mockApi.update.mockRejectedValue(networkError);
+
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Test', version: 1 });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert
+      expect(toast.error).toHaveBeenCalledWith('Network error');
+      
+      // Should rollback on network errors too
+      const finalCacheData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalCacheData).toEqual(MOCK_INITIAL_DATA);
+    });
+
+    it('should handle 404 when entity is deleted between fetch and save', async () => {
+      // Arrange
+      const notFoundError = new ApiError(404, 'NOT_FOUND', 'Entity not found');
+      mockApi.update.mockRejectedValue(notFoundError);
+
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Test', version: 1 });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - 404 should be treated as generic error with rollback
+      expect(toast.error).toHaveBeenCalledWith('Entity not found');
+      
+      const finalCacheData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalCacheData).toEqual(MOCK_INITIAL_DATA);
+    });
+  });
+
+  describe('Success Path', () => {
+    it('should update cache with new version on successful save', async () => {
+      // Arrange
+      const updatedEntity = { 
+        id: MOCK_CHARACTER_ID, 
+        name: 'Updated Name', 
+        version: 2 // Server returns new version
+      };
+      mockApi.update.mockResolvedValue(updatedEntity);
+
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Updated Name', version: 1 });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert - Cache should be updated with new version
+      const finalCacheData: any = queryClient.getQueryData(QUERY_KEY);
+      const updatedNode = finalCacheData?.nodes?.find((n: any) => n.id === MOCK_CHARACTER_ID);
+      
+      expect(updatedNode?.data?.entity?.version).toBe(2);
+      expect(updatedNode?.data?.label).toBe('Updated Name');
+      expect(updatedNode?.data?.metadata?.isOptimistic).toBe(false);
+    });
+
+    it('should show success toast with entity name', async () => {
+      // Arrange
+      mockApi.update.mockResolvedValue({ 
+        id: MOCK_CHARACTER_ID, 
+        name: 'Test Character',
+        version: 2 
+      });
+
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Test Character', version: 1 });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert
+      expect(toast.success).toHaveBeenCalledWith('Updated Test Character');
+    });
+  });
+
+  describe('Version Lifecycle', () => {
+    it('should use the new version for subsequent saves', async () => {
+      // Arrange - First save
+      mockApi.update.mockResolvedValueOnce({ 
+        id: MOCK_CHARACTER_ID, 
+        name: 'First Update', 
+        version: 2 
+      });
+
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+
+      const { result } = renderHook(() => useUpdateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - First save with version 1
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'First Update', version: 1 });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Verify first save used version 1
+      expect(mockApi.update).toHaveBeenCalledWith(
+        MOCK_CHARACTER_ID,
+        { name: 'First Update' },
+        { 'If-Match': '1' }
+      );
+
+      // Setup for second save
+      mockApi.update.mockResolvedValueOnce({ 
+        id: MOCK_CHARACTER_ID, 
+        name: 'Second Update', 
+        version: 3 
+      });
+
+      // Act - Second save should use version 2
+      result.current.mutate({ id: MOCK_CHARACTER_ID, name: 'Second Update', version: 2 });
+      await waitFor(() => expect(mockApi.update).toHaveBeenCalledTimes(2));
+
+      // Assert - Second save should use version 2
+      expect(mockApi.update).toHaveBeenLastCalledWith(
+        MOCK_CHARACTER_ID,
+        { name: 'Second Update' },
+        { 'If-Match': '2' }
+      );
+    });
+  });
+});
+
+describe('createEntityMutation (via useCreateCharacter)', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = createTestQueryClient();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  const MOCK_VIEW_NAME = 'test-view';
+  const QUERY_KEY = ['graph', 'complete', MOCK_VIEW_NAME];
+  const MOCK_INITIAL_DATA = {
+    nodes: [],
+    edges: [],
+  };
+
+  describe('Optimistic Creation', () => {
+    it('should create temporary node with temp- ID and isOptimistic flag', async () => {
+      // Arrange
+      // Mock a slow API to ensure we can check optimistic state
+      mockApi.create.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ id: 'final' }), 100)));
+      
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      const { result } = renderHook(() => useCreateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - Trigger mutation with mutateAsync to wait for onMutate
+      const mutationPromise = result.current.mutateAsync({ name: 'New Character', tier: 'Core' });
+
+      // Assert - Check optimistic state after onMutate completes
+      // Use waitFor to handle async timing
+      await waitFor(() => {
+        const optimisticData: any = queryClient.getQueryData(QUERY_KEY);
+        expect(optimisticData?.nodes).toHaveLength(1);
+      });
+      
+      const optimisticData: any = queryClient.getQueryData(QUERY_KEY);
+      const tempNode = optimisticData.nodes[0];
+      expect(tempNode.id).toMatch(/^temp-/); // Temporary ID starts with temp-
+      expect(tempNode.data.label).toBe('New Character');
+      expect(tempNode.data.metadata.isOptimistic).toBe(true);
+      expect(tempNode.type).toBe('character'); // Correct node type mapping
+      
+      // Clean up - wait for mutation to complete
+      await mutationPromise;
+    });
+
+    it('should create optimistic edge when _parentRelation is provided', async () => {
+      // Arrange
+      // Mock a slow API to ensure we can check optimistic state  
+      mockElementsApi.create.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ id: 'final' }), 100)));
+      
+      const PARENT_ID = 'parent_123';
+      const initialDataWithParent = {
+        nodes: [{
+          id: PARENT_ID,
+          type: 'puzzle',
+          data: {
+            id: PARENT_ID,
+            label: 'Parent Puzzle',
+            entity: { id: PARENT_ID, puzzleElementIds: [] },
+            metadata: { isOptimistic: false },
+          },
+        }],
+        edges: [],
+      };
+      
+      queryClient.setQueryData(QUERY_KEY, initialDataWithParent);
+      const { result } = renderHook(() => useCreateElement({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - Create element with parent relation using mutateAsync
+      const mutationPromise = result.current.mutateAsync({
+        name: 'New Element',
+        _parentRelation: {
+          parentId: PARENT_ID,
+          fieldKey: 'puzzleElementIds',
+        },
+      });
+
+      // Assert - Check optimistic edge creation after onMutate completes
+      await waitFor(() => {
+        const optimisticData: any = queryClient.getQueryData(QUERY_KEY);
+        expect(optimisticData.edges).toHaveLength(1);
+      });
+      
+      const optimisticData: any = queryClient.getQueryData(QUERY_KEY);
+      const edge = optimisticData.edges[0];
+      expect(edge.source).toBe(PARENT_ID);
+      expect(edge.target).toMatch(/^temp-/); // Target is temp node
+      expect(edge.type).toBe('relation');
+      expect(edge.data.relationField).toBe('puzzleElementIds');
+      expect(edge.data.isOptimistic).toBe(true);
+      
+      // Clean up
+      await mutationPromise;
+    });
+  });
+
+  describe('Success Handling for Create', () => {
+    it('should replace temporary node with server data on success', async () => {
+      // Arrange
+      const serverResponse = { 
+        id: 'real_char_id', 
+        name: 'Created Character',
+        tier: 'Core',
+        version: 1 
+      };
+      mockApi.create.mockResolvedValue(serverResponse);
+      
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      const { result } = renderHook(() => useCreateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ name: 'Created Character', tier: 'Core' });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert - Temp node should be replaced with real data
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalData.nodes).toHaveLength(1);
+      
+      const node = finalData.nodes[0];
+      expect(node.id).toBe('real_char_id'); // Real ID from server
+      expect(node.data.id).toBe('real_char_id');
+      expect(node.data.entity.version).toBe(1); // Version from server
+      expect(node.data.metadata.isOptimistic).toBe(false); // No longer optimistic
+    });
+
+    it('should update edges to use real ID after successful creation', async () => {
+      // Arrange
+      const PARENT_ID = 'parent_456';
+      const serverResponse = { 
+        id: 'real_elem_id', 
+        name: 'Created Element',
+        version: 1 
+      };
+      mockElementsApi.create.mockResolvedValue(serverResponse);
+      
+      const initialDataWithParent = {
+        nodes: [{
+          id: PARENT_ID,
+          type: 'puzzle',
+          data: {
+            id: PARENT_ID,
+            entity: { id: PARENT_ID, puzzleElementIds: [] },
+            metadata: { isOptimistic: false },
+          },
+        }],
+        edges: [],
+      };
+      
+      queryClient.setQueryData(QUERY_KEY, initialDataWithParent);
+      const { result } = renderHook(() => useCreateElement({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({
+        name: 'Created Element',
+        _parentRelation: {
+          parentId: PARENT_ID,
+          fieldKey: 'puzzleElementIds',
+        },
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert - Edge should use real ID
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      const edge = finalData.edges[0];
+      
+      expect(edge.source).toBe(PARENT_ID);
+      expect(edge.target).toBe('real_elem_id'); // Real ID, not temp-
+      expect(edge.id).toContain('real_elem_id'); // Edge ID updated
+      expect(edge.data.isOptimistic).toBe(false);
+    });
+
+    it('should invalidate queries on successful creation', async () => {
+      // Arrange
+      const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+      mockApi.create.mockResolvedValue({ id: 'new_id', name: 'New', version: 1 });
+      
+      const { result } = renderHook(() => useCreateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ name: 'New Character' });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert - Queries should be invalidated
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['graph'],
+        exact: false,
+        refetchType: 'active'
+      });
+    });
+  });
+
+  describe('Error Handling for Create', () => {
+    it('should remove temporary node on generic error', async () => {
+      // Arrange
+      const error = new ApiError(500, 'SERVER_ERROR', 'Creation failed');
+      mockApi.create.mockRejectedValue(error);
+      
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      const { result } = renderHook(() => useCreateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - trigger mutation with mutate (not mutateAsync)
+      result.current.mutate({ name: 'Will Fail' });
+      
+      // Verify temp node exists after onMutate
+      await waitFor(() => {
+        const optimisticData: any = queryClient.getQueryData(QUERY_KEY);
+        return optimisticData?.nodes?.length > 0;
+      });
+      
+      // Wait for error
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Temp node should be removed
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalData.nodes).toHaveLength(0); // Node removed
+      expect(toast.error).toHaveBeenCalledWith('Creation failed');
+    });
+
+    it('should remove temporary edges on creation failure', async () => {
+      // Arrange
+      const PARENT_ID = 'parent_789';
+      const error = new ApiError(500, 'SERVER_ERROR', 'Creation failed');
+      mockElementsApi.create.mockRejectedValue(error);
+      
+      const initialDataWithParent = {
+        nodes: [{
+          id: PARENT_ID,
+          type: 'puzzle',
+          data: { id: PARENT_ID, entity: { puzzleElementIds: [] } },
+        }],
+        edges: [],
+      };
+      
+      queryClient.setQueryData(QUERY_KEY, initialDataWithParent);
+      const { result } = renderHook(() => useCreateElement({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - trigger mutation with mutate (not mutateAsync)
+      result.current.mutate({
+        name: 'Will Fail',
+        _parentRelation: { parentId: PARENT_ID, fieldKey: 'puzzleElementIds' },
+      });
+      
+      // Verify optimistic edge exists
+      await waitFor(() => {
+        const optimisticData: any = queryClient.getQueryData(QUERY_KEY);
+        return optimisticData?.edges?.length > 0;
+      });
+      
+      // Wait for error
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Both node and edge should be removed
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalData.nodes).toHaveLength(1); // Only parent remains
+      expect(finalData.edges).toHaveLength(0); // Temp edge removed
+    });
+
+    it('should NOT rollback on 409 conflict during creation', async () => {
+      // Arrange
+      const conflictError = new ApiError(409, 'CONFLICT', 'Already exists');
+      mockApi.create.mockRejectedValue(conflictError);
+      
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      const { result } = renderHook(() => useCreateCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ name: 'Conflicting Character' });
+      
+      // Wait for optimistic update
+      await waitFor(() => {
+        const data: any = queryClient.getQueryData(QUERY_KEY);
+        return data?.nodes?.length > 0;
+      });
+      
+      // Wait for error
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Temp node should remain (no rollback on 409)
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalData.nodes).toHaveLength(1);
+      expect(finalData.nodes[0].data.metadata.isOptimistic).toBe(true);
+      expect(toast.error).toHaveBeenCalledWith(
+        'This item has been modified by another user. Please refresh the page and try again.',
+        { duration: 5000 }
+      );
+    });
+  });
+});
+
+describe('deleteEntityMutation (via useDeleteCharacter)', () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    queryClient = createTestQueryClient();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  const MOCK_VIEW_NAME = 'test-view';
+  const QUERY_KEY = ['graph', 'complete', MOCK_VIEW_NAME];
+  const ENTITY_ID = 'char_123';
+  
+  const MOCK_INITIAL_DATA = {
+    nodes: [{
+      id: ENTITY_ID,
+      type: 'character',
+      position: { x: 0, y: 0 },
+      data: {
+        id: ENTITY_ID,
+        label: 'Character to Delete',
+        entity: { id: ENTITY_ID, name: 'Character to Delete', version: 2 },
+        metadata: { isOptimistic: false },
+      },
+    }],
+    edges: [{
+      id: `e::${ENTITY_ID}::relationship::other_456`,
+      source: ENTITY_ID,
+      target: 'other_456',
+      type: 'relation',
+      data: { relationField: 'connections' },
+    }],
+  };
+
+  describe('Version Control for Delete', () => {
+    it('should send If-Match header when version is provided', async () => {
+      // Arrange
+      mockApi.delete.mockResolvedValue(undefined);
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - Delete with version
+      result.current.mutate({ id: ENTITY_ID, version: 2 });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert
+      expect(mockApi.delete).toHaveBeenCalledWith(ENTITY_ID, {
+        'If-Match': '2'
+      });
+    });
+
+    it('should handle backward compatibility with string ID only', async () => {
+      // Arrange
+      mockApi.delete.mockResolvedValue(undefined);
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - Delete with just ID (backward compatibility test)
+      result.current.mutate(ENTITY_ID);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert - Should work with no headers
+      expect(mockApi.delete).toHaveBeenCalledWith(ENTITY_ID);
+    });
+
+    it('should NOT delete on 409 conflict with version mismatch', async () => {
+      // Arrange
+      const conflictError = new ApiError(409, 'CONFLICT', 'Version mismatch');
+      mockApi.delete.mockRejectedValue(conflictError);
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act - Delete with outdated version
+      result.current.mutate({ id: ENTITY_ID, version: 1 });
+      
+      // Wait for error
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Entity should remain (no deletion on 409)
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalData.nodes).toHaveLength(0); // Optimistic removal still happens
+      expect(toast.error).toHaveBeenCalledWith(
+        'This item has been modified by another user. Please refresh the page and try again.',
+        { duration: 5000 }
+      );
+    });
+  });
+
+  describe('Optimistic Deletion', () => {
+    it('should remove node optimistically on delete', async () => {
+      // Arrange
+      mockApi.delete.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: ENTITY_ID });
+
+      // Assert - Node should be removed optimistically
+      await waitFor(() => {
+        const data: any = queryClient.getQueryData(QUERY_KEY);
+        expect(data?.nodes).toHaveLength(0);
+      });
+    });
+
+    it('should remove related edges when deleting node', async () => {
+      // Arrange
+      mockApi.delete.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: ENTITY_ID });
+
+      // Assert - Edges should be removed
+      await waitFor(() => {
+        const data: any = queryClient.getQueryData(QUERY_KEY);
+        expect(data?.edges).toHaveLength(0);
+      });
+    });
+  });
+
+  describe('Success Handling for Delete', () => {
+    it('should invalidate queries on successful deletion', async () => {
+      // Arrange
+      const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
+      mockApi.delete.mockResolvedValue(undefined);
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: ENTITY_ID });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert
+      expect(invalidateQueriesSpy).toHaveBeenCalledWith({
+        queryKey: ['graph'],
+        exact: false,
+        refetchType: 'active'
+      });
+    });
+
+    it('should show success toast on deletion', async () => {
+      // Arrange
+      mockApi.delete.mockResolvedValue(undefined);
+      queryClient.setQueryData(QUERY_KEY, {
+        nodes: [{
+          ...MOCK_INITIAL_DATA.nodes[0],
+          data: {
+            ...MOCK_INITIAL_DATA.nodes[0].data,
+            entity: { id: ENTITY_ID, name: 'Named Character', version: 2 },
+          },
+        }],
+        edges: [],
+      });
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: ENTITY_ID });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      // Assert
+      expect(toast.success).toHaveBeenCalledWith('Deleted character');
+    });
+  });
+
+  describe('Error Handling for Delete', () => {
+    it('should restore node and edges on generic error', async () => {
+      // Arrange
+      const error = new ApiError(500, 'SERVER_ERROR', 'Deletion failed');
+      mockApi.delete.mockRejectedValue(error);
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: ENTITY_ID });
+      
+      // Verify optimistic removal
+      await waitFor(() => {
+        const data: any = queryClient.getQueryData(QUERY_KEY);
+        return data?.nodes?.length === 0;
+      });
+
+      // Wait for error
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Node and edges should be restored
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalData.nodes).toHaveLength(1);
+      expect(finalData.nodes[0].id).toBe(ENTITY_ID);
+      expect(finalData.edges).toHaveLength(1);
+      expect(toast.error).toHaveBeenCalledWith('Deletion failed');
+    });
+
+    it('should NOT restore on 409 conflict during deletion', async () => {
+      // Arrange
+      const conflictError = new ApiError(409, 'CONFLICT', 'Version mismatch');
+      mockApi.delete.mockRejectedValue(conflictError);
+      queryClient.setQueryData(QUERY_KEY, MOCK_INITIAL_DATA);
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: ENTITY_ID });
+      
+      // Wait for optimistic removal
+      await waitFor(() => {
+        const data: any = queryClient.getQueryData(QUERY_KEY);
+        return data?.nodes?.length === 0;
+      });
+
+      // Wait for error
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert - Node should remain deleted (no rollback on 409)
+      const finalData: any = queryClient.getQueryData(QUERY_KEY);
+      expect(finalData.nodes).toHaveLength(0);
+      expect(finalData.edges).toHaveLength(0);
+      expect(toast.error).toHaveBeenCalledWith(
+        'This item has been modified by another user. Please refresh the page and try again.',
+        { duration: 5000 }
+      );
+    });
+
+    it('should handle deletion of non-existent entity gracefully', async () => {
+      // Arrange
+      const error = new ApiError(404, 'NOT_FOUND', 'Entity not found');
+      mockApi.delete.mockRejectedValue(error);
+      queryClient.setQueryData(QUERY_KEY, { nodes: [], edges: [] });
+      
+      const { result } = renderHook(() => useDeleteCharacter({ viewName: MOCK_VIEW_NAME }), {
+        wrapper: createWrapper(queryClient),
+      });
+
+      // Act
+      result.current.mutate({ id: 'non_existent_id' });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+
+      // Assert
+      expect(toast.error).toHaveBeenCalledWith('Entity not found');
+    });
+  });
+});

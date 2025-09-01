@@ -61,6 +61,5 @@ export {
   // Types
   type EntityType,
   type MutationType,
-  type Entity,
-  type MutationPayload
+  type Entity
 } from './entityMutations';

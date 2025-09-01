@@ -14,6 +14,28 @@ ALNRetool is a visualization and editing tool for the "About Last Night" murder 
 - **Styling**: Tailwind CSS v4, Framer Motion
 - **Data**: Notion API as primary database
 
+## CRITICAL Considerations
+- Relationship handling between ROLLUP and RELATIONSHIP and TWO WAY RELATIONSHIP fields in Notion each need specific handling for CRUD operations. 
+- ALWAYS use FULL filepaths for TOOL CALLS.
+- zen:precommit REQUIRES changeset files. Prepare it before you start. 
+
+## Currently working on: 
+@H6_PROCESS_MAP.md
+
+## Changes recorded at: 
+CHANGELOG.md
+
+## Technical Debt Tracking
+TECH-DEBT.md
+
+## CRITICAL: TypeScript Error Checking
+
+**WARNING**: Never use `npx tsc` directly on individual files! This will give false errors.
+- ❌ **WRONG**: `npx tsc --noEmit src/hooks/mutations/entityMutations.ts` 
+- ✅ **CORRECT**: `npm run typecheck`
+
+The direct tsc command uses default ES5 target and lacks path mappings, creating phantom syntax errors that don't exist with the project's actual configuration. This has caused hours of wasted debugging time chasing non-existent brace mismatches.
+
 ## Key Development Commands
 
 ```bash
