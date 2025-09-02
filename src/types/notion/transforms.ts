@@ -118,7 +118,17 @@ export function getRelationIds(prop: NotionProperty | undefined): string[] {
 
 export function getRollupArray(prop: NotionProperty | undefined): NotionProperty[] {
   if (!prop || prop.type !== 'rollup') return [];
+  
+  // NOTE: The 'has_more' flag for rollups is only available on the `pages.properties.retrieve`
+  // endpoint, not the standard `pages.retrieve` response. The best we can do here is warn
+  // when we approach the known limit of 25 where pagination is likely to occur.
   if (prop.rollup.type === 'array') {
+    if (prop.rollup.array.length >= 25) {
+      // This file is shared client/server, so use console.warn.
+      console.warn(`[Rollup Limit] Rollup property has 25 or more items. Results may be truncated by Notion API.`, {
+        count: prop.rollup.array.length
+      });
+    }
     return prop.rollup.array;
   }
   return [];

@@ -31,6 +31,9 @@ export interface GraphDelta {
       updated: Edge[];    // Added for edge property changes
     };
   };
+  // Version tracking for cache consistency (prevents cache corruption)
+  fromVersion?: number; // The cache version this delta was calculated from
+  toVersion?: number;   // The cache version after applying this delta
 }
 
 export interface DeltaCalculatorResult {

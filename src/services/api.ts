@@ -281,11 +281,13 @@ export const charactersApi = {
   /**
    * Update a character
    */
-  update: async (id: string, updates: Partial<Character>): Promise<Character> => {
-    return fetcher<Character>(`/notion/characters/${id}`, {
+  update: async (id: string, updates: Partial<Character>, headers?: Record<string, string>): Promise<Character> => {
+    // Step 4: Add include_delta query parameter for UPDATE mutations
+    return fetcher<Character>(`/notion/characters/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...headers, // Allow passing If-Match header for version control
       },
       body: JSON.stringify(updates),
     });
@@ -295,7 +297,8 @@ export const charactersApi = {
    * Create a new character
    */
   create: async (data: Partial<Character>): Promise<Character> => {
-    return fetcher<Character>('/notion/characters', {
+    // Step 6: Add include_delta query parameter for CREATE mutations
+    return fetcher<Character>('/notion/characters?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -307,9 +310,11 @@ export const charactersApi = {
   /**
    * Delete (archive) a character
    */
-  delete: async (id: string): Promise<void> => {
-    await fetcher<void>(`/notion/characters/${id}`, {
+  delete: async (id: string, headers?: Record<string, string>): Promise<void> => {
+    // Step 8: Add include_delta query parameter for DELETE mutations
+    await fetcher<void>(`/notion/characters/${id}?include_delta=true`, {
       method: 'DELETE',
+      headers,
     });
   },
 };
@@ -360,11 +365,13 @@ export const elementsApi = {
   /**
    * Update an element
    */
-  update: async (id: string, updates: Partial<Element>): Promise<Element> => {
-    return fetcher<Element>(`/notion/elements/${id}`, {
+  update: async (id: string, updates: Partial<Element>, headers?: Record<string, string>): Promise<Element> => {
+    // Step 4: Add include_delta query parameter for UPDATE mutations
+    return fetcher<Element>(`/notion/elements/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...headers, // Allow passing If-Match header for version control
       },
       body: JSON.stringify(updates),
     });
@@ -374,7 +381,8 @@ export const elementsApi = {
    * Create a new element
    */
   create: async (data: Partial<Element>): Promise<Element> => {
-    return fetcher<Element>('/notion/elements', {
+    // Step 6: Add include_delta query parameter for CREATE mutations
+    return fetcher<Element>('/notion/elements?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -386,9 +394,11 @@ export const elementsApi = {
   /**
    * Delete (archive) an element
    */
-  delete: async (id: string): Promise<void> => {
-    await fetcher<void>(`/notion/elements/${id}`, {
+  delete: async (id: string, headers?: Record<string, string>): Promise<void> => {
+    // Step 8: Add include_delta query parameter for DELETE mutations
+    await fetcher<void>(`/notion/elements/${id}?include_delta=true`, {
       method: 'DELETE',
+      headers,
     });
   },
 };
@@ -426,11 +436,13 @@ export const puzzlesApi = {
   /**
    * Update a puzzle
    */
-  update: async (id: string, updates: Partial<Puzzle>): Promise<Puzzle> => {
-    return fetcher<Puzzle>(`/notion/puzzles/${id}`, {
+  update: async (id: string, updates: Partial<Puzzle>, headers?: Record<string, string>): Promise<Puzzle> => {
+    // Step 4: Add include_delta query parameter for UPDATE mutations
+    return fetcher<Puzzle>(`/notion/puzzles/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...headers, // Allow passing If-Match header for version control
       },
       body: JSON.stringify(updates),
     });
@@ -440,7 +452,8 @@ export const puzzlesApi = {
    * Create a new puzzle
    */
   create: async (data: Partial<Puzzle>): Promise<Puzzle> => {
-    return fetcher<Puzzle>('/notion/puzzles', {
+    // Step 6: Add include_delta query parameter for CREATE mutations
+    return fetcher<Puzzle>('/notion/puzzles?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -452,9 +465,11 @@ export const puzzlesApi = {
   /**
    * Delete (archive) a puzzle
    */
-  delete: async (id: string): Promise<void> => {
-    await fetcher<void>(`/notion/puzzles/${id}`, {
+  delete: async (id: string, headers?: Record<string, string>): Promise<void> => {
+    // Step 8: Add include_delta query parameter for DELETE mutations
+    await fetcher<void>(`/notion/puzzles/${id}?include_delta=true`, {
       method: 'DELETE',
+      headers,
     });
   },
 };
@@ -504,11 +519,13 @@ export const timelineApi = {
   /**
    * Update a timeline event
    */
-  update: async (id: string, updates: Partial<TimelineEvent>): Promise<TimelineEvent> => {
-    return fetcher<TimelineEvent>(`/notion/timeline/${id}`, {
+  update: async (id: string, updates: Partial<TimelineEvent>, headers?: Record<string, string>): Promise<TimelineEvent> => {
+    // Step 4: Add include_delta query parameter for UPDATE mutations
+    return fetcher<TimelineEvent>(`/notion/timeline/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        ...headers, // Allow passing If-Match header for version control
       },
       body: JSON.stringify(updates),
     });
@@ -518,7 +535,8 @@ export const timelineApi = {
    * Create a new timeline event
    */
   create: async (data: Partial<TimelineEvent>): Promise<TimelineEvent> => {
-    return fetcher<TimelineEvent>('/notion/timeline', {
+    // Step 6: Add include_delta query parameter for CREATE mutations
+    return fetcher<TimelineEvent>('/notion/timeline?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -530,9 +548,11 @@ export const timelineApi = {
   /**
    * Delete (archive) a timeline event
    */
-  delete: async (id: string): Promise<void> => {
-    await fetcher<void>(`/notion/timeline/${id}`, {
+  delete: async (id: string, headers?: Record<string, string>): Promise<void> => {
+    // Step 8: Add include_delta query parameter for DELETE mutations
+    await fetcher<void>(`/notion/timeline/${id}?include_delta=true`, {
       method: 'DELETE',
+      headers,
     });
   },
 };

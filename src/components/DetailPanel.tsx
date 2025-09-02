@@ -548,8 +548,12 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     // Only send changed fields
     const changes: Partial<Entity> = {};
     Object.keys(formData).forEach((key) => {
-      if (formData[key as keyof Entity] !== entity[key as keyof Entity]) {
-        changes[key as keyof Entity] = formData[key as keyof Entity];
+      const typedKey = key as keyof Entity;
+      if (formData[typedKey] !== entity[typedKey]) {
+        // We use `as any` here because TypeScript cannot resolve the dynamic key
+        // against the union type `Partial<Entity>`. The logic is safe because
+        // formData and entity share the same concrete type at runtime.
+        (changes as any)[typedKey] = formData[typedKey];
       }
     });
     
@@ -561,8 +565,11 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     try {
       // Use mutation if available, otherwise fallback to onSave prop
       if (mutation) {
+        // Pass original version for optimistic locking
+        const version = entity?.version;
         await mutation.mutateAsync({ 
-          id: entity.id, 
+          id: entity.id,
+          version, // Include version for If-Match header
           ...changes 
         });
         setIsDirty(false);
@@ -595,7 +602,11 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     
     setIsDeleting(true);
     try {
-      await deleteMutation.mutateAsync(entity.id);
+      // Pass version for optimistic locking on delete
+      const deleteData = 'version' in entity && entity.version !== undefined 
+        ? { id: entity.id, version: entity.version }
+        : entity.id;
+      await deleteMutation.mutateAsync(deleteData);
       // onClose is called from the mutation's onSuccess callback
     } catch (error) {
       // Error is already shown via toast in the mutation

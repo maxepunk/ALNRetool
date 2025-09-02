@@ -9,7 +9,9 @@ import { handleCachedNotionRequest } from './base.js';
 import { notion } from '../../services/notion.js';
 import { cacheService } from '../../services/cache.js';
 import { log } from '../../utils/logger.js';
+import { AppError } from '../../middleware/errorHandler.js';
 import type { NotionPage } from '../../../src/types/notion/raw.js';
+import type { Character, Element, Puzzle, TimelineEvent } from '../../../src/types/notion/app.js';
 import { captureGraphState } from '../../services/graphStateCapture.js';
 import { deltaCalculator } from '../../services/deltaCalculator.js';
 import type { GraphState, GraphDelta } from '../../types/delta.js';
@@ -70,6 +72,14 @@ async function updateInverseRelations(
     // Find added and removed IDs
     const addedIds = Array.from(newIds).filter(id => !oldIds.has(id));
     const removedIds = Array.from(oldIds).filter(id => !newIds.has(id));
+    
+    if (removedIds.length > 0) {
+      log.info(`[InverseRelations] Removing ${removedIds.length} relations from field ${relation.sourceField}`, {
+        entityId,
+        removedIds,
+        targetField: relation.targetField
+      });
+    }
     
     if (!relation.bidirectional) {
       continue;
@@ -321,12 +331,63 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       // Invalidate graph cache to ensure graph reflects new entity
       cacheService.invalidatePattern('graph_complete*'); // Graph caches: "graph_complete_all", "graph_complete_{viewConfig}"
       
+      // STEP 6: Generate delta for CREATE if requested
+      let delta: GraphDelta | undefined;
+      const includeDelta = req.query.include_delta === 'true';
+      
+      if (includeDelta) {
+        try {
+          // For CREATE, we need to generate the "after" state
+          // The delta shows what nodes/edges were added
+          const afterState = await captureGraphState(response.id, config.entityName);
+          
+          if (afterState && afterState.nodes && afterState.edges) {
+            // For CREATE, everything in afterState is "created"
+            delta = {
+              entity: transformed as Character | Element | Puzzle | TimelineEvent,
+              changes: {
+                nodes: {
+                  created: afterState.nodes, // All nodes are new
+                  updated: [],
+                  deleted: []
+                },
+                edges: {
+                  created: afterState.edges, // All edges are new
+                  updated: [],
+                  deleted: []
+                }
+              }
+            };
+            
+            log.info('[Delta] Generated delta for CREATE', {
+              entityType: config.entityName,
+              entityId: response.id,
+              nodesCreated: afterState.nodes.length,
+              edgesCreated: afterState.edges.length
+            });
+          } else {
+            log.warn('[Delta] Graph state capture returned empty for CREATE', {
+              entityType: config.entityName,
+              entityId: response.id
+            });
+            // Don't include delta if capture failed
+          }
+        } catch (error) {
+          log.error('[Delta] Failed to generate delta for CREATE', {
+            entityType: config.entityName,
+            entityId: response.id,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          // Don't fail the request, just skip delta
+        }
+      }
+      
       // Return consistent response structure
       // WHY: Standardized API responses across all mutations
       res.status(201).json({
         success: true,
         data: transformed,
-        delta: undefined  // CREATE has no delta (everything is new)
+        delta  // Will be undefined if not requested or if generation failed
       });
     }));
   }
@@ -388,13 +449,31 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     let delta: GraphDelta | null = null;
     if (graphStateBefore && entityData) {
       try {
-        // For deletion, the after state has the node removed
-        // WHY: We simulate the deleted state by removing the entity from the graph
-        const graphStateAfter = {
-          nodes: graphStateBefore.nodes.filter((n: any) => n.id !== id),
-          edges: graphStateBefore.edges.filter((e: any) => e.source !== id && e.target !== id),
-          capturedAt: Date.now()
-        };
+        // Bug 4 Fix: For deletion with inverse relations, we need to capture the actual state
+        // after inverse relations have been updated, not just simulate it
+        let graphStateAfter: GraphState;
+        
+        if (config.inverseRelations && config.inverseRelations.length > 0) {
+          // Complex deletion - inverse relations modified other entities
+          // We need to re-capture to get the updated state of related entities
+          // Note: The deleted entity won't be in the graph anymore
+          graphStateAfter = await captureGraphState(id, config.entityName);
+          
+          // Since the entity is deleted, manually remove it from the captured state
+          // (it might still appear if there's a race condition)
+          graphStateAfter = {
+            nodes: graphStateAfter.nodes.filter((n: any) => n.id !== id),
+            edges: graphStateAfter.edges.filter((e: any) => e.source !== id && e.target !== id),
+            capturedAt: graphStateAfter.capturedAt
+          };
+        } else {
+          // Simple deletion - no inverse relations, safe to simulate
+          graphStateAfter = {
+            nodes: graphStateBefore.nodes.filter((n: any) => n.id !== id),
+            edges: graphStateBefore.edges.filter((e: any) => e.source !== id && e.target !== id),
+            capturedAt: Date.now()
+          };
+        }
         
         // Calculate the delta showing what was deleted
         delta = deltaCalculator.calculateGraphDelta(
@@ -422,6 +501,30 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     if (delta) {
       // Only invalidate the specific entity cache
       cacheService.invalidatePattern(`${config.entityName}_${id}`);
+      
+      // BUG 5 FIX: Also invalidate cache for all entities affected by the deletion
+      // WHY: Related entities (via inverse relations) are modified but weren't being invalidated
+      const updatedNodes = delta.changes?.nodes?.updated || [];
+      for (const node of updatedNodes) {
+        // Map entity type from delta to cache key pattern
+        const entityType = node.data?.metadata?.entityType;
+        if (!entityType) {
+          log.warn('[Cache] Skipping invalidation for node with missing entityType in delta (DELETE)', { nodeId: node.id });
+          continue;
+        }
+        
+        // TODO: Replace with centralized utility function getCollectionNameForEntityType(entityType)
+        const entityName = entityType === 'timeline' 
+          ? 'timeline' 
+          : `${entityType}s`;
+        
+        log.info('[Cache] Invalidating related entity from delta (DELETE)', { 
+          entityId: node.id, 
+          entityType: entityType 
+        });
+        
+        cacheService.invalidatePattern(`${entityName}_${node.id}`);
+      }
     } else {
       // No delta - fall back to full cache invalidation
       cacheService.invalidatePattern(`${config.entityName}_${id}`);
@@ -478,6 +581,27 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         }
       }
       
+      // H2: Version control check using If-Match header
+      const ifMatchHeader = req.headers['if-match'];
+      if (ifMatchHeader) {
+        // Fetch current page to check version
+        const currentPage = await notion.pages.retrieve({ page_id: req.params.id }) as NotionPage;
+        const currentLastEdited = currentPage.last_edited_time;
+        
+        // Strip quotes from If-Match header for comparison (RFC 7232 ETags are quoted)
+        const providedVersion = ifMatchHeader.replace(/^"|"$/g, '');
+        
+        // Compare versions (If-Match should contain the lastEdited timestamp)
+        if (providedVersion !== currentLastEdited) {
+          // Version mismatch - return 409 Conflict
+          throw new AppError(
+            409,
+            'VERSION_CONFLICT',
+            'Version conflict: Entity has been modified by another user'
+          );
+        }
+      }
+      
       // Update the entity
       const properties = config.toNotionProps!(req.body);
       const response = await notion.pages.update({
@@ -501,8 +625,8 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       let delta: GraphDelta | null = null;
       if (graphStateBefore) {
         try {
-          // Import edge generation helper
-          const { generateEdgesForEntities } = await import('../../services/graphStateCapture.js');
+          // Import helpers
+          const { generateEdgesForEntities, fetchGraphStateForIds } = await import('../../services/graphStateCapture.js');
           
           // Optimize: If no inverse relations, construct after state in-memory
           // WHY: Avoid second API call when only the target entity changed
@@ -526,8 +650,11 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
               capturedAt: Date.now()
             };
           } else {
-            // Complex update - inverse relations modified other entities, must re-fetch
-            graphStateAfter = await captureGraphState(req.params.id, config.entityName);
+            // Complex update - inverse relations modified other entities
+            // Bug 4 Fix: Use the SAME set of entity IDs from before state
+            // WHY: This ensures recently unlinked entities are included in after state
+            const entityIdsInScope = graphStateBefore.nodes.map((n: any) => n.id);
+            graphStateAfter = await fetchGraphStateForIds(entityIdsInScope);
           }
           
           // Only calculate delta if we have both states
@@ -563,6 +690,33 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       if (delta) {
         // Only invalidate the specific entity cache
         cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
+        
+        // BUG 5 FIX: Also invalidate cache for all entities affected by the change
+        // WHY: Related entities (via inverse relations) are modified but weren't being invalidated
+        const updatedNodes = delta.changes?.nodes?.updated || [];
+        for (const node of updatedNodes) {
+          // Skip the primary entity (already invalidated above)
+          if (node.id === req.params.id) continue;
+          
+          // Map entity type from delta to cache key pattern
+          const entityType = node.data?.metadata?.entityType;
+          if (!entityType) {
+            log.warn('[Cache] Skipping invalidation for node with missing entityType in delta', { nodeId: node.id });
+            continue;
+          }
+          
+          // TODO: Replace with centralized utility function getCollectionNameForEntityType(entityType)
+          const entityName = entityType === 'timeline' 
+            ? 'timeline' 
+            : `${entityType}s`;
+          
+          log.info('[Cache] Invalidating related entity from delta', { 
+            entityId: node.id, 
+            entityType: entityType 
+          });
+          
+          cacheService.invalidatePattern(`${entityName}_${node.id}`);
+        }
       } else {
         // No delta - fall back to full cache invalidation
         cacheService.invalidatePattern(`${config.entityName}_${req.params.id}`);
@@ -571,15 +725,19 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         
         // If we have inverse relations, invalidate those entity types too
         if (config.inverseRelations) {
+          // Import entity type detection utility
+          const { getEntityTypeFromDatabaseId } = await import('../../utils/entityTypeDetection.js');
+          
           for (const relation of config.inverseRelations) {
-            // Extract entity name from the target database ID pattern
-            const targetEntityName = relation.targetDatabaseId.includes('element') ? 'elements' :
-                                     relation.targetDatabaseId.includes('puzzle') ? 'puzzles' :
-                                     relation.targetDatabaseId.includes('character') ? 'characters' : 
-                                     'timeline';
-            
-            // Invalidate the target entity type caches
-            cacheService.invalidatePattern(`${targetEntityName}:*`);
+            // Use proper database ID mapping instead of string matching
+            const entityType = getEntityTypeFromDatabaseId(relation.targetDatabaseId);
+            if (entityType) {
+              // Map entity type to collection name (add 's' for plural)
+              const targetEntityName = entityType === 'timeline' ? 'timeline' : `${entityType}s`;
+              
+              // Invalidate the target entity type caches
+              cacheService.invalidatePattern(`${targetEntityName}:*`);
+            }
           }
         }
       }
@@ -587,6 +745,13 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       // Return consistent response structure  
       // WHY: Standardized API responses make client code simpler and more predictable
       const includeDelta = req.query.include_delta === 'true';
+      
+      // H2: Add ETag header with the new lastEdited timestamp
+      // The response from Notion contains the updated last_edited_time
+      // RFC 7232 requires ETags to be quoted strings
+      if (response.last_edited_time) {
+        res.setHeader('ETag', `"${response.last_edited_time}"`);
+      }
       
       res.json({
         success: true,

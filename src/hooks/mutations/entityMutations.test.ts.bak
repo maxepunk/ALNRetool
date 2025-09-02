@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import toast from 'react-hot-toast';
@@ -15,13 +15,11 @@ import type {
   Character, 
   Element, 
   Puzzle, 
-  TimelineEvent,
+  TimelineEvent, 
+  Entity,
   CharacterType,
   ElementBasicType 
 } from '@/types/notion/app';
-
-// Entity is a union type
-type Entity = Character | Element | Puzzle | TimelineEvent;
 
 // Mock external dependencies
 vi.mock('react-hot-toast', () => ({
@@ -67,13 +65,9 @@ vi.mock('@/services/api', () => ({
 }));
 
 // Get the mocked API after the mock is defined
-import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
+import { charactersApi, elementsApi, puzzlesApi, timelineApi, ApiError } from '@/services/api';
 const mockApi = charactersApi as any;
-
-// Ensure all API modules have the same mock functions for batch tests
-(elementsApi as any).update = mockApi.update;
-(puzzlesApi as any).update = mockApi.update;
-(timelineApi as any).update = mockApi.update;
+const mockElementsApi = elementsApi as any;
 
 // Test setup: create a new QueryClient for each test
 const createTestQueryClient = () => new QueryClient({
@@ -141,7 +135,7 @@ describe('createEntityMutation (via useUpdateCharacter)', () => {
       expect(mockApi.update).toHaveBeenCalledWith(
         MOCK_CHARACTER_ID,
         { name: 'New Name' }, // id and version are correctly stripped from the body
-        { 'If-Match': '"1"' }   // version is correctly passed as If-Match header with RFC 7232 quotes
+        { 'If-Match': '1' }   // version is correctly passed as If-Match header
       );
       expect(toast.success).toHaveBeenCalledWith('Updated New Name');
     });
@@ -180,7 +174,7 @@ describe('createEntityMutation (via useUpdateCharacter)', () => {
       expect(mockApi.update).toHaveBeenCalledWith(
         MOCK_CHARACTER_ID,
         { name: 'New Name' },
-        { 'If-Match': '"0"' }
+        { 'If-Match': '0' }
       );
     });
   });
@@ -413,7 +407,7 @@ describe('createEntityMutation (via useUpdateCharacter)', () => {
       expect(mockApi.update).toHaveBeenCalledWith(
         MOCK_CHARACTER_ID,
         { name: 'First Update' },
-        { 'If-Match': '"1"' }
+        { 'If-Match': '1' }
       );
 
       // Setup for second save
@@ -431,7 +425,7 @@ describe('createEntityMutation (via useUpdateCharacter)', () => {
       expect(mockApi.update).toHaveBeenLastCalledWith(
         MOCK_CHARACTER_ID,
         { name: 'Second Update' },
-        { 'If-Match': '"2"' }
+        { 'If-Match': '2' }
       );
     });
   });
@@ -491,7 +485,7 @@ describe('createEntityMutation (via useCreateCharacter)', () => {
     it('should create optimistic edge when _parentRelation is provided', async () => {
       // Arrange
       // Mock a slow API to ensure we can check optimistic state  
-      mockApi.create.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ id: 'final' }), 100)));
+      mockElementsApi.create.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve({ id: 'final' }), 100)));
       
       const PARENT_ID = 'parent_123';
       const initialDataWithParent = {
@@ -580,7 +574,7 @@ describe('createEntityMutation (via useCreateCharacter)', () => {
         name: 'Created Element',
         version: 1 
       };
-      mockApi.create.mockResolvedValue(serverResponse);
+      mockElementsApi.create.mockResolvedValue(serverResponse);
       
       const initialDataWithParent = {
         nodes: [{
@@ -675,7 +669,7 @@ describe('createEntityMutation (via useCreateCharacter)', () => {
       // Arrange
       const PARENT_ID = 'parent_789';
       const error = new ApiError(500, 'SERVER_ERROR', 'Creation failed');
-      mockApi.create.mockRejectedValue(error);
+      mockElementsApi.create.mockRejectedValue(error);
       
       const initialDataWithParent = {
         nodes: [{
@@ -914,9 +908,9 @@ describe('deleteEntityMutation (via useDeleteCharacter)', () => {
       mockApi.delete.mockResolvedValue(undefined);
       queryClient.setQueryData(QUERY_KEY, {
         nodes: [{
-          ...MOCK_INITIAL_DATA.nodes[0]!,
+          ...MOCK_INITIAL_DATA.nodes[0],
           data: {
-            ...MOCK_INITIAL_DATA.nodes[0]!.data,
+            ...MOCK_INITIAL_DATA.nodes[0].data,
             entity: { id: ENTITY_ID, name: 'Named Character', version: 2 },
           },
         }],
@@ -1024,8 +1018,11 @@ describe('Batch Mutations', () => {
   const QUERY_KEY = ['graph', 'test'];
   const MOCK_VIEW_NAME = 'test-view';
   
-  // Use the global mockApi for all entity types
-  // The mockApi object is already set up to handle all entity types
+  // Import the APIs we need
+  const mockCharactersApi = charactersApi as any;
+  const mockElementsApi = elementsApi as any;
+  const mockPuzzlesApi = puzzlesApi as any;
+  const mockTimelineApi = timelineApi as any;
   
   beforeEach(() => {
     queryClient = createTestQueryClient();
@@ -1045,9 +1042,9 @@ describe('Batch Mutations', () => {
         { id: 'char_3', name: 'Updated Character 3', lastEdited: '2024-01-01T00:00:02Z' }
       ];
       
-      mockApi.update.mockResolvedValueOnce({ ...updates[0], lastEdited: '2024-01-01T00:00:10Z' });
-      mockApi.update.mockResolvedValueOnce({ ...updates[1], lastEdited: '2024-01-01T00:00:11Z' });
-      mockApi.update.mockResolvedValueOnce({ ...updates[2], lastEdited: '2024-01-01T00:00:12Z' });
+      mockCharactersApi.update.mockResolvedValueOnce({ ...updates[0], lastEdited: '2024-01-01T00:00:10Z' });
+      mockCharactersApi.update.mockResolvedValueOnce({ ...updates[1], lastEdited: '2024-01-01T00:00:11Z' });
+      mockCharactersApi.update.mockResolvedValueOnce({ ...updates[2], lastEdited: '2024-01-01T00:00:12Z' });
       
       const initialData = {
         nodes: updates.map(u => ({
@@ -1070,19 +1067,27 @@ describe('Batch Mutations', () => {
       );
       
       // Act
-      result.current.mutate(updates);
+      result.current.mutate({ updates, viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       
       // Assert
-      expect(mockApi.update).toHaveBeenCalledTimes(3);
+      expect(mockApi.put).toHaveBeenCalledTimes(3);
       
       // Verify each call had proper headers
       updates.forEach((update, index) => {
-        expect(mockApi.update).toHaveBeenNthCalledWith(
+        expect(mockApi.put).toHaveBeenNthCalledWith(
           index + 1,
-          update.id,
-          { name: update.name },
-          { 'If-Match': `"${update.lastEdited}"` }
+          `/notion/characters/${update.id}`,
+          expect.objectContaining({
+            data: expect.objectContaining({
+              name: update.name
+            })
+          }),
+          expect.objectContaining({
+            headers: expect.objectContaining({
+              'If-Match': update.lastEdited
+            })
+          })
         );
       });
       
@@ -1103,9 +1108,9 @@ describe('Batch Mutations', () => {
         { id: 'char_3', name: 'Updated Character 3', lastEdited: '2024-01-01T00:00:02Z' }
       ];
       
-      mockApi.update.mockResolvedValueOnce({ ...updates[0], lastEdited: '2024-01-01T00:00:10Z' });
-      mockApi.update.mockRejectedValueOnce(new ApiError(409, 'VERSION_CONFLICT', 'Version mismatch'));
-      mockApi.update.mockResolvedValueOnce({ ...updates[2], lastEdited: '2024-01-01T00:00:12Z' });
+      mockApi.put.mockResolvedValueOnce({ ...updates[0], lastEdited: '2024-01-01T00:00:10Z' });
+      mockApi.put.mockRejectedValueOnce(new ApiError(409, 'VERSION_CONFLICT', 'Version mismatch'));
+      mockApi.put.mockResolvedValueOnce({ ...updates[2], lastEdited: '2024-01-01T00:00:12Z' });
       
       const initialData = {
         nodes: updates.map(u => ({
@@ -1129,11 +1134,11 @@ describe('Batch Mutations', () => {
       );
       
       // Act
-      result.current.mutate(updates);
+      result.current.mutate({ updates, viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(result.current.isError).toBe(true));
       
       // Assert
-      expect(mockApi.update).toHaveBeenCalledTimes(3);
+      expect(mockApi.put).toHaveBeenCalledTimes(3);
       
       // Verify cache was rolled back to original state
       const finalData: any = queryClient.getQueryData(QUERY_KEY);
@@ -1153,7 +1158,7 @@ describe('Batch Mutations', () => {
       ];
       
       // Delay API responses to observe optimistic updates
-      mockApi.update.mockImplementation(() => 
+      mockApi.put.mockImplementation(() => 
         new Promise(resolve => setTimeout(() => 
           resolve({ ...updates[0], lastEdited: '2024-01-01T00:00:10Z' }), 100
         ))
@@ -1180,7 +1185,7 @@ describe('Batch Mutations', () => {
       );
       
       // Act
-      result.current.mutate(updates);
+      result.current.mutate({ updates, viewName: MOCK_VIEW_NAME });
       
       // Check optimistic update immediately
       const optimisticData: any = queryClient.getQueryData(QUERY_KEY);
@@ -1205,9 +1210,9 @@ describe('Batch Mutations', () => {
         { id: 'elem_3', descriptionText: 'Updated Element 3', lastEdited: '2024-01-01T00:00:02Z' }
       ];
       
-      mockApi.update.mockResolvedValueOnce({ ...updates[0], lastEdited: '2024-01-01T00:00:10Z' });
-      mockApi.update.mockRejectedValueOnce(new ApiError(409, 'VERSION_CONFLICT', 'Version mismatch'));
-      mockApi.update.mockResolvedValueOnce({ ...updates[2], lastEdited: '2024-01-01T00:00:12Z' });
+      mockApi.put.mockResolvedValueOnce({ ...updates[0], lastEdited: '2024-01-01T00:00:10Z' });
+      mockApi.put.mockRejectedValueOnce(new ApiError(409, 'VERSION_CONFLICT', 'Version mismatch'));
+      mockApi.put.mockResolvedValueOnce({ ...updates[2], lastEdited: '2024-01-01T00:00:12Z' });
       
       const initialData = {
         nodes: updates.map(u => ({
@@ -1230,11 +1235,11 @@ describe('Batch Mutations', () => {
       );
       
       // Act
-      result.current.mutate(updates);
+      result.current.mutate({ updates, viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       
       // Assert
-      expect(mockApi.update).toHaveBeenCalledTimes(3);
+      expect(mockApi.put).toHaveBeenCalledTimes(3);
       
       // Verify successful updates were applied
       const finalData: any = queryClient.getQueryData(QUERY_KEY);
@@ -1250,13 +1255,13 @@ describe('Batch Mutations', () => {
       expect(finalData.nodes[2].data.entity.lastEdited).toBe('2024-01-01T00:00:12Z');
       
       // Check result data
-      const resultData = result.current.data as { successful: Element[]; failed: Array<{ update: Partial<Element>; error: Error }> };
+      const resultData = result.current.data;
       expect(resultData?.successful).toHaveLength(2);
       expect(resultData?.failed).toHaveLength(1);
-      expect(resultData?.failed[0].update.id).toBe('elem_2');
-      expect((resultData?.failed[0].error as ApiError).code).toBe('VERSION_CONFLICT');
+      expect(resultData?.failed[0].entity.id).toBe('elem_2');
+      expect(resultData?.failed[0].error.code).toBe('VERSION_CONFLICT');
       
-      expect(toast.error).toHaveBeenCalledWith(
+      expect(toast.warning).toHaveBeenCalledWith(
         'Updated 2 of 3 elements. 1 failed due to conflicts.',
         { duration: 5000 }
       );
@@ -1269,7 +1274,7 @@ describe('Batch Mutations', () => {
         { id: 'puzzle_2', name: 'Updated Puzzle 2', version: 2 }
       ];
       
-      mockApi.update.mockRejectedValue(new ApiError(500, 'SERVER_ERROR', 'Internal error'));
+      mockApi.put.mockRejectedValue(new ApiError(500, 'SERVER_ERROR', 'Internal error'));
       
       const initialData = {
         nodes: updates.map(u => ({
@@ -1292,11 +1297,11 @@ describe('Batch Mutations', () => {
       );
       
       // Act
-      result.current.mutate(updates);
+      result.current.mutate({ updates, viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(result.current.isError).toBe(true));
       
       // Assert
-      expect(mockApi.update).toHaveBeenCalledTimes(2);
+      expect(mockApi.put).toHaveBeenCalledTimes(2);
       
       // Verify no updates were applied
       const finalData: any = queryClient.getQueryData(QUERY_KEY);
@@ -1323,7 +1328,7 @@ describe('Batch Mutations', () => {
       
       // Act & Assert
       expect(() => {
-        result.current.mutate(updates as any);
+        result.current.mutate({ updates: updates as any, viewName: MOCK_VIEW_NAME });
       }).not.toThrow(); // Should handle gracefully, not throw
     });
   });
@@ -1339,7 +1344,7 @@ describe('Batch Mutations', () => {
       
       const currentVersion = '2024-01-01T00:01:00Z'; // Newer version on server
       
-      mockApi.update.mockRejectedValueOnce(
+      mockApi.put.mockRejectedValueOnce(
         new ApiError(409, 'VERSION_CONFLICT', 'Entity has been modified')
       );
       
@@ -1368,14 +1373,18 @@ describe('Batch Mutations', () => {
       );
       
       // Act
-      result.current.mutate([staleUpdate]);
+      result.current.mutate({ updates: [staleUpdate], viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(result.current.isError).toBe(true));
       
       // Assert
-      expect(mockApi.update).toHaveBeenCalledWith(
-        staleUpdate.id,
-        { description: staleUpdate.description },
-        { 'If-Match': `"${staleUpdate.lastEdited}"` } // Should use the stale version from update with RFC 7232 quotes
+      expect(mockApi.put).toHaveBeenCalledWith(
+        `/notion/timeline/${staleUpdate.id}`,
+        expect.any(Object),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'If-Match': staleUpdate.lastEdited // Should use the stale version from update
+          })
+        })
       );
       
       expect(toast.error).toHaveBeenCalledWith(
@@ -1403,13 +1412,13 @@ describe('Batch Mutations', () => {
       ];
       
       // User A succeeds first
-      mockApi.update.mockResolvedValueOnce({ 
+      mockApi.put.mockResolvedValueOnce({ 
         ...userAUpdates[0], 
         lastEdited: '2024-01-01T00:00:01Z' 
       });
       
       // User B gets conflict
-      mockApi.update.mockRejectedValueOnce(
+      mockApi.put.mockRejectedValueOnce(
         new ApiError(409, 'VERSION_CONFLICT', 'Entity modified by another user')
       );
       
@@ -1445,10 +1454,10 @@ describe('Batch Mutations', () => {
       );
       
       // Act - Both users update simultaneously
-      resultA.current.mutate(userAUpdates);
+      resultA.current.mutate({ updates: userAUpdates, viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(resultA.current.isSuccess).toBe(true));
       
-      resultB.current.mutate(userBUpdates);
+      resultB.current.mutate({ updates: userBUpdates, viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(resultB.current.isError).toBe(true));
       
       // Assert
@@ -1463,7 +1472,7 @@ describe('Batch Mutations', () => {
         { id: 'elem_1', name: 'Update 1', lastEdited: '2024-01-01T00:00:00Z' }
       ];
       
-      mockApi.update.mockRejectedValueOnce(new Error('Network timeout'));
+      mockApi.put.mockRejectedValueOnce(new Error('Network timeout'));
       
       const { result } = renderHook(
         () => useBatchEntityMutation<Element>('elements'),
@@ -1471,7 +1480,7 @@ describe('Batch Mutations', () => {
       );
       
       // Act
-      result.current.mutate(updates);
+      result.current.mutate({ updates, viewName: MOCK_VIEW_NAME });
       await waitFor(() => expect(result.current.isError).toBe(true));
       
       // Assert

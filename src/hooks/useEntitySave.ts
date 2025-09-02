@@ -116,34 +116,41 @@ export function useEntitySave() {
       throw new Error('Could not determine entity type');
     }
 
+    // Extract version from original entity for optimistic locking
+    const version = (entity as any)?.version;
+
     // Call appropriate mutation based on entity type
     try {
       switch (type) {
         case 'character':
           await updateCharacter.mutateAsync({ 
             ...updates as Partial<Character>,
-            id: entityId
+            id: entityId,
+            version // Pass original version for If-Match header
           });
           break;
           
         case 'puzzle':
           await updatePuzzle.mutateAsync({ 
             ...updates as Partial<Puzzle>,
-            id: entityId
+            id: entityId,
+            version // Pass original version for If-Match header
           });
           break;
           
         case 'element':
           await updateElement.mutateAsync({ 
             ...updates as Partial<Element>,
-            id: entityId
+            id: entityId,
+            version // Pass original version for If-Match header
           });
           break;
           
         case 'timeline':
           await updateTimeline.mutateAsync({ 
             ...updates as Partial<TimelineEvent>,
-            id: entityId
+            id: entityId,
+            version // Pass original version for If-Match header
           });
           break;
           

@@ -129,11 +129,11 @@ function createEntityMutation<T extends Entity | void = Entity>(
               id: data.id,
               data: { ...data },
               // H2: Use lastEdited as version for optimistic locking
-              version: data.lastEdited || data.version // Support both for backward compatibility
+              version: (data as any).lastEdited || (data as any).version // Support both for backward compatibility
             };
             delete updatePayload.data.id;
-            delete updatePayload.data.version;
-            delete updatePayload.data.lastEdited; // Don't send lastEdited in update body
+            delete (updatePayload.data as any).version;
+            delete (updatePayload.data as any).lastEdited; // Don't send lastEdited in update body
             // H2: Pass lastEdited as If-Match header for optimistic locking
             // Version is now a string (lastEdited timestamp) with RFC 7232 quotes
             const updateHeaders = updatePayload.version !== undefined 
@@ -802,33 +802,128 @@ export const useDeleteTimelineEvent = (options?: MutationOptions) => useDeleteTi
 
 /**
  * Batch mutation for updating multiple entities
+ * 
+ * @param entityType - Type of entities to update
+ * @param options - Configuration options
+ * @param options.allowPartialSuccess - If true, uses Promise.allSettled for independent updates.
+ *                                       If false (default), uses Promise.all for atomic updates.
+ * 
+ * @example
+ * // Atomic updates (fail together)
+ * const mutation = useBatchEntityMutation('characters');
+ * 
+ * // Independent updates (partial success allowed)  
+ * const mutation = useBatchEntityMutation('characters', { allowPartialSuccess: true });
  */
 export function useBatchEntityMutation<T extends Entity>(
-  entityType: EntityType
+  entityType: EntityType,
+  options?: { allowPartialSuccess?: boolean }
 ) {
   const queryClient = useQueryClient();
+  const allowPartial = options?.allowPartialSuccess ?? false;
   
-  return useMutation<T[], MutationError, (Partial<T> & ParentRelationMetadata)[]>({
+  return useMutation<
+    T[] | { successful: T[]; failed: Array<{ update: Partial<T>; error: Error }> },
+    MutationError,
+    (Partial<T> & ParentRelationMetadata)[]
+  >({
     mutationFn: async (updates: (Partial<T> & ParentRelationMetadata)[]) => {
       const apiModule = getApiModule(entityType);
-      const results = await Promise.all(
-        updates.map(update => {
-          if (!update.id) throw new Error('ID required for batch update');
-          // Pass complete update including any metadata
-          return apiModule.update(update.id, update);
-        })
-      );
       
-      return results as T[];
+      // Validate all updates have IDs
+      updates.forEach(update => {
+        if (!update.id) throw new Error('ID required for batch update');
+      });
+
+      if (allowPartial) {
+        // Independent updates - use allSettled for partial success
+        const results = await Promise.allSettled(
+          updates.map(update => {
+            // Extract version for If-Match header (same as individual mutations)
+            const version = (update as any).lastEdited || (update as any).version;
+            const updateData = { ...update };
+            delete updateData.id;
+            delete (updateData as any).version;
+            delete (updateData as any).lastEdited;
+            
+            const headers = version !== undefined 
+              ? { 'If-Match': `"${version}"` }
+              : undefined;
+              
+            return apiModule.update(update.id!, updateData, headers)
+              .then(result => ({ update, result }))
+              .catch(error => Promise.reject({ update, error }));
+          })
+        );
+        
+        const successful: T[] = [];
+        const failed: Array<{ update: Partial<T>; error: Error }> = [];
+        
+        results.forEach(result => {
+          if (result.status === 'fulfilled') {
+            successful.push(result.value.result as T);
+          } else {
+            failed.push({
+              update: result.reason.update,
+              error: result.reason.error
+            });
+          }
+        });
+        
+        return { successful, failed };
+      } else {
+        // Atomic updates - use Promise.all (current behavior)
+        const results = await Promise.all(
+          updates.map(update => {
+            // Extract version for If-Match header (same as individual mutations)
+            const version = (update as any).lastEdited || (update as any).version;
+            const updateData = { ...update };
+            delete updateData.id;
+            delete (updateData as any).version;
+            delete (updateData as any).lastEdited;
+            
+            const headers = version !== undefined 
+              ? { 'If-Match': `"${version}"` }
+              : undefined;
+              
+            return apiModule.update(update.id!, updateData, headers);
+          })
+        );
+        return results as T[];
+      }
     },
     
     onSuccess: async (response) => {
-      // Simple: just invalidate the graph after batch update
+      // Invalidate graph cache after any successful updates
       await queryClient.invalidateQueries({ 
         queryKey: ['graph'] 
       });
       
-      toast.success(`Updated ${response.length} entities`);
+      // Provide appropriate feedback based on mode
+      if (allowPartial && typeof response === 'object' && 'successful' in response) {
+        const { successful, failed } = response;
+        if (successful.length > 0) {
+          toast.success(`Updated ${successful.length} entities`);
+        }
+        if (failed.length > 0) {
+          toast.error(`Failed to update ${failed.length} entities. Check console for details.`);
+          // Log details for debugging
+          console.error('Batch update failures:', failed.map(f => ({
+            id: f.update.id,
+            error: f.error.message
+          })));
+        }
+      } else {
+        // Atomic mode - all succeeded
+        const entities = response as T[];
+        toast.success(`Updated ${entities.length} entities`);
+      }
+    },
+    
+    onError: async (error) => {
+      // In atomic mode, all updates failed
+      toast.error('Batch update failed. No changes were saved.');
+      console.error('Batch update error:', error);
     }
   });
 }

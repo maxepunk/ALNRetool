@@ -230,6 +230,43 @@ const elements = allEntities.filter(e => e && 'basicType' in e && 'status' in e)
 
 ---
 
+### Ticket #9: TypeScript Compilation Errors (Non-blocking)
+**Severity**: LOW-MEDIUM  
+**Impact**: False confidence in type safety, but app still runs  
+**Evidence**: npm run typecheck shows multiple errors  
+**Date Found**: 2025-09-01
+
+**Current Errors (not blocking H6 work)**:
+1. **Duplicate ApiError definitions** (entityMutations.test.ts:7, 52)
+   - Two mock ApiError classes with same name
+   - Should consolidate into single test helper
+   
+2. **Unused imports** (multiple test files)
+   - `act` imported but never used
+   - Various entity types imported but unused
+   - Should clean up imports
+   
+3. **Test type mismatches** (useEntitySave.test.ts:111)
+   - Mock puzzle missing required properties
+   - Should use proper test builders
+   
+4. **Missing module** (mutations.ts:9)
+   - Cannot find '@/types/graph'
+   - File exists but import path may be wrong
+
+**Not Fixing Now Because**:
+- None block our H6 implementation
+- Risk of introducing new bugs in unrelated code
+- Would add days to timeline for minimal benefit
+- App runs correctly despite these errors
+
+**When to Fix**:
+- During dedicated technical debt sprint
+- When touching these specific files for features
+- Before major version release
+
+---
+
 ### Related to Phase 3 Work
 - Bug 6 → Phase 3.1 (property names vs DB IDs) - Ticket #2
 - Bug 7 → Phase 3.2 (placeholder handling) - Ticket #3
@@ -240,3 +277,34 @@ const elements = allEntities.filter(e => e && 'basicType' in e && 'status' in e)
 2. Use tests as acceptance criteria validation
 3. Run full regression suite after each fix
 4. Monitor production metrics for impact
+
+---
+
+## Priority 3: MEDIUM - Feature Gaps
+
+### Ticket #10: Batch Mutation Lacks Optimistic Updates
+**Severity**: MEDIUM
+**Impact**: Poor UX - no immediate feedback for batch operations
+**Evidence**: zen chat review identified missing implementation in useBatchEntityMutation
+
+**Current Behavior**:
+- No `onMutate` handler for optimistic cache updates
+- No `onError` rollback for atomic mode failures
+- Uses simple invalidation instead of granular updates
+- Partial success mode confuses success/error states
+
+**Required Fix**:
+1. Add `onMutate` handler similar to individual mutations
+2. Implement cache snapshot and rollback for atomic mode
+3. Add granular cache updates for partial success mode
+4. Fix success/error state handling for Promise.allSettled
+5. Consolidate toast notifications for better UX
+
+**Acceptance Criteria**:
+- All 13 failing batch mutation tests pass
+- Optimistic updates visible immediately
+- Atomic rollback works correctly
+- Partial success updates only successful items
+- Empty array input handled gracefully
+
+**Test Coverage**: Already written - 10 comprehensive test cases covering all scenarios

@@ -1,5 +1,5 @@
 import { test, expect, Page, BrowserContext } from '@playwright/test';
-import { notionHandlers } from '@/test/mocks/notion-handlers';
+import { setupApiMocking, simulateServerError, resetMockDb } from './helpers/mock-api';
 
 /**
  * E2E Tests for Edge Mutation Fixes
@@ -11,7 +11,7 @@ import { notionHandlers } from '@/test/mocks/notion-handlers';
  * - Error recovery
  */
 
-// Test data factory
+// Test data factory - matches mock-api.ts initial state
 const testData = {
   puzzle: {
     id: 'puzzle-test-1',
@@ -42,12 +42,25 @@ async function createCharacterFromPuzzle(page: Page, characterName: string = tes
 
 async function navigateToPuzzle(page: Page, puzzleId: string) {
   await page.goto('/graph');
-  await page.click(`[data-testid="node-${puzzleId}"]`);
-  await page.waitForSelector('[data-testid="detail-panel"]');
+  
+  // Wait for the graph to load and render nodes
+  await page.waitForLoadState('networkidle');
+  await page.waitForSelector('.react-flow__node', { timeout: 10000 });
+  
+  // Small delay to ensure React Flow has finished rendering
+  await page.waitForTimeout(500);
+  
+  // Now try to click the puzzle node
+  const puzzleNode = page.locator(`[data-testid="node-${puzzleId}"]`);
+  await puzzleNode.waitFor({ state: 'visible', timeout: 5000 });
+  await puzzleNode.click();
+  
+  await page.waitForSelector('[data-testid="detail-panel"]', { timeout: 5000 });
 }
 
 test.describe('Edge Creation', () => {
   let context: BrowserContext;
+  let page: Page;
 
   test.beforeEach(async ({ browser }) => {
     context = await browser.newContext({
@@ -55,15 +68,20 @@ test.describe('Edge Creation', () => {
         'X-API-Key': process.env.API_KEY || 'test-key'
       }
     });
+    page = await context.newPage();
+    
+    // Set up API mocking for all tests
+    await setupApiMocking(page);
   });
 
   test.afterEach(async () => {
+    await page.close();
     await context.close();
+    // Reset mock database for next test
+    resetMockDb();
   });
 
   test('creates edge when adding character to puzzle', async () => {
-    const page = await context.newPage();
-    
     // Navigate to puzzle
     await navigateToPuzzle(page, testData.puzzle.id);
     
@@ -88,12 +106,8 @@ test.describe('Edge Creation', () => {
   });
 
   test('reverts edge on server error', async () => {
-    const page = await context.newPage();
-    
-    // Simulate server error
-    await page.route('**/api/notion/characters', route => 
-      route.fulfill({ status: 500, body: JSON.stringify({ error: 'Server error' }) })
-    );
+    // Simulate server error for character creation
+    await simulateServerError(page, '/api/notion/characters');
     
     await navigateToPuzzle(page, testData.puzzle.id);
     
@@ -114,14 +128,32 @@ test.describe('Edge Creation', () => {
   });
 
   test('allows retry after server error', async () => {
-    const page = await context.newPage();
     let attemptCount = 0;
     
     // First attempt fails, second succeeds
     await page.route('**/api/notion/characters', async route => {
-      attemptCount++;
-      if (attemptCount === 1) {
-        await route.fulfill({ status: 500 });
+      if (route.request().method() === 'POST') {
+        attemptCount++;
+        if (attemptCount === 1) {
+          await route.fulfill({ 
+            status: 500,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'Server error' })
+          });
+        } else {
+          // Second attempt succeeds - create a new character
+          const body = await route.request().postDataJSON();
+          const newCharacter = {
+            id: `character-${attemptCount}`,
+            ...body,
+            version: 1
+          };
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ data: newCharacter })
+          });
+        }
       } else {
         await route.continue();
       }
@@ -148,6 +180,16 @@ test.describe('Edge Creation', () => {
 });
 
 test.describe('Relationship Lifecycle', () => {
+  test.beforeEach(async ({ page }) => {
+    // Set up API mocking for all tests in this describe block
+    await setupApiMocking(page);
+  });
+
+  test.afterEach(async () => {
+    // Reset mock database for next test
+    resetMockDb();
+  });
+
   test('removes edge when deleting relationship', async ({ page }) => {
     // Setup: Ensure relationship exists
     await page.goto('/graph');
@@ -198,13 +240,23 @@ test.describe('Relationship Lifecycle', () => {
 });
 
 test.describe('Edge Cases', () => {
+  test.beforeEach(async ({ page }) => {
+    // Set up API mocking for all tests in this describe block
+    await setupApiMocking(page);
+  });
+
+  test.afterEach(async () => {
+    // Reset mock database for next test
+    resetMockDb();
+  });
+
   test('handles rapid relationship creation without race conditions', async ({ page }) => {
     await navigateToPuzzle(page, testData.puzzle.id);
     
     // Track API calls
     const apiCalls: string[] = [];
     await page.route('**/api/notion/characters', async route => {
-      const postData = await route.request().postData();
+      const postData = route.request().postData();
       if (postData) apiCalls.push(postData);
       await route.continue();
     });
@@ -273,6 +325,16 @@ test.describe('Edge Cases', () => {
 });
 
 test.describe('Visual Regression', () => {
+  test.beforeEach(async ({ page }) => {
+    // Set up API mocking for all tests in this describe block
+    await setupApiMocking(page);
+  });
+
+  test.afterEach(async () => {
+    // Reset mock database for next test
+    resetMockDb();
+  });
+
   test('edge rendering remains consistent', async ({ page }) => {
     await page.goto('/graph');
     
