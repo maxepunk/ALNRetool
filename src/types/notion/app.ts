@@ -33,6 +33,7 @@ export interface Character {
   id: string;
   /** Character's display name */
   name: string;
+  entityType?: 'character'; // Runtime type discriminator
   /** Last edited timestamp from Notion */
   lastEdited?: string;
   /** Version number for optimistic locking */
@@ -127,6 +128,7 @@ export interface SFPatterns {
 export interface Element {
   id: string;
   name: string;
+  entityType?: 'element'; // Runtime type discriminator
   lastEdited?: string; // Last edited timestamp from Notion
   version?: number; // Version number for optimistic locking
   descriptionText: string;
@@ -158,6 +160,7 @@ export interface Element {
 export interface Puzzle {
   id: string;
   name: string;
+  entityType?: 'puzzle'; // Runtime type discriminator
   lastEdited?: string; // Last edited timestamp from Notion
   version?: number; // Version number for optimistic locking
   descriptionSolution: string;
@@ -181,6 +184,7 @@ export interface Puzzle {
 export interface TimelineEvent {
   id: string;
   name: string; // Same as description, for consistency with other types
+  entityType?: 'timeline'; // Runtime type discriminator
   lastEdited?: string; // Last edited timestamp from Notion
   version?: number; // Version number for optimistic locking
   description: string;

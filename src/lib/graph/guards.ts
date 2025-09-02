@@ -142,13 +142,15 @@ export function hasError(node: GraphNode): boolean {
  * 
  * Provides runtime type checking for Notion entities within murder mystery
  * investigation context, enabling safe type narrowing and entity classification
- * through discriminated union pattern analysis and property-based validation.
+ * through discriminated union pattern analysis.
  * 
  * **Type Discrimination Strategy:**
- * - **character**: Detected by presence of 'tier' property (Tier 1-3 suspects/witnesses)
- * - **element**: Detected by presence of 'basicType' property (evidence, items, clues)
- * - **puzzle**: Detected by presence of 'puzzleElementIds' property (investigation challenges)
- * - **timeline**: Detected by presence of 'date' property (temporal events, alibis)
+ * - Primary: Uses entityType field for reliable type checking
+ * - Fallback: Property-based detection for backward compatibility
+ * - **character**: entityType === 'character' or has 'tier' property
+ * - **element**: entityType === 'element' or has 'basicType' property
+ * - **puzzle**: entityType === 'puzzle' or has 'puzzleElementIds' property
+ * - **timeline**: entityType === 'timeline' or has 'date' property
  * 
  * **Investigation Entity Classification:**
  * - **Characters**: Suspects, witnesses, and key figures with tier-based importance
@@ -254,6 +256,12 @@ export function isEntityType<T extends NotionEntity>(
   entity: NotionEntity,
   type: EntityType
 ): entity is T {
+  // Primary: Check entityType field if present
+  if ('entityType' in entity) {
+    return entity.entityType === type;
+  }
+  
+  // Fallback: Property-based detection for backward compatibility
   switch (type) {
     case 'character':
       return 'tier' in entity;

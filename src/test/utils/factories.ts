@@ -14,6 +14,7 @@ export function createMockCharacter(overrides?: Partial<Character>): Character {
   return {
     id,
     name: `Character ${id}`,
+    entityType: 'character',
     type: 'Player',
     tier: 'Core',
     ownedElementIds: [],
@@ -37,6 +38,7 @@ export function createMockElement(overrides?: Partial<Element>): Element {
   return {
     id,
     name: `Element ${id}`,
+    entityType: 'element',
     descriptionText: 'Test element description',
     sfPatterns: {}, // Empty object for required field
     basicType: 'Prop',
@@ -68,6 +70,7 @@ export function createMockPuzzle(overrides?: Partial<Puzzle>): Puzzle {
   return {
     id,
     name: `Puzzle ${id}`,
+    entityType: 'puzzle',
     descriptionSolution: 'Test puzzle description',
     puzzleElementIds: [],
     lockedItemId: undefined,
@@ -92,6 +95,7 @@ export function createMockTimelineEvent(overrides?: Partial<TimelineEvent>): Tim
   return {
     id,
     name: description, // name is same as description for consistency
+    entityType: 'timeline',
     description,
     date: new Date().toISOString(),
     charactersInvolvedIds: [],

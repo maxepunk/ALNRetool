@@ -18,7 +18,6 @@ export interface GraphNode extends Node {
 }
 
 export interface GraphDelta {
-  entity: Character | Element | Puzzle | TimelineEvent;
   changes: {
     nodes: {
       updated: GraphNode[];

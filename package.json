@@ -24,7 +24,11 @@
     "test:batch:hooks": "vitest run src/hooks --no-coverage",
     "test:batch:lib": "vitest run src/lib --no-coverage",
     "test:batch:all": "npm run test:batch:components && npm run test:batch:hooks && npm run test:batch:lib",
-    "test:e2e:edges": "playwright test tests/e2e/edge-mutations.spec.ts"
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:edges": "playwright test tests/e2e/edge-mutations.spec.ts",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@notionhq/client": "^4.0.1",

@@ -6,6 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ALNRetool is a visualization and editing tool for the "About Last Night" murder mystery game. It provides an interactive graph interface for managing characters, puzzles, story elements, and timeline events stored in Notion databases.
 
+## Technical Documentation (READ to update your memory on MOST RECENT best practices)
+- /docs/REACT_QUERY_V5_REACT_18.md
+
 ## Tech Stack
 
 - **Frontend**: React 18, TypeScript, Vite, React Flow (@xyflow/react), Zustand, TanStack Query
@@ -15,18 +18,16 @@ ALNRetool is a visualization and editing tool for the "About Last Night" murder 
 - **Data**: Notion API as primary database
 
 ## CRITICAL Considerations
+- This is an INTERNAL TOOL. It will only be used by 2-3 users.
 - Relationship handling between ROLLUP and RELATIONSHIP and TWO WAY RELATIONSHIP fields in Notion each need specific handling for CRUD operations. 
 - ALWAYS use FULL filepaths for TOOL CALLS.
-- zen:precommit REQUIRES changeset files. Prepare it before you start. 
 
 ## Currently working on: 
-@H6_PROCESS_MAP.md
+@startTransition_Plan.md
 
 ## Changes recorded at: 
 CHANGELOG.md
 
-## Technical Debt Tracking
-TECH-DEBT.md
 
 ## CRITICAL: TypeScript Error Checking
 
@@ -66,6 +67,20 @@ npm run test:batch:lib         # Test lib utilities only
 # Code Quality
 npm run lint               # Run ESLint
 npm run typecheck          # Run TypeScript type checking for both client and server
+```
+
+## Running a Single Test
+
+```bash
+# Run a specific test file
+npx vitest run src/components/CreatePanel.test.tsx
+npx vitest run src/hooks/useGraphState.test.ts
+
+# Run tests in watch mode for a specific pattern
+npx vitest src/hooks/mutations
+
+# Run with Playwright for E2E
+npm run test:e2e:edges
 ```
 
 ## Architecture Overview
@@ -115,7 +130,7 @@ npm run typecheck          # Run TypeScript type checking for both client and se
 
 ## Environment Variables
 
-Required for server:
+Required for server (copy `.env.example` to `.env`):
 ```bash
 NOTION_API_KEY=your-notion-integration-token
 NOTION_CHARACTERS_DB=database-id
@@ -154,12 +169,7 @@ All endpoints support:
 - **E2E Tests**: Playwright tests in `tests/e2e/`
 - **Mocks**: MSW handlers in `src/test/mocks/` for API simulation
 - **Coverage**: Minimum 80% coverage thresholds enforced
-
-Run specific test files:
-```bash
-npx vitest run src/components/CreatePanel.test.tsx
-npx vitest run src/hooks/useGraphState.test.ts
-```
+- **Test Environment**: Tests run in parallel with fork pool isolation for speed and safety
 
 ## Key Libraries & Patterns
 
@@ -185,3 +195,11 @@ npx vitest run src/hooks/useGraphState.test.ts
 - Virtual rendering for large graphs
 - Progressive loading with pagination
 - Optimistic updates for better UX
+
+## Build Configuration
+
+- **TypeScript**: Uses project references with separate configs for app (`tsconfig.app.json`) and server (`tsconfig.server.json`)
+- **Path Aliases**: `@/*` maps to `src/*` for cleaner imports
+- **Vite**: Configured with tree-shaking, source maps, and dependency optimization
+- **Test Isolation**: Each test file runs in its own fork for safety
+- **Coverage Requirements**: 80% minimum coverage for branches, functions, lines, and statements

@@ -33,7 +33,6 @@ export interface CacheUpdateContext<T extends Entity = Entity> {
   tempId?: string;
   operation: 'create' | 'update' | 'delete';
   previousState?: CachedGraphData; // For rollback support
-  viewName?: string; // For filtered view context
 }
 
 /**
@@ -136,14 +135,17 @@ export class OptimisticCacheUpdater implements CacheUpdater {
           const updateIndex = nodes.findIndex(n => n.id === entity.id);
           if (updateIndex !== -1 && nodes[updateIndex]) {
             const nodeToUpdate = nodes[updateIndex];
+            // OPTIMISTIC FIX: Preserve isOptimistic flag if it exists
+            const existingIsOptimistic = nodeToUpdate.data?.metadata?.isOptimistic;
             nodes[updateIndex] = {
               ...nodeToUpdate,
               data: {
                 ...nodeToUpdate.data,
                 entity,
                 metadata: {
-                  ...(nodeToUpdate.data?.metadata || {})
-                  // Remove isOptimistic - not part of NodeMetadata type
+                  ...(nodeToUpdate.data?.metadata || {}),
+                  // Preserve isOptimistic if it was true
+                  ...(existingIsOptimistic ? { isOptimistic: true } : {})
                 }
               }
             };
@@ -192,7 +194,7 @@ export class OptimisticCacheUpdater implements CacheUpdater {
  */
 export class DeltaCacheUpdater implements CacheUpdater {
   async update<T extends Entity>(context: CacheUpdateContext<T>): Promise<void> {
-    const { queryClient, queryKey, delta, viewName } = context;
+    const { queryClient, queryKey, delta, operation, tempId, entity } = context;
     
     if (!delta) {
       // Fallback to invalidation if no delta available
@@ -218,9 +220,11 @@ export class DeltaCacheUpdater implements CacheUpdater {
       // }
       
       // WARNING: Delta application on filtered views
-      if (viewName && viewName !== 'full-graph') {
+      // Check if this is a filtered view based on the query key
+      const viewType = queryKey[2]; // ['graph', 'complete', viewType]
+      if (viewType && viewType !== 'full-graph') {
         console.warn(
-          `Applying delta to filtered view '${viewName}'. ` +
+          `Applying delta to filtered view '${viewType}'. ` +
           `This may add nodes that don't match the filter criteria.`
         );
       }
@@ -229,16 +233,92 @@ export class DeltaCacheUpdater implements CacheUpdater {
       const nodeMap = new Map(oldData.nodes.map(n => [n.id, n]));
       const edgeMap = new Map(oldData.edges.map(e => [e.id, e]));
       
+      // CRITICAL FIX: Handle temp ID replacement for CREATE operations
+      // The server doesn't know about client-side temp IDs, so we must
+      // replace them with the real ID from the delta entity
+      let preservedOptimisticFlag = false;
+      if (operation === 'create' && tempId && entity && 'id' in entity) {
+        const realId = entity.id;
+        
+        // OPTIMISTIC FIX: Preserve the isOptimistic flag from temp node
+        const tempNode = nodeMap.get(tempId);
+        if (tempNode?.data?.metadata && 'isOptimistic' in tempNode.data.metadata) {
+          preservedOptimisticFlag = tempNode.data.metadata.isOptimistic === true;
+        }
+        
+        // Remove the temp node if it exists
+        if (nodeMap.has(tempId)) {
+          nodeMap.delete(tempId);
+          console.log(`[Delta] Replacing temp node ${tempId} with real ID ${realId}`);
+        }
+        
+        // Update all edges that reference the temp ID
+        for (const [edgeId, edge] of edgeMap) {
+          let updated = false;
+          let newEdge = { ...edge };
+          
+          if (edge.source === tempId) {
+            newEdge.source = realId;
+            updated = true;
+          }
+          if (edge.target === tempId) {
+            newEdge.target = realId;
+            updated = true;
+          }
+          
+          if (updated) {
+            // Update edge ID to reflect new node IDs
+            // Handle both edge ID formats: simple and field-based
+            let newEdgeId = edgeId;
+            if (edgeId.includes('::')) {
+              // Format: e::source::fieldKey::target
+              const parts = edgeId.split('::');
+              if (parts.length === 4 && parts[1] && parts[3]) {
+                parts[1] = parts[1] === tempId ? realId : parts[1];
+                parts[3] = parts[3] === tempId ? realId : parts[3];
+                newEdgeId = parts.join('::');
+              }
+            } else if (edgeId.startsWith('e-')) {
+              // Format: e-source-target
+              newEdgeId = edgeId.replace(tempId, realId);
+            }
+            
+            // Remove old edge and add updated one
+            edgeMap.delete(edgeId);
+            edgeMap.set(newEdgeId, { ...newEdge, id: newEdgeId });
+            console.log(`[Delta] Updated edge ${edgeId} to ${newEdgeId}`);
+          }
+        }
+      }
+      
       // Apply node changes
       if (delta.changes.nodes) {
-        // Update existing nodes
-        delta.changes.nodes.updated?.forEach(node => {
-          nodeMap.set(node.id, node);
+        // Update existing nodes - MERGE updates, don't replace
+        delta.changes.nodes.updated?.forEach(update => {
+          const existingNode = nodeMap.get(update.id);
+          if (existingNode) {
+            // Deep merge the update with existing node
+            // Let the server data overwrite metadata (including clearing isOptimistic)
+            const mergedNode = {
+              ...existingNode,
+              ...update,
+              data: {
+                ...existingNode.data,
+                ...(update.data || {})
+              }
+            } as GraphNode;
+            nodeMap.set(update.id, mergedNode);
+          } else {
+            // Node doesn't exist, just add it
+            nodeMap.set(update.id, update as GraphNode);
+          }
         });
         
         // Add new nodes
         delta.changes.nodes.created?.forEach(node => {
-          nodeMap.set(node.id, node);
+          // Don't apply the preserved flag here - let the server data come through clean
+          // The flag cleanup will be handled by setTimeout in onSuccess
+          nodeMap.set(node.id, node as GraphNode);
         });
         
         // Remove deleted nodes
@@ -254,8 +334,32 @@ export class DeltaCacheUpdater implements CacheUpdater {
           edgeMap.set(edge.id, edge);
         });
         
-        // Add new edges
+        // Add new edges - check for optimistic edges to replace
         delta.changes.edges.created?.forEach(edge => {
+          // For CREATE operations, check if this edge replaces an optimistic one with temp ID
+          if (operation === 'create' && tempId) {
+            // Look for optimistic edge that matches but has temp ID
+            const optimisticEdgeId = Array.from(edgeMap.keys()).find(id => {
+              // Check if edge ID contains the temp ID and matches the pattern
+              if (id.includes(tempId)) {
+                // Extract parts to compare structure
+                if (id.includes('::') && edge.id.includes('::')) {
+                  const oldParts = id.split('::');
+                  const newParts = edge.id.split('::');
+                  // Check if same source and field, just different target (temp vs real)
+                  return oldParts[1] === newParts[1] && oldParts[2] === newParts[2];
+                }
+                return false;
+              }
+              return false;
+            });
+            
+            if (optimisticEdgeId) {
+              console.log(`[Delta] Replacing optimistic edge ${optimisticEdgeId} with ${edge.id}`);
+              edgeMap.delete(optimisticEdgeId);
+            }
+          }
+          
           edgeMap.set(edge.id, edge);
         });
         
@@ -280,13 +384,27 @@ export class DeltaCacheUpdater implements CacheUpdater {
   }
   
   rollback<T extends Entity>(context: CacheUpdateContext<T>): void {
-    const { previousState, queryClient, queryKey } = context;
+    const { previousState, queryClient, queryKey, operation, tempId } = context;
     
-    // If we have previous state, use it for instant rollback
-    if (previousState) {
+    // CRITICAL: Handle CREATE rollback by removing temp node
+    // WHY: CREATE operations add temp nodes that must be removed on failure
+    if (operation === 'create' && tempId) {
+      queryClient.setQueryData(queryKey, (oldData: CachedGraphData | undefined) => {
+        if (!oldData) return oldData;
+        
+        // Remove the optimistic node and any edges referencing it
+        const nodes = oldData.nodes.filter(n => n.id !== tempId);
+        const edges = oldData.edges.filter(e => 
+          e.source !== tempId && e.target !== tempId
+        );
+        
+        return { ...oldData, nodes, edges };
+      });
+    } else if (previousState) {
+      // For UPDATE/DELETE, restore the previous state
       queryClient.setQueryData(queryKey, previousState);
     } else {
-      // Otherwise, fallback to invalidation (causes loading state)
+      // Fallback to invalidation only for UPDATE/DELETE without previous state
       console.warn('Delta rollback without previous state - falling back to invalidation');
       const invalidator = new InvalidateCacheUpdater();
       invalidator.update(context);

@@ -46,6 +46,10 @@ export function createNodeProps<T extends Character | Element | Puzzle | Timelin
 }
 
 function getNodeType(entity: any): 'character' | 'element' | 'puzzle' | 'timeline' {
+  // Primary: Use entityType field if present
+  if ('entityType' in entity) return entity.entityType;
+  
+  // Fallback: Property-based detection for backward compatibility
   if ('tier' in entity) return 'character';
   if ('basicType' in entity) return 'element';
   if ('puzzleElementIds' in entity) return 'puzzle';

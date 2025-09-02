@@ -52,15 +52,15 @@ export function generateEdgesForEntities(entities: any[]): Edge[] {
     if (!entity) return;
     
     // Character relationships
-    if ('type' in entity) {
+    if (entity.entityType === 'character') {
       entity.ownedElementIds?.forEach((id: string) => createEdge(entity.id, id, 'ownership'));
       entity.associatedElementIds?.forEach((id: string) => createEdge(entity.id, id, 'association'));
       entity.characterPuzzleIds?.forEach((id: string) => createEdge(entity.id, id, 'puzzle'));
       entity.timelineIds?.forEach((id: string) => createEdge(entity.id, id, 'timeline'));
     }
     
-    // Element relationships - using ACTUAL properties from Element interface
-    if ('basicType' in entity && 'status' in entity) {
+    // Element relationships
+    if (entity.entityType === 'element') {
       entity.associatedCharacterIds?.forEach((id: string) => createEdge(id, entity.id, 'association'));
       if (entity.ownerId) createEdge(entity.ownerId, entity.id, 'ownership');
       if (entity.containerId) createEdge(entity.containerId, entity.id, 'container');
@@ -72,14 +72,14 @@ export function generateEdgesForEntities(entities: any[]): Edge[] {
     }
     
     // Puzzle relationships
-    if ('solution' in entity) {
+    if (entity.entityType === 'puzzle') {
       entity.characterIds?.forEach((id: string) => createEdge(id, entity.id, 'puzzle'));
       entity.requiredElementIds?.forEach((id: string) => createEdge(id, entity.id, 'requirement'));
       entity.rewardElementIds?.forEach((id: string) => createEdge(entity.id, id, 'reward'));
     }
     
     // Timeline relationships
-    if ('time' in entity) {
+    if (entity.entityType === 'timeline') {
       entity.characterIds?.forEach((id: string) => createEdge(id, entity.id, 'timeline'));
     }
   });
@@ -184,11 +184,11 @@ export async function captureGraphState(entityId: string, entityType: string): P
     const allEntities = targetEntity ? [targetEntity, ...relatedEntities] : relatedEntities;
     
     // Create entity maps for graph building
-    // Use unique properties to identify entity types
-    const characters = allEntities.filter(e => e && 'tier' in e && 'type' in e);
-    const elements = allEntities.filter(e => e && 'basicType' in e && 'status' in e);
-    const puzzles = allEntities.filter(e => e && 'solution' in e && 'acts' in e);
-    const timeline = allEntities.filter(e => e && 'date' in e && 'time' in e);
+    // Use entityType field for reliable type checking
+    const characters = allEntities.filter(e => e?.entityType === 'character');
+    const elements = allEntities.filter(e => e?.entityType === 'element');
+    const puzzles = allEntities.filter(e => e?.entityType === 'puzzle');
+    const timeline = allEntities.filter(e => e?.entityType === 'timeline');
   
   // Build current graph state
   const graphData = buildCompleteGraph({ characters, elements, puzzles, timeline });

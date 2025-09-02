@@ -546,7 +546,10 @@ export const notionHandlers = [
     db.characters.push(newCharacter);
     updateRelationships('character', newId, body);
     
-    return HttpResponse.json(newCharacter, { status: 201 });
+    return HttpResponse.json({
+      success: true,
+      data: newCharacter
+    }, { status: 201 });
   }),
 
   http.put('*/api/notion/characters/:id', async ({ params, request }) => {
@@ -584,12 +587,16 @@ export const notionHandlers = [
     db.characters[charIndex] = updatedCharacter;
 
     updateRelationships('character', id, body, oldCharacter);
-    return HttpResponse.json(db.characters[charIndex]);
+    return HttpResponse.json({
+      success: true,
+      data: db.characters[charIndex]
+    });
   }),
 
   http.delete('*/api/notion/characters/:id', ({ params }) => {
     const { id } = params as { id: string };
     const initialLength = db.characters.length;
+    const deletedChar = db.characters.find(c => c.id === id);
     db.characters = db.characters.filter(c => c.id !== id);
 
     // Clean up relationships
@@ -601,8 +608,11 @@ export const notionHandlers = [
       e.associatedCharacterIds = e.associatedCharacterIds.filter(cId => cId !== id);
     });
 
-    if (db.characters.length < initialLength) {
-      return new HttpResponse(null, { status: 204 });
+    if (db.characters.length < initialLength && deletedChar) {
+      return HttpResponse.json({
+        success: true,
+        data: deletedChar
+      }, { status: 200 });
     }
     return HttpResponse.json({ error: 'Character not found' }, { status: 404 });
   }),
@@ -650,7 +660,10 @@ export const notionHandlers = [
     db.elements.push(newElement);
     updateRelationships('element', newId, body);
     
-    return HttpResponse.json(newElement, { status: 201 });
+    return HttpResponse.json({
+      success: true,
+      data: newElement
+    }, { status: 201 });
   }),
 
   http.put('*/api/notion/elements/:id', async ({ params, request }) => {
@@ -689,12 +702,16 @@ export const notionHandlers = [
     db.elements[elemIndex] = updatedElement;
 
     updateRelationships('element', id, body, oldElement);
-    return HttpResponse.json(db.elements[elemIndex]);
+    return HttpResponse.json({
+      success: true,
+      data: db.elements[elemIndex]
+    });
   }),
 
   http.delete('*/api/notion/elements/:id', ({ params }) => {
     const { id } = params as { id: string };
     const initialLength = db.elements.length;
+    const deletedElem = db.elements.find(e => e.id === id);
     db.elements = db.elements.filter(e => e.id !== id);
 
     // Clean up relationships
@@ -707,8 +724,11 @@ export const notionHandlers = [
       p.rewardIds = p.rewardIds.filter(rId => rId !== id);
     });
 
-    if (db.elements.length < initialLength) {
-      return new HttpResponse(null, { status: 204 });
+    if (db.elements.length < initialLength && deletedElem) {
+      return HttpResponse.json({
+        success: true,
+        data: deletedElem
+      }, { status: 200 });
     }
     return HttpResponse.json({ error: 'Element not found' }, { status: 404 });
   }),
@@ -748,7 +768,10 @@ export const notionHandlers = [
     db.puzzles.push(newPuzzle);
     updateRelationships('puzzle', newId, body);
     
-    return HttpResponse.json(newPuzzle, { status: 201 });
+    return HttpResponse.json({
+      success: true,
+      data: newPuzzle
+    }, { status: 201 });
   }),
 
   http.put('*/api/notion/puzzles/:id', async ({ params, request }) => {
@@ -787,12 +810,16 @@ export const notionHandlers = [
     // Use centralized relationship update logic
     updateRelationships('puzzle', id, body, oldPuzzle);
 
-    return HttpResponse.json(db.puzzles[puzzleIndex]);
+    return HttpResponse.json({
+      success: true,
+      data: db.puzzles[puzzleIndex]
+    });
   }),
 
   http.delete('*/api/notion/puzzles/:id', ({ params }) => {
     const { id } = params as { id: string };
     const initialLength = db.puzzles.length;
+    const deletedPuzzle = db.puzzles.find(p => p.id === id);
     
     // Remove puzzle from database
     db.puzzles = db.puzzles.filter(p => p.id !== id);
@@ -820,8 +847,11 @@ export const notionHandlers = [
       }
     });
 
-    if (db.puzzles.length < initialLength) {
-      return new HttpResponse(null, { status: 204 });
+    if (db.puzzles.length < initialLength && deletedPuzzle) {
+      return HttpResponse.json({
+        success: true,
+        data: deletedPuzzle
+      }, { status: 200 });
     }
     return HttpResponse.json({ error: 'Puzzle not found' }, { status: 404 });
   }),
@@ -858,7 +888,10 @@ export const notionHandlers = [
     db.timeline.push(newEvent);
     updateRelationships('timeline', newId, body);
     
-    return HttpResponse.json(newEvent, { status: 201 });
+    return HttpResponse.json({
+      success: true,
+      data: newEvent
+    }, { status: 201 });
   }),
 
   http.put('*/api/notion/timeline/:id', async ({ params, request }) => {
@@ -898,12 +931,16 @@ export const notionHandlers = [
     // Use centralized relationship update logic
     updateRelationships('timeline', id, body, oldEvent);
 
-    return HttpResponse.json(db.timeline[eventIndex]);
+    return HttpResponse.json({
+      success: true,
+      data: db.timeline[eventIndex]
+    });
   }),
 
   http.delete('*/api/notion/timeline/:id', ({ params }) => {
     const { id } = params as { id: string };
     const initialLength = db.timeline.length;
+    const deletedEvent = db.timeline.find(t => t.id === id);
     
     // Remove timeline event from database
     db.timeline = db.timeline.filter(t => t.id !== id);
@@ -926,8 +963,11 @@ export const notionHandlers = [
       p.storyReveals = p.storyReveals.filter(srId => srId !== id);
     });
 
-    if (db.timeline.length < initialLength) {
-      return new HttpResponse(null, { status: 204 });
+    if (db.timeline.length < initialLength && deletedEvent) {
+      return HttpResponse.json({
+        success: true,
+        data: deletedEvent
+      }, { status: 200 });
     }
     return HttpResponse.json({ error: 'Timeline event not found' }, { status: 404 });
   }),

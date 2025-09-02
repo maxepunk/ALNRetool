@@ -181,28 +181,29 @@ export function useEntitySave() {
 
 /**
  * Detect entity type from entity object.
- * Uses unique properties to identify entity type.
+ * Uses entityType field first, falls back to property detection for backward compatibility.
  * 
  * @function detectEntityType
  * @param {Partial<Entity>} entity - Entity object to analyze
  * @returns {EntityType|null} Detected type or null
  * 
  * **Detection Rules:**
- * - Character: Has 'tier' property
- * - Puzzle: Has 'descriptionSolution' property
- * - Element: Has 'descriptionText' but not 'descriptionSolution'
- * - Timeline: Has both 'date' and 'charactersInvolvedIds'
+ * - Primary: Use entityType field if present
+ * - Fallback: Property-based detection for older data
  * 
  * @example
- * detectEntityType({ tier: 'Core', name: 'Alice' }) // 'character'
- * detectEntityType({ descriptionSolution: '...' }) // 'puzzle'
- * detectEntityType({ descriptionText: '...' }) // 'element'
- * detectEntityType({ date: '2024-01-01', charactersInvolvedIds: [] }) // 'timeline'
+ * detectEntityType({ entityType: 'character', name: 'Alice' }) // 'character'
+ * detectEntityType({ tier: 'Core', name: 'Alice' }) // 'character' (fallback)
  */
 function detectEntityType(entity: Partial<Entity>): EntityType | null {
   if (!entity || typeof entity !== 'object') return null;
 
-  // Type detection based on unique properties
+  // Primary: Use entityType field if present
+  if ('entityType' in entity) {
+    return entity.entityType as EntityType;
+  }
+
+  // Fallback: Type detection based on unique properties (for backward compatibility)
   if ('tier' in entity) return 'character';
   if ('descriptionSolution' in entity) return 'puzzle';
   if ('descriptionText' in entity && !('descriptionSolution' in entity)) return 'element';

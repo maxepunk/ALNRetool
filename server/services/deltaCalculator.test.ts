@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DeltaCalculator } from './deltaCalculator.js';
 import type { Character, Element, Puzzle, TimelineEvent } from '../../src/types/notion/app.js';
+import type { GraphNode } from '../types/delta.js';
 
 // Mock the logger
 vi.mock('../utils/logger.js', () => ({
@@ -52,20 +53,30 @@ describe('DeltaCalculator', () => {
     requiredForPuzzleIds: ['puzzle-1'],
     rewardedByPuzzleIds: ['puzzle-2'],
     containerPuzzleId: 'puzzle-3',
+    narrativeThreads: [], // Required field - provide empty array
     associatedCharacterIds: ['char-2'], // ROLLUP - should not be checked  
     puzzleChain: ['puzzle-1'], // ROLLUP - should not be checked
+    productionNotes: '', // Required field - provide empty string
+    filesMedia: [], // Required field - provide empty array
+    contentLink: undefined, // Optional field
+    isContainer: false, // Required field from formula
     ...overrides
   });
 
   const createPuzzle = (overrides?: Partial<Puzzle>): Puzzle => ({
     id: 'puzzle-1',
     name: 'Test Puzzle',
+    descriptionSolution: '', // Required field - provide empty string
     puzzleElementIds: ['elem-1', 'elem-2'],
     lockedItemId: 'elem-3',
     rewardIds: ['elem-4'],
+    parentItemId: undefined, // Optional field
+    subPuzzleIds: [], // Required field - provide empty array
     storyReveals: ['event-1'], // ROLLUP - should not be checked
     ownerId: 'char-1', // ROLLUP - should not be checked
-    unlockedBy: 'char-2', // ROLLUP - should not be checked
+    timing: [], // Required field from rollup - provide empty array
+    narrativeThreads: [], // Required field from rollup - provide empty array
+    assetLink: undefined, // Optional field
     ...overrides
   });
 
@@ -77,18 +88,13 @@ describe('DeltaCalculator', () => {
     charactersInvolvedIds: ['char-1', 'char-2'],
     memoryEvidenceIds: ['elem-1'],
     memTypes: ['Document'], // ROLLUP - should not be checked
+    notes: '', // Required field - provide empty string
+    lastEditedTime: '2024-01-01T00:00:00Z', // Required field - provide ISO timestamp
     associatedPuzzles: ['puzzle-1'], // ROLLUP - should not be checked
     ...overrides
   });
 
   // Helper for creating graph nodes
-  // TECH_DEBT #7: This helper is unused - integration tests use their own version at line 380
-  const createGraphNode = (entity: any, type: string): Node => ({
-    id: entity.id,
-    type,
-    position: { x: 0, y: 0 },
-    data: { entity }
-  });
 
   describe('stringArraysEqual', () => {
     // Access private method via type assertion for testing
@@ -387,7 +393,7 @@ describe('DeltaCalculator', () => {
       id: entity.id,
       type: type.toLowerCase(),
       data: {
-        label: entity.name ?? entity.description ?? 'Test Node',
+        label: entity.name ?? 'Test Node',
         entity,
         metadata: {
           entityType: type
@@ -516,7 +522,7 @@ describe('DeltaCalculator', () => {
         );
         
         expect(delta.changes.nodes.updated).toHaveLength(1);
-        expect(delta.changes.nodes.updated[0].data.entity.name).toBe('Character B');
+        expect(delta.changes.nodes.updated[0]!.data.entity!.name).toBe('Character B');
       });
 
       it('detects Element relation changes', () => {
@@ -535,7 +541,8 @@ describe('DeltaCalculator', () => {
         );
         
         expect(delta.changes.nodes.updated).toHaveLength(1);
-        expect(delta.changes.nodes.updated[0].data.entity.ownerId).toBe('char-2');
+        const updatedEntity = delta.changes.nodes.updated[0]!.data.entity as Element;
+        expect(updatedEntity.ownerId).toBe('char-2');
       });
 
       it('detects array changes with different duplicates', () => {
@@ -590,7 +597,7 @@ describe('DeltaCalculator', () => {
       it('detects added nodes', () => {
         const char = createCharacter();
         
-        const oldNodes = [];
+        const oldNodes: GraphNode[] = [];
         const newNodes = [createGraphNode(char, 'Character')];
         
         const delta = calculator.calculateGraphDelta(
@@ -602,14 +609,14 @@ describe('DeltaCalculator', () => {
         );
         
         expect(delta.changes.nodes.created).toHaveLength(1);
-        expect(delta.changes.nodes.created[0].data.entity.id).toBe('char-1');
+        expect(delta.changes.nodes.created[0]!.data.entity!.id).toBe('char-1');
       });
 
       it('detects deleted nodes', () => {
         const elem = createElement();
         
         const oldNodes = [createGraphNode(elem, 'Element')];
-        const newNodes = [];
+        const newNodes: GraphNode[] = [];
         
         const delta = calculator.calculateGraphDelta(
           oldNodes,
@@ -648,8 +655,8 @@ describe('DeltaCalculator', () => {
         
         // Only char-1 should be marked as updated
         expect(delta.changes.nodes.updated).toHaveLength(1);
-        expect(delta.changes.nodes.updated[0].id).toBe('char-1');
-        expect(delta.changes.nodes.updated[0].data.entity.name).toBe('Alice Updated');
+        expect(delta.changes.nodes.updated[0]!.id).toBe('char-1');
+        expect(delta.changes.nodes.updated[0]!.data.entity!.name).toBe('Alice Updated');
       });
 
       it('handles complex mixed changes', () => {
@@ -680,8 +687,8 @@ describe('DeltaCalculator', () => {
         expect(delta.changes.nodes.created).toHaveLength(1);   // puzzle added
         expect(delta.changes.nodes.deleted).toHaveLength(1); // elem deleted
         
-        expect(delta.changes.nodes.updated[0].data.entity.name).toBe('Updated');
-        expect(delta.changes.nodes.created[0].data.entity.id).toBe('puzzle-3');
+        expect(delta.changes.nodes.updated[0]!.data.entity!.name).toBe('Updated');
+        expect(delta.changes.nodes.created[0]!.data.entity!.id).toBe('puzzle-3');
         expect(delta.changes.nodes.deleted[0]).toBe('elem-2');
       });
     });
@@ -840,7 +847,9 @@ describe('DeltaCalculator', () => {
           createEdge('edge-1', 'char-1', 'elem-1', 'discovered')
         ];
         
-        const delta = calculator.calculateGraphDelta(oldNodes, newNodes, oldEdges, newEdges, null);
+        // Use the remaining element as context since character was deleted
+        const remainingElem = createElement({ id: 'elem-1' });
+        const delta = calculator.calculateGraphDelta(oldNodes, newNodes, oldEdges, newEdges);
         
         // Node should be deleted
         expect(delta.changes.nodes.deleted).toHaveLength(1);
@@ -872,7 +881,9 @@ describe('DeltaCalculator', () => {
           createEdge('edge-1', 'char-1', 'elem-1', 'discovered')
         ];
         
-        const delta = calculator.calculateGraphDelta(oldNodes, newNodes, oldEdges, newEdges, null);
+        // Use the remaining character as context since element was deleted
+        const remainingChar = createCharacter({ id: 'char-1' });
+        const delta = calculator.calculateGraphDelta(oldNodes, newNodes, oldEdges, newEdges);
         
         // Node should be deleted
         expect(delta.changes.nodes.deleted).toHaveLength(1);
@@ -893,7 +904,9 @@ describe('DeltaCalculator', () => {
           createEdge('edge-1', 'char-1', 'elem-1', 'reference')
         ];
         
-        const delta = calculator.calculateGraphDelta([], [], oldEdges, newEdges, null);
+        // Use a dummy entity for edge-only tests
+        const dummyChar = createCharacter();
+        const delta = calculator.calculateGraphDelta([], [], oldEdges, newEdges);
         
         // Edge should be marked as updated due to type change
         expect(delta.changes.edges.updated).toHaveLength(1);
@@ -909,7 +922,9 @@ describe('DeltaCalculator', () => {
           { id: 'edge-1', source: 'char-1', target: 'elem-1', type: 'relationship', data: { label: 'investigated' } }
         ];
         
-        const delta = calculator.calculateGraphDelta([], [], oldEdges, newEdges, null);
+        // Use a dummy entity for edge-only tests
+        const dummyElem = createElement();
+        const delta = calculator.calculateGraphDelta([], [], oldEdges, newEdges);
         
         // Edge should be marked as updated due to label change
         expect(delta.changes.edges.updated).toHaveLength(1);
@@ -917,52 +932,7 @@ describe('DeltaCalculator', () => {
       });
     });
 
-    describe('updatedEntity parameter behavior', () => {
-      it('works correctly when updatedEntity is null/undefined', () => {
-        const char1 = createCharacter({ name: 'Original' });
-        const char2 = createCharacter({ name: 'Updated' });
-        
-        const oldNodes = [createGraphNode(char1, 'Character')];
-        const newNodes = [createGraphNode(char2, 'Character')];
-        
-        // Pass null for updatedEntity
-        const delta = calculator.calculateGraphDelta(
-          oldNodes,
-          newNodes,
-          [],
-          [],
-          null as any
-        );
-        
-        // Delta calculation should still work correctly
-        expect(delta.changes.nodes.updated).toHaveLength(1);
-        expect(delta.entity).toBeNull();
-      });
-
-      it('updatedEntity does not affect delta calculation logic', () => {
-        const elem1 = createElement({ name: 'Element A' });
-        const elem2 = createElement({ name: 'Element B' });
-        const unrelatedChar = createCharacter({ id: 'unrelated' });
-        
-        const oldNodes = [createGraphNode(elem1, 'Element')];
-        const newNodes = [createGraphNode(elem2, 'Element')];
-        
-        // Pass an unrelated entity as updatedEntity
-        const delta = calculator.calculateGraphDelta(
-          oldNodes,
-          newNodes,
-          [],
-          [],
-          unrelatedChar  // Wrong entity!
-        );
-        
-        // Delta should still detect the element change correctly
-        expect(delta.changes.nodes.updated).toHaveLength(1);
-        expect(delta.changes.nodes.updated[0].data.entity.name).toBe('Element B');
-        // But the entity field will have the wrong entity
-        expect(delta.entity).toBe(unrelatedChar);
-      });
-    });
+    // REMOVED: updatedEntity parameter tests - parameter was vestigial (TECH_DEBT #1)
 
     // Duplicate helper factories removed - using definitions from top of file
   });

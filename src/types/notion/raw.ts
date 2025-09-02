@@ -33,6 +33,18 @@ export interface NotionPage {
   archived: boolean;
   url: string;
   properties: Record<string, NotionProperty>;
+  // Parent property - standard Notion API field that we cast away with 'as NotionPage'
+  // Adding this fixes our type to match actual API responses
+  parent: {
+    type: 'database_id';
+    database_id: string;
+  } | {
+    type: 'page_id';
+    page_id: string;
+  } | {
+    type: 'workspace';
+    workspace: true;
+  };
 }
 
 // Union of all property types we use

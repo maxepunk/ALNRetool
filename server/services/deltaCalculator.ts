@@ -594,8 +594,7 @@ export class DeltaCalculator {
     oldNodes: GraphNode[], 
     newNodes: GraphNode[],
     oldEdges: Edge[],
-    newEdges: Edge[],
-    updatedEntity: Character | Element | Puzzle | TimelineEvent
+    newEdges: Edge[]
   ): GraphDelta {
     const start = performance.now();
     
@@ -681,7 +680,6 @@ export class DeltaCalculator {
     });
     
     return {
-      entity: updatedEntity,
       changes: {
         nodes: nodeChanges,
         edges: edgeChanges
@@ -696,7 +694,7 @@ export class DeltaCalculator {
       // Return a delta that indicates full invalidation is needed
       // This is signaled by returning all nodes as "updated" which will trigger a full refresh
       return {
-        entity: updatedEntity,
+        // entity field removed - was vestigial
         changes: {
           nodes: {
             updated: newNodes,  // All nodes marked as updated

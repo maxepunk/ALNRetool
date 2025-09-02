@@ -28,6 +28,7 @@ import type {
   MutationContext as BaseMutationContext
 } from '@/types/mutations';
 import { getCacheUpdater, determineCacheStrategy, type CacheUpdateContext } from '@/lib/cache/updaters';
+import { useViewStore } from '@/stores/viewStore';
 
 // Parent relation metadata for atomic creation (kept for backward compatibility)
 export type ParentRelationMetadata = {
@@ -48,14 +49,18 @@ interface MutationError {
   details?: unknown;
 }
 
-// Mutation options with viewName for correct cache targeting
+// Mutation options for optimistic updates and cache targeting
 interface MutationOptions extends Partial<UseMutationOptions<any, MutationError, any>> {
-  viewName?: string;
+  // Using viewStore for single source of truth instead of viewName parameter
 }
 
 // Extended context for local use (includes BaseMutationContext fields)
 interface MutationContext extends BaseMutationContext {
-  // Additional fields specific to this implementation
+  // Bug 8 Fix: Granular rollback fields
+  previousNode?: any; // Original node state before UPDATE
+  deletedNode?: any; // Node that was deleted (for DELETE)
+  deletedEdges?: any[]; // Edges that were deleted (for DELETE)
+  modifiedParentNodes?: Array<{ id: string; previousState: any }>; // Parent nodes modified during mutation
 }
 
 // Node type mapping for correct entity type conversion
@@ -105,13 +110,11 @@ function createEntityMutation<T extends Entity | void = Entity>(
     const queryClient = useQueryClient();
     const apiModule = getApiModule(entityType);
     
-    // Extract viewName with warning if not provided
-    const viewName = options?.viewName;
-    if (!viewName) {
-      console.warn('[Mutation] No viewName provided, optimistic updates may not work correctly');
-    }
+    // Get current view type from store for cache key consistency
     // Use consistent query key that matches what GraphView uses
-    const queryKey = ['graph', 'complete', viewName || 'full-graph'];
+    // Get current view from store instead of parameter (fixes Bug 6a)
+    const currentViewType = useViewStore.getState().currentViewType;
+    const queryKey = ['graph', 'complete', currentViewType || 'full-graph'];
     
     return useMutation<MutationResponse<T extends Entity ? T : Entity>, MutationError, any>({
       mutationFn: async (data): Promise<MutationResponse<T extends Entity ? T : Entity>> => {
@@ -122,7 +125,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
               data: data,
               parentRelation: data._parentRelation
             };
-            response = await apiModule.create(createPayload.data);
+            response = await apiModule.create(createPayload.data as any);
             break;
           case 'update':
             const updatePayload: UpdatePayload<Entity> = {
@@ -139,7 +142,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
             const updateHeaders = updatePayload.version !== undefined 
               ? { 'If-Match': `"${updatePayload.version}"` }
               : undefined;
-            response = await apiModule.update(updatePayload.id, updatePayload.data, updateHeaders);
+            response = await apiModule.update(updatePayload.id, updatePayload.data as any, updateHeaders);
             break;
           case 'delete':
             // Standardize to DeletePayload format
@@ -160,15 +163,17 @@ function createEntityMutation<T extends Entity | void = Entity>(
             throw new Error(`Unknown mutation type: ${mutationType}`);
         }
         
-        // Wrap response in MutationResponse format if not already
-        if (response && typeof response === 'object' && 'success' in response && 'data' in response) {
-          return response as MutationResponse<T extends Entity ? T : Entity>;
+        // API now returns MutationResponse directly for mutations
+        // For DELETE operations, construct a MutationResponse if needed
+        if (mutationType === 'delete' && !response) {
+          return {
+            success: true,
+            data: { id: data.id || data } as (T extends Entity ? T : Entity)
+          };
         }
-        // Legacy format - wrap in MutationResponse
-        return {
-          success: true,
-          data: response as (T extends Entity ? T : Entity)
-        };
+        
+        // All mutations now return MutationResponse from API
+        return response as MutationResponse<T extends Entity ? T : Entity>;
       },
       
       onMutate: async (variables) => {
@@ -178,9 +183,16 @@ function createEntityMutation<T extends Entity | void = Entity>(
         // Snapshot specific view cache for rollback
         const previousData = queryClient.getQueryData(queryKey);
         
+        
         // Generate unique temp ID for creates
         const tempId = mutationType === 'create' ? `temp-${Date.now()}` : undefined;
         const createdEdges: string[] = [];
+        
+        // Bug 8 Fix: Capture granular state for rollback
+        let previousNode: any;
+        let deletedNode: any;
+        let deletedEdges: any[] = [];
+        const modifiedParentNodes: Array<{ id: string; previousState: any }> = [];
         
         // Update specific view cache optimistically
         queryClient.setQueryData(queryKey, (oldData: any) => {
@@ -214,7 +226,8 @@ function createEntityMutation<T extends Entity | void = Entity>(
             // Ensure edges array exists before adding new edge
             if (!newData.edges) newData.edges = [];
             if (variables._parentRelation) {
-              const edgeId = `e-${variables._parentRelation.parentId}-${tempId}`;
+              // Use consistent edge ID format with delta: e::source::field::target
+              const edgeId = `e::${variables._parentRelation.parentId}::${variables._parentRelation.fieldKey}::${tempId}`;
               const newEdge = {
                 id: edgeId,
                 source: variables._parentRelation.parentId,
@@ -232,6 +245,9 @@ function createEntityMutation<T extends Entity | void = Entity>(
             // Update existing node optimistically
             const nodeIndex = nodes.findIndex(n => n.id === variables.id);
             if (nodeIndex !== -1) {
+              // Bug 8 Fix: Capture previous state for granular rollback
+              previousNode = { ...nodes[nodeIndex] };
+              
               nodes[nodeIndex] = {
                 ...nodes[nodeIndex],
                 data: {
@@ -248,6 +264,55 @@ function createEntityMutation<T extends Entity | void = Entity>(
           } else if (mutationType === 'delete') {
             // Handle both string ID and object with version
             const deleteId = typeof variables === 'string' ? variables : variables.id;
+            
+            // Bug 8 Fix: Capture deleted node and edges for granular rollback
+            const nodeToDelete = nodes.find(n => n.id === deleteId);
+            if (nodeToDelete) {
+              deletedNode = { ...nodeToDelete };
+            }
+            
+            // Capture edges that will be deleted
+            deletedEdges = (newData.edges || []).filter(
+              (e: any) => e.source === deleteId || e.target === deleteId
+            );
+            
+            // Bug 7 Fix: Clean up parent entity relationship arrays
+            // Find all edges where this entity is the target (child)
+            const incomingEdges = (newData.edges || []).filter((e: any) => e.target === deleteId);
+            
+            // Update parent nodes to remove this child from their relationship arrays
+            for (const edge of incomingEdges) {
+              const parentNodeIndex = nodes.findIndex(n => n.id === edge.source);
+              if (parentNodeIndex !== -1 && edge.data?.relationField) {
+                const parentNode = nodes[parentNodeIndex];
+                
+                // Bug 8 Fix: Capture parent's previous state
+                modifiedParentNodes.push({
+                  id: parentNode.id,
+                  previousState: { ...parentNode }
+                });
+                const fieldKey = edge.data.relationField;
+                const currentIds = parentNode.data.entity[fieldKey] || [];
+                
+                // Remove the deleted ID from parent's relationship array
+                const updatedIds = currentIds.filter((id: string) => id !== deleteId);
+                
+                // Only update if the ID was actually present
+                if (updatedIds.length < currentIds.length) {
+                  nodes[parentNodeIndex] = {
+                    ...parentNode,
+                    data: {
+                      ...parentNode.data,
+                      entity: {
+                        ...parentNode.data.entity,
+                        [fieldKey]: updatedIds
+                      }
+                    }
+                  };
+                }
+              }
+            }
+            
             // Remove node optimistically
             const nodeIndex = nodes.findIndex(n => n.id === deleteId);
             if (nodeIndex !== -1) {
@@ -266,11 +331,18 @@ function createEntityMutation<T extends Entity | void = Entity>(
           previousGraphData: previousData, 
           queryKey,
           tempId,
-          createdEdges
+          createdEdges,
+          // Bug 8 Fix: Include granular state for rollback
+          previousNode,
+          deletedNode,
+          deletedEdges,
+          modifiedParentNodes,
+          // OPTIMISTIC FIX: Track when optimistic update started
+          optimisticStartTime: Date.now()
         } as MutationContext;
       },
       
-      onError: (error, variables, context) => {
+      onError: async (error, variables, context) => {
         const ctx = context as MutationContext | undefined;
         
         // Check for version conflict (409 Conflict)
@@ -290,6 +362,17 @@ function createEntityMutation<T extends Entity | void = Entity>(
           toast.error(error.message || `Failed to ${mutationType} entity`);
           options?.onError?.(error, variables, context);
           return;
+        }
+        
+        // OPTIMISTIC FIX: Ensure minimum display time for optimistic updates
+        // This ensures users see the optimistic update even with immediate error responses
+        const optimisticStartTime = ctx.optimisticStartTime || Date.now();
+        const elapsedTime = Date.now() - optimisticStartTime;
+        const minDisplayTime = 50; // Minimum time to show optimistic update
+        
+        if (elapsedTime < minDisplayTime) {
+          const remainingTime = minDisplayTime - elapsedTime;
+          await new Promise(resolve => setTimeout(resolve, remainingTime));
         }
 
         // 1. Handle CREATE failure: remove optimistic node and its associated edges
@@ -315,12 +398,57 @@ function createEntityMutation<T extends Entity | void = Entity>(
             };
           });
         } 
-        // 2. Handle UPDATE/DELETE failure: restore previous state
-        // This branch is taken if previousGraphData was successfully captured (can be null or actual data)
-        else if (ctx.previousGraphData !== undefined) { // Check for explicit undefined, allowing null
+        // 2. Handle UPDATE/DELETE failure with granular rollback (Bug 8 Fix)
+        else if (mutationType === 'update' && ctx.previousNode) {
+          // Granular rollback for UPDATE: restore only the specific node
+          queryClient.setQueryData(ctx.queryKey, (current: any) => {
+            if (!current) return current;
+            
+            const nodes = [...current.nodes];
+            const nodeIndex = nodes.findIndex(n => n.id === ctx.previousNode.id);
+            if (nodeIndex !== -1) {
+              nodes[nodeIndex] = ctx.previousNode;
+            }
+            
+            return { ...current, nodes };
+          });
+        }
+        else if (mutationType === 'delete' && (ctx.deletedNode || ctx.modifiedParentNodes?.length)) {
+          // Granular rollback for DELETE: restore deleted node and parent relationships
+          queryClient.setQueryData(ctx.queryKey, (current: any) => {
+            if (!current) return current;
+            
+            let nodes = [...current.nodes];
+            let edges = [...(current.edges || [])];
+            
+            // Restore deleted node
+            if (ctx.deletedNode) {
+              nodes.push(ctx.deletedNode);
+            }
+            
+            // Restore deleted edges
+            if (ctx.deletedEdges?.length) {
+              edges = [...edges, ...ctx.deletedEdges];
+            }
+            
+            // Restore modified parent nodes
+            if (ctx.modifiedParentNodes?.length) {
+              for (const parent of ctx.modifiedParentNodes) {
+                const parentIndex = nodes.findIndex(n => n.id === parent.id);
+                if (parentIndex !== -1) {
+                  nodes[parentIndex] = parent.previousState;
+                }
+              }
+            }
+            
+            return { ...current, nodes, edges };
+          });
+        }
+        // 3. Fallback to full restore if granular data not available
+        else if (ctx.previousGraphData !== undefined) {
           queryClient.setQueryData(ctx.queryKey, ctx.previousGraphData);
         } 
-        // 3. Fallback: clean up optimistic artifacts if previousGraphData was not available
+        // 4. Final fallback: clean up optimistic artifacts if no rollback data available
         // (e.g., onMutate failed before capturing, or other unexpected scenarios)
         else { 
           queryClient.setQueryData(ctx.queryKey, (current: any) => {
@@ -358,7 +486,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
         // STEP 1/7: Delta detection for UPDATE, CREATE, and DELETE mutations
         const responseData: any = data && typeof data === 'object' ? data : {};
         const hasDelta = responseData.delta && (mutationType === 'update' || mutationType === 'create' || mutationType === 'delete');
-        let deltaAppliedSuccessfully = false;
+        // Delta application now always succeeds for CRUD operations or throws
         let deltaDuration = 0; // For performance comparison
         
         if (hasDelta) {
@@ -393,8 +521,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
               delta: responseData.delta,
               operation: mutationType as 'create' | 'update' | 'delete', // Now supports all mutations
               tempId: ctx.tempId, // For CREATE, this is the temp node to replace
-              previousState: ctx.previousGraphData, // For rollback if needed
-              viewName: options?.viewName
+              previousState: ctx.previousGraphData // For rollback if needed
             };
             
             console.log(`[Delta] Applying ${strategy} strategy for ${entityType} ${mutationType.toUpperCase()}`);
@@ -412,242 +539,27 @@ function createEntityMutation<T extends Entity | void = Entity>(
               deltaSize: JSON.stringify(responseData.delta).length,
               efficiency: `${((JSON.stringify(responseData.delta).length / JSON.stringify(queryClient.getQueryData(ctx.queryKey) || {}).length) * 100).toFixed(1)}% of cache size`
             });
-            deltaAppliedSuccessfully = true;
             
-            // Skip the manual cache update below since delta handled it
-            // But still run invalidation as fallback for now (Step 5 will remove this)
+            // No need for delayed cleanup - delta should bring clean data from server
+            // The isOptimistic flag is only for temporary visual feedback during the mutation
+            
+            // Delta successfully applied
           } catch (error) {
             console.error(`[Delta] Failed to apply delta for ${entityType} ${mutationType.toUpperCase()}:`, error);
             // Fall through to manual update + invalidation
           }
         } else if (mutationType === 'update' || mutationType === 'create' || mutationType === 'delete') {
-          console.log(`[Delta] NOT available for ${entityType} ${mutationType.toUpperCase()} - will use manual update + invalidation`);
+          // CRITICAL: Delta should ALWAYS be present for successful CRUD operations
+          // If we get here, it means the server didn't return delta, which is a bug
+          console.error(`[Delta] MISSING for successful ${entityType} ${mutationType.toUpperCase()} - this should not happen!`);
         }
         
-        // Manually update cache with server response instead of invalidating
-        // Skip this if delta was applied successfully for UPDATE, CREATE, or DELETE
-        //
-        // ⚠️ WARNING: Deep nesting ahead! This block has caused repeated confusion.
-        // The structure is: if { setQueryData( (oldData) => { if-else-if chains with 3 levels of nesting } ) }
-        // Each closing brace is now clearly commented. Do NOT "fix" the braces - they are correct!
-        // To verify structure, use: npm run typecheck (NOT npx tsc directly!)
-        if (!deltaAppliedSuccessfully || (mutationType !== 'update' && mutationType !== 'create' && mutationType !== 'delete')) {
-          queryClient.setQueryData(ctx.queryKey, (oldData: any) => {
-          if (!oldData) return oldData;
-          
-          let nodes = [...(oldData.nodes || [])];
-          let edges = [...(oldData.edges || [])];
-          
-          if (mutationType === 'create' && ctx.tempId && data) {
-            // Extract entity from MutationResponse
-            const entity = 'data' in data ? data.data : data;
-            if (entity && 'id' in entity) {
-              // Find and replace temporary node with real data
-              const nodeIndex = nodes.findIndex(n => n.id === ctx.tempId);
-              if (nodeIndex !== -1) {
-                // Replace with real data from server
-                nodes[nodeIndex] = {
-                  ...nodes[nodeIndex],
-                  id: entity.id,
-                  data: {
-                    ...nodes[nodeIndex].data,
-                    id: entity.id,
-                    entity: entity,
-                    label: ('name' in entity ? entity.name : null) || nodes[nodeIndex].data.label,
-                  metadata: {
-                    ...nodes[nodeIndex].data.metadata,
-                    isOptimistic: false  // Remove optimistic flag
-                  }
-                }
-              };
-              
-                // Update all edges to use real ID - unified operation for proper ID sync
-                edges = edges.map(edge => {
-                  // Check if this edge involves the temp ID
-                  if (edge.source === ctx.tempId || edge.target === ctx.tempId) {
-                    const newSource = edge.source === ctx.tempId ? entity.id : edge.source;
-                    const newTarget = edge.target === ctx.tempId ? entity.id : edge.target;
-                  
-                  // Reconstruct edge ID to match new source/target
-                  // Edge ID format: e::{source}::{fieldKey}::{target}
-                  const fieldKey = edge.data?.fieldKey || 'relationship';
-                  const newEdgeId = `e::${newSource}::${fieldKey}::${newTarget}`;
-                  
-                  return {
-                    ...edge,
-                    id: newEdgeId, // CRITICAL: Update edge ID to reflect new nodes
-                    source: newSource,
-                    target: newTarget,
-                    data: {
-                      ...edge.data,
-                      isOptimistic: false // Remove optimistic flag from edges
-                    }
-                  };
-                }
-                return edge;
-              });
-            }
-            // Update parent entity's relationship array if this was created from a relation field
-            if (variables._parentRelation) {
-              const { parentId, fieldKey } = variables._parentRelation;
-              
-              // Find parent node index for efficient update
-              const parentNodeIndex = nodes.findIndex(node => node.id === parentId);
-              if (parentNodeIndex !== -1) {
-                const parentNode = nodes[parentNodeIndex];
-                const currentIds = parentNode.data.entity[fieldKey] || [];
-                
-                  // Only update if ID doesn't already exist (avoid duplicates)
-                  if (!currentIds.includes(entity.id)) {
-                  // Create new nodes array with updated parent
-                  nodes = [
-                    ...nodes.slice(0, parentNodeIndex),
-                    {
-                      ...parentNode,
-                      data: {
-                        ...parentNode.data,
-                        entity: {
-                          ...parentNode.data.entity,
-                            [fieldKey]: [...currentIds, entity.id]
-                        }
-                      }
-                    },
-                    ...nodes.slice(parentNodeIndex + 1)
-                  ];
-                }
-              }
-              
-                // After updating parent's array, create the edge
-                if (entity && 'id' in entity) {
-                // Determine edge type based on field name using explicit mapping
-                // This mapping uses exact field names from the schema for precision
-                const fieldKeyToEdgeType: Record<string, string> = {
-                  // Character fields
-                  'ownedElementIds': 'ownership',
-                  'characterPuzzleIds': 'puzzle',
-                  'eventIds': 'timeline',
-                  
-                  // Element fields
-                  'ownerId': 'ownership',
-                  'requiredForPuzzleIds': 'requirement',
-                  'rewardedByPuzzleIds': 'reward',
-                  'containerId': 'container',
-                  'contentIds': 'container',
-                  'timelineEventId': 'timeline',
-                  'containerPuzzleId': 'puzzle',
-                  
-                  // Puzzle fields
-                  'puzzleElementIds': 'requirement',
-                  'rewardIds': 'reward',
-                  'lockedItemId': 'container',
-                  'parentItemId': 'dependency',
-                  'subPuzzleIds': 'dependency',
-                  'characterIds': 'character',
-                  
-                  // Timeline fields
-                  'charactersInvolvedIds': 'character',
-                  'memoryEvidenceIds': 'timeline',
-                  
-                  // Fallback patterns for common naming conventions
-                  'elements': 'requirement',
-                  'rewards': 'reward',
-                  'characters': 'character',
-                  'puzzles': 'puzzle',
-                  'timeline': 'timeline',
-                  'events': 'timeline'
-                };
-                
-                // First try exact match, then try lowercase match, then default
-                let edgeType = fieldKeyToEdgeType[fieldKey] || 
-                               fieldKeyToEdgeType[fieldKey.toLowerCase()] || 
-                               'relationship';
-                
-                  // Check if edge already exists (may have been updated by unified operation above)
-                  const finalEdgeId = `e::${parentId}::${fieldKey}::${entity.id}`;
-                const existingFinalEdgeIndex = edges.findIndex(e => e.id === finalEdgeId);
-                
-                // If unified update already handled this edge, nothing more to do
-                if (existingFinalEdgeIndex === -1) {
-                  // Edge doesn't exist yet, check for optimistic edge to replace
-                  // (this would be an edge created directly with parent, not with temp node)
-                  const optimisticEdgeIndex = edges.findIndex(e => 
-                    e.source === parentId && 
-                    e.target === ctx.tempId && 
-                    e.data?.fieldKey === fieldKey
-                  );
-                  
-                  if (optimisticEdgeIndex !== -1) {
-                    // Replace the optimistic edge with the confirmed one
-                    edges = [
-                      ...edges.slice(0, optimisticEdgeIndex),
-                      {
-                        id: finalEdgeId,
-                        source: parentId,
-                        target: entity.id,
-                        type: 'default',
-                        data: {
-                          relationshipType: edgeType,
-                          fieldKey,
-                          isOptimistic: false // Mark as confirmed
-                        }
-                      },
-                      ...edges.slice(optimisticEdgeIndex + 1)
-                    ];
-                  } else {
-                    // No optimistic edge found, create new edge
-                    edges = [...edges, {
-                      id: finalEdgeId,
-                      source: parentId,
-                      target: entity.id,
-                      type: 'default',
-                      data: {
-                        relationshipType: edgeType,
-                        fieldKey,
-                        isOptimistic: false
-                      }
-                    }];
-                    }
-                  }
-                }
-              }
-            }
-          } else if (mutationType === 'update' && data) {
-            // Extract entity from MutationResponse
-            const entity = 'data' in data ? data.data : data;
-            
-            if (entity && 'id' in entity) {
-              // Find the node to update
-              const nodeIndex = nodes.findIndex(n => n.id === variables.id);
-              if (nodeIndex !== -1) {
-                // Update the node and remove the optimistic flag
-                nodes[nodeIndex] = {
-                  ...nodes[nodeIndex],
-                  data: {
-                    ...nodes[nodeIndex].data,
-                    entity: entity,
-                    label: ('name' in entity ? entity.name : null) || nodes[nodeIndex].data.label,
-                    metadata: {
-                      ...nodes[nodeIndex].data.metadata,
-                      isOptimistic: false
-                    }
-                  }
-                };
-              } // Closes: if (nodeIndex !== -1)
-            } // Closes: if (entity && 'id' in entity)
-          } // Closes: else if (mutationType === 'update' && data)
-          
-          // Delete operations don't need special handling in this manual update block,
-          // as the optimistic removal in onMutate is sufficient.
-          
-          return { ...oldData, nodes, edges };
-        });
-        } // End of conditional manual cache update
+        // Manual fallback removed - DeltaCacheUpdater handles all CRUD operations
         
-        // STEP 5/7: Only invalidate if delta was not successfully applied
-        // Skip invalidation for successful UPDATE, CREATE, and DELETE deltas to avoid redundant network calls
-        const shouldInvalidate = (mutationType !== 'update' && mutationType !== 'create' && mutationType !== 'delete') || !deltaAppliedSuccessfully;
-        
+        // Only invalidate if delta wasn't available or failed to apply
+        // Delta handles all cache updates when available, making invalidation unnecessary
         let invalidationDuration = 0;
+        const shouldInvalidate = !hasDelta && (mutationType === 'create' || mutationType === 'delete');
         if (shouldInvalidate) {
           // Force cache invalidation for graph queries to ensure server's synthesized data is fetched
           // STEP 3: Add performance metrics for invalidation comparison
@@ -670,9 +582,9 @@ function createEntityMutation<T extends Entity | void = Entity>(
         if (mutationType === 'update' || mutationType === 'create' || mutationType === 'delete') {
           console.log(`[Delta] Final ${mutationType.toUpperCase()} metrics for ${entityType}`, {
             deltaWasAvailable: hasDelta,
-            deltaWasApplied: deltaAppliedSuccessfully,
-            invalidationSkipped: deltaAppliedSuccessfully,
-            timings: deltaAppliedSuccessfully ? {
+            deltaWasApplied: hasDelta,
+            invalidationSkipped: !shouldInvalidate,
+            timings: hasDelta ? {
               deltaDurationMs: deltaDuration.toFixed(2),
               invalidationDurationMs: '0.00 (skipped)',
               totalDurationMs: deltaDuration.toFixed(2)
@@ -681,7 +593,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
               invalidationDurationMs: invalidationDuration.toFixed(2),
               totalDurationMs: invalidationDuration.toFixed(2)
             },
-            networkSavings: deltaAppliedSuccessfully ? 
+            networkSavings: hasDelta ? 
               'Avoided 2+ network requests (graph + entity queries)' :
               'No savings - full invalidation performed'
           });
@@ -800,130 +712,3 @@ export const useDeleteTimelineEvent = (options?: MutationOptions) => useDeleteTi
 // by calling hooks conditionally. Use the specific hooks directly instead:
 // useCreateCharacter, useUpdateCharacter, useDeleteCharacter, etc.
 
-/**
- * Batch mutation for updating multiple entities
- * 
- * @param entityType - Type of entities to update
- * @param options - Configuration options
- * @param options.allowPartialSuccess - If true, uses Promise.allSettled for independent updates.
- *                                       If false (default), uses Promise.all for atomic updates.
- * 
- * @example
- * // Atomic updates (fail together)
- * const mutation = useBatchEntityMutation('characters');
- * 
- * // Independent updates (partial success allowed)  
- * const mutation = useBatchEntityMutation('characters', { allowPartialSuccess: true });
- */
-export function useBatchEntityMutation<T extends Entity>(
-  entityType: EntityType,
-  options?: { allowPartialSuccess?: boolean }
-) {
-  const queryClient = useQueryClient();
-  const allowPartial = options?.allowPartialSuccess ?? false;
-  
-  return useMutation<
-    T[] | { successful: T[]; failed: Array<{ update: Partial<T>; error: Error }> },
-    MutationError,
-    (Partial<T> & ParentRelationMetadata)[]
-  >({
-    mutationFn: async (updates: (Partial<T> & ParentRelationMetadata)[]) => {
-      const apiModule = getApiModule(entityType);
-      
-      // Validate all updates have IDs
-      updates.forEach(update => {
-        if (!update.id) throw new Error('ID required for batch update');
-      });
-
-      if (allowPartial) {
-        // Independent updates - use allSettled for partial success
-        const results = await Promise.allSettled(
-          updates.map(update => {
-            // Extract version for If-Match header (same as individual mutations)
-            const version = (update as any).lastEdited || (update as any).version;
-            const updateData = { ...update };
-            delete updateData.id;
-            delete (updateData as any).version;
-            delete (updateData as any).lastEdited;
-            
-            const headers = version !== undefined 
-              ? { 'If-Match': `"${version}"` }
-              : undefined;
-              
-            return apiModule.update(update.id!, updateData, headers)
-              .then(result => ({ update, result }))
-              .catch(error => Promise.reject({ update, error }));
-          })
-        );
-        
-        const successful: T[] = [];
-        const failed: Array<{ update: Partial<T>; error: Error }> = [];
-        
-        results.forEach(result => {
-          if (result.status === 'fulfilled') {
-            successful.push(result.value.result as T);
-          } else {
-            failed.push({
-              update: result.reason.update,
-              error: result.reason.error
-            });
-          }
-        });
-        
-        return { successful, failed };
-      } else {
-        // Atomic updates - use Promise.all (current behavior)
-        const results = await Promise.all(
-          updates.map(update => {
-            // Extract version for If-Match header (same as individual mutations)
-            const version = (update as any).lastEdited || (update as any).version;
-            const updateData = { ...update };
-            delete updateData.id;
-            delete (updateData as any).version;
-            delete (updateData as any).lastEdited;
-            
-            const headers = version !== undefined 
-              ? { 'If-Match': `"${version}"` }
-              : undefined;
-              
-            return apiModule.update(update.id!, updateData, headers);
-          })
-        );
-        return results as T[];
-      }
-    },
-    
-    onSuccess: async (response) => {
-      // Invalidate graph cache after any successful updates
-      await queryClient.invalidateQueries({ 
-        queryKey: ['graph'] 
-      });
-      
-      // Provide appropriate feedback based on mode
-      if (allowPartial && typeof response === 'object' && 'successful' in response) {
-        const { successful, failed } = response;
-        if (successful.length > 0) {
-          toast.success(`Updated ${successful.length} entities`);
-        }
-        if (failed.length > 0) {
-          toast.error(`Failed to update ${failed.length} entities. Check console for details.`);
-          // Log details for debugging
-          console.error('Batch update failures:', failed.map(f => ({
-            id: f.update.id,
-            error: f.error.message
-          })));
-        }
-      } else {
-        // Atomic mode - all succeeded
-        const entities = response as T[];
-        toast.success(`Updated ${entities.length} entities`);
-      }
-    },
-    
-    onError: async (error) => {
-      // In atomic mode, all updates failed
-      toast.error('Batch update failed. No changes were saved.');
-      console.error('Batch update error:', error);
-    }
-  });
-}

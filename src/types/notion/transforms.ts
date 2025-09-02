@@ -234,6 +234,7 @@ export function transformCharacter(page: NotionPage): Character {
   return {
     id: normalizeUuid(page.id),
     name: getTitle(props[CharacterProperties.NAME]),
+    entityType: 'character' as const,
     lastEdited: page.last_edited_time,
     type: (getSelect(props[CharacterProperties.TYPE]) || 'NPC') as Character['type'],
     tier: (getSelect(props[CharacterProperties.TIER]) || 'Tertiary') as Character['tier'],
@@ -256,6 +257,7 @@ export function transformElement(page: NotionPage): Element {
   return {
     id: normalizeUuid(page.id),
     name: getTitle(props[ElementProperties.NAME]),
+    entityType: 'element' as const,
     lastEdited: page.last_edited_time,
     descriptionText,
     sfPatterns: parseSFPatterns(descriptionText),
@@ -285,6 +287,7 @@ export function transformPuzzle(page: NotionPage): Puzzle {
   return {
     id: normalizeUuid(page.id),
     name: getTitle(props[PuzzleProperties.PUZZLE]),
+    entityType: 'puzzle' as const,
     lastEdited: page.last_edited_time,
     descriptionSolution: getRichText(props[PuzzleProperties.DESCRIPTION_SOLUTION]),
     puzzleElementIds: getRelationIds(props[PuzzleProperties.PUZZLE_ELEMENTS]),
@@ -307,6 +310,7 @@ export function transformTimelineEvent(page: NotionPage): TimelineEvent {
   return {
     id: normalizeUuid(page.id),
     name: description || 'Untitled Event', // Add name field
+    entityType: 'timeline' as const,
     lastEdited: page.last_edited_time,
     description: description || '',
     date: getDate(props[TimelineProperties.DATE]) || '',

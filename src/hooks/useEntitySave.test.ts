@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useEntitySave } from './useEntitySave';
-import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
+import type { Character, Puzzle } from '@/types/notion/app';
 
 // Create mock functions that will be accessible in tests
 const mockUpdateCharacter = vi.fn();
@@ -36,9 +36,7 @@ vi.mock('@/hooks/mutations', () => ({
 // Import the mocked hooks for dynamic testing
 import { 
   useUpdateCharacter, 
-  useUpdateElement, 
-  useUpdatePuzzle, 
-  useUpdateTimelineEvent 
+  useUpdateElement
 } from '@/hooks/mutations';
 
 describe('useEntitySave', () => {

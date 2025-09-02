@@ -6,7 +6,7 @@
  */
 
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
-import type { GraphDelta } from '@/types/graph';
+import type { GraphDelta } from '../../server/types/delta';
 
 // Entity type union
 export type EntityType = 'characters' | 'elements' | 'puzzles' | 'timeline';
@@ -51,6 +51,7 @@ export interface MutationContext {
   tempId?: string;
   createdEdges?: string[];
   performanceStart?: number;
+  optimisticStartTime?: number;
 }
 
 // Cache update strategies

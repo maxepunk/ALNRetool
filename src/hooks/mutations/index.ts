@@ -55,9 +55,6 @@ export {
   useDeleteTimeline,
   useDeleteTimeline as useDeleteTimelineEvent,
   
-  // Generic mutations
-  useBatchEntityMutation,
-  
   // Types
   type EntityType,
   type MutationType,

@@ -378,7 +378,9 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
             entityId: response.id,
             error: error instanceof Error ? error.message : String(error)
           });
-          // Don't fail the request, just skip delta
+          // CHANGED: Make delta failures visible instead of silent
+          // This allows the client to handle the error appropriately
+          throw new Error(`Delta generation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       
@@ -480,8 +482,7 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
           graphStateBefore.nodes,
           graphStateAfter.nodes,
           graphStateBefore.edges,
-          graphStateAfter.edges,
-          entityData  // The deleted entity
+          graphStateAfter.edges
         );
         
         log.info(`[Delta] Calculated delta for ${config.entityName} deletion`, {
@@ -494,6 +495,8 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
           entityId: id,
           error: error instanceof Error ? error.message : String(error)
         });
+        // CHANGED: Make delta failures visible instead of silent
+        throw new Error(`Delta generation failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     
@@ -663,8 +666,7 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
               graphStateBefore.nodes,
               graphStateAfter.nodes,
               graphStateBefore.edges,
-              graphStateAfter.edges,
-              transformed as any  // Type assertion for generic constraint
+              graphStateAfter.edges
             );
             
             log.info(`[Delta] Calculated delta for ${config.entityName} update`, {
@@ -682,6 +684,8 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
             entityId: req.params.id,
             error: error instanceof Error ? error.message : String(error)
           });
+          // CHANGED: Make delta failures visible instead of silent
+          throw new Error(`Delta generation failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
       

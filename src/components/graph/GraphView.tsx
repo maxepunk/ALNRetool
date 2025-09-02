@@ -56,6 +56,7 @@ import { useViewportManager } from '@/hooks/useGraphState';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
 import { useFilterSelectors } from '@/hooks/useFilterSelectors';
 import { useFilterStore } from '@/stores/filterStore';
+import { useViewStore } from '@/stores/viewStore';
 import { FilterStatusBar } from './FilterStatusBar';
 import { FloatingActionButton } from './FloatingActionButton';
 import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
@@ -133,6 +134,11 @@ function ViewportController({
 function GraphViewComponent() {
   // Get view configuration from route
   const { config: viewConfig, viewType } = useViewConfig();
+  
+  // Update view store when viewType changes (fixes Bug 6a)
+  useEffect(() => {
+    useViewStore.setState({ currentViewType: viewType });
+  }, [viewType]);
   
   // NEW: Single query to fetch complete graph from server
   // Server handles all relationship resolution and returns nodes + edges

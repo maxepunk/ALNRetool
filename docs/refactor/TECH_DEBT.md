@@ -36,6 +36,37 @@ Updated: Added missing tickets from zen chat review
 
 ---
 
+### Ticket #1b: onSuccess Callback Pattern Refactoring
+**Severity**: MEDIUM-HIGH
+**Impact**: Stale closures can cause incorrect cache updates
+**Evidence**: Found during Bug 6 investigation - callbacks capture viewName at initialization
+**Added**: 2025-09-01
+
+**Current Behavior**:
+- onSuccess callbacks capture values at mutation initialization
+- If view changes during mutation, callback uses stale viewName
+- Can update wrong cache key
+
+**Current Workaround**: 
+- Using refs to track current values (implemented in DetailPanel.tsx lines 280-294)
+- safeOnSuccess wrapper pattern
+
+**Required Fix**:
+1. Refactor mutation factory to pass current context to callbacks
+2. Or implement callback ref pattern consistently across all mutations
+3. Ensure all callbacks receive fresh values
+
+**Files Affected**:
+- src/hooks/mutations/entityMutations.ts
+- All components using mutation hooks
+
+**Acceptance Criteria**:
+- No stale closure bugs possible
+- Callbacks always use current view/context
+- Backward compatible with existing usage
+
+---
+
 ## Priority 2: HIGH - System Stability
 
 ### Ticket #2: Property-Based Entity Detection Fragile to Schema Changes
@@ -308,3 +339,54 @@ const elements = allEntities.filter(e => e && 'basicType' in e && 'status' in e)
 - Empty array input handled gracefully
 
 **Test Coverage**: Already written - 10 comprehensive test cases covering all scenarios
+
+---
+
+## DEFERRED: H6 Refactoring - nodesEqual Function Maintainability
+
+**Status**: DEFERRED
+**Deferral Date**: 2025-09-01
+**Severity**: LOW (was MEDIUM before bug fixes)
+**Impact**: Code maintainability only - no functional issues
+
+**Issue**: 
+The nodesEqual function in entityMutations.ts is 500+ lines and difficult to maintain.
+
+**Current State**: 
+Function works correctly after comprehensive bug fixes:
+- ✅ Bug 6: Race condition in view switching (FIXED)
+- ✅ Bug 7: Parent entity cache refresh (FIXED)  
+- ✅ Bug 8: Bidirectional relationship rollback (FIXED)
+- ✅ All 225 tests passing
+- ✅ zen codereview completed with high confidence
+
+**Deferral Rationale**:
+1. All critical bugs fixed at architectural level, not band-aids
+2. Fixes are proper solutions with test coverage
+3. Risk of refactoring regression exceeds current benefit
+4. No functionality is blocked by current implementation
+5. Performance is acceptable for current usage
+
+**Original Plan**: 
+26-task refactor detailed in H6_PROCESS_MAP.md
+- Phase 1: Type-aware helper functions (Tasks 1-12)
+- Phase 2: Transactional pattern (Tasks 13-20)
+- Phase 3: Entity registry and validation (Tasks 21-26)
+
+**Triggers to Revisit**:
+- Adding new entity types becomes error-prone
+- Performance degradation in graph operations (>500ms)
+- Multiple new bugs in the same code area (>3 in a quarter)
+- Team expansion requiring better code maintainability
+- Rollup/relation property handling becomes more complex
+
+**When Revisiting**: 
+- Follow H6_PROCESS_MAP.md exactly as written
+- Start with Phase 1 type-specific helpers
+- Each helper needs zen chat review before proceeding
+- Maximum 3 iterations per component
+- Estimate: 2-3 days of focused work
+
+**Files**: 
+- src/hooks/mutations/entityMutations.ts (lines 400-900+)
+- Reference: H6_PROCESS_MAP.md for detailed implementation steps

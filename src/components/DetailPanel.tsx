@@ -34,7 +34,7 @@
  * ```
  */
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { X, Save, XCircle, ChevronDown, ChevronRight, Loader2, Check, AlertCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -276,40 +276,55 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // Get current view config for correct cache targeting
   const { config } = useViewConfig();
   
+  // Track if component is mounted to prevent stale callbacks (Bug 6 fix)
+  const isMountedRef = useRef(true);
+  const currentViewNameRef = useRef(config.name);
+  
+  // Correctly track mount status (Code review fix)
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []); // Empty array ensures this runs only on mount and unmount
+  
+  // Separately track the current view name
+  useEffect(() => {
+    currentViewNameRef.current = config.name;
+  }, [config.name]);
+  
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Get appropriate mutation hook based on entity type with viewName
-  const updateCharacter = useUpdateCharacter({ viewName: config.name });
-  const updateElement = useUpdateElement({ viewName: config.name });
-  const updatePuzzle = useUpdatePuzzle({ viewName: config.name });
-  const updateTimeline = useUpdateTimelineEvent({ viewName: config.name });
+  // Wrap callbacks to check if mounted (Bug 6 fix)
+  const safeOnSuccess = useCallback((callback?: () => void) => {
+    return () => {
+      if (isMountedRef.current) {
+        callback?.();
+      }
+    };
+  }, []);
+
+  // Get appropriate mutation hook based on entity type
+  // View type is now managed by viewStore for cache key consistency
+  const updateCharacter = useUpdateCharacter();
+  const updateElement = useUpdateElement();
+  const updatePuzzle = useUpdatePuzzle();
+  const updateTimeline = useUpdateTimelineEvent();
   
-  // Get delete mutation hooks with viewName
+  // Get delete mutation hooks
   const deleteCharacter = useDeleteCharacter({
-    viewName: config.name,
-    onSuccess: () => {
-      onClose();
-    }
+    onSuccess: safeOnSuccess(() => onClose())
   });
   const deleteElement = useDeleteElement({
-    viewName: config.name,
-    onSuccess: () => {
-      onClose();
-    }
+    onSuccess: safeOnSuccess(() => onClose())
   });
   const deletePuzzle = useDeletePuzzle({
-    viewName: config.name,
-    onSuccess: () => {
-      onClose();
-    }
+    onSuccess: safeOnSuccess(() => onClose())
   });
   const deleteTimeline = useDeleteTimelineEvent({
-    viewName: config.name,
-    onSuccess: () => {
-      onClose();
-    }
+    onSuccess: safeOnSuccess(() => onClose())
   });
 
   // Select the right mutation based on entity type

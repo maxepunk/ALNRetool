@@ -19,6 +19,7 @@ import type {
   Puzzle,
   TimelineEvent,
 } from '@/types/notion/app';
+import type { MutationResponse } from '@/types/mutations';
 import { requestBatcher } from './requestBatcher';
 
 /**
@@ -281,9 +282,9 @@ export const charactersApi = {
   /**
    * Update a character
    */
-  update: async (id: string, updates: Partial<Character>, headers?: Record<string, string>): Promise<Character> => {
+  update: async (id: string, updates: Partial<Character>, headers?: Record<string, string>): Promise<MutationResponse<Character>> => {
     // Step 4: Add include_delta query parameter for UPDATE mutations
-    return fetcher<Character>(`/notion/characters/${id}?include_delta=true`, {
+    return fetcher<MutationResponse<Character>>(`/notion/characters/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -296,9 +297,9 @@ export const charactersApi = {
   /**
    * Create a new character
    */
-  create: async (data: Partial<Character>): Promise<Character> => {
+  create: async (data: Partial<Character>): Promise<MutationResponse<Character>> => {
     // Step 6: Add include_delta query parameter for CREATE mutations
-    return fetcher<Character>('/notion/characters?include_delta=true', {
+    return fetcher<MutationResponse<Character>>('/notion/characters?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -365,9 +366,9 @@ export const elementsApi = {
   /**
    * Update an element
    */
-  update: async (id: string, updates: Partial<Element>, headers?: Record<string, string>): Promise<Element> => {
+  update: async (id: string, updates: Partial<Element>, headers?: Record<string, string>): Promise<MutationResponse<Element>> => {
     // Step 4: Add include_delta query parameter for UPDATE mutations
-    return fetcher<Element>(`/notion/elements/${id}?include_delta=true`, {
+    return fetcher<MutationResponse<Element>>(`/notion/elements/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -380,9 +381,9 @@ export const elementsApi = {
   /**
    * Create a new element
    */
-  create: async (data: Partial<Element>): Promise<Element> => {
+  create: async (data: Partial<Element>): Promise<MutationResponse<Element>> => {
     // Step 6: Add include_delta query parameter for CREATE mutations
-    return fetcher<Element>('/notion/elements?include_delta=true', {
+    return fetcher<MutationResponse<Element>>('/notion/elements?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -436,9 +437,9 @@ export const puzzlesApi = {
   /**
    * Update a puzzle
    */
-  update: async (id: string, updates: Partial<Puzzle>, headers?: Record<string, string>): Promise<Puzzle> => {
+  update: async (id: string, updates: Partial<Puzzle>, headers?: Record<string, string>): Promise<MutationResponse<Puzzle>> => {
     // Step 4: Add include_delta query parameter for UPDATE mutations
-    return fetcher<Puzzle>(`/notion/puzzles/${id}?include_delta=true`, {
+    return fetcher<MutationResponse<Puzzle>>(`/notion/puzzles/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -451,9 +452,9 @@ export const puzzlesApi = {
   /**
    * Create a new puzzle
    */
-  create: async (data: Partial<Puzzle>): Promise<Puzzle> => {
+  create: async (data: Partial<Puzzle>): Promise<MutationResponse<Puzzle>> => {
     // Step 6: Add include_delta query parameter for CREATE mutations
-    return fetcher<Puzzle>('/notion/puzzles?include_delta=true', {
+    return fetcher<MutationResponse<Puzzle>>('/notion/puzzles?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -519,9 +520,9 @@ export const timelineApi = {
   /**
    * Update a timeline event
    */
-  update: async (id: string, updates: Partial<TimelineEvent>, headers?: Record<string, string>): Promise<TimelineEvent> => {
+  update: async (id: string, updates: Partial<TimelineEvent>, headers?: Record<string, string>): Promise<MutationResponse<TimelineEvent>> => {
     // Step 4: Add include_delta query parameter for UPDATE mutations
-    return fetcher<TimelineEvent>(`/notion/timeline/${id}?include_delta=true`, {
+    return fetcher<MutationResponse<TimelineEvent>>(`/notion/timeline/${id}?include_delta=true`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -534,9 +535,9 @@ export const timelineApi = {
   /**
    * Create a new timeline event
    */
-  create: async (data: Partial<TimelineEvent>): Promise<TimelineEvent> => {
+  create: async (data: Partial<TimelineEvent>): Promise<MutationResponse<TimelineEvent>> => {
     // Step 6: Add include_delta query parameter for CREATE mutations
-    return fetcher<TimelineEvent>('/notion/timeline?include_delta=true', {
+    return fetcher<MutationResponse<TimelineEvent>>('/notion/timeline?include_delta=true', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
