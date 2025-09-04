@@ -88,9 +88,7 @@ export function useGraphInteractions({
     return getEdges().filter(e => e.selected);
   }, [getEdges]);
   
-  // Selection state (keeping for now, will refactor to computed values)
-  const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
-  const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
+  // Multi-select state
   const [isMultiSelecting, setIsMultiSelecting] = useState(false);
   
   // Clipboard state
@@ -125,20 +123,25 @@ export function useGraphInteractions({
     event.stopPropagation();
     
     if (isMultiSelecting) {
-      // Add to selection
-      setSelectedNodes(prev => {
-        const isAlreadySelected = prev.some(n => n.id === node.id);
-        if (isAlreadySelected) {
-          return prev.filter(n => n.id !== node.id);
+      // Toggle selection of clicked node
+      setNodes(nodes => nodes.map(n => {
+        if (n.id === node.id) {
+          return { ...n, selected: !n.selected };
         }
-        return [...prev, node];
-      });
+        return n;
+      }));
     } else {
-      // Replace selection
-      setSelectedNodes([node]);
-      setSelectedEdges([]);
+      // Clear all selections and select only clicked node
+      setNodes(nodes => nodes.map(n => ({
+        ...n,
+        selected: n.id === node.id
+      })));
+      setEdges(edges => edges.map(e => ({
+        ...e,
+        selected: false
+      })));
     }
-  }, [isMultiSelecting]);
+  }, [isMultiSelecting, setNodes, setEdges]);
   
   // Handle node double click
   const handleNodeDoubleClick: NodeMouseHandler = useCallback((event, node) => {
@@ -162,20 +165,25 @@ export function useGraphInteractions({
     event.stopPropagation();
     
     if (isMultiSelecting) {
-      // Add to selection
-      setSelectedEdges(prev => {
-        const isAlreadySelected = prev.some(e => e.id === edge.id);
-        if (isAlreadySelected) {
-          return prev.filter(e => e.id !== edge.id);
+      // Toggle selection of clicked edge
+      setEdges(edges => edges.map(e => {
+        if (e.id === edge.id) {
+          return { ...e, selected: !e.selected };
         }
-        return [...prev, edge];
-      });
+        return e;
+      }));
     } else {
-      // Replace selection
-      setSelectedEdges([edge]);
-      setSelectedNodes([]);
+      // Clear all selections and select only clicked edge
+      setEdges(edges => edges.map(e => ({
+        ...e,
+        selected: e.id === edge.id
+      })));
+      setNodes(nodes => nodes.map(n => ({
+        ...n,
+        selected: false
+      })));
     }
-  }, [isMultiSelecting]);
+  }, [isMultiSelecting, setNodes, setEdges]);
   
   // Handle edge double click
   const handleEdgeDoubleClick: EdgeMouseHandler = useCallback((event, edge) => {
@@ -194,10 +202,6 @@ export function useGraphInteractions({
     } else {
       setSelectedNode(null);
     }
-    
-    // Keep local state in sync for now (will remove later)
-    setSelectedNodes(params.nodes);
-    setSelectedEdges(params.edges);
     
     // Call user's handler
     onSelectionChange?.(params);
@@ -254,39 +258,49 @@ export function useGraphInteractions({
   
   // Select specific node
   const selectNode = useCallback((nodeId: string, addToSelection = false) => {
-    setSelectedNodes(prev => {
-      if (addToSelection) {
-        const node = prev.find(n => n.id === nodeId);
-        if (node) return prev;
-        // Need to get the actual node object - this is a simplified version
-        return prev;
-      }
-      // Need to get the actual node object - this is a simplified version
-      return [];
-    });
-    
-    if (!addToSelection) {
-      setSelectedEdges([]);
+    if (addToSelection) {
+      // Toggle the specific node's selection
+      setNodes(nodes => nodes.map(n => {
+        if (n.id === nodeId) {
+          return { ...n, selected: !n.selected };
+        }
+        return n;
+      }));
+    } else {
+      // Clear all selections and select only this node
+      setNodes(nodes => nodes.map(n => ({
+        ...n,
+        selected: n.id === nodeId
+      })));
+      setEdges(edges => edges.map(e => ({
+        ...e,
+        selected: false
+      })));
     }
-  }, []);
+  }, [setNodes, setEdges]);
   
   // Select specific edge
   const selectEdge = useCallback((edgeId: string, addToSelection = false) => {
-    setSelectedEdges(prev => {
-      if (addToSelection) {
-        const edge = prev.find(e => e.id === edgeId);
-        if (edge) return prev;
-        // Need to get the actual edge object - this is a simplified version
-        return prev;
-      }
-      // Need to get the actual edge object - this is a simplified version
-      return [];
-    });
-    
-    if (!addToSelection) {
-      setSelectedNodes([]);
+    if (addToSelection) {
+      // Toggle the specific edge's selection
+      setEdges(edges => edges.map(e => {
+        if (e.id === edgeId) {
+          return { ...e, selected: !e.selected };
+        }
+        return e;
+      }));
+    } else {
+      // Clear all selections and select only this edge
+      setEdges(edges => edges.map(e => ({
+        ...e,
+        selected: e.id === edgeId
+      })));
+      setNodes(nodes => nodes.map(n => ({
+        ...n,
+        selected: false
+      })));
     }
-  }, []);
+  }, [setNodes, setEdges]);
   
   // Delete selected items
   const deleteSelected = useCallback(() => {
@@ -294,6 +308,9 @@ export function useGraphInteractions({
       toast.error('Cannot delete in read-only mode');
       return;
     }
+    
+    const selectedNodes = getSelectedNodes();
+    const selectedEdges = getSelectedEdges();
     
     if (selectedNodes.length > 0) {
       onNodesDelete?.(selectedNodes);
@@ -306,7 +323,7 @@ export function useGraphInteractions({
     }
     
     clearSelection();
-  }, [readOnly, selectedNodes, selectedEdges, onNodesDelete, onEdgesDelete, clearSelection]);
+  }, [readOnly, getSelectedNodes, getSelectedEdges, onNodesDelete, onEdgesDelete, clearSelection]);
   
   // Duplicate selected nodes
   const duplicateSelected = useCallback((_nodes: Node[]): Node[] => {
@@ -315,7 +332,8 @@ export function useGraphInteractions({
       return [];
     }
     
-    const duplicatedNodes = selectedNodes.map(node => ({
+    const selectedNodes = getSelectedNodes();
+    const duplicatedNodes = selectedNodes.map((node: Node) => ({
       ...node,
       id: `${node.id}-copy-${Date.now()}`,
       position: {
@@ -327,7 +345,7 @@ export function useGraphInteractions({
     
     toast.success(`Duplicated ${duplicatedNodes.length} node(s)`);
     return duplicatedNodes;
-  }, [readOnly, selectedNodes]);
+  }, [readOnly, getSelectedNodes]);
   
   // Copy to clipboard - now uses system clipboard with fallback
   const copyToClipboard = useCallback(async () => {
