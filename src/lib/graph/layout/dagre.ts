@@ -410,8 +410,8 @@ function createDagreGraph(
     nodesep: nodeSeparation,
     marginx: 50,
     marginy: 50,
-    // Use network-simplex for better edge crossing minimization
-    ranker: config.optimizeEdgeCrossings ? 'longest-path' : 'longest-path',
+    // Use longest-path consistently (network-simplex has issues per layouts.ts)
+    ranker: 'longest-path',
     // Align nodes to reduce edge crossings
     align: 'UR', // Top-Right alignment
   });
