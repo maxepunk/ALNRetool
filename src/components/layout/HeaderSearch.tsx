@@ -22,6 +22,7 @@ import { useFilterStore } from '@/stores/filterStore';
 import { useAllEntityData } from '@/hooks/generic/useEntityData';
 import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
 import { queryKeys } from '@/lib/queryKeys';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   Popover,
   PopoverContent,
@@ -65,6 +66,9 @@ export const HeaderSearch = memo(function HeaderSearch({ isMobile = false, class
   const selectedNodeId = useFilterStore((state) => state.selectedNodeId);
   const setSelectedNode = useFilterStore((state) => state.setSelectedNode);
   
+  // Debounce search term for suggestions to reduce recalculations
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+  
   // Fetch entity data directly instead of using graphNodes from store
   const { data: characters = [] } = useAllEntityData(charactersApi, queryKeys.characters());
   const { data: puzzles = [] } = useAllEntityData(puzzlesApi, queryKeys.puzzles());
@@ -77,11 +81,12 @@ export const HeaderSearch = memo(function HeaderSearch({ isMobile = false, class
   
   /**
    * Generate search suggestions from available entities
+   * Now using debounced search term to reduce recalculations
    */
   const suggestions = useMemo((): SearchSuggestion[] => {
-    if (!searchTerm || searchTerm.length < 2) return [];
+    if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
     
-    const searchLower = searchTerm.toLowerCase();
+    const searchLower = debouncedSearchTerm.toLowerCase();
     const allSuggestions: SearchSuggestion[] = [];
     
     // Add character suggestions
@@ -134,7 +139,7 @@ export const HeaderSearch = memo(function HeaderSearch({ isMobile = false, class
     
     // Limit to 15 suggestions for performance
     return allSuggestions.slice(0, 15);
-  }, [searchTerm, characters, puzzles, elements, timeline]);
+  }, [debouncedSearchTerm, characters, puzzles, elements, timeline]);
   
   /**
    * Handle search input change
