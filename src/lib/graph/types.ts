@@ -466,6 +466,11 @@ export const RelationshipTypes = {
   CONTAINER: 'container',
   PUZZLE_GROUPING: 'puzzle-grouping',
   VIRTUAL_DEPENDENCY: 'virtual-dependency',
+  VIRTUAL_ALIGNMENT: 'virtual-alignment',
+  VIRTUAL_ALIGNMENT_SAME_RANK: 'virtual-alignment-same-rank',
+  VIRTUAL_ALIGNMENT_NEXT_RANK: 'virtual-alignment-next-rank',
+  PUZZLE: 'puzzle',
+  CHARACTER_PUZZLE: 'character-puzzle',
   DEPENDENCY: 'dependency',
   RELATIONSHIP: 'relationship',
   CONNECTION: 'connection'

@@ -21,6 +21,7 @@ import { useMemo } from 'react';
 import type { GraphNode } from '@/lib/graph/types';
 import type { Node, Edge } from '@xyflow/react';
 import type { ViewConfig } from '@/lib/viewConfigs';
+import { filterTimelineEdges } from '@/lib/graph/filtering';
 
 // Import the 2 composable hooks (filtering is now inline, relationships come from server)
 import { useGraphVisibility } from './graph/useGraphVisibility';
@@ -176,20 +177,24 @@ export const useGraphLayout = ({
   // Step 2: Use server-provided edges directly, ensuring type compatibility
   const allEdges = edges as any[];
   
+  
   // Step 3: Apply visibility rules
   // This hook memoizes based on selection and connection depth
-  const { visibleNodes, visibleEdges } = useGraphVisibility({
+  const { visibleNodes, allEdges: layoutEdges } = useGraphVisibility({
     filteredNodes,
     allEdges,
     selectedNodeId,
     connectionDepth,
   });
   
+  
   // Step 4: Apply layout to visible nodes
   // This hook memoizes based on nodes/edges/config
+  // IMPORTANT: Use ALL edges for layout to maintain proper positioning
+  // even when some nodes are temporarily hidden
   const { layoutedNodes } = useLayoutEngine({
     visibleNodes,
-    visibleEdges,
+    allEdges: layoutEdges,  // Use all edges for layout calculations
     viewConfig,
   });
   
@@ -198,7 +203,26 @@ export const useGraphLayout = ({
   
   // Safely map GraphEdge[] to Edge[] for React Flow compatibility
   // This ensures data integrity is preserved during the conversion
+  // IMPORTANT: Filter edges based on currently visible nodes to ensure
+  // Timeline edges appear when Timeline nodes are toggled visible
   const filteredEdges: Edge[] = useMemo(() => {
+    // DIAGNOSTIC: Log what we're filtering from
+    
+    // Create a set of visible node IDs for efficient lookup
+    const visibleNodeSet = new Set(layoutedNodes.map(n => n.id));
+    
+    // First, filter edges for visible nodes
+    let visibleEdges = layoutEdges.filter(edge => 
+      visibleNodeSet.has(edge.source) && 
+      visibleNodeSet.has(edge.target)
+    );
+    
+    // Apply Timeline edge filtering if enabled
+    if (viewConfig.layout?.filterTimelineEdges) {
+      visibleEdges = filterTimelineEdges(visibleEdges, layoutedNodes, true);
+    }
+    
+    // Map to React Flow Edge format
     return visibleEdges.map(edge => ({
       id: edge.id,
       source: edge.source,
@@ -224,7 +248,8 @@ export const useGraphLayout = ({
       zIndex: edge.zIndex,
       interactionWidth: edge.interactionWidth,
     } satisfies Edge));
-  }, [visibleEdges]);
+  }, [layoutEdges, layoutedNodes, viewConfig.layout?.filterTimelineEdges]);
+  
   
   return {
     layoutedNodes,

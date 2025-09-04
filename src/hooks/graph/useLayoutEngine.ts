@@ -24,7 +24,7 @@ import { applyPureDagreLayout } from '@/lib/graph/layout/dagre';
 interface UseLayoutEngineParams {
   // Nodes and edges to layout
   visibleNodes: GraphNode[];
-  visibleEdges: GraphEdge[];
+  allEdges: GraphEdge[];  // All edges for complete layout context
   
   // Layout configuration
   viewConfig: ViewConfig;
@@ -45,20 +45,22 @@ interface UseLayoutEngineResult {
  * ```typescript
  * const { layoutedNodes } = useLayoutEngine({
  *   visibleNodes,
- *   visibleEdges,
+ *   allEdges,
  *   viewConfig
  * });
  * ```
  */
 export function useLayoutEngine({
   visibleNodes,
-  visibleEdges,
+  allEdges,
   viewConfig,
 }: UseLayoutEngineParams): UseLayoutEngineResult {
   // Extract layout properties for stable dependencies
   const layoutDirection = viewConfig.layout.direction || 'LR';
   const nodeSpacing = viewConfig.layout.spacing?.nodeSpacing || 100;
   const rankSpacing = viewConfig.layout.spacing?.rankSpacing || 300;
+  const alignSpecialNodes = viewConfig.layout.alignSpecialNodes || false;
+  const filterTimelineEdges = viewConfig.layout.filterTimelineEdges || false;
 
   return useMemo(() => {
     // Handle empty graph
@@ -72,13 +74,15 @@ export function useLayoutEngine({
         ? layoutDirection
         : 'LR' as const,
       nodeSpacing: nodeSpacing,
-      rankSpacing: rankSpacing
+      rankSpacing: rankSpacing,
+      alignSpecialNodes: alignSpecialNodes,
+      filterTimelineEdges: filterTimelineEdges
     };
     
     // Apply layout algorithm
     const layoutedNodes = applyPureDagreLayout(
       visibleNodes,
-      visibleEdges,
+      allEdges,
       layoutConfig
     );
     
@@ -86,10 +90,12 @@ export function useLayoutEngine({
   }, [
     // Nodes and edges
     visibleNodes,
-    visibleEdges,
+    allEdges,
     // Layout configuration as individual stable values
     layoutDirection,
     nodeSpacing,
-    rankSpacing
+    rankSpacing,
+    alignSpecialNodes,
+    filterTimelineEdges
   ]);
 }

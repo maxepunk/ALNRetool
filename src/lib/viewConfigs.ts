@@ -77,6 +77,10 @@ export interface ViewConfig {
       /** Space between hierarchy levels */
       rankSpacing?: number;
     };
+    /** Align Characters with Puzzles and Timeline with Elements */
+    alignSpecialNodes?: boolean;
+    /** Filter Timeline edges based on visible entity types */
+    filterTimelineEdges?: boolean;
   };
   
   /** Visual display options */
@@ -154,7 +158,9 @@ export const viewConfigs: Record<string, ViewConfig> = {
       spacing: {
         nodeSpacing: 100,
         rankSpacing: 300
-      }
+      },
+      alignSpecialNodes: true,
+      filterTimelineEdges: true
     },
     display: {
       showLabels: true,

@@ -1,4 +1,84 @@
 import type { Edge } from '@xyflow/react';
+import type { GraphNode, GraphEdge } from './types';
+
+/**
+ * Filter special relationship edges based on visible entity types.
+ * Handles Timeline edges (hierarchical filtering) and Association edges (character-element).
+ * 
+ * @param edges - All edges to filter
+ * @param nodes - All visible nodes for entity type detection
+ * @param filterEnabled - Whether special edge filtering is enabled
+ * @returns Filtered edges array
+ */
+export function filterSpecialEdges<T extends Edge | GraphEdge>(
+  edges: T[],
+  nodes: GraphNode[],
+  filterEnabled: boolean = false
+): T[] {
+  // If filtering is disabled, return all edges
+  if (!filterEnabled) return edges;
+
+  // Create node map for O(1) lookups
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+  
+  // Detect which entity types are visible
+  const hasElements = nodes.some(n => n.type === 'element');
+  const hasCharacters = nodes.some(n => n.type === 'character');
+  const hasPuzzles = nodes.some(n => n.type === 'puzzle');
+  const hasTimeline = nodes.some(n => n.type === 'timeline');
+  
+  
+  // Filter special edges
+  const filtered = edges.filter(edge => {
+    const relationshipType = edge.data?.relationshipType;
+    
+    // Filter Association edges (Character-Element connections)
+    if (relationshipType === 'association') {
+      // Only show association edges when ONLY Characters and Elements are visible
+      const onlyCharactersAndElements = hasCharacters && hasElements && !hasPuzzles && !hasTimeline;
+      if (!onlyCharactersAndElements) {
+        return false; // Hide association edges
+      }
+      return true; // Show association edges
+    }
+    
+    // Filter Timeline edges
+    if (relationshipType === 'timeline') {
+      // Get source and target nodes
+      const sourceNode = nodeMap.get(edge.source);
+      const targetNode = nodeMap.get(edge.target);
+      
+      // Filter out timeline->timeline sequential edges
+      if (sourceNode?.type === 'timeline' && targetNode?.type === 'timeline') {
+        return false;
+      }
+      
+      // Apply filtering hierarchy for timeline->entity edges
+      if (sourceNode?.type === 'timeline') {
+        // Priority 1: Show timeline->element when elements visible
+        if (hasElements && targetNode?.type === 'element') return true;
+        
+        // Priority 2: Show timeline->character when elements hidden but characters visible
+        if (!hasElements && hasCharacters && targetNode?.type === 'character') return true;
+        
+        // Priority 3: Show timeline->puzzle when both elements and characters hidden
+        if (!hasElements && !hasCharacters && hasPuzzles && targetNode?.type === 'puzzle') return true;
+        
+        // Filter out this timeline edge
+        return false;
+      }
+    }
+    
+    // Keep all other edges (ownership, puzzle, requirement, reward, etc.)
+    return true;
+  });
+  
+  
+  return filtered;
+}
+
+// Export the old function name for backward compatibility
+export const filterTimelineEdges = filterSpecialEdges;
 
 /**
  * Get all nodes within N connections of a focused node.
@@ -67,12 +147,11 @@ export function getVisibleNodeIds(
   
   // Priority 3: No selection, but we need to expand from all filtered nodes.
   const connectedIds = new Set(filteredNodeIds);
-  const baseFilteredEdges = edges.filter(
-    e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)
-  );
   
+  // IMPORTANT: Use ALL edges, not just filtered ones, to properly calculate connections
+  // This ensures that when entity types are toggled visible, their connections are preserved
   for (const nodeId of filteredNodeIds) {
-    const connections = getNodesWithinDepth(nodeId, baseFilteredEdges, connectionDepth);
+    const connections = getNodesWithinDepth(nodeId, edges, connectionDepth);
     connections.forEach(id => connectedIds.add(id));
   }
   

@@ -35,6 +35,7 @@ interface UseGraphVisibilityResult {
   visibleNodeIds: Set<string>;
   visibleNodes: GraphNode[];
   visibleEdges: GraphEdge[];
+  allEdges: GraphEdge[];  // All edges for layout calculations
 }
 
 /**
@@ -60,6 +61,9 @@ export function useGraphVisibility({
   selectedNodeId,
   connectionDepth,
 }: UseGraphVisibilityParams): UseGraphVisibilityResult {
+  // DIAGNOSTIC: Log input edges
+  // Note: Timeline nodes don't use 'timeline-' prefix, they use raw Notion IDs
+  
   return useMemo(() => {
     // Step 1: Get IDs of filtered nodes
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
@@ -90,14 +94,18 @@ export function useGraphVisibility({
       }));
     
     // Step 4: Filter edges for visible nodes
+    // IMPORTANT: We return BOTH all edges (for layout) and visible edges (for rendering)
+    // This ensures layout algorithm has full graph structure even when some nodes are hidden
     const visibleEdges = allEdges.filter(
       edge => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
     );
     
+    
     return {
       visibleNodeIds,
       visibleNodes,
-      visibleEdges
+      visibleEdges,
+      allEdges  // Pass all edges for layout calculations
     };
   }, [
     // Nodes and edges

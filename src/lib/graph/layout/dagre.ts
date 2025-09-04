@@ -25,6 +25,7 @@
 
 import dagre from 'dagre';
 import type { GraphNode, GraphEdge } from '../types';
+import { filterTimelineEdges } from '../filtering';
 // Module imports removed in Phase 3 - using simplified inline implementations
 
 
@@ -58,6 +59,8 @@ export interface PureDagreLayoutOptions {
   tightElementSpacing?: number; // Tight spacing for elements when dynamic spacing
   adaptiveRankSeparation?: boolean; // Calculate rank separation based on connections
   clusterElements?: boolean;    // Post-layout element clustering
+  alignSpecialNodes?: boolean;  // Align Characters with Puzzles and Timeline with Elements
+  filterTimelineEdges?: boolean; // Filter Timeline edges based on visible entity types
 }
 
 /**
@@ -76,6 +79,8 @@ const DEFAULT_OPTIONS: Required<PureDagreLayoutOptions> = {
   tightElementSpacing: 40,
   adaptiveRankSeparation: false,
   clusterElements: false,
+  alignSpecialNodes: false,
+  filterTimelineEdges: false,
 };
 
 /**
@@ -216,8 +221,88 @@ export function applyPureDagreLayout(
   
   // Removed debug logging for cleaner code
   
-  // Virtual edge injection removed in Phase 3 - using direct edges
-  const enhancedEdges = edges;
+  // Create enhanced edges array for potential virtual edges
+  let enhancedEdges = [...edges];
+  
+  // Add virtual alignment edges if enabled
+  if (config.alignSpecialNodes) {
+    let alignmentEdgesCreated = 0;
+    
+    // Build adjacency map for O(1) edge lookups
+    const sourceToEdgeMap = new Map<string, GraphEdge[]>();
+    edges.forEach(edge => {
+      if (!sourceToEdgeMap.has(edge.source)) {
+        sourceToEdgeMap.set(edge.source, []);
+      }
+      sourceToEdgeMap.get(edge.source)!.push(edge);
+    });
+    
+    // Create node type map for O(1) entity type lookups
+    const nodeTypeMap = new Map<string, string>();
+    nodes.forEach(node => {
+      nodeTypeMap.set(node.id, node.data.metadata.entityType);
+    });
+    
+    // Create alignment edges for Characters to align with their Puzzles
+    nodes.forEach(node => {
+      if (node.data.metadata.entityType === 'character') {
+        // Use adjacency map for O(1) lookup
+        const characterEdges = sourceToEdgeMap.get(node.id) || [];
+        
+        // Find puzzles this character is connected to
+        const connectedPuzzles = characterEdges
+          .filter(e => e.data?.relationshipType === 'puzzle')
+          .map(e => e.target);
+        
+        connectedPuzzles.forEach(puzzleId => {
+          // Add bidirectional virtual edge to force same rank
+          enhancedEdges.push({
+            id: `align-char-${node.id}-${puzzleId}`,
+            source: puzzleId,
+            target: node.id,
+            data: { 
+              relationshipType: 'virtual-alignment-same-rank',
+              weight: 100,
+              label: 'char-align'
+            }
+          } as GraphEdge);
+          alignmentEdgesCreated++;
+        });
+      }
+      
+      // Create alignment edges for Timeline events to align with their Elements
+      if (node.data.metadata.entityType === 'timeline') {
+        // Use adjacency map for O(1) lookup
+        const timelineEdges = sourceToEdgeMap.get(node.id) || [];
+        
+        // Find elements connected to this timeline event
+        const connectedElements = timelineEdges
+          .filter(e => e.data?.relationshipType === 'timeline' && 
+                      nodeTypeMap.get(e.target) === 'element')
+          .map(e => e.target);
+        
+        connectedElements.forEach(elementId => {
+          enhancedEdges.push({
+            id: `align-timeline-${node.id}-${elementId}`,
+            source: elementId,
+            target: node.id,
+            data: { 
+              relationshipType: 'virtual-alignment-next-rank',
+              weight: 100,
+              label: 'timeline-align'
+            }
+          } as GraphEdge);
+          alignmentEdgesCreated++;
+        });
+      }
+    });
+  }
+
+  // Filter Timeline edges based on visible entity types
+  if (config.filterTimelineEdges) {
+    // Use the shared filtering utility
+    enhancedEdges = filterTimelineEdges(enhancedEdges as any[], nodes, true) as GraphEdge[];
+  }
 
   // Phase 4: Adaptive rank separation
   // Analyze node density to determine optimal rank separation
@@ -266,7 +351,14 @@ export function applyPureDagreLayout(
         weight = 500; // Medium-high weight for puzzle grouping
         minlen = 0; // Allow puzzles to be in same rank
         virtualEdgeCount++;
-        
+      } else if (relationshipType === 'virtual-alignment-same-rank') {
+        weight = 100; // Strong but not overwhelming weight for alignment
+        minlen = 0; // Key: allows same rank positioning for horizontal alignment
+        virtualEdgeCount++;
+      } else if (relationshipType === 'virtual-alignment-next-rank') {
+        weight = 100; // Strong but not overwhelming weight for alignment
+        minlen = 1; // Key: forces positioning in the next rank
+        virtualEdgeCount++;
       } 
       // For regular edges, apply additional multipliers to smart weights
       else {
@@ -353,6 +445,9 @@ export function applyPureDagreLayout(
   // Extract and apply positions
   let positionedNodes = extractPositions(nodes, dagreGraph);
 
+  // Post-layout adjustment removed - alignment now handled entirely through virtual edges with proper minlen configuration
+
+
   // Element clustering removed in Phase 3
 
   // Log some metrics about the layout
@@ -410,8 +505,8 @@ function createDagreGraph(
     nodesep: nodeSeparation,
     marginx: 50,
     marginy: 50,
-    // Use longest-path consistently (network-simplex has issues per layouts.ts)
-    ranker: 'longest-path',
+    // Testing network-simplex for better optimization (was longest-path)
+    ranker: 'network-simplex',
     // Align nodes to reduce edge crossings
     align: 'UR', // Top-Right alignment
   });

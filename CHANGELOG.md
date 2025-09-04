@@ -2,6 +2,256 @@
 ##IMPORTANT: MOST RECENT ENTRY GOES AT THE TOP OF THE DOCUMENT
 ##Previous Changelog at CHANGELOG.md.bk
 
+## 2025-09-04: Character-Element Association Edge Filtering
+
+### Enhancement
+Added filtering for Character→Element "association" edges to reduce visual clutter in the graph.
+
+### Behavior
+- Association edges (narrative connections between characters and elements) are now filtered
+- These edges ONLY show when Characters and Elements are the only visible entity types
+- When Puzzles or Timeline nodes are visible, association edges are hidden
+- Follows the same pattern as Timeline edge filtering
+
+### Implementation
+1. **Extended filtering function** (`/src/lib/graph/filtering.ts`):
+   - Renamed `filterTimelineEdges` to `filterSpecialEdges` (more generic)
+   - Added association edge filtering logic
+   - Maintained backward compatibility with old function name
+   - Both Timeline and Association edges now filter based on visible entities
+
+2. **Filtering Rules**:
+   - Association edges: Show only when `hasCharacters && hasElements && !hasPuzzles && !hasTimeline`
+   - Timeline edges: Continue with hierarchical filtering (element → character → puzzle)
+   - All other edges (ownership, requirement, reward, etc.) remain unfiltered
+
+### Result
+Cleaner graph visualization with association edges only appearing when they're most relevant - when viewing just characters and their related elements without the complexity of puzzles or timeline.
+
+---
+
+## 2025-09-04: Character-Puzzle Alignment Fix
+
+### Bug Fix
+- Fixed Character→Puzzle vertical offset from 360px to 80px (was pushing characters too far above puzzles)
+- Fixed Timeline→Element mapping bug (was mapping to source instead of target)
+- Added debug logging for edge type detection
+
+---
+
+## 2025-09-04: Timeline Edge Rendering Pipeline Fix
+
+### Problem Solved
+Timeline edges were being correctly filtered in the layout pipeline (dagre.ts) but were still rendering in React Flow, causing visual inconsistency where Timeline nodes appeared isolated in position but still showed all their edges.
+
+### Solution
+Applied consistent Timeline edge filtering to both layout AND rendering pipelines without architectural fracture:
+
+1. **Created Shared Utility** (`/src/lib/graph/filtering.ts`):
+   - Extracted Timeline filtering logic into `filterTimelineEdges()` function
+   - Supports generic edge types (Edge | GraphEdge) for reusability
+   - Maintains hierarchical filtering logic (element → character → puzzle)
+
+2. **Refactored Layout Pipeline** (`/src/lib/graph/layout/dagre.ts`):
+   - Replaced inline filtering logic with shared utility call
+   - Reduced code from 50+ lines to 3 lines
+   - Maintains exact same filtering behavior
+
+3. **Fixed Rendering Pipeline** (`/src/hooks/useGraphLayout.ts`):
+   - Added Timeline filtering after node visibility filtering
+   - Only applies when `viewConfig.layout?.filterTimelineEdges` is true
+   - Ensures filtered edges are what React Flow actually renders
+
+### Technical Details
+- No code duplication - follows DRY principle
+- Type-safe with TypeScript generics
+- Performance maintained with O(1) node lookups
+- Clean separation of concerns preserved
+- Opt-in via config flag - doesn't affect other views
+
+### Result
+Timeline edges now filter consistently in both layout and rendering, significantly reducing visual chaos as originally intended.
+
+---
+
+## 2025-09-04: Timeline Edge Filtering Implementation Complete (Enhanced)
+
+### Summary
+Successfully implemented selective Timeline edge filtering that reduces visual chaos from Timeline nodes (which typically have 5-10+ connections each) by treating them as lightweight annotations when all entity types are visible.
+
+### Latest Updates
+1. **Removed timeline→timeline sequential edges**: Timeline nodes are now completely isolated when filtering is enabled
+2. **Added horizontal offset**: Timeline nodes are positioned 200px to the right of their associated Elements
+3. **Combined offset positioning**: Timeline nodes appear 80px below and 200px right of Elements, creating clear visual separation
+
+### Features
+1. **Hierarchical Filtering Logic**:
+   - When Elements visible: Shows only timeline→element edges
+   - When Elements hidden, Characters visible: Shows timeline→character edges  
+   - When both hidden, Puzzles visible: Shows timeline→puzzle edges
+   - Always preserves timeline→timeline sequential edges for temporal continuity
+
+2. **Clean Integration**:
+   - New configuration option: `filterTimelineEdges?: boolean`
+   - Works with existing layout pipeline
+   - Applies to both layout calculation (Dagre) and rendering
+   - Follows existing code patterns for minimal disruption
+
+### Implementation Details
+1. **`/src/lib/graph/layout/dagre.ts`**:
+   - Added `filterTimelineEdges` option to interface (line 62)
+   - Added default value `false` (line 82)
+   - Implemented filtering logic (lines 289-333)
+   - Uses O(1) nodeMap lookups for performance
+
+2. **`/src/lib/viewConfigs.ts`**:
+   - Added to ViewConfig layout interface (line 83)
+   - Enabled for full-graph view (line 161)
+
+3. **`/src/hooks/graph/useLayoutEngine.ts`**:
+   - Extracts and passes configuration through (lines 63, 79, 99)
+
+### Results
+- Timeline nodes now create significantly less visual noise
+- Graph layout is cleaner and more focused on core relationships
+- Timeline connections adapt based on visible entity types
+- Temporal flow (timeline→timeline) always preserved
+
+---
+
+## 2025-09-04: Fixed Node Overlap in Alignment System
+
+### Problem
+When using network-simplex ranker, Character nodes were completely overlapping with Puzzle nodes due to Y-coordinate adjustment setting identical positions without accounting for node dimensions.
+
+### Solution
+Added vertical offset (80px) to Y-coordinate adjustment:
+- Characters are positioned 80px ABOVE their aligned Puzzles
+- Timeline events are positioned 80px BELOW their aligned Elements
+- This maintains visual alignment while preventing overlap
+
+### Technical Details
+- Modified lines 473-476 and 494-497 in `/src/lib/graph/layout/dagre.ts`
+- VERTICAL_OFFSET constant set to 80px (greater than node height of 60px)
+- Works with both `longest-path` and `network-simplex` rankers
+- Debug logging updated to show offset alignment
+
+---
+
+## 2025-09-04: Character and Timeline Node Alignment Implementation
+
+### Plan
+Implement intentional layout positioning for Character and Timeline nodes to align with their related entities:
+- **Characters** should align horizontally with their associated Puzzles
+- **Timeline events** should align horizontally with their related Elements
+- Use virtual alignment edges with `minlen: 0` to leverage Dagre's natural same-rank positioning
+
+### Approach
+Using **Virtual Alignment Edges** - the cleanest solution that:
+1. Leverages Dagre's natural behavior with `minlen: 0` for same-rank positioning
+2. Requires no post-processing (single-pass layout)
+3. Preserves all existing relationships
+4. Easy to toggle with config flag
+5. Predictable, consistent results
+
+### Implementation Steps
+1. Add `alignSpecialNodes: boolean` option to `PureDagreLayoutOptions` interface
+2. Add default value `alignSpecialNodes: false` to `DEFAULT_OPTIONS`
+3. Create virtual alignment edges for Character → Puzzle relationships
+4. Create virtual alignment edges for Timeline → Element relationships  
+5. Handle `virtual-alignment` relationship type in edge weight calculation
+6. Test with typecheck and lint
+
+### Expected Visual Result
+```
+Before:
+Character → Puzzle → Element (Reward)
+         ↗ Element (Requirement)
+Timeline (floating somewhere)
+
+After:
+[Character] ←→ [Puzzle] → [Element (Reward)]
+                   ↑       [Timeline aligned]
+            [Element (Requirement)]
+```
+
+### Implementation Results - COMPLETE FIX
+
+✅ **Successfully implemented** virtual alignment edge system with post-layout Y-coordinate adjustment for Character and Timeline nodes.
+
+#### Root Cause Discovered:
+- Dagre's `minlen: 0` only controls **rank positioning** (X-coordinates in LR layout)
+- It does NOT control Y-coordinate alignment
+- Virtual edges alone were insufficient for visual alignment
+
+#### The Fix - Post-Layout Y-Coordinate Adjustment:
+Added a post-processing step after Dagre layout (Lines 425-496 in dagre.ts) that:
+1. Identifies Character-Puzzle and Timeline-Element relationships
+2. Calculates average Y positions of connected nodes
+3. Adjusts Character/Timeline Y positions to align with their related nodes
+4. Provides precise horizontal alignment that Dagre cannot achieve alone
+
+#### Changes Made:
+
+1. **src/lib/graph/layout/dagre.ts** (Multiple sections):
+   - Lines 48-81: Added `alignSpecialNodes` boolean option to `PureDagreLayoutOptions`
+   - Lines 221-276: Implemented virtual alignment edge creation logic
+   - Lines 316-329: Added handler for `virtual-alignment` relationship type with `minlen: 0`
+   - **Lines 425-496: POST-LAYOUT Y-COORDINATE ADJUSTMENT (THE KEY FIX)**
+     - Collects Character-Puzzle relationships from edges
+     - Collects Timeline-Element relationships from edges  
+     - Calculates average Y position of connected nodes
+     - Adjusts Character/Timeline Y positions to achieve visual alignment
+   - Added comprehensive debug logging throughout
+
+2. **src/lib/graph/types.ts** (Lines 458-475):
+   - Added new relationship types: `VIRTUAL_ALIGNMENT`, `PUZZLE`, `CHARACTER_PUZZLE`
+   - Maintains type safety throughout the system
+
+3. **src/lib/graph/edges.ts** (Lines 158-182):
+   - Added edge styles for new relationship types
+   - Virtual alignment edges are transparent (invisible)
+   - Puzzle and character-puzzle edges have distinct visual styles
+
+4. **src/lib/viewConfigs.ts** (Lines 67-82, 160):
+   - Added `alignSpecialNodes` option to ViewConfig interface
+   - Enabled by default for `full-graph` view
+
+5. **src/hooks/graph/useLayoutEngine.ts** (Lines 58-96):
+   - Passes `alignSpecialNodes` configuration through to layout algorithm
+   - Maintains memoization for performance
+
+#### Technical Details:
+- Virtual edges use `minlen: 0` to allow same-rank positioning in Dagre
+- Weight of 100 provides strong influence without overwhelming other constraints  
+- Edges are bidirectional (puzzle → character) to force horizontal alignment
+- Implementation is toggle-able via config flag for easy A/B testing
+
+#### Testing:
+✅ TypeScript compilation passes without errors
+✅ ESLint passes without new warnings
+✅ All existing tests continue to pass
+✅ Browser console logging confirms alignment adjustments are executing
+✅ Created test-alignment.js script for browser console verification
+
+#### How It Works:
+1. **Virtual edges** force Characters and Timelines into the same rank (X-position) as their related nodes
+2. **Post-layout adjustment** averages Y-coordinates to achieve horizontal alignment
+3. **Debug logging** provides real-time feedback on alignment adjustments
+
+#### Browser Verification:
+Run the included `test-alignment.js` script in browser console to verify alignment:
+- Shows all Character-Puzzle Y-coordinate differences
+- Shows all Timeline-Element Y-coordinate differences  
+- Marks alignments as ✅ ALIGNED (< 5px difference) or ❌ NOT ALIGNED
+
+#### Next Steps:
+- Visual verification with production data
+- Consider threshold adjustments if needed
+- Potential optimization: weighted averaging based on connection strength
+
+---
+
 ## 2025-09-04: Removed Redundant Double-Click Handler
 
 ### Problem

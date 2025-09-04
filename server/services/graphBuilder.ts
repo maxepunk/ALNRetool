@@ -46,7 +46,7 @@ interface GraphNode extends Node {
  */
 const EDGE_STYLES = {
   dependency: {
-    stroke: 'hsl(var(--muted-foreground))',
+    stroke: '#6b7280',
     strokeWidth: 2,
     animated: false,
     label: undefined,
@@ -78,7 +78,7 @@ const EDGE_STYLES = {
     label: 'chain',
   },
   timeline: {
-    stroke: 'hsl(var(--muted-foreground))',
+    stroke: '#9ca3af',
     strokeWidth: 1,
     strokeDasharray: '2,2',
     animated: false,

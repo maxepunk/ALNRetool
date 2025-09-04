@@ -155,6 +155,46 @@ export const EDGE_STYLES = {
     markerEnd: undefined,
     label: undefined,
   },
+  'virtual-alignment': {
+    stroke: 'transparent',
+    strokeWidth: 0,
+    strokeDasharray: '0,0',
+    animated: false,
+    markerEnd: undefined,
+    label: undefined,
+  },
+  puzzle: {
+    stroke: '#6366f1',
+    strokeWidth: 2,
+    strokeDasharray: '3,3',
+    animated: false,
+    markerEnd: { type: 'arrowclosed' as const },
+    label: 'puzzle',
+  },
+  'character-puzzle': {
+    stroke: '#8b5cf6',
+    strokeWidth: 2,
+    strokeDasharray: '3,3',
+    animated: false,
+    markerEnd: { type: 'arrowclosed' as const },
+    label: 'character',
+  },
+  'virtual-alignment-same-rank': {
+    stroke: 'transparent',
+    strokeWidth: 0,
+    strokeDasharray: '0',
+    animated: false,
+    markerEnd: undefined,
+    label: undefined,
+  },
+  'virtual-alignment-next-rank': {
+    stroke: 'transparent',
+    strokeWidth: 0,
+    strokeDasharray: '0',
+    animated: false,
+    markerEnd: undefined,
+    label: undefined,
+  },
 } satisfies Record<RelationshipType, any>;
 
 /**
