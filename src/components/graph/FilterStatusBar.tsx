@@ -60,19 +60,17 @@ export const FilterStatusBar = memo(function FilterStatusBar({
             )}
           </div>
           
-          {/* Clear All Filters button */}
-          {(visibleNodes < totalNodes || hasActiveFilters) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearAllFilters}
-              className="h-6 px-2 text-xs"
-              aria-label="Clear all filters"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Clear All
-            </Button>
-          )}
+          {/* Clear All Filters button - Always show when status bar is visible */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearAllFilters}
+            className="h-6 px-2 text-xs"
+            aria-label="Clear all filters"
+          >
+            <X className="h-3 w-3 mr-1" />
+            Clear All
+          </Button>
         </div>
 
         {/* Connection depth description */}

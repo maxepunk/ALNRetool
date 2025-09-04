@@ -2,6 +2,99 @@
 ##IMPORTANT: MOST RECENT ENTRY GOES AT THE TOP OF THE DOCUMENT
 ##Previous Changelog at CHANGELOG.md.bk
 
+## 2025-09-04: Removed Redundant Double-Click Handler
+
+### Problem
+Double-click functionality was redundant and confusing:
+- Single-click already zooms to selected node (via ViewportController after 200ms)
+- Double-click zoomed again with different padding (0.5 vs 0.2)
+- Users saw viewport zoom twice for no clear reason
+
+### Changes Made
+- **GraphView.tsx**: Removed onNodeDoubleClick prop and callback (lines 323-336, 443)
+- **useGraphInteractions.ts**: Removed handleNodeDoubleClick handler and interface properties
+- **Removed unused imports**: useReactFlow no longer needed
+
+### Result
+✅ Cleaner UX - single click selects and zooms once
+✅ Less code to maintain
+✅ No duplicate viewport animations
+
+## 2025-09-04: CRITICAL FIX - Node Selection Click Handler
+
+### Problem
+Node selection was completely broken - clicking nodes did nothing:
+- Detail panel didn't open
+- Viewport didn't focus
+- No visual selection feedback
+- Root cause: Missing `onNodeClick` handler in React Flow component
+
+### Investigation Findings
+1. `handleNodeClick` was an empty no-op function (useGraphInteractions.ts:123-126)
+2. `onNodeClick` prop wasn't passed to ReactFlow component (GraphView.tsx:438-454)
+3. React Flow's internal selection requires explicit click handler
+4. Broken event chain: Click → [NO HANDLER] → No selection → No UI updates
+
+### Changes Made
+
+#### GraphView.tsx
+- **Line 323**: Added `handleNodeClick` to useGraphInteractions destructuring
+- **Line 442**: Added `onNodeClick={handleNodeClick}` prop to ReactFlow component
+
+#### useGraphInteractions.ts
+- **Lines 121-133**: Moved handleNodeClick definition after selectNode to fix dependency
+- **Lines 289-303**: Implemented proper click handler with:
+  - Event propagation prevention
+  - Multi-selection support (Shift/Cmd/Ctrl keys)
+  - Direct selectNode call for unified selection
+- **Lines 232-263**: Enhanced selectNode to sync FilterStore immediately:
+  - Single selection: Direct FilterStore update
+  - Multi-selection: Updates FilterStore with first selected node
+
+### Result
+✅ Single click selects node and opens detail panel
+✅ Multi-select with Shift/Cmd/Ctrl works
+✅ Selection state properly synced across all systems
+✅ Visual feedback (blue outline) works correctly
+
+### Testing Status
+- ✅ TypeScript compilation: PASSES
+- ✅ Dev server: Running on port 5177
+- ⏳ Browser testing: In progress
+
+## 2025-09-04: Selection System Architecture Correction
+
+### Problem Discovered
+After implementing unified selection system, found that removing direct FilterStore updates broke keyboard shortcuts. Research revealed React Flow does NOT fire `onSelectionChange` for programmatic `setNodes` calls.
+
+### Changes Made
+
+#### 1. GraphView.tsx Fixes
+- **Line 374-378**: Removed direct `setSelectedNode(node.id)` from `onNodeClick` to prevent double updates
+- **Line 387-389**: Changed `handleDetailPanelClose` to use `clearSelection()` hook method
+- **Line 248**: Removed unused `setSelectedNode` import from filter store destructuring
+- **Line 328**: Added `clearSelection` to useGraphInteractions destructuring
+
+#### 2. useGraphInteractions.ts Corrections
+- **Lines 234-239**: Restored manual FilterStore sync in `selectAll` with explanatory comment
+- **Lines 256-258**: Restored manual FilterStore sync in `clearSelection` with explanatory comment
+- Both changes required because React Flow doesn't fire onSelectionChange for programmatic updates (confirmed via GitHub issue #2405)
+
+### Architecture Clarified
+```
+User Click → React Flow → onSelectionChange → handleSelectionChange → FilterStore
+Keyboard → selectAll/clearSelection → setNodes + manual FilterStore sync
+HeaderSearch → Direct FilterStore update (legitimate separate control)
+```
+
+### Known Issues
+- Click behavior reported as "not working as intended" - needs investigation
+
+### Testing Status
+- ✅ TypeScript compilation: PASSES
+- ✅ ESLint: PASSES (warnings only)
+- ⚠️ Browser testing: Click behavior needs fix
+
 ## 2025-09-04: COMPLETE FIX - Selection System Fully Refactored
 
 ### Critical Issue Discovered

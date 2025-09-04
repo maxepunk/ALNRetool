@@ -23,6 +23,7 @@ import { useAllEntityData } from '@/hooks/generic/useEntityData';
 import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
 import { queryKeys } from '@/lib/queryKeys';
 import { useDebounce } from '@/hooks/useDebounce';
+import Fuse from 'fuse.js';
 import {
   Popover,
   PopoverContent,
@@ -80,66 +81,64 @@ export const HeaderSearch = memo(function HeaderSearch({ isMobile = false, class
   const inputRef = useRef<HTMLInputElement>(null);
   
   /**
-   * Generate search suggestions from available entities
-   * Now using debounced search term to reduce recalculations
+   * Combine all entities for Fuse.js fuzzy search
+   */
+  const allEntitiesForSearch = useMemo(() => [
+    ...characters.map(c => ({
+      id: c.id,
+      label: c.name,
+      type: 'character' as const,
+      entity: c
+    })),
+    ...puzzles.map(p => ({
+      id: p.id,
+      label: p.name,
+      type: 'puzzle' as const,
+      entity: p
+    })),
+    ...elements.map(e => ({
+      id: e.id,
+      label: e.name,
+      type: 'element' as const,
+      entity: e
+    })),
+    ...timeline.map(t => ({
+      id: t.id,
+      label: t.description || t.name,
+      type: 'timeline' as const,
+      entity: t
+    })),
+  ], [characters, puzzles, elements, timeline]);
+
+  /**
+   * Initialize Fuse instance for fuzzy search
+   */
+  const fuse = useMemo(() => new Fuse(allEntitiesForSearch, {
+    keys: [
+      { name: 'label', weight: 0.7 },
+      { name: 'id', weight: 0.3 }
+    ],
+    threshold: 0.4,  // 0.0 = exact, 1.0 = match anything
+    includeScore: true,
+    shouldSort: true,
+  }), [allEntitiesForSearch]);
+  
+  /**
+   * Generate search suggestions using fuzzy search
    */
   const suggestions = useMemo((): SearchSuggestion[] => {
     if (!debouncedSearchTerm || debouncedSearchTerm.length < 2) return [];
-    
-    const searchLower = debouncedSearchTerm.toLowerCase();
-    const allSuggestions: SearchSuggestion[] = [];
-    
-    // Add character suggestions
-    characters.forEach(character => {
-      const name = character.name || '';
-      if (name.toLowerCase().includes(searchLower) || character.id.toLowerCase().includes(searchLower)) {
-        allSuggestions.push({
-          id: character.id,
-          label: name,
-          type: 'character'
-        });
-      }
-    });
-    
-    // Add puzzle suggestions
-    puzzles.forEach(puzzle => {
-      const name = puzzle.name || '';
-      if (name.toLowerCase().includes(searchLower) || puzzle.id.toLowerCase().includes(searchLower)) {
-        allSuggestions.push({
-          id: puzzle.id,
-          label: name,
-          type: 'puzzle'
-        });
-      }
-    });
-    
-    // Add element suggestions
-    elements.forEach(element => {
-      const name = element.name || '';
-      if (name.toLowerCase().includes(searchLower) || element.id.toLowerCase().includes(searchLower)) {
-        allSuggestions.push({
-          id: element.id,
-          label: name,
-          type: 'element'
-        });
-      }
-    });
-    
-    // Add timeline suggestions
-    timeline.forEach(event => {
-      const description = event.description || '';
-      if (description.toLowerCase().includes(searchLower) || event.id.toLowerCase().includes(searchLower)) {
-        allSuggestions.push({
-          id: event.id,
-          label: description,
-          type: 'timeline'
-        });
-      }
-    });
-    
-    // Limit to 15 suggestions for performance
-    return allSuggestions.slice(0, 15);
-  }, [debouncedSearchTerm, characters, puzzles, elements, timeline]);
+
+    const results = fuse.search(debouncedSearchTerm);
+
+    return results
+      .slice(0, 20)  // Limit results
+      .map(result => ({
+        id: result.item.id,
+        label: result.item.label,
+        type: result.item.type
+      }));
+  }, [debouncedSearchTerm, fuse]);
   
   /**
    * Handle search input change

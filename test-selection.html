@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Selection Test Monitor</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        #log { height: 600px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; }
+        .event { margin: 5px 0; padding: 5px; border-left: 3px solid #007acc; }
+        .error { border-left-color: red; background: #fee; }
+        .warning { border-left-color: orange; background: #fef5e7; }
+        .success { border-left-color: green; background: #efe; }
+    </style>
+</head>
+<body>
+    <h1>ALNRetool Selection Behavior Monitor</h1>
+    <div id="log"></div>
+    <script>
+        const log = document.getElementById('log');
+        
+        // Monitor console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        let eventCount = 0;
+        
+        function addEntry(type, message) {
+            const entry = document.createElement('div');
+            entry.className = `event ${type}`;
+            entry.innerHTML = `[${++eventCount}] ${new Date().toLocaleTimeString()} - ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+            
+            // Look for selection-related logs
+            if (msg.includes('selected') || msg.includes('Select') || msg.includes('click')) {
+                addEntry('success', msg);
+            }
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addEntry('error', args.join(' '));
+        };
+        
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addEntry('warning', args.join(' '));
+        };
+        
+        // Connect to the app
+        addEntry('success', 'Monitor started. Open http://localhost:5173 in another tab and interact with nodes.');
+        
+        // Listen for messages from the app (if we add postMessage)
+        window.addEventListener('message', (e) => {
+            if (e.data.type === 'selection-event') {
+                addEntry('success', `Selection Event: ${JSON.stringify(e.data)}`);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -24,8 +24,8 @@ ALNRetool is a visualization and editing tool for the "About Last Night" murder 
 - ALWAYS use FULL filepaths for TOOL CALLS.
 
 ## Currently working on: 
-General Code Quality & UX Improvements.
- 
+@UI_Improvements.md
+
 ## Changes recorded at: 
 CHANGELOG.md
 
@@ -138,7 +138,7 @@ NOTION_CHARACTERS_DB=database-id
 NOTION_ELEMENTS_DB=database-id  
 NOTION_PUZZLES_DB=database-id
 NOTION_TIMELINE_DB=database-id
-API_KEY=optional-api-key-for-auth
+API_KEY=optional-api-key-for-auth/zen
 PORT=3001
 NODE_ENV=development|production
 ```

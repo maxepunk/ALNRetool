@@ -1,0 +1,2581 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - link "Skip to content" [ref=e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - button "Close sidebar" [expanded] [ref=e8]:
+          - img
+        - link "ALN ALNRetool" [ref=e9] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e11] [cursor=pointer]: ALN
+          - heading "ALNRetool" [level=1] [ref=e12] [cursor=pointer]
+      - generic [ref=e13]:
+        - generic [ref=e16]:
+          - img [ref=e17]
+          - searchbox "Search nodes with autocomplete" [ref=e20]
+        - generic [ref=e21]:
+          - generic [ref=e24]: Connected
+          - generic [ref=e25]:
+            - text: "Last synced:"
+            - time [ref=e26]: 9:49:58 AM
+        - button "User profile" [ref=e27]:
+          - img
+    - navigation "Breadcrumb" [ref=e29]:
+      - list [ref=e30]:
+        - listitem [ref=e31]:
+          - link "Home" [ref=e32] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e33]:
+          - img [ref=e34]
+          - link "Graph" [ref=e36] [cursor=pointer]:
+            - /url: /graph
+        - listitem [ref=e37]:
+          - img [ref=e38]
+          - generic [ref=e40]: Full-graph
+  - generic [ref=e41]:
+    - complementary "Application sidebar" [ref=e43]:
+      - generic [ref=e45]:
+        - heading "ALNRetool" [level=2] [ref=e47]
+        - navigation "Main navigation" [ref=e49]:
+          - link "Full Graph Complete view of all entities and relationships" [ref=e50] [cursor=pointer]:
+            - /url: /graph/full-graph
+            - img [ref=e51] [cursor=pointer]
+            - generic [ref=e56] [cursor=pointer]:
+              - generic [ref=e57] [cursor=pointer]: Full Graph
+              - generic [ref=e58] [cursor=pointer]: Complete view of all entities and relationships
+          - link "Puzzle Network Focus on puzzle dependencies and rewards" [ref=e59] [cursor=pointer]:
+            - /url: /graph/puzzles-only
+            - img [ref=e60] [cursor=pointer]
+            - generic [ref=e62] [cursor=pointer]:
+              - generic [ref=e63] [cursor=pointer]: Puzzle Network
+              - generic [ref=e64] [cursor=pointer]: Focus on puzzle dependencies and rewards
+          - link "Character Relationships Character and element connections" [ref=e65] [cursor=pointer]:
+            - /url: /graph/character-relations
+            - img [ref=e66] [cursor=pointer]
+            - generic [ref=e71] [cursor=pointer]:
+              - generic [ref=e72] [cursor=pointer]: Character Relationships
+              - generic [ref=e73] [cursor=pointer]: Character and element connections
+          - link "Timeline Chronological event flow" [ref=e74] [cursor=pointer]:
+            - /url: /graph/timeline-flow
+            - img [ref=e75] [cursor=pointer]
+            - generic [ref=e78] [cursor=pointer]:
+              - generic [ref=e79] [cursor=pointer]: Timeline
+              - generic [ref=e80] [cursor=pointer]: Chronological event flow
+          - link "Core Experience Essential puzzles and characters only" [ref=e81] [cursor=pointer]:
+            - /url: /graph/core-experience
+            - img [ref=e82] [cursor=pointer]
+            - generic [ref=e84] [cursor=pointer]:
+              - generic [ref=e85] [cursor=pointer]: Core Experience
+              - generic [ref=e86] [cursor=pointer]: Essential puzzles and characters only
+        - generic [ref=e87]:
+          - generic [ref=e88]:
+            - generic [ref=e89]:
+              - generic [ref=e90]:
+                - generic [ref=e91]: Show Entity Types
+                - generic [ref=e92]: 3/4
+              - generic [ref=e93]:
+                - button "Show all entity types" [ref=e94]:
+                  - img [ref=e95]
+                - button "Hide all entity types" [ref=e98]:
+                  - img [ref=e99]
+            - generic [ref=e104]:
+              - generic [ref=e105]:
+                - generic [ref=e106]:
+                  - generic [ref=e107]:
+                    - checkbox "Characters" [checked] [ref=e108]
+                    - img [ref=e110]
+                  - generic [ref=e112] [cursor=pointer]:
+                    - img [ref=e113] [cursor=pointer]
+                    - generic [ref=e118] [cursor=pointer]: Characters
+                - generic [ref=e119]: All
+              - generic [ref=e120]:
+                - generic [ref=e121]:
+                  - generic [ref=e122]:
+                    - checkbox "Puzzles" [checked] [ref=e123]
+                    - img [ref=e125]
+                  - generic [ref=e127] [cursor=pointer]:
+                    - img [ref=e128] [cursor=pointer]
+                    - generic [ref=e130] [cursor=pointer]: Puzzles
+                - generic [ref=e131]: All
+              - generic [ref=e132]:
+                - generic [ref=e133]:
+                  - generic [ref=e134]:
+                    - checkbox "Elements" [checked] [ref=e135]
+                    - img [ref=e137]
+                  - generic [ref=e139] [cursor=pointer]:
+                    - img [ref=e140] [cursor=pointer]
+                    - generic [ref=e144] [cursor=pointer]: Elements
+                - generic [ref=e145]: All
+              - generic [ref=e147]:
+                - checkbox "Timeline" [ref=e149]
+                - generic [ref=e151] [cursor=pointer]:
+                  - img [ref=e152] [cursor=pointer]
+                  - generic [ref=e155] [cursor=pointer]: Timeline
+            - generic [ref=e156]: Hide entity types to focus on specific graph elements
+          - generic [ref=e157]:
+            - generic [ref=e159]: Character Filters
+            - generic [ref=e160]:
+              - generic [ref=e161]:
+                - generic [ref=e162]: Character Type
+                - generic [ref=e163]:
+                  - generic [ref=e164]:
+                    - checkbox "All" [checked] [ref=e165]
+                    - img [ref=e167]
+                  - generic [ref=e169]: All
+                - generic [ref=e170]:
+                  - checkbox "Players" [ref=e172]
+                  - generic [ref=e174]: Players
+                - generic [ref=e175]:
+                  - checkbox "NPCs" [ref=e177]
+                  - generic [ref=e179]: NPCs
+              - generic [ref=e180]:
+                - generic [ref=e181]: Tiers
+                - generic [ref=e182]:
+                  - generic [ref=e183]:
+                    - checkbox "Core" [ref=e185]
+                    - generic [ref=e187]: Core
+                  - generic [ref=e188]:
+                    - checkbox "Secondary" [ref=e190]
+                    - generic [ref=e192]: Secondary
+                  - generic [ref=e193]:
+                    - checkbox "Tertiary" [ref=e195]
+                    - generic [ref=e197]: Tertiary
+          - generic [ref=e198]:
+            - generic [ref=e200]: Puzzle Filters
+            - generic [ref=e201]:
+              - generic [ref=e202]:
+                - generic [ref=e203]: Acts
+                - generic [ref=e204]:
+                  - generic [ref=e205]:
+                    - checkbox "Act 0" [ref=e207]
+                    - generic [ref=e209]: Act 0
+                  - generic [ref=e210]:
+                    - checkbox "Act 1" [ref=e212]
+                    - generic [ref=e214]: Act 1
+                  - generic [ref=e215]:
+                    - checkbox "Act 2" [ref=e217]
+                    - generic [ref=e219]: Act 2
+              - generic [ref=e220]:
+                - generic [ref=e221]: Completion Status
+                - generic [ref=e222]:
+                  - generic [ref=e223]:
+                    - checkbox "All" [checked] [ref=e224]
+                    - img [ref=e226]
+                  - generic [ref=e228]: All
+                - generic [ref=e229]:
+                  - checkbox "Completed" [ref=e231]
+                  - generic [ref=e233]: Completed
+                - generic [ref=e234]:
+                  - checkbox "Incomplete" [ref=e236]
+                  - generic [ref=e238]: Incomplete
+          - generic [ref=e239]:
+            - generic [ref=e241]: Element Filters
+            - generic [ref=e242]:
+              - generic [ref=e243]:
+                - generic [ref=e244]: Element Types
+                - generic [ref=e245]:
+                  - generic [ref=e246]:
+                    - checkbox "Set Dressing" [ref=e248]
+                    - generic [ref=e250]: Set Dressing
+                  - generic [ref=e251]:
+                    - checkbox "Prop" [ref=e253]
+                    - generic [ref=e255]: Prop
+                  - generic [ref=e256]:
+                    - checkbox "Memory Token (Audio)" [ref=e258]
+                    - generic [ref=e260]: Memory Token (Audio)
+                  - generic [ref=e261]:
+                    - checkbox "Memory Token (Video)" [ref=e263]
+                    - generic [ref=e265]: Memory Token (Video)
+                  - generic [ref=e266]:
+                    - checkbox "Memory Token (Image)" [ref=e268]
+                    - generic [ref=e270]: Memory Token (Image)
+                  - generic [ref=e271]:
+                    - checkbox "Memory Token (Audio+Image)" [ref=e273]
+                    - generic [ref=e275]: Memory Token (Audio+Image)
+                  - generic [ref=e276]:
+                    - checkbox "Document" [ref=e278]
+                    - generic [ref=e280]: Document
+              - generic [ref=e281]:
+                - generic [ref=e282]: Production Status
+                - generic [ref=e283]:
+                  - generic [ref=e284]:
+                    - checkbox "Idea/Placeholder" [ref=e286]
+                    - generic [ref=e288]: Idea/Placeholder
+                  - generic [ref=e289]:
+                    - checkbox "In Space Playtest Ready" [ref=e291]
+                    - generic [ref=e293]: In Space Playtest Ready
+                  - generic [ref=e294]:
+                    - checkbox "In Development" [ref=e296]
+                    - generic [ref=e298]: In Development
+                  - generic [ref=e299]:
+                    - checkbox "Writing Complete" [ref=e301]
+                    - generic [ref=e303]: Writing Complete
+                  - generic [ref=e304]:
+                    - checkbox "Design Complete" [ref=e306]
+                    - generic [ref=e308]: Design Complete
+                  - generic [ref=e309]:
+                    - checkbox "Source Prop/Print" [ref=e311]
+                    - generic [ref=e313]: Source Prop/Print
+                  - generic [ref=e314]:
+                    - checkbox "Ready for Playtest" [ref=e316]
+                    - generic [ref=e318]: Ready for Playtest
+                  - generic [ref=e319]:
+                    - checkbox "Done" [ref=e321]
+                    - generic [ref=e323]: Done
+          - generic [ref=e324]:
+            - generic [ref=e326]: Connection Depth
+            - generic [ref=e327]:
+              - generic [ref=e328]:
+                - img [ref=e329]
+                - generic [ref=e331]: Showing 0 levels from selected node
+              - generic [ref=e332]:
+                - generic [ref=e333]:
+                  - generic [ref=e334]: Depth Level
+                  - generic [ref=e335]: None
+                - generic [ref=e336]:
+                  - slider [ref=e337] [cursor=pointer]: "0"
+                  - generic [ref=e338]:
+                    - generic [ref=e341]: "0"
+                    - generic [ref=e344]: "1"
+                    - generic [ref=e347]: "2"
+                    - generic [ref=e350]: "3"
+                    - generic [ref=e353]: "4"
+                    - generic [ref=e356]: "5"
+                - generic [ref=e357]:
+                  - generic [ref=e358]:
+                    - generic [ref=e359]: "0:"
+                    - generic [ref=e360]: Only filtered nodes, no connections
+                  - generic [ref=e361]:
+                    - generic [ref=e362]: "1:"
+                    - generic [ref=e363]: Direct neighbors only
+                  - generic [ref=e364]:
+                    - generic [ref=e365]: "2-3:"
+                    - generic [ref=e366]: Extended neighborhood
+                  - generic [ref=e367]:
+                    - generic [ref=e368]: "4-5:"
+                    - generic [ref=e369]: Wide network view
+              - generic [ref=e370]:
+                - strong [ref=e371]: "Node Selected:"
+                - text: Showing connections from the selected node only. Deselect to see all filtered nodes.
+      - generic [ref=e374]:
+        - generic [ref=e375] [cursor=pointer]: Dark Mode
+        - checkbox "Dark mode is disabled" [ref=e377]
+    - main [ref=e379]:
+      - generic [ref=e381]:
+        - generic [ref=e382]:
+          - generic [ref=e384]:
+            - generic [ref=e385]:
+              - generic [ref=e386]:
+                - img [ref=e387]
+                - generic [ref=e389]: 207 / 281 nodes
+                - generic [ref=e390]: 74 hidden
+              - button "Clear all filters" [ref=e391]:
+                - img
+                - text: Clear All
+            - generic [ref=e392]:
+              - img [ref=e393]
+              - generic [ref=e398]: Showing 0 levels from toy
+            - generic [ref=e399]:
+              - img [ref=e400]
+              - generic [ref=e404]: "Selected: toy"
+          - application [ref=e405]:
+            - generic [ref=e407]:
+              - generic:
+                - generic:
+                  - img:
+                    - group "Edge from 1b62f33d-583f-807f-b807-d89bb65c2c33 to d1b16a9b-914e-4b1c-a8a4-7a778d3dd16c" [ref=e408] [cursor=pointer]:
+                      - generic [ref=e411] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 1b62f33d-583f-807f-b807-d89bb65c2c33 to 1dd2f33d-583f-800b-8178-e29b74c8ee57" [ref=e413] [cursor=pointer]:
+                      - generic [ref=e416] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ce-b624-d8c9b78a7850 to 1dd2f33d-583f-80e5-98d8-d2fd689d08fb" [ref=e418] [cursor=pointer]:
+                      - generic [ref=e421] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ce-b624-d8c9b78a7850 to 2002f33d-583f-803b-84bc-dff9e7f32def" [ref=e423] [cursor=pointer]:
+                      - generic [ref=e426] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ce-b624-d8c9b78a7850 to 2052f33d-583f-81ee-ad97-f151ee4e72e3" [ref=e428] [cursor=pointer]:
+                      - generic [ref=e431] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ce-b624-d8c9b78a7850 to 2052f33d-583f-8167-b2ec-dd406a1a9b5f" [ref=e433] [cursor=pointer]:
+                      - generic [ref=e436] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ce-b624-d8c9b78a7850 to 2052f33d-583f-813b-a5fd-d39ecc4c16f1" [ref=e438] [cursor=pointer]:
+                      - generic [ref=e441] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ce-b624-d8c9b78a7850 to 2052f33d-583f-813a-998c-eb3ad35a1a92" [ref=e443] [cursor=pointer]:
+                      - generic [ref=e446] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ce-b624-d8c9b78a7850 to 1dd2f33d-583f-80fa-909e-ccf94bbd7db8" [ref=e448] [cursor=pointer]:
+                      - generic [ref=e451] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 1dd2f33d-583f-804c-902e-f0a37a30c424" [ref=e453] [cursor=pointer]:
+                      - generic [ref=e456] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 1dd2f33d-583f-80d8-a1fb-e9e718c11be6" [ref=e458] [cursor=pointer]:
+                      - generic [ref=e461] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 1dd2f33d-583f-80f5-b6d9-cde8ab34fd80" [ref=e463] [cursor=pointer]:
+                      - generic [ref=e466] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 1f82f33d-583f-8026-9f51-eded0ca63496" [ref=e468] [cursor=pointer]:
+                      - generic [ref=e471] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 2002f33d-583f-8038-b185-cb164ae4689a" [ref=e473] [cursor=pointer]:
+                      - generic [ref=e476] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 2052f33d-583f-81e1-923f-fa4f5ee83229" [ref=e478] [cursor=pointer]:
+                      - generic [ref=e481] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 2052f33d-583f-81a5-85a2-cac5d7bf5b10" [ref=e483] [cursor=pointer]:
+                      - generic [ref=e486] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 2052f33d-583f-819b-beba-fca2d37575da" [ref=e488] [cursor=pointer]:
+                      - generic [ref=e491] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 2052f33d-583f-817c-aa1a-d412bf90481a" [ref=e493] [cursor=pointer]:
+                      - generic [ref=e496] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8022-9a6f-c558cbb376a8 to 1dd2f33d-583f-80b4-a89f-fea6523e4bb4" [ref=e498] [cursor=pointer]:
+                      - generic [ref=e501] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 1de2f33d-583f-805a-9665-c71dfe26cd80" [ref=e503] [cursor=pointer]:
+                      - generic [ref=e506] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 1de2f33d-583f-803e-9e6a-e3a7aa1a3cb0" [ref=e508] [cursor=pointer]:
+                      - generic [ref=e511] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 1de2f33d-583f-802a-9b5b-e4d3c446f836" [ref=e513] [cursor=pointer]:
+                      - generic [ref=e516] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 1de2f33d-583f-80c2-873e-f00a4049c7e4" [ref=e518] [cursor=pointer]:
+                      - generic [ref=e521] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 1f82f33d-583f-80e4-93fe-ce49fdb99966" [ref=e523] [cursor=pointer]:
+                      - generic [ref=e526] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 2002f33d-583f-801f-a47a-c3c4dfc82dca" [ref=e528] [cursor=pointer]:
+                      - generic [ref=e531] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 2052f33d-583f-8145-a8fe-f0be570fea1e" [ref=e533] [cursor=pointer]:
+                      - generic [ref=e536] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 2052f33d-583f-8194-9d62-ef6eb6961a7a" [ref=e538] [cursor=pointer]:
+                      - generic [ref=e541] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 2052f33d-583f-81c6-b966-f812715ec991" [ref=e543] [cursor=pointer]:
+                      - generic [ref=e546] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 2052f33d-583f-8177-9ef1-cf83eb762f15" [ref=e548] [cursor=pointer]:
+                      - generic [ref=e551] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8063-bc0c-fa0195863eb9 to 1de2f33d-583f-80e5-89e2-f16fa694e299" [ref=e553] [cursor=pointer]:
+                      - generic [ref=e556] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 1de2f33d-583f-8037-9e0f-d2c330b34b9b" [ref=e558] [cursor=pointer]:
+                      - generic [ref=e561] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 1de2f33d-583f-80f7-a58d-c929ab3b3ca6" [ref=e563] [cursor=pointer]:
+                      - generic [ref=e566] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 2002f33d-583f-80cf-852e-f77ecdd28e2d" [ref=e568] [cursor=pointer]:
+                      - generic [ref=e571] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 2042f33d-583f-819a-9531-ed1061fc1c66" [ref=e573] [cursor=pointer]:
+                      - generic [ref=e576] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 2042f33d-583f-818c-a82c-cad42c242872" [ref=e578] [cursor=pointer]:
+                      - generic [ref=e581] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 2042f33d-583f-81df-8bc4-f2864f9e6696" [ref=e583] [cursor=pointer]:
+                      - generic [ref=e586] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 2042f33d-583f-81c9-aa9b-c21249b5bb51" [ref=e588] [cursor=pointer]:
+                      - generic [ref=e591] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ba-bea1-ce0d7650256d to 1de2f33d-583f-80d0-bfc6-cd2c725f8ed9" [ref=e593] [cursor=pointer]:
+                      - generic [ref=e596] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8086-81f8-c0a239ef8736 to 1de2f33d-583f-80f1-97fb-fa6626f1ce29" [ref=e598] [cursor=pointer]:
+                      - generic [ref=e601] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8086-81f8-c0a239ef8736 to 1de2f33d-583f-80de-9ad1-fffefd7b0575" [ref=e603] [cursor=pointer]:
+                      - generic [ref=e606] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8086-81f8-c0a239ef8736 to 2002f33d-583f-8076-af28-db07d6ec021c" [ref=e608] [cursor=pointer]:
+                      - generic [ref=e611] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8086-81f8-c0a239ef8736 to 2042f33d-583f-81e9-b774-cd65a7ffd303" [ref=e613] [cursor=pointer]:
+                      - generic [ref=e616] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8086-81f8-c0a239ef8736 to 2042f33d-583f-812a-b0dc-d656bbfd99c1" [ref=e618] [cursor=pointer]:
+                      - generic [ref=e621] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8086-81f8-c0a239ef8736 to 2042f33d-583f-810c-aae7-e041c1080ce8" [ref=e623] [cursor=pointer]:
+                      - generic [ref=e626] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8086-81f8-c0a239ef8736 to 1de2f33d-583f-8012-b944-d60fad6057e1" [ref=e628] [cursor=pointer]:
+                      - generic [ref=e631] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80a7-b85f-d832d542b747 to 1de2f33d-583f-803f-bfc4-c700caa8c89b" [ref=e633] [cursor=pointer]:
+                      - generic [ref=e636] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80a7-b85f-d832d542b747 to 1de2f33d-583f-80ed-b83e-e01497f90611" [ref=e638] [cursor=pointer]:
+                      - generic [ref=e641] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80a7-b85f-d832d542b747 to 2002f33d-583f-8077-8ce2-de5833b68f1a" [ref=e643] [cursor=pointer]:
+                      - generic [ref=e646] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80a7-b85f-d832d542b747 to 2042f33d-583f-811a-929b-e4cd75bb7591" [ref=e648] [cursor=pointer]:
+                      - generic [ref=e651] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80a7-b85f-d832d542b747 to 2042f33d-583f-8111-9940-f921c7ab19f6" [ref=e653] [cursor=pointer]:
+                      - generic [ref=e656] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80a7-b85f-d832d542b747 to 2042f33d-583f-81d7-a78d-f9ec222866ff" [ref=e658] [cursor=pointer]:
+                      - generic [ref=e661] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80a7-b85f-d832d542b747 to 1de2f33d-583f-8098-bf2a-ce81771756dc" [ref=e663] [cursor=pointer]:
+                      - generic [ref=e666] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 1dc2f33d-583f-8097-bfac-c89857dbea41" [ref=e668] [cursor=pointer]:
+                      - generic [ref=e671] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 1dc2f33d-583f-8063-9a3b-c8eff987d1ea" [ref=e673] [cursor=pointer]:
+                      - generic [ref=e676] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 2002f33d-583f-8076-8e49-cfc66691346d" [ref=e678] [cursor=pointer]:
+                      - generic [ref=e681] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 2052f33d-583f-81a4-9be0-f1e63b7af4c6" [ref=e683] [cursor=pointer]:
+                      - generic [ref=e686] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 2052f33d-583f-811a-9ef6-ff4616408a1a" [ref=e688] [cursor=pointer]:
+                      - generic [ref=e691] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 2052f33d-583f-8149-9e4f-e8acabd91453" [ref=e693] [cursor=pointer]:
+                      - generic [ref=e696] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 2052f33d-583f-8199-9c5a-f3ee63060203" [ref=e698] [cursor=pointer]:
+                      - generic [ref=e701] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8053-8a7c-fe8f669c0984 to 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9" [ref=e703] [cursor=pointer]:
+                      - generic [ref=e706] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 1dd2f33d-583f-80e6-a637-cb8872b34efe" [ref=e708] [cursor=pointer]:
+                      - generic [ref=e711] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 1dd2f33d-583f-80ce-8e2e-f1d4b21ea130" [ref=e713] [cursor=pointer]:
+                      - generic [ref=e716] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 2002f33d-583f-801b-b5b6-cd80e8a51553" [ref=e718] [cursor=pointer]:
+                      - generic [ref=e721] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 2052f33d-583f-8128-be04-d9390e89b227" [ref=e723] [cursor=pointer]:
+                      - generic [ref=e726] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 2052f33d-583f-8129-89d7-f98475171889" [ref=e728] [cursor=pointer]:
+                      - generic [ref=e731] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 2052f33d-583f-815d-b9c1-dfe5cf2815d7" [ref=e733] [cursor=pointer]:
+                      - generic [ref=e736] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 2052f33d-583f-8166-a0ec-c4fce4c6b13d" [ref=e738] [cursor=pointer]:
+                      - generic [ref=e741] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80cf-87d4-db0faec3b54a to 1dd2f33d-583f-8047-a1f3-f21d81aeb767" [ref=e743] [cursor=pointer]:
+                      - generic [ref=e746] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 1dd2f33d-583f-80df-a17a-c7acab111ccf" [ref=e748] [cursor=pointer]:
+                      - generic [ref=e751] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 1dd2f33d-583f-8092-8d16-f1e42b4fc75b" [ref=e753] [cursor=pointer]:
+                      - generic [ref=e756] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 2002f33d-583f-804f-bbf8-f098eac643b6" [ref=e758] [cursor=pointer]:
+                      - generic [ref=e761] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 2042f33d-583f-8167-b856-cfceb580bd46" [ref=e763] [cursor=pointer]:
+                      - generic [ref=e766] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 2042f33d-583f-819a-a6a9-e1c4c61e8c41" [ref=e768] [cursor=pointer]:
+                      - generic [ref=e771] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 2042f33d-583f-811d-9783-e9b6040934bf" [ref=e773] [cursor=pointer]:
+                      - generic [ref=e776] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 2042f33d-583f-8164-8fdf-f2a6363b8461" [ref=e778] [cursor=pointer]:
+                      - generic [ref=e781] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8032-ba00-f0bd0c6e5905 to 1dd2f33d-583f-80ef-99ab-ff203a81c38f" [ref=e783] [cursor=pointer]:
+                      - generic [ref=e786] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 1dd2f33d-583f-8018-ba42-f7f3a3c8f47f" [ref=e788] [cursor=pointer]:
+                      - generic [ref=e791] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 2002f33d-583f-8057-b5db-e2c6c4383032" [ref=e793] [cursor=pointer]:
+                      - generic [ref=e796] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 2052f33d-583f-8187-b06a-c98afe0c8aa8" [ref=e798] [cursor=pointer]:
+                      - generic [ref=e801] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 2052f33d-583f-81f3-beb0-d1f723702e78" [ref=e803] [cursor=pointer]:
+                      - generic [ref=e806] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 2052f33d-583f-81d0-bb56-d0d673d27b94" [ref=e808] [cursor=pointer]:
+                      - generic [ref=e811] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 18f2f33d-583f-8001-9c97-c6f1c9d80acc" [ref=e813] [cursor=pointer]:
+                      - generic [ref=e816] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 1dd2f33d-583f-804c-902e-f0a37a30c424" [ref=e818] [cursor=pointer]:
+                      - generic [ref=e821] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80b6-bdc5-c3ab5216e841 to 1dd2f33d-583f-80a5-aac2-d0ec48bc7fb3" [ref=e823] [cursor=pointer]:
+                      - generic [ref=e826] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 1dc2f33d-583f-802b-ab97-df8af76e80eb" [ref=e828] [cursor=pointer]:
+                      - generic [ref=e831] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 1dc2f33d-583f-80dc-b28c-c7e3308328ed" [ref=e833] [cursor=pointer]:
+                      - generic [ref=e836] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 2002f33d-583f-80cc-b6bb-e20632fba76c" [ref=e838] [cursor=pointer]:
+                      - generic [ref=e841] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 2052f33d-583f-8159-a0b4-f88b2ce2aa8a" [ref=e843] [cursor=pointer]:
+                      - generic [ref=e846] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 2052f33d-583f-819e-aa97-f6e282808328" [ref=e848] [cursor=pointer]:
+                      - generic [ref=e851] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 2052f33d-583f-812c-a4a6-cc876a835ab2" [ref=e853] [cursor=pointer]:
+                      - generic [ref=e856] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 2052f33d-583f-8184-892e-ddc3e92444cc" [ref=e858] [cursor=pointer]:
+                      - generic [ref=e861] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 18c2f33d-583f-8073-9d3b-e44d17dab69d" [ref=e863] [cursor=pointer]:
+                      - generic [ref=e866] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8044-b768-e88bdeb3753c to 1dc2f33d-583f-80e9-a36b-c89c24ae43f0" [ref=e868] [cursor=pointer]:
+                      - generic [ref=e871] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 1b52f33d-583f-8009-ac46-eb21a4eb1d21" [ref=e873] [cursor=pointer]:
+                      - generic [ref=e876] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 1dc2f33d-583f-8055-a920-d0587a4f0b3b" [ref=e878] [cursor=pointer]:
+                      - generic [ref=e881] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 1dc2f33d-583f-8049-9589-f8e2517f60f2" [ref=e883] [cursor=pointer]:
+                      - generic [ref=e886] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 1dc2f33d-583f-8071-b376-c3a8f1d12da1" [ref=e888] [cursor=pointer]:
+                      - generic [ref=e891] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 2042f33d-583f-8110-bcc3-de3020f2f023" [ref=e893] [cursor=pointer]:
+                      - generic [ref=e896] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 2042f33d-583f-8183-a2ec-c7ae75ad4db6" [ref=e898] [cursor=pointer]:
+                      - generic [ref=e901] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 2042f33d-583f-8153-ba22-dec01dcc7d64" [ref=e903] [cursor=pointer]:
+                      - generic [ref=e906] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 2042f33d-583f-8189-977b-d1b3de8ac79d" [ref=e908] [cursor=pointer]:
+                      - generic [ref=e911] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to cf617c35-c185-45c8-9822-b86a5f8b3d93" [ref=e913] [cursor=pointer]:
+                      - generic [ref=e916] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 19f2f33d-583f-801f-8f0d-fbe2aaabdffa to 1dc2f33d-583f-80f4-a90b-e432ae28c773" [ref=e918] [cursor=pointer]:
+                      - generic [ref=e921] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 1dc2f33d-583f-80a5-81bd-d602be4a0524" [ref=e923] [cursor=pointer]:
+                      - generic [ref=e926] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 1dc2f33d-583f-803a-af4c-c5d519588e99" [ref=e928] [cursor=pointer]:
+                      - generic [ref=e931] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 1dc2f33d-583f-802f-a3b5-eea495619862" [ref=e933] [cursor=pointer]:
+                      - generic [ref=e936] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 2002f33d-583f-80aa-b787-d761e5798862" [ref=e938] [cursor=pointer]:
+                      - generic [ref=e941] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 2042f33d-583f-8121-98bb-f1e6bf146029" [ref=e943] [cursor=pointer]:
+                      - generic [ref=e946] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 2042f33d-583f-81d0-8972-cae065cc4821" [ref=e948] [cursor=pointer]:
+                      - generic [ref=e951] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 2042f33d-583f-81e0-82f7-eb9713d23349" [ref=e953] [cursor=pointer]:
+                      - generic [ref=e956] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 2042f33d-583f-81ac-adf2-da608030411f" [ref=e958] [cursor=pointer]:
+                      - generic [ref=e961] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 1dc2f33d-583f-8049-9589-f8e2517f60f2" [ref=e963] [cursor=pointer]:
+                      - generic [ref=e966] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 19f2f33d-583f-80e2-af1f-ced97f5d8b60 to 1dc2f33d-583f-8053-8c30-d34f227ed1ff" [ref=e968] [cursor=pointer]:
+                      - generic [ref=e971] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 19f2f33d-583f-804f-a5e2-c90a3cac6699 to 1dc2f33d-583f-80f0-b16c-da1267f1f3a0" [ref=e973] [cursor=pointer]:
+                      - generic [ref=e976] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-804f-a5e2-c90a3cac6699 to 1dc2f33d-583f-80dd-a884-da7873e27348" [ref=e978] [cursor=pointer]:
+                      - generic [ref=e981] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-804f-a5e2-c90a3cac6699 to 1dc2f33d-583f-8056-bf34-c6a9922067d8" [ref=e983] [cursor=pointer]:
+                      - generic [ref=e986] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-804f-a5e2-c90a3cac6699 to 2002f33d-583f-804b-84f8-eabcf4bf3f8a" [ref=e988] [cursor=pointer]:
+                      - generic [ref=e991] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 19f2f33d-583f-804f-a5e2-c90a3cac6699 to e1dc9f67-c115-4278-9ae0-1b0a5e66caa6" [ref=e993] [cursor=pointer]:
+                      - generic [ref=e996] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 19f2f33d-583f-804f-a5e2-c90a3cac6699 to 1dc2f33d-583f-80e6-8cbd-fd54cfe6f697" [ref=e998] [cursor=pointer]:
+                      - generic [ref=e1001] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to 18c2f33d-583f-80fd-8c1a-c3cceeeab8f9" [ref=e1003] [cursor=pointer]:
+                      - generic [ref=e1006] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to 18c2f33d-583f-80ae-8fd2-e808652b7363" [ref=e1008] [cursor=pointer]:
+                      - generic [ref=e1011] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to 18c2f33d-583f-809b-a3d8-cb7843f0b423" [ref=e1013] [cursor=pointer]:
+                      - generic [ref=e1016] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to 1902f33d-583f-80ec-ac61-d2cd1445e9ed" [ref=e1018] [cursor=pointer]:
+                      - generic [ref=e1021] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to e1dc9f67-c115-4278-9ae0-1b0a5e66caa6" [ref=e1023] [cursor=pointer]:
+                      - generic [ref=e1026] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to 85620c6f-befd-4799-a877-8fc25c040d8e" [ref=e1028] [cursor=pointer]:
+                      - generic [ref=e1031] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to 18c2f33d-583f-802a-a446-cd878434fe6d" [ref=e1033] [cursor=pointer]:
+                      - generic [ref=e1036] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802f-9042-d4e989988b6e to 1b62f33d-583f-80ca-acfe-f90aea72d35d" [ref=e1038] [cursor=pointer]:
+                      - generic [ref=e1041] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to 18f2f33d-583f-8013-807b-eb6b1e46c590" [ref=e1043] [cursor=pointer]:
+                      - generic [ref=e1046] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to 18f2f33d-583f-8045-bc37-cab1f32cf97b" [ref=e1048] [cursor=pointer]:
+                      - generic [ref=e1051] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to 1902f33d-583f-800b-8b7b-dea5f52b399c" [ref=e1053] [cursor=pointer]:
+                      - generic [ref=e1056] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to cf617c35-c185-45c8-9822-b86a5f8b3d93" [ref=e1058] [cursor=pointer]:
+                      - generic [ref=e1061] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to f326f799-c6df-4530-a3e8-83af9c1e55ad" [ref=e1063] [cursor=pointer]:
+                      - generic [ref=e1066] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to dadca741-45f0-4d90-a6f7-19c4d48c19bf" [ref=e1068] [cursor=pointer]:
+                      - generic [ref=e1071] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to d1b16a9b-914e-4b1c-a8a4-7a778d3dd16c" [ref=e1073] [cursor=pointer]:
+                      - generic [ref=e1076] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to 1dc2f33d-583f-8056-bf34-c6a9922067d8" [ref=e1078] [cursor=pointer]:
+                      - generic [ref=e1081] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to 18f2f33d-583f-8001-9c97-c6f1c9d80acc" [ref=e1083] [cursor=pointer]:
+                      - generic [ref=e1086] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a3-9b13-ca462bd2d606 to 1b62f33d-583f-8012-9b24-c8b955a3d6dd" [ref=e1088] [cursor=pointer]:
+                      - generic [ref=e1091] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 18c2f33d-583f-80b9-a961-fb53d3fe3e41" [ref=e1093] [cursor=pointer]:
+                      - generic [ref=e1096] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 18c2f33d-583f-8073-9d3b-e44d17dab69d" [ref=e1098] [cursor=pointer]:
+                      - generic [ref=e1101] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 18c2f33d-583f-802a-a446-cd878434fe6d" [ref=e1103] [cursor=pointer]:
+                      - generic [ref=e1106] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 18c2f33d-583f-80cc-a20a-c0157d38669f" [ref=e1108] [cursor=pointer]:
+                      - generic [ref=e1111] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 1902f33d-583f-8084-9b8f-e1d8d640198c" [ref=e1113] [cursor=pointer]:
+                      - generic [ref=e1116] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to a6474620-32b6-406b-92bc-69d97bc735d6" [ref=e1118] [cursor=pointer]:
+                      - generic [ref=e1121] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to eeb482eb-20cd-4238-ac24-36e1c3cec303" [ref=e1123] [cursor=pointer]:
+                      - generic [ref=e1126] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to bf916ed6-0f0d-41bb-9a56-7bf55f696ce5" [ref=e1128] [cursor=pointer]:
+                      - generic [ref=e1131] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 18c2f33d-583f-809b-a3d8-cb7843f0b423" [ref=e1133] [cursor=pointer]:
+                      - generic [ref=e1136] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 18c2f33d-583f-8062-ae0f-e86eb60ea75f" [ref=e1138] [cursor=pointer]:
+                      - generic [ref=e1141] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to e1dc9f67-c115-4278-9ae0-1b0a5e66caa6" [ref=e1143] [cursor=pointer]:
+                      - generic [ref=e1146] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80a5-87aa-cd198fb5a65a to 1b62f33d-583f-80de-a4b7-cae080a83b31" [ref=e1148] [cursor=pointer]:
+                      - generic [ref=e1151] [cursor=pointer]:
+                        - generic: puzzle
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8086-8ff8-fdb97283e1a8 to 18c2f33d-583f-8025-88dc-e567973978e0" [ref=e1153] [cursor=pointer]:
+                      - generic [ref=e1156] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8086-8ff8-fdb97283e1a8 to 18c2f33d-583f-8062-ae0f-e86eb60ea75f" [ref=e1158] [cursor=pointer]:
+                      - generic [ref=e1161] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8086-8ff8-fdb97283e1a8 to 1902f33d-583f-80cd-b79e-efd3245ec999" [ref=e1163] [cursor=pointer]:
+                      - generic [ref=e1166] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8086-8ff8-fdb97283e1a8 to 3e4d8c1a-fa7b-464a-86ca-8d12510c1f5a" [ref=e1168] [cursor=pointer]:
+                      - generic [ref=e1171] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8086-8ff8-fdb97283e1a8 to 18c2f33d-583f-8077-9425-f9634b58087c" [ref=e1173] [cursor=pointer]:
+                      - generic [ref=e1176] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8086-8ff8-fdb97283e1a8 to 18c2f33d-583f-802a-a446-cd878434fe6d" [ref=e1178] [cursor=pointer]:
+                      - generic [ref=e1181] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8086-8ff8-fdb97283e1a8 to 18c2f33d-583f-80cc-a20a-c0157d38669f" [ref=e1183] [cursor=pointer]:
+                      - generic [ref=e1186] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to 18f2f33d-583f-8001-9c97-c6f1c9d80acc" [ref=e1188] [cursor=pointer]:
+                      - generic [ref=e1191] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to 1902f33d-583f-80f0-8b4b-cae4def43aa3" [ref=e1193] [cursor=pointer]:
+                      - generic [ref=e1196] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to a621e6c2-be20-422f-82f1-d6b5f6bfc2bd" [ref=e1198] [cursor=pointer]:
+                      - generic [ref=e1201] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to 8fc8155e-b9e2-4200-8243-86286117f120" [ref=e1203] [cursor=pointer]:
+                      - generic [ref=e1206] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to f140740a-f8a5-444c-8742-31fe10df9109" [ref=e1208] [cursor=pointer]:
+                      - generic [ref=e1211] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to 18c2f33d-583f-8086-8ba5-d883dc011a04" [ref=e1213] [cursor=pointer]:
+                      - generic [ref=e1216] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to 18c2f33d-583f-8027-b3b0-d316dc795cd5" [ref=e1218] [cursor=pointer]:
+                      - generic [ref=e1221] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8045-88f3-c23116be2724 to 18c2f33d-583f-8062-ae0f-e86eb60ea75f" [ref=e1223] [cursor=pointer]:
+                      - generic [ref=e1226] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80c8-83b4-ef43b7c9c4b1 to 2052f33d-583f-81ca-ac1d-e4a4f0908780" [ref=e1228] [cursor=pointer]:
+                      - generic [ref=e1231] [cursor=pointer]:
+                        - generic: owns
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80c8-83b4-ef43b7c9c4b1 to 18c2f33d-583f-802a-a446-cd878434fe6d" [ref=e1233] [cursor=pointer]:
+                      - generic [ref=e1236] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80c8-83b4-ef43b7c9c4b1 to 18c2f33d-583f-80cc-a20a-c0157d38669f" [ref=e1238] [cursor=pointer]:
+                      - generic [ref=e1241] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80c8-83b4-ef43b7c9c4b1 to 18f2f33d-583f-8001-9c97-c6f1c9d80acc" [ref=e1243] [cursor=pointer]:
+                      - generic [ref=e1246] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 18c2f33d-583f-80c8-83b4-ef43b7c9c4b1 to 18f2f33d-583f-8045-bc37-cab1f32cf97b" [ref=e1248] [cursor=pointer]:
+                      - generic [ref=e1251] [cursor=pointer]:
+                        - generic: associated
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80e5-89e2-f16fa694e299 to 2052f33d-583f-8177-9ef1-cf83eb762f15" [ref=e1253] [cursor=pointer]:
+                      - generic [ref=e1256] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80e5-89e2-f16fa694e299 to 2052f33d-583f-81c6-b966-f812715ec991" [ref=e1258] [cursor=pointer]:
+                      - generic [ref=e1261] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80e5-89e2-f16fa694e299 to 2052f33d-583f-8194-9d62-ef6eb6961a7a" [ref=e1263] [cursor=pointer]:
+                      - generic [ref=e1266] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80e5-89e2-f16fa694e299 to 2052f33d-583f-8145-a8fe-f0be570fea1e" [ref=e1268] [cursor=pointer]:
+                      - generic [ref=e1271] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80b4-a89f-fea6523e4bb4 to 2052f33d-583f-817c-aa1a-d412bf90481a" [ref=e1273] [cursor=pointer]:
+                      - generic [ref=e1276] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80b4-a89f-fea6523e4bb4 to 2052f33d-583f-819b-beba-fca2d37575da" [ref=e1278] [cursor=pointer]:
+                      - generic [ref=e1281] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80b4-a89f-fea6523e4bb4 to 2052f33d-583f-81a5-85a2-cac5d7bf5b10" [ref=e1283] [cursor=pointer]:
+                      - generic [ref=e1286] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80b4-a89f-fea6523e4bb4 to 2052f33d-583f-81e1-923f-fa4f5ee83229" [ref=e1288] [cursor=pointer]:
+                      - generic [ref=e1291] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-8047-a1f3-f21d81aeb767 to 2052f33d-583f-8166-a0ec-c4fce4c6b13d" [ref=e1293] [cursor=pointer]:
+                      - generic [ref=e1296] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-8047-a1f3-f21d81aeb767 to 2052f33d-583f-815d-b9c1-dfe5cf2815d7" [ref=e1298] [cursor=pointer]:
+                      - generic [ref=e1301] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-8047-a1f3-f21d81aeb767 to 2052f33d-583f-8129-89d7-f98475171889" [ref=e1303] [cursor=pointer]:
+                      - generic [ref=e1306] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-8047-a1f3-f21d81aeb767 to 2052f33d-583f-8128-be04-d9390e89b227" [ref=e1308] [cursor=pointer]:
+                      - generic [ref=e1311] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9 to 2052f33d-583f-8199-9c5a-f3ee63060203" [ref=e1313] [cursor=pointer]:
+                      - generic [ref=e1316] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9 to 2052f33d-583f-8149-9e4f-e8acabd91453" [ref=e1318] [cursor=pointer]:
+                      - generic [ref=e1321] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9 to 2052f33d-583f-811a-9ef6-ff4616408a1a" [ref=e1323] [cursor=pointer]:
+                      - generic [ref=e1326] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9 to 2052f33d-583f-81a4-9be0-f1e63b7af4c6" [ref=e1328] [cursor=pointer]:
+                      - generic [ref=e1331] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80fa-909e-ccf94bbd7db8 to 2052f33d-583f-813a-998c-eb3ad35a1a92" [ref=e1333] [cursor=pointer]:
+                      - generic [ref=e1336] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80fa-909e-ccf94bbd7db8 to 2052f33d-583f-813b-a5fd-d39ecc4c16f1" [ref=e1338] [cursor=pointer]:
+                      - generic [ref=e1341] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80fa-909e-ccf94bbd7db8 to 2052f33d-583f-8167-b2ec-dd406a1a9b5f" [ref=e1343] [cursor=pointer]:
+                      - generic [ref=e1346] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80fa-909e-ccf94bbd7db8 to 2052f33d-583f-81ee-ad97-f151ee4e72e3" [ref=e1348] [cursor=pointer]:
+                      - generic [ref=e1351] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80e9-a36b-c89c24ae43f0 to 2052f33d-583f-8184-892e-ddc3e92444cc" [ref=e1353] [cursor=pointer]:
+                      - generic [ref=e1356] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80e9-a36b-c89c24ae43f0 to 2052f33d-583f-812c-a4a6-cc876a835ab2" [ref=e1358] [cursor=pointer]:
+                      - generic [ref=e1361] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80e9-a36b-c89c24ae43f0 to 2052f33d-583f-819e-aa97-f6e282808328" [ref=e1363] [cursor=pointer]:
+                      - generic [ref=e1366] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80e9-a36b-c89c24ae43f0 to 2052f33d-583f-8159-a0b4-f88b2ce2aa8a" [ref=e1368] [cursor=pointer]:
+                      - generic [ref=e1371] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80a5-aac2-d0ec48bc7fb3 to 2052f33d-583f-81d0-bb56-d0d673d27b94" [ref=e1373] [cursor=pointer]:
+                      - generic [ref=e1376] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80a5-aac2-d0ec48bc7fb3 to 2052f33d-583f-81f3-beb0-d1f723702e78" [ref=e1378] [cursor=pointer]:
+                      - generic [ref=e1381] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80a5-aac2-d0ec48bc7fb3 to 2052f33d-583f-8187-b06a-c98afe0c8aa8" [ref=e1383] [cursor=pointer]:
+                      - generic [ref=e1386] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80f4-a90b-e432ae28c773 to 2042f33d-583f-8189-977b-d1b3de8ac79d" [ref=e1388] [cursor=pointer]:
+                      - generic [ref=e1391] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80f4-a90b-e432ae28c773 to 2042f33d-583f-8153-ba22-dec01dcc7d64" [ref=e1393] [cursor=pointer]:
+                      - generic [ref=e1396] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80f4-a90b-e432ae28c773 to 2042f33d-583f-8183-a2ec-c7ae75ad4db6" [ref=e1398] [cursor=pointer]:
+                      - generic [ref=e1401] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80f4-a90b-e432ae28c773 to 2042f33d-583f-8110-bcc3-de3020f2f023" [ref=e1403] [cursor=pointer]:
+                      - generic [ref=e1406] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8053-8c30-d34f227ed1ff to 2042f33d-583f-81ac-adf2-da608030411f" [ref=e1408] [cursor=pointer]:
+                      - generic [ref=e1411] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8053-8c30-d34f227ed1ff to 2042f33d-583f-81e0-82f7-eb9713d23349" [ref=e1413] [cursor=pointer]:
+                      - generic [ref=e1416] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8053-8c30-d34f227ed1ff to 2042f33d-583f-81d0-8972-cae065cc4821" [ref=e1418] [cursor=pointer]:
+                      - generic [ref=e1421] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8053-8c30-d34f227ed1ff to 2042f33d-583f-8121-98bb-f1e6bf146029" [ref=e1423] [cursor=pointer]:
+                      - generic [ref=e1426] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80ef-99ab-ff203a81c38f to 2042f33d-583f-8164-8fdf-f2a6363b8461" [ref=e1428] [cursor=pointer]:
+                      - generic [ref=e1431] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80d0-bfc6-cd2c725f8ed9 to 2042f33d-583f-81df-8bc4-f2864f9e6696" [ref=e1433] [cursor=pointer]:
+                      - generic [ref=e1436] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-800b-8178-e29b74c8ee57 to 2042f33d-583f-8116-8936-cdd094bc29c5" [ref=e1438] [cursor=pointer]:
+                      - generic [ref=e1441] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-8012-b944-d60fad6057e1 to 2042f33d-583f-810c-aae7-e041c1080ce8" [ref=e1443] [cursor=pointer]:
+                      - generic [ref=e1446] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-8012-b944-d60fad6057e1 to 2042f33d-583f-812a-b0dc-d656bbfd99c1" [ref=e1448] [cursor=pointer]:
+                      - generic [ref=e1451] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-8012-b944-d60fad6057e1 to 2042f33d-583f-81e9-b774-cd65a7ffd303" [ref=e1453] [cursor=pointer]:
+                      - generic [ref=e1456] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-8098-bf2a-ce81771756dc to 2042f33d-583f-8111-9940-f921c7ab19f6" [ref=e1458] [cursor=pointer]:
+                      - generic [ref=e1461] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-8098-bf2a-ce81771756dc to 2042f33d-583f-811a-929b-e4cd75bb7591" [ref=e1463] [cursor=pointer]:
+                      - generic [ref=e1466] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80ef-99ab-ff203a81c38f to 2042f33d-583f-811d-9783-e9b6040934bf" [ref=e1468] [cursor=pointer]:
+                      - generic [ref=e1471] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80ef-99ab-ff203a81c38f to 2042f33d-583f-819a-a6a9-e1c4c61e8c41" [ref=e1473] [cursor=pointer]:
+                      - generic [ref=e1476] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80ef-99ab-ff203a81c38f to 2042f33d-583f-8167-b856-cfceb580bd46" [ref=e1478] [cursor=pointer]:
+                      - generic [ref=e1481] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80d0-bfc6-cd2c725f8ed9 to 2042f33d-583f-818c-a82c-cad42c242872" [ref=e1483] [cursor=pointer]:
+                      - generic [ref=e1486] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80d0-bfc6-cd2c725f8ed9 to 2042f33d-583f-819a-9531-ed1061fc1c66" [ref=e1488] [cursor=pointer]:
+                      - generic [ref=e1491] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1f92f33d-583f-8000-85c3-ffc83389683e to 1f92f33d-583f-80c4-b92b-f06405a26a0b" [ref=e1493] [cursor=pointer]:
+                      - generic [ref=e1496] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-80c4-8718-cb8f04fee617 to 1f92f33d-583f-80c4-b92b-f06405a26a0b" [ref=e1498] [cursor=pointer]:
+                      - generic [ref=e1501] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-8045-9921-ddf2d90d6ab3 to 1f92f33d-583f-80c4-b92b-f06405a26a0b" [ref=e1503] [cursor=pointer]:
+                      - generic [ref=e1506] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-80a0-9fa1-e91aab3d5a37 to 1f92f33d-583f-8093-9f31-c99316241087" [ref=e1508] [cursor=pointer]:
+                      - generic [ref=e1511] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-80fc-aba4-ca8ce0ec4d62 to 1f92f33d-583f-8093-9f31-c99316241087" [ref=e1513] [cursor=pointer]:
+                      - generic [ref=e1516] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-805a-bb25-cb503ace7a3c to 1f92f33d-583f-8094-9562-dac1c8c071e7" [ref=e1518] [cursor=pointer]:
+                      - generic [ref=e1521] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-80e0-b037-d14e6b259ea9 to 1f92f33d-583f-801d-9b86-c0278c5b68b1" [ref=e1523] [cursor=pointer]:
+                      - generic [ref=e1526] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-8043-84b6-ed828e210378 to 1b62f33d-583f-8003-a88d-e396f542f886" [ref=e1528] [cursor=pointer]:
+                      - generic [ref=e1531] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-80b3-97ae-fc6ee801b421 to 1de2f33d-583f-8098-bf2a-ce81771756dc" [ref=e1533] [cursor=pointer]:
+                      - generic [ref=e1536] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f92f33d-583f-80b3-97ae-fc6ee801b421 to 1dd2f33d-583f-80ef-99ab-ff203a81c38f" [ref=e1538] [cursor=pointer]:
+                      - generic [ref=e1541] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f82f33d-583f-8035-beaf-efde42a97f3f to 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9" [ref=e1543] [cursor=pointer]:
+                      - generic [ref=e1546] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f82f33d-583f-8026-9f51-eded0ca63496 to 1dd2f33d-583f-80b4-a89f-fea6523e4bb4" [ref=e1548] [cursor=pointer]:
+                      - generic [ref=e1551] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1f82f33d-583f-80e4-93fe-ce49fdb99966 to 1de2f33d-583f-80e5-89e2-f16fa694e299" [ref=e1553] [cursor=pointer]:
+                      - generic [ref=e1556] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1de2f33d-583f-803f-bfc4-c700caa8c89b to 1de2f33d-583f-8098-bf2a-ce81771756dc" [ref=e1558] [cursor=pointer]:
+                      - generic [ref=e1561] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1de2f33d-583f-80f1-97fb-fa6626f1ce29 to 1de2f33d-583f-8012-b944-d60fad6057e1" [ref=e1563] [cursor=pointer]:
+                      - generic [ref=e1566] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1de2f33d-583f-8037-9e0f-d2c330b34b9b to 1de2f33d-583f-80d0-bfc6-cd2c725f8ed9" [ref=e1568] [cursor=pointer]:
+                      - generic [ref=e1571] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1de2f33d-583f-802a-9b5b-e4d3c446f836 to 1de2f33d-583f-80e5-89e2-f16fa694e299" [ref=e1573] [cursor=pointer]:
+                      - generic [ref=e1576] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1de2f33d-583f-803e-9e6a-e3a7aa1a3cb0 to 1de2f33d-583f-80e5-89e2-f16fa694e299" [ref=e1578] [cursor=pointer]:
+                      - generic [ref=e1581] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1de2f33d-583f-805a-9665-c71dfe26cd80 to 1de2f33d-583f-80e5-89e2-f16fa694e299" [ref=e1583] [cursor=pointer]:
+                      - generic [ref=e1586] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80e5-98d8-d2fd689d08fb to 1dd2f33d-583f-80fa-909e-ccf94bbd7db8" [ref=e1588] [cursor=pointer]:
+                      - generic [ref=e1591] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-807f-bf1b-f541b29860d6 to 1dd2f33d-583f-80fa-909e-ccf94bbd7db8" [ref=e1593] [cursor=pointer]:
+                      - generic [ref=e1596] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-8019-a0be-eeb7a5fba9b5 to 1dd2f33d-583f-80fa-909e-ccf94bbd7db8" [ref=e1598] [cursor=pointer]:
+                      - generic [ref=e1601] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-804a-985c-c92cffd142bd to 1dd2f33d-583f-800b-8178-e29b74c8ee57" [ref=e1603] [cursor=pointer]:
+                      - generic [ref=e1606] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80d8-a1fb-e9e718c11be6 to 1dd2f33d-583f-80b4-a89f-fea6523e4bb4" [ref=e1608] [cursor=pointer]:
+                      - generic [ref=e1611] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-804c-902e-f0a37a30c424 to 1dd2f33d-583f-80b4-a89f-fea6523e4bb4" [ref=e1613] [cursor=pointer]:
+                      - generic [ref=e1616] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-804c-902e-f0a37a30c424 to 1dd2f33d-583f-80a5-aac2-d0ec48bc7fb3" [ref=e1618] [cursor=pointer]:
+                      - generic [ref=e1621] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80df-a17a-c7acab111ccf to 1dd2f33d-583f-80ef-99ab-ff203a81c38f" [ref=e1623] [cursor=pointer]:
+                      - generic [ref=e1626] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dd2f33d-583f-80e6-a637-cb8872b34efe to 1dd2f33d-583f-8047-a1f3-f21d81aeb767" [ref=e1628] [cursor=pointer]:
+                      - generic [ref=e1631] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8063-9a3b-c8eff987d1ea to 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9" [ref=e1633] [cursor=pointer]:
+                      - generic [ref=e1636] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8097-bfac-c89857dbea41 to 1dc2f33d-583f-802a-b24a-d1c3fbdf24e9" [ref=e1638] [cursor=pointer]:
+                      - generic [ref=e1641] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8056-bf34-c6a9922067d8 to 1f92f33d-583f-80bc-8481-fa2f7f1ab183" [ref=e1643] [cursor=pointer]:
+                      - generic [ref=e1646] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80e6-8cbd-fd54cfe6f697 to 1dc2f33d-583f-8056-bf34-c6a9922067d8" [ref=e1648] [cursor=pointer]:
+                      - generic [ref=e1651] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8012-9b24-c8b955a3d6dd to 1dc2f33d-583f-8056-bf34-c6a9922067d8" [ref=e1653] [cursor=pointer]:
+                      - generic [ref=e1656] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-802b-ab97-df8af76e80eb to 1dc2f33d-583f-80e9-a36b-c89c24ae43f0" [ref=e1658] [cursor=pointer]:
+                      - generic [ref=e1661] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-802f-a3b5-eea495619862 to 1dc2f33d-583f-8053-8c30-d34f227ed1ff" [ref=e1663] [cursor=pointer]:
+                      - generic [ref=e1666] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-803a-af4c-c5d519588e99 to 1dc2f33d-583f-8053-8c30-d34f227ed1ff" [ref=e1668] [cursor=pointer]:
+                      - generic [ref=e1671] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-80f0-b16c-da1267f1f3a0 to 1dc2f33d-583f-80e6-8cbd-fd54cfe6f697" [ref=e1673] [cursor=pointer]:
+                      - generic [ref=e1676] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8049-9589-f8e2517f60f2 to 1dc2f33d-583f-80f4-a90b-e432ae28c773" [ref=e1678] [cursor=pointer]:
+                      - generic [ref=e1681] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1dc2f33d-583f-8055-a920-d0587a4f0b3b to 1dc2f33d-583f-80f4-a90b-e432ae28c773" [ref=e1683] [cursor=pointer]:
+                      - generic [ref=e1686] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80de-a4b7-cae080a83b31 to bf916ed6-0f0d-41bb-9a56-7bf55f696ce5" [ref=e1688] [cursor=pointer]:
+                      - generic [ref=e1691] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80de-a4b7-cae080a83b31 to eeb482eb-20cd-4238-ac24-36e1c3cec303" [ref=e1693] [cursor=pointer]:
+                      - generic [ref=e1696] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80de-a4b7-cae080a83b31 to a6474620-32b6-406b-92bc-69d97bc735d6" [ref=e1698] [cursor=pointer]:
+                      - generic [ref=e1701] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8012-9b24-c8b955a3d6dd to f326f799-c6df-4530-a3e8-83af9c1e55ad" [ref=e1703] [cursor=pointer]:
+                      - generic [ref=e1706] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8012-9b24-c8b955a3d6dd to cf617c35-c185-45c8-9822-b86a5f8b3d93" [ref=e1708] [cursor=pointer]:
+                      - generic [ref=e1711] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ca-acfe-f90aea72d35d to 85620c6f-befd-4799-a877-8fc25c040d8e" [ref=e1713] [cursor=pointer]:
+                      - generic [ref=e1716] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ca-acfe-f90aea72d35d to e1dc9f67-c115-4278-9ae0-1b0a5e66caa6" [ref=e1718] [cursor=pointer]:
+                      - generic [ref=e1721] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from dadca741-45f0-4d90-a6f7-19c4d48c19bf to 1b62f33d-583f-8012-9b24-c8b955a3d6dd" [ref=e1723] [cursor=pointer]:
+                      - generic [ref=e1726] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from d1b16a9b-914e-4b1c-a8a4-7a778d3dd16c to 1b62f33d-583f-8012-9b24-c8b955a3d6dd" [ref=e1728] [cursor=pointer]:
+                      - generic [ref=e1731] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1b62f33d-583f-8012-9b24-c8b955a3d6dd to 18f2f33d-583f-8045-bc37-cab1f32cf97b" [ref=e1733] [cursor=pointer]:
+                      - generic [ref=e1736] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 18f2f33d-583f-8001-9c97-c6f1c9d80acc to 1b62f33d-583f-8012-9b24-c8b955a3d6dd" [ref=e1738] [cursor=pointer]:
+                      - generic [ref=e1741] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80de-a4b7-cae080a83b31 to 18c2f33d-583f-80cc-a20a-c0157d38669f" [ref=e1743] [cursor=pointer]:
+                      - generic [ref=e1746] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 18c2f33d-583f-809b-a3d8-cb7843f0b423 to 1b62f33d-583f-80ca-acfe-f90aea72d35d" [ref=e1748] [cursor=pointer]:
+                      - generic [ref=e1751] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ca-acfe-f90aea72d35d to 18c2f33d-583f-80ae-8fd2-e808652b7363" [ref=e1753] [cursor=pointer]:
+                      - generic [ref=e1756] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 18c2f33d-583f-802a-a446-cd878434fe6d to 1b62f33d-583f-80ca-acfe-f90aea72d35d" [ref=e1758] [cursor=pointer]:
+                      - generic [ref=e1761] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80de-a4b7-cae080a83b31 to 18c2f33d-583f-802a-a446-cd878434fe6d" [ref=e1763] [cursor=pointer]:
+                      - generic [ref=e1766] [cursor=pointer]:
+                        - generic: reward
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8073-9d3b-e44d17dab69d to 1b62f33d-583f-80de-a4b7-cae080a83b31" [ref=e1768] [cursor=pointer]:
+                      - generic [ref=e1771] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 18c2f33d-583f-8073-9d3b-e44d17dab69d to 1dc2f33d-583f-80e9-a36b-c89c24ae43f0" [ref=e1773] [cursor=pointer]:
+                      - generic [ref=e1776] [cursor=pointer]:
+                        - generic: requires
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ca-acfe-f90aea72d35d to 1b62f33d-583f-80de-a4b7-cae080a83b31" [ref=e1778] [cursor=pointer]
+                  - img:
+                    - group "Edge from 1b62f33d-583f-80ca-acfe-f90aea72d35d to 1b62f33d-583f-80de-a4b7-cae080a83b31" [ref=e1781] [cursor=pointer]:
+                      - generic [ref=e1784] [cursor=pointer]:
+                        - generic: chain
+                - generic:
+                  - group [ref=e1786]:
+                    - generic [ref=e1795] [cursor=pointer]:
+                      - img [ref=e1797] [cursor=pointer]
+                      - heading "toy" [level=3] [ref=e1800] [cursor=pointer]
+                  - group [ref=e1805]:
+                    - generic [ref=e1814] [cursor=pointer]:
+                      - img [ref=e1816] [cursor=pointer]
+                      - heading "Howie Sullivan" [level=3] [ref=e1819] [cursor=pointer]
+                  - group [ref=e1824]:
+                    - generic [ref=e1833] [cursor=pointer]:
+                      - img [ref=e1835] [cursor=pointer]
+                      - heading "Kai Andersen" [level=3] [ref=e1838] [cursor=pointer]
+                  - group [ref=e1843]:
+                    - generic [ref=e1852] [cursor=pointer]:
+                      - img [ref=e1854] [cursor=pointer]
+                      - heading "Jamie Woods" [level=3] [ref=e1857] [cursor=pointer]
+                  - group [ref=e1862]:
+                    - generic [ref=e1871] [cursor=pointer]:
+                      - img [ref=e1873] [cursor=pointer]
+                      - heading "Sofia Francisco" [level=3] [ref=e1876] [cursor=pointer]
+                  - group [ref=e1881]:
+                    - generic [ref=e1890] [cursor=pointer]:
+                      - img [ref=e1892] [cursor=pointer]
+                      - heading "Oliver Sterling" [level=3] [ref=e1895] [cursor=pointer]
+                  - group [ref=e1900]:
+                    - generic [ref=e1909] [cursor=pointer]:
+                      - img [ref=e1911] [cursor=pointer]
+                      - heading "Skyler Iyer" [level=3] [ref=e1914] [cursor=pointer]
+                  - group [ref=e1919]:
+                    - generic [ref=e1928] [cursor=pointer]:
+                      - img [ref=e1930] [cursor=pointer]
+                      - heading "Tori Zhang" [level=3] [ref=e1933] [cursor=pointer]
+                  - group [ref=e1938]:
+                    - generic [ref=e1947] [cursor=pointer]:
+                      - img [ref=e1949] [cursor=pointer]
+                      - heading "Flip" [level=3] [ref=e1952] [cursor=pointer]
+                  - group [ref=e1957]:
+                    - generic [ref=e1966] [cursor=pointer]:
+                      - img [ref=e1968] [cursor=pointer]
+                      - heading "Morgan Reed" [level=3] [ref=e1971] [cursor=pointer]
+                  - group [ref=e1976]:
+                    - generic [ref=e1985] [cursor=pointer]:
+                      - img [ref=e1987] [cursor=pointer]
+                      - heading "Leila Bishara" [level=3] [ref=e1990] [cursor=pointer]
+                  - group [ref=e1995]:
+                    - generic [ref=e2004] [cursor=pointer]:
+                      - img [ref=e2006] [cursor=pointer]
+                      - heading "Rachel Torres" [level=3] [ref=e2009] [cursor=pointer]
+                  - group [ref=e2014]:
+                    - generic [ref=e2023] [cursor=pointer]:
+                      - img [ref=e2025] [cursor=pointer]
+                      - heading "Taylor Chase" [level=3] [ref=e2028] [cursor=pointer]
+                  - group [ref=e2033]:
+                    - generic [ref=e2042] [cursor=pointer]:
+                      - img [ref=e2044] [cursor=pointer]
+                      - heading "Diana Nilsson" [level=3] [ref=e2047] [cursor=pointer]
+                  - group [ref=e2052]:
+                    - generic [ref=e2061] [cursor=pointer]:
+                      - img [ref=e2063] [cursor=pointer]
+                      - heading "Jessicah Kane" [level=3] [ref=e2066] [cursor=pointer]
+                  - group [ref=e2071]:
+                    - generic [ref=e2080] [cursor=pointer]:
+                      - img [ref=e2082] [cursor=pointer]
+                      - heading "Ashe Motoko" [level=3] [ref=e2085] [cursor=pointer]
+                  - group [ref=e2090]:
+                    - generic [ref=e2099] [cursor=pointer]:
+                      - img [ref=e2101] [cursor=pointer]
+                      - heading "Detective Anondono" [level=3] [ref=e2106] [cursor=pointer]
+                      - generic [ref=e2107] [cursor=pointer]: (NPC)
+                  - group [ref=e2112]:
+                    - generic [ref=e2121] [cursor=pointer]:
+                      - img [ref=e2123] [cursor=pointer]
+                      - heading "James Whitman" [level=3] [ref=e2126] [cursor=pointer]
+                  - group [ref=e2131]:
+                    - generic [ref=e2140] [cursor=pointer]:
+                      - img [ref=e2142] [cursor=pointer]
+                      - heading "Derek Thorn" [level=3] [ref=e2145] [cursor=pointer]
+                  - group [ref=e2150]:
+                    - generic [ref=e2159] [cursor=pointer]:
+                      - img [ref=e2161] [cursor=pointer]
+                      - heading "Victoria Kingsley" [level=3] [ref=e2164] [cursor=pointer]
+                  - group [ref=e2169]:
+                    - generic [ref=e2178] [cursor=pointer]:
+                      - img [ref=e2180] [cursor=pointer]
+                      - heading "Alex Reeves" [level=3] [ref=e2183] [cursor=pointer]
+                  - group [ref=e2188]:
+                    - generic [ref=e2197] [cursor=pointer]:
+                      - img [ref=e2199] [cursor=pointer]
+                      - heading "Sarah Blackwood" [level=3] [ref=e2202] [cursor=pointer]
+                  - group [ref=e2207]:
+                    - generic [ref=e2216] [cursor=pointer]:
+                      - img [ref=e2218] [cursor=pointer]
+                      - heading "Marcus Blackwood" [level=3] [ref=e2223] [cursor=pointer]
+                      - generic [ref=e2224] [cursor=pointer]: (NPC)
+                  - group [ref=e2229]:
+                    - generic [ref=e2234] [cursor=pointer]:
+                      - generic [ref=e2237] [cursor=pointer]: Ready
+                      - generic [ref=e2238] [cursor=pointer]:
+                        - img [ref=e2240] [cursor=pointer]
+                        - heading "Sofia's Memory - Final Film Pitch to Marcus" [level=3] [ref=e2243] [cursor=pointer]
+                  - group [ref=e2246]:
+                    - generic [ref=e2251] [cursor=pointer]:
+                      - generic [ref=e2254] [cursor=pointer]: Ready
+                      - generic [ref=e2255] [cursor=pointer]:
+                        - img [ref=e2257] [cursor=pointer]
+                        - heading "Broken Champagne Flute Stem" [level=3] [ref=e2262] [cursor=pointer]
+                  - group [ref=e2265]:
+                    - generic [ref=e2270] [cursor=pointer]:
+                      - generic [ref=e2273] [cursor=pointer]: Ready
+                      - generic [ref=e2274] [cursor=pointer]:
+                        - img [ref=e2276] [cursor=pointer]
+                        - heading "Film Project Pitch Deck - 'The Algorithm'" [level=3] [ref=e2281] [cursor=pointer]
+                  - group [ref=e2284]:
+                    - generic [ref=e2289] [cursor=pointer]:
+                      - generic [ref=e2292] [cursor=pointer]: Ready
+                      - generic [ref=e2293] [cursor=pointer]:
+                        - img [ref=e2295] [cursor=pointer]
+                        - heading "The Stanford Four Photo" [level=3] [ref=e2300] [cursor=pointer]
+                  - group [ref=e2303]:
+                    - generic [ref=e2308] [cursor=pointer]:
+                      - generic [ref=e2311] [cursor=pointer]: Ready
+                      - generic [ref=e2312] [cursor=pointer]:
+                        - img [ref=e2314] [cursor=pointer]
+                        - heading "Bar Damage Receipt" [level=3] [ref=e2319] [cursor=pointer]
+                  - group [ref=e2322]:
+                    - generic [ref=e2327] [cursor=pointer]:
+                      - generic [ref=e2330] [cursor=pointer]: Ready
+                      - generic [ref=e2331] [cursor=pointer]:
+                        - img [ref=e2333] [cursor=pointer]
+                        - heading "Drink Order Slip with Margin Notes" [level=3] [ref=e2338] [cursor=pointer]
+                  - group [ref=e2341]:
+                    - generic [ref=e2346] [cursor=pointer]:
+                      - generic [ref=e2349] [cursor=pointer]: Ready
+                      - generic [ref=e2350] [cursor=pointer]:
+                        - img [ref=e2352] [cursor=pointer]
+                        - heading "Shift Report Card" [level=3] [ref=e2357] [cursor=pointer]
+                  - group [ref=e2360]:
+                    - generic [ref=e2365] [cursor=pointer]:
+                      - generic [ref=e2368] [cursor=pointer]: Ready
+                      - generic [ref=e2369] [cursor=pointer]:
+                        - img [ref=e2371] [cursor=pointer]
+                        - heading "Bartender's Napkin Notes" [level=3] [ref=e2376] [cursor=pointer]
+                  - group [ref=e2379]:
+                    - generic [ref=e2384] [cursor=pointer]:
+                      - generic [ref=e2387] [cursor=pointer]: Draft
+                      - generic [ref=e2388] [cursor=pointer]:
+                        - img [ref=e2390] [cursor=pointer]
+                        - heading "Marcus's Foundation Protocol - Memory Token" [level=3] [ref=e2393] [cursor=pointer]
+                  - group [ref=e2396]:
+                    - generic [ref=e2401] [cursor=pointer]:
+                      - generic [ref=e2404] [cursor=pointer]: Draft
+                      - generic [ref=e2405] [cursor=pointer]:
+                        - img [ref=e2407] [cursor=pointer]
+                        - heading "Morgan's Confrontation Memory" [level=3] [ref=e2410] [cursor=pointer]
+                  - group [ref=e2413]:
+                    - generic [ref=e2418] [cursor=pointer]:
+                      - generic [ref=e2421] [cursor=pointer]: Draft
+                      - generic [ref=e2422] [cursor=pointer]:
+                        - img [ref=e2424] [cursor=pointer]
+                        - heading "Victoria-Morgan Mutual Concern Email" [level=3] [ref=e2429] [cursor=pointer]
+                  - group [ref=e2432]:
+                    - generic [ref=e2437] [cursor=pointer]:
+                      - generic [ref=e2440] [cursor=pointer]: Draft
+                      - generic [ref=e2441] [cursor=pointer]:
+                        - img [ref=e2443] [cursor=pointer]
+                        - heading "Congressional Testimony Talking Points" [level=3] [ref=e2448] [cursor=pointer]
+                  - group [ref=e2451]:
+                    - generic [ref=e2456] [cursor=pointer]:
+                      - generic [ref=e2459] [cursor=pointer]: Draft
+                      - generic [ref=e2460] [cursor=pointer]:
+                        - img [ref=e2462] [cursor=pointer]
+                        - heading "Morgan's Lobbying Calendar with Marcus Annotations" [level=3] [ref=e2467] [cursor=pointer]
+                  - group [ref=e2470]:
+                    - generic [ref=e2475] [cursor=pointer]:
+                      - generic [ref=e2478] [cursor=pointer]: Draft
+                      - generic [ref=e2479] [cursor=pointer]:
+                        - img [ref=e2481] [cursor=pointer]
+                        - heading "Rachel Moment Gone Wrong - Memory Token" [level=3] [ref=e2484] [cursor=pointer]
+                  - group [ref=e2487]:
+                    - generic [ref=e2492] [cursor=pointer]:
+                      - generic [ref=e2495] [cursor=pointer]: Draft
+                      - generic [ref=e2496] [cursor=pointer]:
+                        - img [ref=e2498] [cursor=pointer]
+                        - heading "Marcus's Subtle Class Game Texts" [level=3] [ref=e2503] [cursor=pointer]
+                  - group [ref=e2506]:
+                    - generic [ref=e2511] [cursor=pointer]:
+                      - generic [ref=e2514] [cursor=pointer]: Draft
+                      - generic [ref=e2515] [cursor=pointer]:
+                        - img [ref=e2517] [cursor=pointer]
+                        - heading "Tonight's Venue Security Protocols" [level=3] [ref=e2522] [cursor=pointer]
+                  - group [ref=e2525]:
+                    - generic [ref=e2530] [cursor=pointer]:
+                      - generic [ref=e2533] [cursor=pointer]: Draft
+                      - generic [ref=e2534] [cursor=pointer]:
+                        - img [ref=e2536] [cursor=pointer]
+                        - heading "Flip's Dual Identity Cards" [level=3] [ref=e2541] [cursor=pointer]
+                  - group [ref=e2544]:
+                    - generic [ref=e2549] [cursor=pointer]:
+                      - generic [ref=e2552] [cursor=pointer]: Draft
+                      - generic [ref=e2553] [cursor=pointer]:
+                        - img [ref=e2555] [cursor=pointer]
+                        - heading "Kai's Emergency Installation Override Key" [level=3] [ref=e2560] [cursor=pointer]
+                  - group [ref=e2563]:
+                    - generic [ref=e2568] [cursor=pointer]:
+                      - generic [ref=e2571] [cursor=pointer]: Draft
+                      - generic [ref=e2572] [cursor=pointer]:
+                        - img [ref=e2574] [cursor=pointer]
+                        - heading "Kai's Memory Token - 'Perspective Test Pattern'" [level=3] [ref=e2577] [cursor=pointer]
+                  - group [ref=e2580]:
+                    - generic [ref=e2585] [cursor=pointer]:
+                      - generic [ref=e2588] [cursor=pointer]: Draft
+                      - generic [ref=e2589] [cursor=pointer]:
+                        - img [ref=e2591] [cursor=pointer]
+                        - heading "Kai's Artist-Tech Toolkit Badge" [level=3] [ref=e2596] [cursor=pointer]
+                  - group [ref=e2599]:
+                    - generic [ref=e2604] [cursor=pointer]:
+                      - generic [ref=e2607] [cursor=pointer]: Draft
+                      - generic [ref=e2608] [cursor=pointer]:
+                        - img [ref=e2610] [cursor=pointer]
+                        - heading "Kai's Installation Control Card" [level=3] [ref=e2615] [cursor=pointer]
+                  - group [ref=e2618]:
+                    - generic [ref=e2623] [cursor=pointer]:
+                      - generic [ref=e2626] [cursor=pointer]: Draft
+                      - generic [ref=e2627] [cursor=pointer]:
+                        - img [ref=e2629] [cursor=pointer]
+                        - heading "Taylor's \"Media Manipulation Playbook\" Index Card" [level=3] [ref=e2634] [cursor=pointer]
+                  - group [ref=e2637]:
+                    - generic [ref=e2642] [cursor=pointer]:
+                      - generic [ref=e2645] [cursor=pointer]: Draft
+                      - generic [ref=e2646] [cursor=pointer]:
+                        - img [ref=e2648] [cursor=pointer]
+                        - heading "Taylor's Drunk Confession Recording" [level=3] [ref=e2651] [cursor=pointer]
+                  - group [ref=e2654]:
+                    - generic [ref=e2659] [cursor=pointer]:
+                      - generic [ref=e2662] [cursor=pointer]: Draft
+                      - generic [ref=e2663] [cursor=pointer]:
+                        - img [ref=e2665] [cursor=pointer]
+                        - heading "Taylor's Betrayal Printout - \"Ashe Story Burial Email\"" [level=3] [ref=e2670] [cursor=pointer]
+                  - group [ref=e2673]:
+                    - generic [ref=e2678] [cursor=pointer]:
+                      - generic [ref=e2681] [cursor=pointer]: Draft
+                      - generic [ref=e2682] [cursor=pointer]:
+                        - img [ref=e2684] [cursor=pointer]
+                        - heading "Taylor's \"Access & Leverage\" Business Card Collection" [level=3] [ref=e2689] [cursor=pointer]
+                  - group [ref=e2692]:
+                    - generic [ref=e2697] [cursor=pointer]:
+                      - generic [ref=e2700] [cursor=pointer]: Draft
+                      - generic [ref=e2701] [cursor=pointer]:
+                        - img [ref=e2703] [cursor=pointer]
+                        - heading "Rachel's Environmental Case File - Marcus-Morgan Connection" [level=3] [ref=e2708] [cursor=pointer]
+                  - group [ref=e2711]:
+                    - generic [ref=e2716] [cursor=pointer]:
+                      - generic [ref=e2719] [cursor=pointer]: Draft
+                      - generic [ref=e2720] [cursor=pointer]:
+                        - img [ref=e2722] [cursor=pointer]
+                        - heading "Rachel's Drunk Voice Memo - Truth Through Tequila" [level=3] [ref=e2725] [cursor=pointer]
+                  - group [ref=e2728]:
+                    - generic [ref=e2733] [cursor=pointer]:
+                      - generic [ref=e2736] [cursor=pointer]: Draft
+                      - generic [ref=e2737] [cursor=pointer]:
+                        - img [ref=e2739] [cursor=pointer]
+                        - heading "Rachel's Loyalty Card - Years of Grievances" [level=3] [ref=e2744] [cursor=pointer]
+                  - group [ref=e2747]:
+                    - generic [ref=e2752] [cursor=pointer]:
+                      - generic [ref=e2755] [cursor=pointer]: Draft
+                      - generic [ref=e2756] [cursor=pointer]:
+                        - img [ref=e2758] [cursor=pointer]
+                        - heading "Diana's Private Notes - Client Consultation Session" [level=3] [ref=e2763] [cursor=pointer]
+                  - group [ref=e2766]:
+                    - generic [ref=e2771] [cursor=pointer]:
+                      - generic [ref=e2774] [cursor=pointer]: Draft
+                      - generic [ref=e2775] [cursor=pointer]:
+                        - img [ref=e2777] [cursor=pointer]
+                        - heading "Confidential Divorce Strategy Memo - Affair Documentation" [level=3] [ref=e2782] [cursor=pointer]
+                  - group [ref=e2785]:
+                    - generic [ref=e2790] [cursor=pointer]:
+                      - generic [ref=e2793] [cursor=pointer]: Draft
+                      - generic [ref=e2794] [cursor=pointer]:
+                        - img [ref=e2796] [cursor=pointer]
+                        - heading "Stanford Alumni Newsletter - 'Where Are They Now?' Feature" [level=3] [ref=e2801] [cursor=pointer]
+                  - group [ref=e2804]:
+                    - generic [ref=e2809] [cursor=pointer]:
+                      - generic [ref=e2812] [cursor=pointer]: Draft
+                      - generic [ref=e2813] [cursor=pointer]:
+                        - img [ref=e2815] [cursor=pointer]
+                        - heading "Diana's Legal Case Assessment - Marcus Blackwood Profile" [level=3] [ref=e2820] [cursor=pointer]
+                  - group [ref=e2823]:
+                    - generic [ref=e2828] [cursor=pointer]:
+                      - generic [ref=e2831] [cursor=pointer]: Draft
+                      - generic [ref=e2832] [cursor=pointer]:
+                        - img [ref=e2834] [cursor=pointer]
+                        - 'heading "Howie''s Memory Token: \"Elara Vance - Soil of Insight\" Lecture Excerpt" [level=3] [ref=e2837] [cursor=pointer]'
+                  - group [ref=e2840]:
+                    - generic [ref=e2845] [cursor=pointer]:
+                      - generic [ref=e2848] [cursor=pointer]: Ready
+                      - generic [ref=e2849] [cursor=pointer]:
+                        - img [ref=e2851] [cursor=pointer]
+                        - heading "Voided Severance Check from Marcus" [level=3] [ref=e2856] [cursor=pointer]
+                  - group [ref=e2859]:
+                    - generic [ref=e2864] [cursor=pointer]:
+                      - generic [ref=e2867] [cursor=pointer]: Ready
+                      - generic [ref=e2868] [cursor=pointer]:
+                        - img [ref=e2870] [cursor=pointer]
+                        - heading "Marcus's Cold Dismissal Texts" [level=3] [ref=e2875] [cursor=pointer]
+                  - group [ref=e2878]:
+                    - generic [ref=e2883] [cursor=pointer]:
+                      - generic [ref=e2886] [cursor=pointer]: Ready
+                      - generic [ref=e2887] [cursor=pointer]:
+                        - img [ref=e2889] [cursor=pointer]
+                        - heading "Jessicah's Voice Memo - Marcus Fight Witness" [level=3] [ref=e2894] [cursor=pointer]
+                  - group [ref=e2897]:
+                    - generic [ref=e2902] [cursor=pointer]:
+                      - generic [ref=e2905] [cursor=pointer]: Ready
+                      - generic [ref=e2906] [cursor=pointer]:
+                        - img [ref=e2908] [cursor=pointer]
+                        - heading "Antique Locket from Marcus" [level=3] [ref=e2913] [cursor=pointer]
+                  - group [ref=e2916]:
+                    - generic [ref=e2921] [cursor=pointer]:
+                      - generic [ref=e2924] [cursor=pointer]: Ready
+                      - generic [ref=e2925] [cursor=pointer]:
+                        - img [ref=e2927] [cursor=pointer]
+                        - heading "Marcus's Ultimatum Note to Oliver" [level=3] [ref=e2932] [cursor=pointer]
+                  - group [ref=e2935]:
+                    - generic [ref=e2940] [cursor=pointer]:
+                      - generic [ref=e2943] [cursor=pointer]: Draft
+                      - generic [ref=e2944] [cursor=pointer]:
+                        - img [ref=e2946] [cursor=pointer]
+                        - heading "Torn Chronofixine Safety Assessment" [level=3] [ref=e2951] [cursor=pointer]
+                  - group [ref=e2954]:
+                    - generic [ref=e2959] [cursor=pointer]:
+                      - generic [ref=e2962] [cursor=pointer]: Draft
+                      - generic [ref=e2963] [cursor=pointer]:
+                        - img [ref=e2965] [cursor=pointer]
+                        - heading "Annotated Neuro-Pharmacology Paper" [level=3] [ref=e2970] [cursor=pointer]
+                  - group [ref=e2973]:
+                    - generic [ref=e2978] [cursor=pointer]:
+                      - generic [ref=e2981] [cursor=pointer]: Draft
+                      - generic [ref=e2982] [cursor=pointer]:
+                        - img [ref=e2984] [cursor=pointer]
+                        - heading "Howie test memory" [level=3] [ref=e2987] [cursor=pointer]
+                  - group [ref=e2990]:
+                    - generic [ref=e2995] [cursor=pointer]:
+                      - generic [ref=e2998] [cursor=pointer]: Draft
+                      - generic [ref=e2999] [cursor=pointer]:
+                        - img [ref=e3001] [cursor=pointer]
+                        - heading "Howie's Annotated Book \"The Resonant Mind\" with Napkin Note" [level=3] [ref=e3006] [cursor=pointer]
+                  - group [ref=e3009]:
+                    - generic [ref=e3014] [cursor=pointer]:
+                      - generic [ref=e3017] [cursor=pointer]: Draft
+                      - generic [ref=e3018] [cursor=pointer]:
+                        - img [ref=e3020] [cursor=pointer]
+                        - 'heading "Lecture Flyer: \"The Unseen Architects of Innovation\" by Howie Sullivan" [level=3] [ref=e3025] [cursor=pointer]'
+                  - group [ref=e3028]:
+                    - generic [ref=e3033] [cursor=pointer]:
+                      - generic [ref=e3036] [cursor=pointer]: Draft
+                      - generic [ref=e3037] [cursor=pointer]:
+                        - img [ref=e3039] [cursor=pointer]
+                        - heading "Skyler's Covert Audio Transcript of Marcus & Private Memo" [level=3] [ref=e3044] [cursor=pointer]
+                  - group [ref=e3047]:
+                    - generic [ref=e3052] [cursor=pointer]:
+                      - generic [ref=e3055] [cursor=pointer]: Draft
+                      - generic [ref=e3056] [cursor=pointer]:
+                        - img [ref=e3058] [cursor=pointer]
+                        - heading "Unidentified Energy Lattice Modulator Schematic (Pattern Weaver Alpha-Gen)" [level=3] [ref=e3063] [cursor=pointer]
+                  - group [ref=e3066]:
+                    - generic [ref=e3071] [cursor=pointer]:
+                      - generic [ref=e3074] [cursor=pointer]: Draft
+                      - generic [ref=e3075] [cursor=pointer]:
+                        - img [ref=e3077] [cursor=pointer]
+                        - 'heading "Redacted CyberLife Legal Memo re: Thorne-Archibald Acquisition" [level=3] [ref=e3082] [cursor=pointer]'
+                  - group [ref=e3085]:
+                    - generic [ref=e3090] [cursor=pointer]:
+                      - generic [ref=e3093] [cursor=pointer]: Draft
+                      - generic [ref=e3094] [cursor=pointer]:
+                        - img [ref=e3096] [cursor=pointer]
+                        - heading "Tori's Immersive Futures Pitch Portfolio" [level=3] [ref=e3101] [cursor=pointer]
+                  - group [ref=e3104]:
+                    - generic [ref=e3109] [cursor=pointer]:
+                      - generic [ref=e3112] [cursor=pointer]: Draft
+                      - generic [ref=e3113] [cursor=pointer]:
+                        - img [ref=e3115] [cursor=pointer]
+                        - 'heading "Email Exchange: Tori & Marcus (Neuro-Aesthetic Project)" [level=3] [ref=e3120] [cursor=pointer]'
+                  - group [ref=e3123]:
+                    - generic [ref=e3128] [cursor=pointer]:
+                      - generic [ref=e3131] [cursor=pointer]: Draft
+                      - generic [ref=e3132] [cursor=pointer]:
+                        - img [ref=e3134] [cursor=pointer]
+                        - heading "Kingsley Capital Rejection Letter" [level=3] [ref=e3139] [cursor=pointer]
+                  - group [ref=e3142]:
+                    - generic [ref=e3147] [cursor=pointer]:
+                      - generic [ref=e3150] [cursor=pointer]: Draft
+                      - generic [ref=e3151] [cursor=pointer]:
+                        - img [ref=e3153] [cursor=pointer]
+                        - heading "NeurAI Ultimatum Agreement" [level=3] [ref=e3158] [cursor=pointer]
+                  - group [ref=e3161]:
+                    - generic [ref=e3166] [cursor=pointer]:
+                      - generic [ref=e3169] [cursor=pointer]: Draft
+                      - generic [ref=e3170] [cursor=pointer]:
+                        - img [ref=e3172] [cursor=pointer]
+                        - heading "Oracle Ledger-NeurAI Agreement" [level=3] [ref=e3177] [cursor=pointer]
+                  - group [ref=e3180]:
+                    - generic [ref=e3185] [cursor=pointer]:
+                      - generic [ref=e3188] [cursor=pointer]: Draft
+                      - generic [ref=e3189] [cursor=pointer]:
+                        - img [ref=e3191] [cursor=pointer]
+                        - heading "Oracle Ledger Pitch Deck" [level=3] [ref=e3196] [cursor=pointer]
+                  - group [ref=e3199]:
+                    - generic [ref=e3204] [cursor=pointer]:
+                      - generic [ref=e3207] [cursor=pointer]: Ready
+                      - generic [ref=e3208] [cursor=pointer]:
+                        - img [ref=e3210] [cursor=pointer]
+                        - heading "Oliver's Private Log - OS-77 Self-Trial Debrief" [level=3] [ref=e3215] [cursor=pointer]
+                  - group [ref=e3218]:
+                    - generic [ref=e3223] [cursor=pointer]:
+                      - generic [ref=e3226] [cursor=pointer]: Ready
+                      - generic [ref=e3227] [cursor=pointer]:
+                        - img [ref=e3229] [cursor=pointer]
+                        - heading "Oliver's Coded OS-77 Research Notes & Retinal Map" [level=3] [ref=e3234] [cursor=pointer]
+                  - group [ref=e3237]:
+                    - generic [ref=e3242] [cursor=pointer]:
+                      - generic [ref=e3245] [cursor=pointer]: Draft
+                      - generic [ref=e3246] [cursor=pointer]:
+                        - img [ref=e3248] [cursor=pointer]
+                        - heading "Howie Sullivan Character Sheet" [level=3] [ref=e3253] [cursor=pointer]
+                  - group [ref=e3256]:
+                    - generic [ref=e3261] [cursor=pointer]:
+                      - generic [ref=e3264] [cursor=pointer]: Draft
+                      - generic [ref=e3265] [cursor=pointer]:
+                        - img [ref=e3267] [cursor=pointer]
+                        - heading "Kai Andersen Character Sheet" [level=3] [ref=e3272] [cursor=pointer]
+                  - group [ref=e3275]:
+                    - generic [ref=e3280] [cursor=pointer]:
+                      - generic [ref=e3283] [cursor=pointer]: Draft
+                      - generic [ref=e3284] [cursor=pointer]:
+                        - img [ref=e3286] [cursor=pointer]
+                        - heading "Jamie Woods Character Sheet" [level=3] [ref=e3291] [cursor=pointer]
+                  - group [ref=e3294]:
+                    - generic [ref=e3299] [cursor=pointer]:
+                      - generic [ref=e3302] [cursor=pointer]: Draft
+                      - generic [ref=e3303] [cursor=pointer]:
+                        - img [ref=e3305] [cursor=pointer]
+                        - heading "Sofia Francisco Character Sheet" [level=3] [ref=e3310] [cursor=pointer]
+                  - group [ref=e3313]:
+                    - generic [ref=e3318] [cursor=pointer]:
+                      - generic [ref=e3321] [cursor=pointer]: Draft
+                      - generic [ref=e3322] [cursor=pointer]:
+                        - img [ref=e3324] [cursor=pointer]
+                        - heading "Oliver Sterling Character Sheet" [level=3] [ref=e3329] [cursor=pointer]
+                  - group [ref=e3332]:
+                    - generic [ref=e3337] [cursor=pointer]:
+                      - generic [ref=e3340] [cursor=pointer]: Draft
+                      - generic [ref=e3341] [cursor=pointer]:
+                        - img [ref=e3343] [cursor=pointer]
+                        - heading "Skyler Iyer Character Sheet" [level=3] [ref=e3348] [cursor=pointer]
+                  - group [ref=e3351]:
+                    - generic [ref=e3356] [cursor=pointer]:
+                      - generic [ref=e3359] [cursor=pointer]: Draft
+                      - generic [ref=e3360] [cursor=pointer]:
+                        - img [ref=e3362] [cursor=pointer]
+                        - heading "Tori Zhang Character Sheet" [level=3] [ref=e3367] [cursor=pointer]
+                  - group [ref=e3370]:
+                    - generic [ref=e3375] [cursor=pointer]:
+                      - generic [ref=e3378] [cursor=pointer]: Draft
+                      - generic [ref=e3379] [cursor=pointer]:
+                        - img [ref=e3381] [cursor=pointer]
+                        - heading "Flip Character Sheet" [level=3] [ref=e3386] [cursor=pointer]
+                  - group [ref=e3389]:
+                    - generic [ref=e3394] [cursor=pointer]:
+                      - generic [ref=e3397] [cursor=pointer]: Draft
+                      - generic [ref=e3398] [cursor=pointer]:
+                        - img [ref=e3400] [cursor=pointer]
+                        - heading "Morgan Reed Character Sheet" [level=3] [ref=e3405] [cursor=pointer]
+                  - group [ref=e3408]:
+                    - generic [ref=e3413] [cursor=pointer]:
+                      - generic [ref=e3416] [cursor=pointer]: Draft
+                      - generic [ref=e3417] [cursor=pointer]:
+                        - img [ref=e3419] [cursor=pointer]
+                        - heading "Leila Bishara Character Sheet" [level=3] [ref=e3424] [cursor=pointer]
+                  - group [ref=e3427]:
+                    - generic [ref=e3432] [cursor=pointer]:
+                      - generic [ref=e3435] [cursor=pointer]: Draft
+                      - generic [ref=e3436] [cursor=pointer]:
+                        - img [ref=e3438] [cursor=pointer]
+                        - heading "Rachel Torres Character Sheet" [level=3] [ref=e3443] [cursor=pointer]
+                  - group [ref=e3446]:
+                    - generic [ref=e3451] [cursor=pointer]:
+                      - generic [ref=e3454] [cursor=pointer]: Draft
+                      - generic [ref=e3455] [cursor=pointer]:
+                        - img [ref=e3457] [cursor=pointer]
+                        - heading "Taylor Chase Character Sheet" [level=3] [ref=e3462] [cursor=pointer]
+                  - group [ref=e3465]:
+                    - generic [ref=e3470] [cursor=pointer]:
+                      - generic [ref=e3473] [cursor=pointer]: Draft
+                      - generic [ref=e3474] [cursor=pointer]:
+                        - img [ref=e3476] [cursor=pointer]
+                        - heading "Jessicah Kane Character Sheet" [level=3] [ref=e3481] [cursor=pointer]
+                  - group [ref=e3484]:
+                    - generic [ref=e3489] [cursor=pointer]:
+                      - generic [ref=e3492] [cursor=pointer]: Draft
+                      - generic [ref=e3493] [cursor=pointer]:
+                        - img [ref=e3495] [cursor=pointer]
+                        - heading "Ashe Motoko Character Sheet" [level=3] [ref=e3500] [cursor=pointer]
+                  - group [ref=e3503]:
+                    - generic [ref=e3508] [cursor=pointer]:
+                      - generic [ref=e3511] [cursor=pointer]: Draft
+                      - generic [ref=e3512] [cursor=pointer]:
+                        - img [ref=e3514] [cursor=pointer]
+                        - heading "vinyl with colors for segments on box" [level=3] [ref=e3519] [cursor=pointer]
+                  - group [ref=e3522]:
+                    - generic [ref=e3527] [cursor=pointer]:
+                      - generic [ref=e3530] [cursor=pointer]: Draft
+                      - generic [ref=e3531] [cursor=pointer]:
+                        - img [ref=e3533] [cursor=pointer]
+                        - heading "888 in different colors for each line on the wall" [level=3] [ref=e3538] [cursor=pointer]
+                  - group [ref=e3541]:
+                    - generic [ref=e3546] [cursor=pointer]:
+                      - generic [ref=e3549] [cursor=pointer]: Draft
+                      - generic [ref=e3550] [cursor=pointer]:
+                        - img [ref=e3552] [cursor=pointer]
+                        - heading "888 in different colors for each line on the wall" [level=3] [ref=e3557] [cursor=pointer]
+                  - group [ref=e3560]:
+                    - generic [ref=e3565] [cursor=pointer]:
+                      - generic [ref=e3568] [cursor=pointer]: Draft
+                      - generic [ref=e3569] [cursor=pointer]:
+                        - img [ref=e3571] [cursor=pointer]
+                        - heading "Act 2 Box 5" [level=3] [ref=e3575] [cursor=pointer]
+                  - group [ref=e3578]:
+                    - generic [ref=e3583] [cursor=pointer]:
+                      - generic [ref=e3586] [cursor=pointer]: Draft
+                      - generic [ref=e3587] [cursor=pointer]:
+                        - img [ref=e3589] [cursor=pointer]
+                        - heading "Blue paper printout" [level=3] [ref=e3594] [cursor=pointer]
+                  - group [ref=e3597]:
+                    - generic [ref=e3602] [cursor=pointer]:
+                      - generic [ref=e3605] [cursor=pointer]: Draft
+                      - generic [ref=e3606] [cursor=pointer]:
+                        - img [ref=e3608] [cursor=pointer]
+                        - heading "Red paint on walls" [level=3] [ref=e3613] [cursor=pointer]
+                  - group [ref=e3616]:
+                    - generic [ref=e3621] [cursor=pointer]:
+                      - generic [ref=e3624] [cursor=pointer]: Draft
+                      - generic [ref=e3625] [cursor=pointer]:
+                        - img [ref=e3627] [cursor=pointer]
+                        - heading "Act 2 Box 4" [level=3] [ref=e3631] [cursor=pointer]
+                  - group [ref=e3634]:
+                    - generic [ref=e3639] [cursor=pointer]:
+                      - generic [ref=e3642] [cursor=pointer]: Draft
+                      - generic [ref=e3643] [cursor=pointer]:
+                        - img [ref=e3645] [cursor=pointer]
+                        - heading "Select any number printout" [level=3] [ref=e3650] [cursor=pointer]
+                  - group [ref=e3653]:
+                    - generic [ref=e3658] [cursor=pointer]:
+                      - generic [ref=e3661] [cursor=pointer]: Draft
+                      - generic [ref=e3662] [cursor=pointer]:
+                        - img [ref=e3664] [cursor=pointer]
+                        - heading "Stretchy Words printout" [level=3] [ref=e3669] [cursor=pointer]
+                  - group [ref=e3672]:
+                    - generic [ref=e3677] [cursor=pointer]:
+                      - generic [ref=e3680] [cursor=pointer]: Draft
+                      - generic [ref=e3681] [cursor=pointer]:
+                        - img [ref=e3683] [cursor=pointer]
+                        - heading "Red Reveal/folding puzzle paper" [level=3] [ref=e3688] [cursor=pointer]
+                  - group [ref=e3691]:
+                    - generic [ref=e3696] [cursor=pointer]:
+                      - generic [ref=e3699] [cursor=pointer]: Draft
+                      - generic [ref=e3700] [cursor=pointer]:
+                        - img [ref=e3702] [cursor=pointer]
+                        - heading "Act 2 Box 3" [level=3] [ref=e3706] [cursor=pointer]
+                  - group [ref=e3709]:
+                    - generic [ref=e3714] [cursor=pointer]:
+                      - generic [ref=e3717] [cursor=pointer]: Draft
+                      - generic [ref=e3718] [cursor=pointer]:
+                        - img [ref=e3720] [cursor=pointer]
+                        - heading "Act 2 Box 2" [level=3] [ref=e3724] [cursor=pointer]
+                  - group [ref=e3727]:
+                    - generic [ref=e3732] [cursor=pointer]:
+                      - generic [ref=e3735] [cursor=pointer]: Draft
+                      - generic [ref=e3736] [cursor=pointer]:
+                        - img [ref=e3738] [cursor=pointer]
+                        - heading "Painting on the Wall (lines with gaps)" [level=3] [ref=e3743] [cursor=pointer]
+                  - group [ref=e3746]:
+                    - generic [ref=e3751] [cursor=pointer]:
+                      - generic [ref=e3754] [cursor=pointer]: Draft
+                      - generic [ref=e3755] [cursor=pointer]:
+                        - img [ref=e3757] [cursor=pointer]
+                        - heading "Act 2 Box 1" [level=3] [ref=e3761] [cursor=pointer]
+                  - group [ref=e3764]:
+                    - generic [ref=e3769] [cursor=pointer]:
+                      - generic [ref=e3772] [cursor=pointer]: Ready
+                      - generic [ref=e3773] [cursor=pointer]:
+                        - img [ref=e3775] [cursor=pointer]
+                        - heading "5 pillows with letters inside" [level=3] [ref=e3780] [cursor=pointer]
+                  - group [ref=e3783]:
+                    - generic [ref=e3788] [cursor=pointer]:
+                      - generic [ref=e3791] [cursor=pointer]: Draft
+                      - generic [ref=e3792] [cursor=pointer]:
+                        - img [ref=e3794] [cursor=pointer]
+                        - heading "drinks menu" [level=3] [ref=e3799] [cursor=pointer]
+                  - group [ref=e3802]:
+                    - generic [ref=e3807] [cursor=pointer]:
+                      - generic [ref=e3810] [cursor=pointer]: Draft
+                      - generic [ref=e3811] [cursor=pointer]:
+                        - img [ref=e3813] [cursor=pointer]
+                        - heading "sofia's headshot" [level=3] [ref=e3818] [cursor=pointer]
+                  - group [ref=e3821]:
+                    - generic [ref=e3826] [cursor=pointer]:
+                      - generic [ref=e3829] [cursor=pointer]: Draft
+                      - generic [ref=e3830] [cursor=pointer]:
+                        - img [ref=e3832] [cursor=pointer]
+                        - heading "Tori's locked box" [level=3] [ref=e3836] [cursor=pointer]
+                  - group [ref=e3839]:
+                    - generic [ref=e3844] [cursor=pointer]:
+                      - generic [ref=e3847] [cursor=pointer]: Draft
+                      - generic [ref=e3848] [cursor=pointer]:
+                        - img [ref=e3850] [cursor=pointer]
+                        - heading "Tori's transparencies" [level=3] [ref=e3855] [cursor=pointer]
+                  - group [ref=e3858]:
+                    - generic [ref=e3863] [cursor=pointer]:
+                      - generic [ref=e3866] [cursor=pointer]: Draft
+                      - generic [ref=e3867] [cursor=pointer]:
+                        - img [ref=e3869] [cursor=pointer]
+                        - heading "Skyler's locked bag" [level=3] [ref=e3873] [cursor=pointer]
+                  - group [ref=e3876]:
+                    - generic [ref=e3881] [cursor=pointer]:
+                      - generic [ref=e3884] [cursor=pointer]: Draft
+                      - generic [ref=e3885] [cursor=pointer]:
+                        - img [ref=e3887] [cursor=pointer]
+                        - heading "Text between Skyler and Victoria" [level=3] [ref=e3892] [cursor=pointer]
+                  - group [ref=e3895]:
+                    - generic [ref=e3900] [cursor=pointer]:
+                      - generic [ref=e3903] [cursor=pointer]: Ready
+                      - generic [ref=e3904] [cursor=pointer]:
+                        - img [ref=e3906] [cursor=pointer]
+                        - heading "Oliver's locked box" [level=3] [ref=e3910] [cursor=pointer]
+                  - group [ref=e3913]:
+                    - generic [ref=e3918] [cursor=pointer]:
+                      - generic [ref=e3921] [cursor=pointer]: Draft
+                      - generic [ref=e3922] [cursor=pointer]:
+                        - img [ref=e3924] [cursor=pointer]
+                        - heading "Oliver’s pill bottle" [level=3] [ref=e3929] [cursor=pointer]
+                  - group [ref=e3932]:
+                    - generic [ref=e3937] [cursor=pointer]:
+                      - generic [ref=e3940] [cursor=pointer]: Draft
+                      - generic [ref=e3941] [cursor=pointer]:
+                        - img [ref=e3943] [cursor=pointer]
+                        - heading "Sofia's locked purse" [level=3] [ref=e3947] [cursor=pointer]
+                  - group [ref=e3950]:
+                    - generic [ref=e3955] [cursor=pointer]:
+                      - generic [ref=e3958] [cursor=pointer]: Draft
+                      - generic [ref=e3959] [cursor=pointer]:
+                        - img [ref=e3961] [cursor=pointer]
+                        - heading "Sofia's earrings" [level=3] [ref=e3966] [cursor=pointer]
+                  - group [ref=e3969]:
+                    - generic [ref=e3974] [cursor=pointer]:
+                      - generic [ref=e3977] [cursor=pointer]: Draft
+                      - generic [ref=e3978] [cursor=pointer]:
+                        - img [ref=e3980] [cursor=pointer]
+                        - heading "Sofia's sunglasses" [level=3] [ref=e3985] [cursor=pointer]
+                  - group [ref=e3988]:
+                    - generic [ref=e3993] [cursor=pointer]:
+                      - generic [ref=e3996] [cursor=pointer]: Draft
+                      - generic [ref=e3997] [cursor=pointer]:
+                        - img [ref=e3999] [cursor=pointer]
+                        - heading "Sofia's necklace" [level=3] [ref=e4004] [cursor=pointer]
+                  - group [ref=e4007]:
+                    - generic [ref=e4012] [cursor=pointer]:
+                      - generic [ref=e4015] [cursor=pointer]: Draft
+                      - generic [ref=e4016] [cursor=pointer]:
+                        - img [ref=e4018] [cursor=pointer]
+                        - heading "Kai's puzzle note" [level=3] [ref=e4023] [cursor=pointer]
+                  - group [ref=e4026]:
+                    - generic [ref=e4031] [cursor=pointer]:
+                      - generic [ref=e4034] [cursor=pointer]: Draft
+                      - generic [ref=e4035] [cursor=pointer]:
+                        - img [ref=e4037] [cursor=pointer]
+                        - heading "marks on the floors for kai's puzzle" [level=3] [ref=e4042] [cursor=pointer]
+                  - group [ref=e4045]:
+                    - generic [ref=e4050] [cursor=pointer]:
+                      - generic [ref=e4053] [cursor=pointer]: Draft
+                      - generic [ref=e4054] [cursor=pointer]:
+                        - img [ref=e4056] [cursor=pointer]
+                        - heading "misc furniture for Kai's puzzle" [level=3] [ref=e4061] [cursor=pointer]
+                  - group [ref=e4064]:
+                    - generic [ref=e4069] [cursor=pointer]:
+                      - generic [ref=e4072] [cursor=pointer]: Draft
+                      - generic [ref=e4073] [cursor=pointer]:
+                        - img [ref=e4075] [cursor=pointer]
+                        - heading "sculpture with locked compartment" [level=3] [ref=e4079] [cursor=pointer]
+                  - group [ref=e4082]:
+                    - generic [ref=e4087] [cursor=pointer]:
+                      - generic [ref=e4090] [cursor=pointer]: Draft
+                      - generic [ref=e4091] [cursor=pointer]:
+                        - img [ref=e4093] [cursor=pointer]
+                        - heading "Howie's locked box" [level=3] [ref=e4097] [cursor=pointer]
+                  - group [ref=e4100]:
+                    - generic [ref=e4106] [cursor=pointer]:
+                      - img [ref=e4108] [cursor=pointer]
+                      - heading "binary translation 1" [level=3] [ref=e4113] [cursor=pointer]
+                  - group [ref=e4116]:
+                    - generic [ref=e4122] [cursor=pointer]:
+                      - img [ref=e4124] [cursor=pointer]
+                      - heading "The Bar Safe" [level=3] [ref=e4128] [cursor=pointer]
+                  - group [ref=e4131]:
+                    - generic [ref=e4136] [cursor=pointer]:
+                      - generic [ref=e4139] [cursor=pointer]: Draft
+                      - generic [ref=e4140] [cursor=pointer]:
+                        - img [ref=e4142] [cursor=pointer]
+                        - heading "Drink orders" [level=3] [ref=e4147] [cursor=pointer]
+                  - group [ref=e4150]:
+                    - generic [ref=e4155] [cursor=pointer]:
+                      - generic [ref=e4158] [cursor=pointer]: Draft
+                      - generic [ref=e4159] [cursor=pointer]:
+                        - img [ref=e4161] [cursor=pointer]
+                        - heading "The bar" [level=3] [ref=e4165] [cursor=pointer]
+                  - group [ref=e4168]:
+                    - generic [ref=e4173] [cursor=pointer]:
+                      - generic [ref=e4176] [cursor=pointer]: Draft
+                      - generic [ref=e4177] [cursor=pointer]:
+                        - img [ref=e4179] [cursor=pointer]
+                        - heading "Rachel's purse" [level=3] [ref=e4183] [cursor=pointer]
+                  - group [ref=e4186]:
+                    - generic [ref=e4192] [cursor=pointer]:
+                      - img [ref=e4194] [cursor=pointer]
+                      - heading "Leila's locked box" [level=3] [ref=e4198] [cursor=pointer]
+                  - group [ref=e4201]:
+                    - generic [ref=e4206] [cursor=pointer]:
+                      - generic [ref=e4209] [cursor=pointer]: Draft
+                      - generic [ref=e4210] [cursor=pointer]:
+                        - img [ref=e4212] [cursor=pointer]
+                        - heading "Leila's fabric" [level=3] [ref=e4217] [cursor=pointer]
+                  - group [ref=e4220]:
+                    - generic [ref=e4225] [cursor=pointer]:
+                      - generic [ref=e4228] [cursor=pointer]: Draft
+                      - generic [ref=e4229] [cursor=pointer]:
+                        - img [ref=e4231] [cursor=pointer]
+                        - heading "Morgan’s briefcase" [level=3] [ref=e4235] [cursor=pointer]
+                  - group [ref=e4238]:
+                    - generic [ref=e4243] [cursor=pointer]:
+                      - generic [ref=e4246] [cursor=pointer]: Draft
+                      - generic [ref=e4247] [cursor=pointer]:
+                        - img [ref=e4249] [cursor=pointer]
+                        - heading "Lobbying letter about AI advancements" [level=3] [ref=e4254] [cursor=pointer]
+                  - group [ref=e4257]:
+                    - generic [ref=e4263] [cursor=pointer]:
+                      - img [ref=e4265] [cursor=pointer]
+                      - heading "Flip's locked box" [level=3] [ref=e4269] [cursor=pointer]
+                  - group [ref=e4272]:
+                    - generic [ref=e4277] [cursor=pointer]:
+                      - generic [ref=e4280] [cursor=pointer]: Draft
+                      - generic [ref=e4281] [cursor=pointer]:
+                        - img [ref=e4283] [cursor=pointer]
+                        - heading "Taylor's locked jacket" [level=3] [ref=e4287] [cursor=pointer]
+                  - group [ref=e4290]:
+                    - generic [ref=e4296] [cursor=pointer]:
+                      - img [ref=e4298] [cursor=pointer]
+                      - heading "Text between Flip and his bookie" [level=3] [ref=e4303] [cursor=pointer]
+                  - group [ref=e4306]:
+                    - generic [ref=e4312] [cursor=pointer]:
+                      - img [ref=e4314] [cursor=pointer]
+                      - heading "Black Market Business card" [level=3] [ref=e4319] [cursor=pointer]
+                  - group [ref=e4322]:
+                    - generic [ref=e4328] [cursor=pointer]:
+                      - img [ref=e4330] [cursor=pointer]
+                      - heading "Ashe's locked pouch" [level=3] [ref=e4334] [cursor=pointer]
+                  - group [ref=e4337]:
+                    - generic [ref=e4343] [cursor=pointer]:
+                      - img [ref=e4345] [cursor=pointer]
+                      - heading "Taylor’s indexing puzzle note" [level=3] [ref=e4350] [cursor=pointer]
+                  - group [ref=e4353]:
+                    - generic [ref=e4358] [cursor=pointer]:
+                      - generic [ref=e4361] [cursor=pointer]: Draft
+                      - generic [ref=e4362] [cursor=pointer]:
+                        - img [ref=e4364] [cursor=pointer]
+                        - heading "Jessicah's key for locked purse" [level=3] [ref=e4369] [cursor=pointer]
+                  - group [ref=e4372]:
+                    - generic [ref=e4378] [cursor=pointer]:
+                      - img [ref=e4380] [cursor=pointer]
+                      - heading "Jessicah's jewelry box with note from marcus" [level=3] [ref=e4385] [cursor=pointer]
+                  - group [ref=e4388]:
+                    - generic [ref=e4394] [cursor=pointer]:
+                      - img [ref=e4396] [cursor=pointer]
+                      - heading "Jessicah's purse" [level=3] [ref=e4400] [cursor=pointer]
+                  - group [ref=e4403]:
+                    - generic [ref=e4409] [cursor=pointer]:
+                      - img [ref=e4411] [cursor=pointer]
+                      - heading "Diana's locked black purse with gold accents 998" [level=3] [ref=e4415] [cursor=pointer]
+                  - group [ref=e4418]:
+                    - generic [ref=e4424] [cursor=pointer]:
+                      - img [ref=e4426] [cursor=pointer]
+                      - heading "Ashe's puzzle note" [level=3] [ref=e4431] [cursor=pointer]
+                  - group [ref=e4434]:
+                    - generic [ref=e4439] [cursor=pointer]:
+                      - generic [ref=e4442] [cursor=pointer]: Draft
+                      - generic [ref=e4443] [cursor=pointer]:
+                        - img [ref=e4445] [cursor=pointer]
+                        - heading "Paternity test for Jessicah" [level=3] [ref=e4450] [cursor=pointer]
+                  - group [ref=e4453]:
+                    - generic [ref=e4459] [cursor=pointer]:
+                      - img [ref=e4461] [cursor=pointer]
+                      - heading "Diana's emails about divorce" [level=3] [ref=e4466] [cursor=pointer]
+                  - group [ref=e4469]:
+                    - generic [ref=e4475] [cursor=pointer]:
+                      - img [ref=e4477] [cursor=pointer]
+                      - heading "Diana Character Sheet" [level=3] [ref=e4482] [cursor=pointer]
+                  - group [ref=e4485]:
+                    - generic [ref=e4490] [cursor=pointer]:
+                      - generic [ref=e4493] [cursor=pointer]: Ready
+                      - generic [ref=e4494] [cursor=pointer]:
+                        - img [ref=e4496] [cursor=pointer]
+                        - heading "Sarah <> Marcus Post-Fight Note" [level=3] [ref=e4501] [cursor=pointer]
+                  - group [ref=e4504]:
+                    - generic [ref=e4509] [cursor=pointer]:
+                      - generic [ref=e4512] [cursor=pointer]: Ready
+                      - generic [ref=e4513] [cursor=pointer]:
+                        - img [ref=e4515] [cursor=pointer]
+                        - heading "Sarah <> Diana Note" [level=3] [ref=e4520] [cursor=pointer]
+                  - group [ref=e4523]:
+                    - generic [ref=e4528] [cursor=pointer]:
+                      - generic [ref=e4531] [cursor=pointer]: Ready
+                      - generic [ref=e4532] [cursor=pointer]:
+                        - img [ref=e4534] [cursor=pointer]
+                        - heading "Derek <> Sarah Postcard" [level=3] [ref=e4539] [cursor=pointer]
+                  - group [ref=e4542]:
+                    - generic [ref=e4547] [cursor=pointer]:
+                      - generic [ref=e4550] [cursor=pointer]: Ready
+                      - generic [ref=e4551] [cursor=pointer]:
+                        - img [ref=e4553] [cursor=pointer]
+                        - heading "Alex <> Sarah text apology (fuck marcus)" [level=3] [ref=e4558] [cursor=pointer]
+                  - group [ref=e4561]:
+                    - generic [ref=e4566] [cursor=pointer]:
+                      - generic [ref=e4569] [cursor=pointer]: Ready
+                      - generic [ref=e4570] [cursor=pointer]:
+                        - img [ref=e4572] [cursor=pointer]
+                        - heading "Victoria’s Voice Memo (Marcus’ Fight)" [level=3] [ref=e4577] [cursor=pointer]
+                  - group [ref=e4580]:
+                    - generic [ref=e4585] [cursor=pointer]:
+                      - generic [ref=e4588] [cursor=pointer]: Ready
+                      - generic [ref=e4589] [cursor=pointer]:
+                        - img [ref=e4591] [cursor=pointer]
+                        - heading "Jessicah <> Marcus Email" [level=3] [ref=e4596] [cursor=pointer]
+                  - group [ref=e4599]:
+                    - generic [ref=e4604] [cursor=pointer]:
+                      - generic [ref=e4607] [cursor=pointer]: Ready
+                      - generic [ref=e4608] [cursor=pointer]:
+                        - img [ref=e4610] [cursor=pointer]
+                        - heading "Staffing budget proposal for next cash injection w/ line item for new in house chemist (Marcus wants Derek on payroll)" [level=3] [ref=e4615] [cursor=pointer]
+                  - group [ref=e4618]:
+                    - generic [ref=e4623] [cursor=pointer]:
+                      - generic [ref=e4626] [cursor=pointer]: Ready
+                      - generic [ref=e4627] [cursor=pointer]:
+                        - img [ref=e4629] [cursor=pointer]
+                        - heading "Derek <> Marcus Texts" [level=3] [ref=e4634] [cursor=pointer]
+                  - group [ref=e4637]:
+                    - generic [ref=e4642] [cursor=pointer]:
+                      - generic [ref=e4645] [cursor=pointer]: Ready
+                      - generic [ref=e4646] [cursor=pointer]:
+                        - img [ref=e4648] [cursor=pointer]
+                        - heading "Derek <> Diana Texts" [level=3] [ref=e4653] [cursor=pointer]
+                  - group [ref=e4656]:
+                    - generic [ref=e4661] [cursor=pointer]:
+                      - generic [ref=e4664] [cursor=pointer]: Ready
+                      - generic [ref=e4665] [cursor=pointer]:
+                        - img [ref=e4667] [cursor=pointer]
+                        - heading "James’ threatening email to Marcus (James getting shafted in deal with Victoria)(Marcus screwed Alex at last co.)" [level=3] [ref=e4672] [cursor=pointer]
+                  - group [ref=e4675]:
+                    - generic [ref=e4680] [cursor=pointer]:
+                      - generic [ref=e4683] [cursor=pointer]: Ready
+                      - generic [ref=e4684] [cursor=pointer]:
+                        - img [ref=e4686] [cursor=pointer]
+                        - heading "Note from Victoria to Ashe" [level=3] [ref=e4691] [cursor=pointer]
+                  - group [ref=e4694]:
+                    - generic [ref=e4699] [cursor=pointer]:
+                      - generic [ref=e4702] [cursor=pointer]: Ready
+                      - generic [ref=e4703] [cursor=pointer]:
+                        - img [ref=e4705] [cursor=pointer]
+                        - heading "James Character Sheet" [level=3] [ref=e4709] [cursor=pointer]
+                  - group [ref=e4712]:
+                    - generic [ref=e4717] [cursor=pointer]:
+                      - generic [ref=e4720] [cursor=pointer]: Ready
+                      - generic [ref=e4721] [cursor=pointer]:
+                        - img [ref=e4723] [cursor=pointer]
+                        - heading "Derek Character Sheet" [level=3] [ref=e4727] [cursor=pointer]
+                  - group [ref=e4730]:
+                    - generic [ref=e4735] [cursor=pointer]:
+                      - generic [ref=e4738] [cursor=pointer]: Ready
+                      - generic [ref=e4739] [cursor=pointer]:
+                        - img [ref=e4741] [cursor=pointer]
+                        - heading "Victoria Character Sheet" [level=3] [ref=e4745] [cursor=pointer]
+                  - group [ref=e4748]:
+                    - generic [ref=e4753] [cursor=pointer]:
+                      - generic [ref=e4756] [cursor=pointer]: Ready
+                      - generic [ref=e4757] [cursor=pointer]:
+                        - img [ref=e4759] [cursor=pointer]
+                        - heading "Alex Character Sheet" [level=3] [ref=e4763] [cursor=pointer]
+                  - group [ref=e4766]:
+                    - generic [ref=e4771] [cursor=pointer]:
+                      - generic [ref=e4774] [cursor=pointer]: Ready
+                      - generic [ref=e4775] [cursor=pointer]:
+                        - img [ref=e4777] [cursor=pointer]
+                        - heading "Sarah Character Sheet" [level=3] [ref=e4781] [cursor=pointer]
+                  - group [ref=e4784]:
+                    - generic [ref=e4789] [cursor=pointer]:
+                      - generic [ref=e4792] [cursor=pointer]: Ready
+                      - generic [ref=e4793] [cursor=pointer]:
+                        - img [ref=e4795] [cursor=pointer]
+                        - heading "Character Sheets" [level=3] [ref=e4799] [cursor=pointer]
+                  - group [ref=e4802]:
+                    - generic [ref=e4807] [cursor=pointer]:
+                      - generic [ref=e4810] [cursor=pointer]: Ready
+                      - generic [ref=e4811] [cursor=pointer]:
+                        - img [ref=e4813] [cursor=pointer]
+                        - heading "Posters 2 (Derek’s gym bag)" [level=3] [ref=e4818] [cursor=pointer]
+                  - group [ref=e4821]:
+                    - generic [ref=e4826] [cursor=pointer]:
+                      - generic [ref=e4829] [cursor=pointer]: Ready
+                      - generic [ref=e4830] [cursor=pointer]:
+                        - img [ref=e4832] [cursor=pointer]
+                        - heading "Posters 1 (Walls)" [level=3] [ref=e4837] [cursor=pointer]
+                  - group [ref=e4840]:
+                    - generic [ref=e4845] [cursor=pointer]:
+                      - generic [ref=e4848] [cursor=pointer]: Ready
+                      - generic [ref=e4849] [cursor=pointer]:
+                        - img [ref=e4851] [cursor=pointer]
+                        - heading "Baggie of PsychoTrophin3B" [level=3] [ref=e4856] [cursor=pointer]
+                  - group [ref=e4859]:
+                    - generic [ref=e4864] [cursor=pointer]:
+                      - generic [ref=e4867] [cursor=pointer]: Ready
+                      - generic [ref=e4868] [cursor=pointer]:
+                        - img [ref=e4870] [cursor=pointer]
+                        - heading "Derek's Gym Bag" [level=3] [ref=e4874] [cursor=pointer]
+                  - group [ref=e4877]:
+                    - generic [ref=e4882] [cursor=pointer]:
+                      - generic [ref=e4885] [cursor=pointer]: Ready
+                      - generic [ref=e4886] [cursor=pointer]:
+                        - img [ref=e4888] [cursor=pointer]
+                        - heading "Sarah<>Rachel Texts (Marcus' Changes)" [level=3] [ref=e4893] [cursor=pointer]
+                  - group [ref=e4896]:
+                    - generic [ref=e4901] [cursor=pointer]:
+                      - generic [ref=e4904] [cursor=pointer]: Ready
+                      - generic [ref=e4905] [cursor=pointer]:
+                        - img [ref=e4907] [cursor=pointer]
+                        - heading "Purse Key" [level=3] [ref=e4912] [cursor=pointer]
+                  - group [ref=e4915]:
+                    - generic [ref=e4920] [cursor=pointer]:
+                      - generic [ref=e4923] [cursor=pointer]: Ready
+                      - generic [ref=e4924] [cursor=pointer]:
+                        - img [ref=e4926] [cursor=pointer]
+                        - heading "Cease & Desist Letter" [level=3] [ref=e4931] [cursor=pointer]
+                  - group [ref=e4934]:
+                    - generic [ref=e4940] [cursor=pointer]:
+                      - img [ref=e4942] [cursor=pointer]
+                      - heading "Alex' shoulder bag" [level=3] [ref=e4946] [cursor=pointer]
+                  - group [ref=e4949]:
+                    - generic [ref=e4954] [cursor=pointer]:
+                      - generic [ref=e4957] [cursor=pointer]: Ready
+                      - generic [ref=e4958] [cursor=pointer]:
+                        - img [ref=e4960] [cursor=pointer]
+                        - heading "James <> Alex emails (party invite)" [level=3] [ref=e4965] [cursor=pointer]
+                  - group [ref=e4968]:
+                    - generic [ref=e4974] [cursor=pointer]:
+                      - img [ref=e4976] [cursor=pointer]
+                      - heading "Sarah's Jewelry Box" [level=3] [ref=e4980] [cursor=pointer]
+                  - group [ref=e4983]:
+                    - generic [ref=e4989] [cursor=pointer]:
+                      - img [ref=e4991] [cursor=pointer]
+                      - heading "Sarah's black purse with makowsky inside (key under coat check)" [level=3] [ref=e4995] [cursor=pointer]
+                  - group [ref=e4998]:
+                    - generic [ref=e5003] [cursor=pointer]:
+                      - generic [ref=e5006] [cursor=pointer]: Ready
+                      - generic [ref=e5007] [cursor=pointer]:
+                        - img [ref=e5009] [cursor=pointer]
+                        - heading "Victoria <> Alex Text Chatlog" [level=3] [ref=e5014] [cursor=pointer]
+                  - group [ref=e5017]:
+                    - generic [ref=e5022] [cursor=pointer]:
+                      - generic [ref=e5025] [cursor=pointer]: Ready
+                      - generic [ref=e5026] [cursor=pointer]:
+                        - img [ref=e5028] [cursor=pointer]
+                        - heading "James <> Victoria Funding Email" [level=3] [ref=e5033] [cursor=pointer]
+                  - group [ref=e5036]:
+                    - generic [ref=e5041] [cursor=pointer]:
+                      - generic [ref=e5044] [cursor=pointer]: Ready
+                      - generic [ref=e5045] [cursor=pointer]:
+                        - img [ref=e5047] [cursor=pointer]
+                        - heading "James' Memory - Marcus entering 2nd room" [level=3] [ref=e5050] [cursor=pointer]
+                  - group [ref=e5053]:
+                    - generic [ref=e5059] [cursor=pointer]:
+                      - img [ref=e5061] [cursor=pointer]
+                      - heading "James’ black puffy jacket with faded x on inside back 124" [level=3] [ref=e5065] [cursor=pointer]
+                  - group [ref=e5068]:
+                    - generic [ref=e5073] [cursor=pointer]:
+                      - generic [ref=e5076] [cursor=pointer]: Ready
+                      - generic [ref=e5077] [cursor=pointer]:
+                        - img [ref=e5079] [cursor=pointer]
+                        - heading "Company One-Pagers" [level=3] [ref=e5084] [cursor=pointer]
+                  - group [ref=e5087]:
+                    - generic [ref=e5092] [cursor=pointer]:
+                      - generic [ref=e5095] [cursor=pointer]: Ready
+                      - generic [ref=e5096] [cursor=pointer]:
+                        - img [ref=e5098] [cursor=pointer]
+                        - heading "Silicon Valley Business Journal" [level=3] [ref=e5103] [cursor=pointer]
+                  - group [ref=e5106]:
+                    - generic [ref=e5112] [cursor=pointer]:
+                      - img [ref=e5114] [cursor=pointer]
+                      - heading "Victoria’s brown purse 713" [level=3] [ref=e5118] [cursor=pointer]
+                  - group [ref=e5121]:
+                    - generic [ref=e5127] [cursor=pointer]:
+                      - img [ref=e5129] [cursor=pointer]
+                      - heading "Coat Check" [level=3] [ref=e5133] [cursor=pointer]
+                  - group [ref=e5136]:
+                    - generic [ref=e5145] [cursor=pointer]:
+                      - img [ref=e5147] [cursor=pointer]
+                      - heading "Colorful 888 puzzle" [level=3] [ref=e5149] [cursor=pointer]
+                  - group [ref=e5154]:
+                    - generic [ref=e5163] [cursor=pointer]:
+                      - img [ref=e5165] [cursor=pointer]
+                      - heading "Red on Walls Blue on Paper Puzzle" [level=3] [ref=e5167] [cursor=pointer]
+                  - group [ref=e5172]:
+                    - generic [ref=e5181] [cursor=pointer]:
+                      - img [ref=e5183] [cursor=pointer]
+                      - heading "Select Any Number Puzzle" [level=3] [ref=e5185] [cursor=pointer]
+                  - group [ref=e5190]:
+                    - generic [ref=e5199] [cursor=pointer]:
+                      - img [ref=e5201] [cursor=pointer]
+                      - heading "Stretchy Words Puzzle" [level=3] [ref=e5203] [cursor=pointer]
+                  - group [ref=e5208]:
+                    - generic [ref=e5217] [cursor=pointer]:
+                      - img [ref=e5219] [cursor=pointer]
+                      - heading "Act 2 Unlock Puzzle" [level=3] [ref=e5221] [cursor=pointer]
+                  - group [ref=e5226]:
+                    - generic [ref=e5235] [cursor=pointer]:
+                      - img [ref=e5237] [cursor=pointer]
+                      - heading "Tori's puzzle" [level=3] [ref=e5239] [cursor=pointer]
+                  - group [ref=e5244]:
+                    - generic [ref=e5253] [cursor=pointer]:
+                      - img [ref=e5255] [cursor=pointer]
+                      - heading "Skyler's non-puzzle" [level=3] [ref=e5257] [cursor=pointer]
+                  - group [ref=e5262]:
+                    - generic [ref=e5271] [cursor=pointer]:
+                      - img [ref=e5273] [cursor=pointer]
+                      - heading "Oliver's pill logic puzzle" [level=3] [ref=e5275] [cursor=pointer]
+                  - group [ref=e5280]:
+                    - generic [ref=e5289] [cursor=pointer]:
+                      - img [ref=e5291] [cursor=pointer]
+                      - heading "Sofia's headshot puzzle" [level=3] [ref=e5293] [cursor=pointer]
+                  - group [ref=e5298]:
+                    - generic [ref=e5307] [cursor=pointer]:
+                      - img [ref=e5309] [cursor=pointer]
+                      - heading "Kai's perspective Puzzle" [level=3] [ref=e5311] [cursor=pointer]
+                  - group [ref=e5316]:
+                    - generic [ref=e5325] [cursor=pointer]:
+                      - img [ref=e5327] [cursor=pointer]
+                      - heading "Howie's binary puzzle" [level=3] [ref=e5329] [cursor=pointer]
+                  - group [ref=e5334]:
+                    - generic [ref=e5343] [cursor=pointer]:
+                      - img [ref=e5345] [cursor=pointer]
+                      - heading "Jamie's bar puzzle" [level=3] [ref=e5347] [cursor=pointer]
+                  - group [ref=e5352]:
+                    - generic [ref=e5361] [cursor=pointer]:
+                      - img [ref=e5363] [cursor=pointer]
+                      - heading "Rachel's Mojito puzzle" [level=3] [ref=e5365] [cursor=pointer]
+                  - group [ref=e5370]:
+                    - generic [ref=e5379] [cursor=pointer]:
+                      - img [ref=e5381] [cursor=pointer]
+                      - heading "Leila's line puzzle" [level=3] [ref=e5383] [cursor=pointer]
+                  - group [ref=e5388]:
+                    - generic [ref=e5397] [cursor=pointer]:
+                      - img [ref=e5399] [cursor=pointer]
+                      - heading "heat reveal" [level=3] [ref=e5401] [cursor=pointer]
+                  - group [ref=e5406]:
+                    - generic [ref=e5415] [cursor=pointer]:
+                      - img [ref=e5417] [cursor=pointer]
+                      - heading "Pillow Puzzle" [level=3] [ref=e5419] [cursor=pointer]
+                  - group [ref=e5424]:
+                    - generic [ref=e5433] [cursor=pointer]:
+                      - img [ref=e5435] [cursor=pointer]
+                      - heading "Taylor’s indexing puzzle" [level=3] [ref=e5437] [cursor=pointer]
+                  - group [ref=e5442]:
+                    - generic [ref=e5451] [cursor=pointer]:
+                      - img [ref=e5453] [cursor=pointer]
+                      - heading "Ashe's talk-to-people math puzzle" [level=3] [ref=e5455] [cursor=pointer]
+                  - group [ref=e5460]:
+                    - generic [ref=e5469] [cursor=pointer]:
+                      - img [ref=e5471] [cursor=pointer]
+                      - heading "jewelry box scavenger hunt puzzle" [level=3] [ref=e5473] [cursor=pointer]
+                  - group [ref=e5478]:
+                    - generic [ref=e5487] [cursor=pointer]:
+                      - img [ref=e5489] [cursor=pointer]
+                      - heading "Paternity test percentage" [level=3] [ref=e5491] [cursor=pointer]
+                  - group [ref=e5496]:
+                    - generic [ref=e5505] [cursor=pointer]:
+                      - img [ref=e5507] [cursor=pointer]
+                      - heading "red reveal/folding puzzle" [level=3] [ref=e5509] [cursor=pointer]
+                  - group [ref=e5514]:
+                    - generic [ref=e5523] [cursor=pointer]:
+                      - img [ref=e5525] [cursor=pointer]
+                      - heading "Inkblot folding puzzle using costumes" [level=3] [ref=e5527] [cursor=pointer]
+                  - group [ref=e5532]:
+                    - generic [ref=e5541] [cursor=pointer]:
+                      - img [ref=e5543] [cursor=pointer]
+                      - heading "Party Posters Spot the Differences Puzzle" [level=3] [ref=e5545] [cursor=pointer]
+                  - group [ref=e5550]:
+                    - generic [ref=e5559] [cursor=pointer]:
+                      - img [ref=e5561] [cursor=pointer]
+                      - heading "Queens/Sudoku Lock" [level=3] [ref=e5563] [cursor=pointer]
+                  - group [ref=e5568]:
+                    - generic [ref=e5577] [cursor=pointer]:
+                      - img [ref=e5579] [cursor=pointer]
+                      - heading "Collab. One Pagers Puzzle" [level=3] [ref=e5581] [cursor=pointer]
+            - img
+            - generic "Control Panel" [ref=e5586]:
+              - button "Zoom In" [ref=e5587] [cursor=pointer]:
+                - img [ref=e5588] [cursor=pointer]
+              - button "Zoom Out" [ref=e5590] [cursor=pointer]:
+                - img [ref=e5591] [cursor=pointer]
+              - button "Fit View" [active] [ref=e5593] [cursor=pointer]:
+                - img [ref=e5594] [cursor=pointer]
+              - button "Toggle Interactivity" [ref=e5596] [cursor=pointer]:
+                - img [ref=e5597] [cursor=pointer]
+            - img "Mini Map" [ref=e5600]
+            - link "React Flow attribution" [ref=e5809] [cursor=pointer]:
+              - /url: https://reactflow.dev
+              - text: React Flow
+        - generic [ref=e5811]:
+          - generic [ref=e5812]:
+            - generic [ref=e5813]:
+              - generic [ref=e5814]: 👤
+              - generic [ref=e5815]:
+                - heading "Character Details" [level=3] [ref=e5816]
+                - paragraph [ref=e5817]: 11/12 fields editable (92%)
+            - generic [ref=e5818]:
+              - button "Delete entity" [ref=e5819]:
+                - img
+              - button [ref=e5820]:
+                - img
+          - generic [ref=e5821]:
+            - generic [ref=e5822]:
+              - button "Basic Information" [ref=e5823]:
+                - img [ref=e5824]
+                - generic [ref=e5826]: Basic Information
+              - generic [ref=e5827]:
+                - generic [ref=e5828]:
+                  - generic [ref=e5829]:
+                    - text: Name
+                    - generic [ref=e5830]: "*"
+                  - textbox "Name *" [ref=e5831]: toy
+                - generic [ref=e5832]:
+                  - generic [ref=e5833]:
+                    - text: Type
+                    - generic [ref=e5834]: "*"
+                  - generic [ref=e5835]:
+                    - combobox "Type *" [ref=e5836] [cursor=pointer]:
+                      - option "Player" [selected]
+                      - option "NPC"
+                    - img
+                - generic [ref=e5837]:
+                  - generic [ref=e5838]:
+                    - text: Tier
+                    - generic [ref=e5839]: "*"
+                  - generic [ref=e5840]:
+                    - combobox "Tier *" [ref=e5841] [cursor=pointer]:
+                      - option "Core" [selected]
+                      - option "Secondary"
+                      - option "Tertiary"
+                    - img
+            - button "Additional Details 4 editable" [ref=e5843]:
+              - img [ref=e5844]
+              - generic [ref=e5846]: Additional Details
+              - generic [ref=e5847]: 4 editable
+            - button "Relationships 4 editable" [ref=e5849]:
+              - img [ref=e5850]
+              - generic [ref=e5852]: Relationships
+              - generic [ref=e5853]: 4 editable
+            - button "Metadata" [ref=e5855]:
+              - img [ref=e5856]
+              - generic [ref=e5858]: Metadata
+          - generic [ref=e5859]:
+            - button "Cancel" [disabled]:
+              - img
+              - text: Cancel
+            - button "Save Changes" [disabled]:
+              - img
+              - text: Save Changes
+  - contentinfo [ref=e5860]:
+    - generic [ref=e5861]:
+      - paragraph [ref=e5862]: © 2024 ALNRetool - About Last Night Visualization Tool
+      - generic [ref=e5863]:
+        - img [ref=e5865]
+        - button "Open Tanstack query devtools" [ref=e5913] [cursor=pointer]:
+          - img [ref=e5914] [cursor=pointer]
+```

@@ -48,19 +48,24 @@ export function getVisibleNodeIds(
   selectedNodeId: string | null,
   connectionDepth: number
 ): Set<string> {
-  // No connection depth? Just show filtered nodes
-  if (!connectionDepth || connectionDepth === 0) {
-    return filteredNodeIds;
-  }
-  
-  // Node selected? Show connections from that node only
+  // Priority 1: A specific node is selected. Handle this case first.
   if (selectedNodeId && filteredNodeIds.has(selectedNodeId)) {
-    // Use all edges to find connections (not just filtered edges)
-    // This ensures we can see the full neighborhood of the selected node
+    // If connection depth is 0 with a selection, show ONLY the selected node.
+    if (connectionDepth === 0) {
+      return new Set([selectedNodeId]);
+    }
+    
+    // Otherwise, find and show its neighbors.
     return getNodesWithinDepth(selectedNodeId, edges, connectionDepth);
   }
   
-  // No selection? Show connections from ALL filtered nodes
+  // Priority 2: No selection, and depth is 0. Just show the base filtered nodes.
+  // This is now an explicit check and only runs if no node is selected.
+  if (connectionDepth === 0) {
+    return filteredNodeIds;
+  }
+  
+  // Priority 3: No selection, but we need to expand from all filtered nodes.
   const connectedIds = new Set(filteredNodeIds);
   const baseFilteredEdges = edges.filter(
     e => filteredNodeIds.has(e.source) && filteredNodeIds.has(e.target)

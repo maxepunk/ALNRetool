@@ -24,7 +24,6 @@ import { useFilterStore } from '@/stores/filterStore';
 
 interface UseGraphInteractionsOptions {
   readOnly?: boolean;
-  onNodeDoubleClick?: (node: Node) => void;
   onEdgeDoubleClick?: (edge: Edge) => void;
   onSelectionChange?: (params: OnSelectionChangeParams) => void;
   onNodesDelete?: (nodes: Node[]) => void;
@@ -40,7 +39,6 @@ interface UseGraphInteractionsReturn {
   
   // Interaction handlers
   handleNodeClick: NodeMouseHandler;
-  handleNodeDoubleClick: NodeMouseHandler;
   handleNodeContextMenu: NodeMouseHandler;
   handleEdgeClick: EdgeMouseHandler;
   handleEdgeDoubleClick: EdgeMouseHandler;
@@ -68,7 +66,6 @@ interface UseGraphInteractionsReturn {
  */
 export function useGraphInteractions({
   readOnly = false,
-  onNodeDoubleClick,
   onEdgeDoubleClick,
   onSelectionChange,
   onNodesDelete,
@@ -118,40 +115,6 @@ export function useGraphInteractions({
     };
   }, []);
   
-  // Handle node click
-  const handleNodeClick: NodeMouseHandler = useCallback((event, node) => {
-    event.stopPropagation();
-    
-    if (isMultiSelecting) {
-      // Toggle selection of clicked node
-      setNodes(nodes => nodes.map(n => {
-        if (n.id === node.id) {
-          return { ...n, selected: !n.selected };
-        }
-        return n;
-      }));
-    } else {
-      // Clear all selections and select only clicked node
-      setNodes(nodes => nodes.map(n => ({
-        ...n,
-        selected: n.id === node.id
-      })));
-      setEdges(edges => edges.map(e => ({
-        ...e,
-        selected: false
-      })));
-    }
-  }, [isMultiSelecting, setNodes, setEdges]);
-  
-  // Handle node double click
-  const handleNodeDoubleClick: NodeMouseHandler = useCallback((event, node) => {
-    event.stopPropagation();
-    
-    if (!readOnly) {
-      onNodeDoubleClick?.(node);
-    }
-  }, [readOnly, onNodeDoubleClick]);
-  
   // Handle node context menu
   const handleNodeContextMenu: NodeMouseHandler = useCallback((event, _node) => {
     event.preventDefault();
@@ -160,30 +123,11 @@ export function useGraphInteractions({
     // Could open a context menu here
   }, []);
   
-  // Handle edge click
-  const handleEdgeClick: EdgeMouseHandler = useCallback((event, edge) => {
-    event.stopPropagation();
-    
-    if (isMultiSelecting) {
-      // Toggle selection of clicked edge
-      setEdges(edges => edges.map(e => {
-        if (e.id === edge.id) {
-          return { ...e, selected: !e.selected };
-        }
-        return e;
-      }));
-    } else {
-      // Clear all selections and select only clicked edge
-      setEdges(edges => edges.map(e => ({
-        ...e,
-        selected: e.id === edge.id
-      })));
-      setNodes(nodes => nodes.map(n => ({
-        ...n,
-        selected: false
-      })));
-    }
-  }, [isMultiSelecting, setNodes, setEdges]);
+  // Handle edge click - don't manipulate selection, let React Flow handle it
+  const handleEdgeClick: EdgeMouseHandler = useCallback((_event, _edge) => {
+    // Don't call stopPropagation - let React Flow handle the event naturally
+    // React Flow will update edge.selected internally and fire onSelectionChange
+  }, []);
   
   // Handle edge double click
   const handleEdgeDoubleClick: EdgeMouseHandler = useCallback((event, edge) => {
@@ -231,7 +175,8 @@ export function useGraphInteractions({
         selected: true
       })));
       
-      // Sync with FilterStore (use first node for focus)
+      // Manual FilterStore sync required - React Flow doesn't fire onSelectionChange 
+      // for programmatic setNodes calls (confirmed behavior)
       const allNodes = getNodes();
       if (allNodes.length > 0 && allNodes[0]) {
         setSelectedNode(allNodes[0].id);
@@ -252,7 +197,8 @@ export function useGraphInteractions({
       selected: false
     })));
     
-    // Clear FilterStore selection
+    // Manual FilterStore sync required - React Flow doesn't fire onSelectionChange 
+    // for programmatic setNodes calls (confirmed behavior)
     setSelectedNode(null);
   }, [setNodes, setEdges, setSelectedNode]);
   
@@ -260,12 +206,20 @@ export function useGraphInteractions({
   const selectNode = useCallback((nodeId: string, addToSelection = false) => {
     if (addToSelection) {
       // Toggle the specific node's selection
-      setNodes(nodes => nodes.map(n => {
-        if (n.id === nodeId) {
-          return { ...n, selected: !n.selected };
-        }
-        return n;
-      }));
+      setNodes(nodes => {
+        const updatedNodes = nodes.map(n => {
+          if (n.id === nodeId) {
+            return { ...n, selected: !n.selected };
+          }
+          return n;
+        });
+        
+        // Update FilterStore with first selected node
+        const firstSelected = updatedNodes.find(n => n.selected);
+        setSelectedNode(firstSelected?.id || null);
+        
+        return updatedNodes;
+      });
     } else {
       // Clear all selections and select only this node
       setNodes(nodes => nodes.map(n => ({
@@ -276,8 +230,11 @@ export function useGraphInteractions({
         ...e,
         selected: false
       })));
+      
+      // Update FilterStore immediately
+      setSelectedNode(nodeId);
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, setSelectedNode]);
   
   // Select specific edge
   const selectEdge = useCallback((edgeId: string, addToSelection = false) => {
@@ -301,6 +258,20 @@ export function useGraphInteractions({
       })));
     }
   }, [setNodes, setEdges]);
+  
+  // Handle node click - properly manage selection state
+  const handleNodeClick: NodeMouseHandler = useCallback((event, node) => {
+    event.stopPropagation(); // Prevent canvas deselection
+    
+    // Check if multi-selecting (Shift, Cmd, or Ctrl key)
+    const addToSelection = event.shiftKey || event.metaKey || event.ctrlKey;
+    
+    // Update selection through our unified system
+    selectNode(node.id, addToSelection);
+    
+    // Note: selectNode will update React Flow's visual state
+    // and handleSelectionChange will sync with FilterStore
+  }, [selectNode]);
   
   // Delete selected items
   const deleteSelected = useCallback(() => {
@@ -453,7 +424,6 @@ export function useGraphInteractions({
     
     // Interaction handlers
     handleNodeClick,
-    handleNodeDoubleClick,
     handleNodeContextMenu,
     handleEdgeClick,
     handleEdgeDoubleClick,

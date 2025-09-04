@@ -39,8 +39,7 @@ import {
   Controls,
   MiniMap,
   BackgroundVariant,
-  ReactFlowProvider,
-  useReactFlow
+  ReactFlowProvider
 } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -170,8 +169,7 @@ function GraphViewComponent() {
   // Get view configuration from route
   const { config: viewConfig, viewType } = useViewConfig();
   
-  // Get React Flow instance for viewport control
-  const { fitView } = useReactFlow();
+  // React Flow instance not needed anymore since double-click removed
   
   // State for layout progress tracking
   const [isLayouting, setIsLayouting] = useState(false);
@@ -246,7 +244,6 @@ function GraphViewComponent() {
   const {
     searchTerm,
     selectedNodeId,
-    setSelectedNode,
     connectionDepth,
     entityVisibility,
     characterSelectedTiers,
@@ -321,21 +318,12 @@ function GraphViewComponent() {
   
   // Connect keyboard interactions and advanced graph handling
   const {
-    handleNodeClick: interactionNodeClick,
-    handleNodeDoubleClick,
-    handleEdgeClick: interactionEdgeClick,
+    handleNodeClick,              // Added to handle node selection
     handleSelectionChange,
+    clearSelection,
     selectAll: _selectAll,        // Added for Cmd/Ctrl+A (handled via hotkeys)
     copyToClipboard: _copyToClipboard,  // Added for Cmd/Ctrl+C (handled via hotkeys)
   } = useGraphInteractions({
-    onNodeDoubleClick: (node) => {
-      // Focus on double-clicked node with smooth animation
-      fitView({ 
-        nodes: [{ id: node.id } as Node], 
-        padding: 0.5, 
-        duration: 400 
-      });
-    },
     onNodesDelete: (nodes) => {
       // Handle node deletion if needed in future
       console.log('Delete nodes:', nodes);
@@ -370,22 +358,12 @@ function GraphViewComponent() {
     return { entity, entityType };
   }, [selectedNodeId, layoutedNodes]);
 
-  // Click handlers for node interaction - now merged with interaction handlers
-  const onNodeClick = (_event: React.MouseEvent, node: Node) => {
-    // Open detail panel for the clicked node
-    setSelectedNode(node.id);
-    // Also handle multi-select and other interaction logic
-    interactionNodeClick(_event, node);
-  };
-  
-  const onEdgeClick = (event: React.MouseEvent, edge: any) => {
-    // Handle edge interactions
-    interactionEdgeClick(event, edge);
-  };
+  // React Flow now handles all selection internally
+  // We only respond to onSelectionChange to sync with FilterStore
 
-  // Handle detail panel close - clears selection
+  // Handle detail panel close - clears selection via hook
   const handleDetailPanelClose = () => {
-    setSelectedNode(null);
+    clearSelection();
   };
 
   // Get selected node details for status bar
@@ -450,13 +428,12 @@ function GraphViewComponent() {
         <ReactFlow
           nodes={reactFlowNodes}
           edges={reactFlowEdges}
-          onNodeClick={onNodeClick}
-          onNodeDoubleClick={handleNodeDoubleClick}
-          onEdgeClick={onEdgeClick}
+          onNodeClick={handleNodeClick}
           onSelectionChange={handleSelectionChange}
           nodeTypes={nodeTypes}
           minZoom={0.05}
           maxZoom={2}
+          elementsSelectable={true}
           elevateNodesOnSelect={false}
           selectNodesOnDrag={false}
           snapToGrid={true}
