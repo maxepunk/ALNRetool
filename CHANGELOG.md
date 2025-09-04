@@ -2,6 +2,37 @@
 ##IMPORTANT: MOST RECENT ENTRY GOES AT THE TOP OF THE DOCUMENT
 ##Previous Changelog at CHANGELOG.md.bk
 
+## 2025-09-04: Fixed Selection System - Unified React Flow Selection State
+
+### Issue
+- Keyboard shortcuts (Cmd+A, Cmd+C) were not working with visual feedback
+- Selection state was fragmented across three separate systems:
+  - React Flow's internal `node.selected` (visual state)
+  - useGraphInteractions' local state arrays (disconnected from visuals)
+  - FilterStore's `selectedNodeId` (single node focus)
+- selectAll() and copyToClipboard() only updated local state, not React Flow's visual selection
+- No system clipboard integration - copy only worked internally
+
+### Root Cause
+The selection system was using local state arrays instead of React Flow's built-in selection state, causing a disconnect between the visual representation and the actual selection logic.
+
+### Fix Applied to useGraphInteractions.ts
+1. **Added React Flow API access** - Imported useReactFlow hook to access setNodes/setEdges
+2. **Created computed selection getters** - getSelectedNodes/getSelectedEdges directly from React Flow
+3. **Refactored selectAll** - Now uses setNodes/setEdges to update visual selection state
+4. **Refactored clearSelection** - Properly clears React Flow's visual selection
+5. **Implemented system clipboard** - copyToClipboard now uses navigator.clipboard with execCommand fallback
+6. **Synced FilterStore** - handleSelectionChange now updates selectedNodeId with first selected node
+7. **Removed redundant state** - Eliminated local state arrays in favor of React Flow as single source of truth
+
+### Impact
+- **Before**: Keyboard shortcuts had no visual effect, selection was broken
+- **After**: 
+  - Cmd/Ctrl+A visually selects all nodes (blue outlines appear)
+  - Cmd/Ctrl+C copies to system clipboard (can paste externally)
+  - Selection state properly synchronized across all systems
+  - FilterStore.selectedNodeId stays in sync with multi-selection
+
 ## 2025-09-04: Fixed ESLint Configuration and Resolved All Errors
 
 ### Issue

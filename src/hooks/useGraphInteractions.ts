@@ -7,16 +7,18 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { 
-  Node, 
-  Edge, 
-  Connection,
-  OnSelectionChangeParams,
-  NodeMouseHandler,
-  EdgeMouseHandler,
+import { 
+  useReactFlow,
+  type Node, 
+  type Edge, 
+  type Connection,
+  type OnSelectionChangeParams,
+  type NodeMouseHandler,
+  type EdgeMouseHandler,
 } from '@xyflow/react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import toast from 'react-hot-toast';
+import { useFilterStore } from '@/stores/filterStore';
 
 
 
@@ -46,7 +48,7 @@ interface UseGraphInteractionsReturn {
   handleConnect: (connection: Connection) => void;
   
   // Selection actions
-  selectAll: (nodes: Node[], edges: Edge[]) => void;
+  selectAll: () => void;
   clearSelection: () => void;
   selectNode: (nodeId: string, addToSelection?: boolean) => void;
   selectEdge: (edgeId: string, addToSelection?: boolean) => void;
@@ -73,7 +75,20 @@ export function useGraphInteractions({
   onEdgesDelete,
   onConnect,
 }: UseGraphInteractionsOptions = {}): UseGraphInteractionsReturn {
-  // Selection state
+  // React Flow API access
+  const { getNodes, setNodes, getEdges, setEdges } = useReactFlow();
+  const setSelectedNode = useFilterStore(state => state.setSelectedNode);
+  
+  // Get selected nodes/edges directly from React Flow (computed values)
+  const getSelectedNodes = useCallback(() => {
+    return getNodes().filter(n => n.selected);
+  }, [getNodes]);
+  
+  const getSelectedEdges = useCallback(() => {
+    return getEdges().filter(e => e.selected);
+  }, [getEdges]);
+  
+  // Selection state (keeping for now, will refactor to computed values)
   const [selectedNodes, setSelectedNodes] = useState<Node[]>([]);
   const [selectedEdges, setSelectedEdges] = useState<Edge[]>([]);
   const [isMultiSelecting, setIsMultiSelecting] = useState(false);
@@ -171,12 +186,22 @@ export function useGraphInteractions({
     }
   }, [readOnly, onEdgeDoubleClick]);
   
-  // Handle selection change
+  // Handle selection change - syncs with FilterStore
   const handleSelectionChange = useCallback((params: OnSelectionChangeParams) => {
+    // Sync with FilterStore (use first selected node for focus)
+    if (params.nodes.length > 0 && params.nodes[0]) {
+      setSelectedNode(params.nodes[0].id);
+    } else {
+      setSelectedNode(null);
+    }
+    
+    // Keep local state in sync for now (will remove later)
     setSelectedNodes(params.nodes);
     setSelectedEdges(params.edges);
+    
+    // Call user's handler
     onSelectionChange?.(params);
-  }, [onSelectionChange]);
+  }, [setSelectedNode, onSelectionChange]);
   
   // Handle connection
   const handleConnect = useCallback((connection: Connection) => {
@@ -187,17 +212,45 @@ export function useGraphInteractions({
     }
   }, [readOnly, onConnect]);
   
-  // Select all
-  const selectAll = useCallback((nodes: Node[], edges: Edge[]) => {
-    setSelectedNodes(nodes);
-    setSelectedEdges(edges);
-  }, []);
+  // Select all - now properly updates React Flow's visual state
+  const selectAll = useCallback(() => {
+    // Performance optimization for large graphs
+    requestAnimationFrame(() => {
+      // Update React Flow state for visual selection
+      setNodes(currentNodes => currentNodes.map(node => ({
+        ...node,
+        selected: true
+      })));
+      
+      setEdges(currentEdges => currentEdges.map(edge => ({
+        ...edge,
+        selected: true
+      })));
+      
+      // Sync with FilterStore (use first node for focus)
+      const allNodes = getNodes();
+      if (allNodes.length > 0 && allNodes[0]) {
+        setSelectedNode(allNodes[0].id);
+      }
+    });
+  }, [setNodes, setEdges, getNodes, setSelectedNode]);
   
-  // Clear selection
+  // Clear selection - now properly clears React Flow's visual state
   const clearSelection = useCallback(() => {
-    setSelectedNodes([]);
-    setSelectedEdges([]);
-  }, []);
+    // Update React Flow state
+    setNodes(nodes => nodes.map(node => ({
+      ...node,
+      selected: false
+    })));
+    
+    setEdges(edges => edges.map(edge => ({
+      ...edge,
+      selected: false
+    })));
+    
+    // Clear FilterStore selection
+    setSelectedNode(null);
+  }, [setNodes, setEdges, setSelectedNode]);
   
   // Select specific node
   const selectNode = useCallback((nodeId: string, addToSelection = false) => {
@@ -276,21 +329,47 @@ export function useGraphInteractions({
     return duplicatedNodes;
   }, [readOnly, selectedNodes]);
   
-  // Copy to clipboard
-  const copyToClipboard = useCallback(() => {
-    if (selectedNodes.length === 0 && selectedEdges.length === 0) {
+  // Copy to clipboard - now uses system clipboard with fallback
+  const copyToClipboard = useCallback(async () => {
+    const selected = getSelectedNodes();
+    if (selected.length === 0) {
       toast.error('Nothing selected to copy');
       return;
     }
     
+    // Create user-friendly text format
+    const text = selected.map(n => `${n.id}: ${(n.data as any).label || n.id}`).join('\n');
+    
+    try {
+      // Try modern Clipboard API first (works in HTTPS/localhost)
+      await navigator.clipboard.writeText(text);
+      toast.success(`Copied ${selected.length} node(s) to clipboard`);
+    } catch (err) {
+      // Fallback for non-HTTPS or permission denied
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      
+      try {
+        document.execCommand('copy');
+        toast.success(`Copied ${selected.length} node(s) to clipboard`);
+      } catch (fallbackErr) {
+        toast.error('Failed to copy to clipboard');
+      }
+      
+      document.body.removeChild(textarea);
+    }
+    
+    // Also store in internal clipboard for paste functionality
     clipboardRef.current = {
-      nodes: [...selectedNodes],
-      edges: [...selectedEdges],
+      nodes: [...selected],
+      edges: [...getSelectedEdges()],
     };
     setHasClipboardData(true);
-    
-    toast.success('Copied to clipboard');
-  }, [selectedNodes, selectedEdges]);
+  }, [getSelectedNodes, getSelectedEdges]);
   
   // Paste from clipboard
   const pasteFromClipboard = useCallback(() => {
@@ -328,8 +407,8 @@ export function useGraphInteractions({
   
   useHotkeys('cmd+a, ctrl+a', (e) => {
     e.preventDefault();
-    // Need access to all nodes and edges to select all
-  }, []);
+    selectAll();
+  }, [selectAll]);
   
   useHotkeys('cmd+c, ctrl+c', () => {
     copyToClipboard();
@@ -349,9 +428,9 @@ export function useGraphInteractions({
   }, [clearSelection]);
   
   return {
-    // Selection state
-    selectedNodes,
-    selectedEdges,
+    // Selection state (computed from React Flow)
+    selectedNodes: getSelectedNodes(),
+    selectedEdges: getSelectedEdges(),
     isMultiSelecting,
     
     // Interaction handlers

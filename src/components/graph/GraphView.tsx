@@ -259,31 +259,6 @@ function GraphViewComponent() {
   
   
   // Removed graphVersion anti-pattern that caused infinite re-renders
-  
-  // Connect keyboard interactions and advanced graph handling
-  const {
-    handleNodeClick: interactionNodeClick,
-    handleNodeDoubleClick,
-    handleEdgeClick: interactionEdgeClick,
-    handleSelectionChange,
-  } = useGraphInteractions({
-    onNodeDoubleClick: (node) => {
-      // Focus on double-clicked node with smooth animation
-      fitView({ 
-        nodes: [{ id: node.id } as Node], 
-        padding: 0.5, 
-        duration: 400 
-      });
-    },
-    onNodesDelete: (nodes) => {
-      // Handle node deletion if needed in future
-      console.log('Delete nodes:', nodes);
-    },
-    onEdgesDelete: (edges) => {
-      // Handle edge deletion if needed in future
-      console.log('Delete edges:', edges);
-    }
-  });
 
   // Initialize filters when view changes to ensure requested entities are visible
   useEffect(() => {
@@ -343,6 +318,33 @@ function GraphViewComponent() {
   // React Flow will always render with the current computed values
   const reactFlowNodes = layoutedNodes as Node[];
   const reactFlowEdges = filteredEdges;
+  
+  // Connect keyboard interactions and advanced graph handling
+  const {
+    handleNodeClick: interactionNodeClick,
+    handleNodeDoubleClick,
+    handleEdgeClick: interactionEdgeClick,
+    handleSelectionChange,
+    selectAll: _selectAll,        // Added for Cmd/Ctrl+A (handled via hotkeys)
+    copyToClipboard: _copyToClipboard,  // Added for Cmd/Ctrl+C (handled via hotkeys)
+  } = useGraphInteractions({
+    onNodeDoubleClick: (node) => {
+      // Focus on double-clicked node with smooth animation
+      fitView({ 
+        nodes: [{ id: node.id } as Node], 
+        padding: 0.5, 
+        duration: 400 
+      });
+    },
+    onNodesDelete: (nodes) => {
+      // Handle node deletion if needed in future
+      console.log('Delete nodes:', nodes);
+    },
+    onEdgesDelete: (edges) => {
+      // Handle edge deletion if needed in future
+      console.log('Delete edges:', edges);
+    },
+  });
 
   // Derive selected entity from selectedNodeId
   const selectedEntity = useMemo(() => {
