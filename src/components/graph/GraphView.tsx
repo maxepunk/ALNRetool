@@ -384,8 +384,15 @@ function GraphViewComponent() {
           onNodeClick={(_, node) => onNodeClick(node.id)}
           onEdgeClick={onEdgeClick}
           nodeTypes={nodeTypes}
-          minZoom={0.1}
+          minZoom={0.05}
           maxZoom={2}
+          elevateNodesOnSelect={false}
+          selectNodesOnDrag={false}
+          snapToGrid={true}
+          snapGrid={[25, 25]}
+          fitViewOptions={{ padding: 0.2, duration: 400 }}
+          deleteKeyCode="Delete"
+          selectionKeyCode="Shift"
         >
           <ViewportController 
             searchTerm={searchTerm}
