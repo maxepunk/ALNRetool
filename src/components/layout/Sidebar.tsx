@@ -12,6 +12,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { SidebarNavigation } from '../sidebar/SidebarNavigation';
 import { CharacterFilterPanel, PuzzleFilterPanel, ElementFilterPanel } from '../sidebar/FilterPanel';
 import { DepthSlider } from '../sidebar/DepthSlider';
+import { ClusterControls } from '../sidebar/ClusterControls';
 import { ActiveFiltersSummary } from '../sidebar/ActiveFiltersSummary';
 import { ThemeToggle } from '../sidebar/ThemeToggle';
 import EntityTypeToggle from '../filters/EntityTypeToggle';
@@ -76,6 +77,8 @@ export default function Sidebar() {
             <PuzzleFilterPanel />
             <ElementFilterPanel />
             <DepthSlider />
+            <Separator className="my-2 opacity-30" />
+            <ClusterControls />
           </div>
         </div>
       </div>

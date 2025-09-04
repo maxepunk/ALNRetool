@@ -48,6 +48,10 @@ import PuzzleNode from './nodes/PuzzleNode';
 import CharacterNode from './nodes/CharacterNode';
 import ElementNode from './nodes/ElementNode';
 import TimelineNode from './nodes/TimelineNode';
+import ClusterNode from './nodes/ClusterNode';
+import { useClusterStore } from '@/stores/clusterStore';
+import { applyClusterAwareLayout } from '@/lib/graph/layout/dagre';
+import { computeClusters } from '@/lib/graph/clustering/clusterEngine';
 import { DetailPanel } from '@/components/DetailPanel';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { useQuery } from '@tanstack/react-query';
@@ -93,6 +97,7 @@ const nodeTypes = {
   character: withTestId(CharacterNode),
   element: withTestId(ElementNode),
   timeline: withTestId(TimelineNode),
+  cluster: withTestId(ClusterNode), // NEW
 };
 
 /**
@@ -278,6 +283,21 @@ function GraphViewComponent() {
     }
   }, [serverNodes.length]);
   
+  // Add clustering state
+  const {
+    clusteringEnabled,
+    expandedClusters,
+    clusteringRules,
+    updateClusters
+  } = useClusterStore();
+
+  // Compute clusters when nodes/edges change
+  useEffect(() => {
+    if (clusteringEnabled && serverNodes.length > 0) {
+      updateClusters(serverNodes, serverEdges);
+    }
+  }, [serverNodes, serverEdges, clusteringEnabled, clusteringRules, updateClusters]);
+
   const { layoutedNodes, filteredEdges, totalUniverseNodes } = useGraphLayout({
     nodes: serverNodes,
     edges: serverEdges,
@@ -294,7 +314,11 @@ function GraphViewComponent() {
     puzzleSelectedActs,
     // Element filters as primitives
     elementBasicTypes,
-    elementStatus
+    elementStatus,
+    // NEW - Clustering parameters
+    clusteringEnabled,
+    expandedClusters,
+    clusteringRules
   });
   
   // Layout calculation complete

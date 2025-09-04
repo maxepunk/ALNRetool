@@ -90,6 +90,93 @@ export type NotionEntity = Character | Element | Puzzle | TimelineEvent;
 export type Entity = NotionEntity;
 
 /**
+ * Metadata for a cluster node.
+ */
+export interface ClusterMetadata {
+  isCluster: true;
+  clusterType: 'puzzle' | 'character' | 'timeline' | 'element';
+  childCount: number;
+  childIds: string[];
+}
+
+/**
+ * The data associated with a cluster node.
+ */
+/**
+ * Base interface for node data.
+ */
+export interface BaseNodeData {
+  label: string;
+  metadata: any;
+}
+
+/**
+ * Represents a character node in the graph.
+ */
+export interface CharacterNode extends Node {
+  type: 'character';
+  data: GraphNodeData<Character>;
+}
+
+/**
+ * Represents a puzzle node in the graph.
+ */
+export interface PuzzleNode extends Node {
+  type: 'puzzle';
+  data: GraphNodeData<Puzzle>;
+}
+
+/**
+ * Represents an element node in the graph.
+ */
+export interface ElementNode extends Node {
+  type: 'element';
+  data: GraphNodeData<Element>;
+}
+
+/**
+ * Represents a timeline node in the graph.
+ */
+export interface TimelineNode extends Node {
+  type: 'timeline';
+  data: GraphNodeData<TimelineEvent>;
+}
+
+/**
+ * Defines the structure of a cluster.
+ */
+export interface ClusterDefinition {
+  id: string;
+  label: string;
+  clusterType: 'puzzle' | 'character' | 'timeline' | 'element';
+  childIds: string[];
+  defaultExpanded: boolean;
+}
+
+export interface ClusterData extends BaseNodeData {
+  metadata: ClusterMetadata;
+  clustering: ClusterDefinition;
+}
+
+/**
+ * A discriminated union of all possible node types in the graph.
+ */
+export type GraphNodeType =
+  | CharacterNode
+  | PuzzleNode
+  | ElementNode
+  | TimelineNode
+  | ClusterNode; // New discriminated union member
+
+/**
+ * Represents a cluster node in the graph.
+ */
+export interface ClusterNode extends Node {
+  type: 'cluster';
+  data: ClusterData;
+}
+
+/**
  * Comprehensive investigation data structure for murder mystery entity storage.
  * 
  * Defines the complete data container for all investigation entities retrieved from

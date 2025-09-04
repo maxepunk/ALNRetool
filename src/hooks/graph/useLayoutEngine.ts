@@ -17,9 +17,10 @@
  */
 
 import { useMemo } from 'react';
-import type { GraphNode, GraphEdge } from '@/lib/graph/types';
+import type { GraphNode, GraphEdge, ClusteringRules } from '@/lib/graph/types';
 import type { ViewConfig } from '@/lib/viewConfigs';
-import { applyPureDagreLayout } from '@/lib/graph/layout/dagre';
+import { applyPureDagreLayout, applyClusterAwareLayout } from '@/lib/graph/layout/dagre';
+import { useClusterStore } from '@/stores/clusterStore';
 
 interface UseLayoutEngineParams {
   // Nodes and edges to layout
@@ -28,6 +29,11 @@ interface UseLayoutEngineParams {
   
   // Layout configuration
   viewConfig: ViewConfig;
+
+  // Clustering parameters
+  clusteringEnabled?: boolean;
+  expandedClusters?: Set<string>;
+  clusteringRules?: ClusteringRules;
 }
 
 interface UseLayoutEngineResult {
@@ -54,7 +60,10 @@ export function useLayoutEngine({
   visibleNodes,
   visibleEdges,
   viewConfig,
+  clusteringEnabled,
+  expandedClusters,
 }: UseLayoutEngineParams): UseLayoutEngineResult {
+  const { clusters } = useClusterStore();
   // Extract layout properties for stable dependencies
   const layoutDirection = viewConfig.layout.direction || 'LR';
   const nodeSpacing = viewConfig.layout.spacing?.nodeSpacing || 100;
@@ -76,11 +85,22 @@ export function useLayoutEngine({
     };
     
     // Apply layout algorithm
-    const layoutedNodes = applyPureDagreLayout(
-      visibleNodes,
-      visibleEdges,
-      layoutConfig
-    );
+    let layoutedNodes: GraphNode[];
+    if (clusteringEnabled && clusters.size > 0) {
+      layoutedNodes = applyClusterAwareLayout(
+        visibleNodes,
+        visibleEdges,
+        clusters,
+        expandedClusters || new Set(),
+        layoutConfig
+      );
+    } else {
+      layoutedNodes = applyPureDagreLayout(
+        visibleNodes,
+        visibleEdges,
+        layoutConfig
+      );
+    }
     
     return { layoutedNodes };
   }, [
@@ -90,6 +110,10 @@ export function useLayoutEngine({
     // Layout configuration as individual stable values
     layoutDirection,
     nodeSpacing,
-    rankSpacing
+    rankSpacing,
+    // Clustering
+    clusteringEnabled,
+    clusters,
+    expandedClusters,
   ]);
 }

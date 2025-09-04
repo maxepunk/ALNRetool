@@ -18,8 +18,11 @@
  */
 
 import { useMemo } from 'react';
-import type { GraphNode } from '@/lib/graph/types';
+import type { GraphNode, ClusteringRules } from '@/lib/graph/types';
 import type { Node, Edge } from '@xyflow/react';
+import { useClusterStore } from '@/stores/clusterStore';
+import { computeClusters } from '@/lib/graph/clustering/clusterEngine';
+import { applyClusterAwareLayout } from '@/lib/graph/layout/dagre';
 import type { ViewConfig } from '@/lib/viewConfigs';
 
 // Import the 2 composable hooks (filtering is now inline, relationships come from server)
@@ -48,6 +51,10 @@ interface UseGraphLayoutParams {
   // Element filter primitives
   elementBasicTypes: Set<string>;
   elementStatus: Set<string>;
+  // Clustering parameters
+  clusteringEnabled?: boolean;
+  expandedClusters?: Set<string>;
+  clusteringRules?: ClusteringRules;
 }
 
 interface UseGraphLayoutResult {
@@ -94,6 +101,9 @@ export const useGraphLayout = ({
   puzzleSelectedActs,
   elementBasicTypes,
   elementStatus,
+  clusteringEnabled,
+  expandedClusters,
+  clusteringRules,
 }: UseGraphLayoutParams): UseGraphLayoutResult => {
   
   // Step 1: Apply filters to server-provided nodes
@@ -191,6 +201,9 @@ export const useGraphLayout = ({
     visibleNodes,
     visibleEdges,
     viewConfig,
+    clusteringEnabled,
+    expandedClusters,
+    clusteringRules,
   });
   
   // Calculate total universe size for UI feedback

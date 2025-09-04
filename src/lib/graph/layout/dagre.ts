@@ -24,7 +24,7 @@
  */
 
 import dagre from 'dagre';
-import type { GraphNode, GraphEdge } from '../types';
+import type { GraphNode, GraphEdge, ClusterDefinition } from '../types';
 // Module imports removed in Phase 3 - using simplified inline implementations
 
 
@@ -371,6 +371,162 @@ export function applyPureDagreLayout(
   
 
   return positionedNodes;
+}
+
+export function applyClusterAwareLayout(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  clusters: Map<string, ClusterDefinition>,
+  expandedClusters: Set<string>,
+  options: PureDagreLayoutOptions = {}
+): GraphNode[] {
+  // Create cluster nodes
+  const clusterNodes: GraphNode[] = Array.from(clusters.values()).map(cluster => ({
+    id: cluster.id,
+    type: 'cluster',
+    position: { x: 0, y: 0 },
+    data: {
+      label: cluster.label,
+      metadata: {
+        entityType: 'cluster' as any,
+        entityId: cluster.id,
+        isCluster: true
+      },
+      entity: {} as any,
+      clustering: {
+        isCluster: true,
+        clusterType: cluster.clusterType,
+        childIds: cluster.childIds,
+        childCount: cluster.childIds.length,
+        // Preview data for collapsed state
+        childPreviews: cluster.childIds.slice(0, 3).map(id => {
+          const node = nodes.find(n => n.id === id);
+          return {
+            type: node?.data.metadata.entityType,
+            label: node?.data.label
+          };
+        })
+      }
+    },
+    width: 250, // Wider for cluster
+    height: expandedClusters.has(cluster.id) ? 80 : 120 // Taller when collapsed for preview
+  }));
+
+  // Separate visible and hidden nodes
+  const hiddenNodeIds = new Set<string>();
+  clusters.forEach((cluster, clusterId) => {
+    if (!expandedClusters.has(clusterId)) {
+      cluster.childIds.forEach(id => hiddenNodeIds.add(id));
+    }
+  });
+
+  const visibleNodes = nodes.filter(n => !hiddenNodeIds.has(n.id));
+  const allVisibleNodes = [...clusterNodes, ...visibleNodes];
+
+  // Create aggregated edges for collapsed clusters
+  const aggregatedEdges = createAggregatedEdges(
+    edges,
+    clusters,
+    expandedClusters,
+    hiddenNodeIds
+  );
+
+  // Layout visible nodes with existing Dagre
+  const layoutedNodes = applyPureDagreLayout(allVisibleNodes, aggregatedEdges, options);
+
+  // Position hidden nodes relative to their cluster parent
+  const hiddenNodes = nodes.filter(n => hiddenNodeIds.has(n.id)).map(node => {
+    const parentCluster = findParentCluster(node.id, clusters);
+    if (parentCluster) {
+      const parentNode = layoutedNodes.find(n => n.id === parentCluster.id);
+      if (parentNode) {
+        return {
+          ...node,
+          position: {
+            x: parentNode.position.x + 10, // Slightly offset
+            y: parentNode.position.y + 10
+          },
+          hidden: true // React Flow will hide these
+        };
+      }
+    }
+    return node;
+  });
+
+  return [...layoutedNodes, ...hiddenNodes];
+}
+
+function createAggregatedEdges(
+  edges: GraphEdge[],
+  clusters: Map<string, ClusterDefinition>,
+  expandedClusters: Set<string>,
+  hiddenNodeIds: Set<string>
+): GraphEdge[] {
+  const aggregatedEdges: GraphEdge[] = [];
+  const edgeGroups = new Map<string, GraphEdge[]>();
+
+  edges.forEach(edge => {
+    const sourceHidden = hiddenNodeIds.has(edge.source);
+    const targetHidden = hiddenNodeIds.has(edge.target);
+
+    if (!sourceHidden && !targetHidden) {
+      // Both visible - keep edge as-is
+      aggregatedEdges.push(edge);
+    } else if (sourceHidden && !targetHidden) {
+      // Source in cluster, target visible
+      const cluster = findParentCluster(edge.source, clusters);
+      if (cluster) {
+        const key = `${cluster.id}-${edge.target}`;
+        const group = edgeGroups.get(key) || [];
+        group.push(edge);
+        edgeGroups.set(key, group);
+      }
+    } else if (!sourceHidden && targetHidden) {
+      // Source visible, target in cluster
+      const cluster = findParentCluster(edge.target, clusters);
+      if (cluster) {
+        const key = `${edge.source}-${cluster.id}`;
+        const group = edgeGroups.get(key) || [];
+        group.push(edge);
+        edgeGroups.set(key, group);
+      }
+    }
+  });
+
+  // Create aggregated edges with badges
+  edgeGroups.forEach((edges, key) => {
+    const [source, target] = key.split('-');
+    aggregatedEdges.push({
+      id: `aggregated-${key}`,
+      source,
+      target,
+      type: 'aggregated',
+      data: {
+        relationshipType: 'aggregated',
+        weight: Math.max(...edges.map(e => e.data?.weight || 1)),
+        edgeCount: edges.length,
+        label: edges.length > 1 ? `${edges.length} connections` : undefined
+      },
+      style: {
+        strokeWidth: Math.min(edges.length, 5),
+        stroke: '#94a3b8'
+      }
+    });
+  });
+
+  return aggregatedEdges;
+}
+
+function findParentCluster(
+  nodeId: string,
+  clusters: Map<string, ClusterDefinition>
+): ClusterDefinition | undefined {
+  for (const cluster of clusters.values()) {
+    if (cluster.childIds.includes(nodeId)) {
+      return cluster;
+    }
+  }
+  return undefined;
 }
 
 /**
