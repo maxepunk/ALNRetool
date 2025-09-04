@@ -295,14 +295,14 @@ test.describe('Edge Cases', () => {
     let graphApiCallCount = 0;
     
     // Track graph API calls
-    await page.route('**/api/graph/data', async route => {
+    await page.route('**/api/graph/complete', async route => {
       graphApiCallCount++;
       await route.continue();
     });
     
     // Initial load
     await page.goto('/graph');
-    await page.waitForResponse('**/api/graph/data');
+    await page.waitForResponse('**/api/graph/complete');
     expect(graphApiCallCount).toBe(1);
     
     // Navigate to puzzle and create relationship
@@ -311,7 +311,7 @@ test.describe('Edge Cases', () => {
     
     // Wait for cache invalidation to trigger refetch
     await page.waitForResponse(response => 
-      response.url().includes('/api/graph/data') && 
+      response.url().includes('/api/graph/complete') && 
       graphApiCallCount > 1
     );
     

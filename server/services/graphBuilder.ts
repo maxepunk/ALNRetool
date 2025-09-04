@@ -446,15 +446,3 @@ export function buildCompleteGraph(entities: {
   };
 }
 
-/**
- * Filter graph based on view configuration
- * This will be expanded to handle view-specific filtering
- */
-export function filterGraphForView(
-  graph: { nodes: GraphNode[]; edges: Edge[] },
-  viewConfig: any
-): { nodes: GraphNode[]; edges: Edge[] } {
-  // TODO: Implement view-specific filtering
-  // For now, return full graph
-  return graph;
-}

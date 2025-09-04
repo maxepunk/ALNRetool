@@ -129,7 +129,7 @@ function useGraphViewport() {
   }, []);
   
   return {
-    viewport: getViewport(),
+    viewport: getViewport,
     zoomToFit: handleZoomToFit,
     zoomIn: handleZoomIn,
     zoomOut: handleZoomOut,
@@ -210,7 +210,12 @@ export function useViewportManager(
           // If we have specific visible nodes, fit to them
           if (visibleNodes && visibleNodes.length > 0) {
             fitToNodes(visibleNodes.map(n => n.id), { padding: 0.3, duration: 600 });
+          } else if (visibleNodes && visibleNodes.length === 0) {
+            // No visible nodes - likely due to connection depth with no selection
+            // Don't change viewport to avoid zooming to empty space
+            console.warn('[ViewportManager] No visible nodes to fit - maintaining current viewport');
           } else {
+            // Fallback to fit all
             zoomToFit();
           }
           break;

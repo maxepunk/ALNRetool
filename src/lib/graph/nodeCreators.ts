@@ -12,9 +12,9 @@ import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/a
 
 // Type for entity visibility toggles
 type EntityVisibility = {
-  characters: boolean;
-  puzzles: boolean;
-  elements: boolean;
+  character: boolean;
+  puzzle: boolean;
+  element: boolean;
   timeline: boolean;
 };
 
@@ -36,7 +36,7 @@ export function createPuzzleNodes(
   return puzzles
     .filter(puzzle => {
       // Check entity visibility toggle
-      if (!entityVisibility.puzzles) {
+      if (!entityVisibility.puzzle) {
         return false;
       }
       
@@ -94,7 +94,7 @@ export function createCharacterNodes(
   return characters
     .filter(character => {
       // Check entity visibility toggle
-      if (!entityVisibility.characters) {
+      if (!entityVisibility.character) {
         return false;
       }
       
@@ -156,7 +156,7 @@ export function createElementNodes(
   return elements
     .filter(element => {
       // Check entity visibility toggle
-      if (!entityVisibility.elements) {
+      if (!entityVisibility.element) {
         return false;
       }
       

@@ -138,9 +138,15 @@ export const useGraphLayout = ({
                 break;
                 
               case 'puzzle':
-                // Puzzle act filter
-                if (puzzleSelectedActs.size > 0 && !puzzleSelectedActs.has(entity.act || '')) {
-                  return false;
+                // Puzzle act filter - check timing array (matches nodeCreators.ts pattern)
+                if (puzzleSelectedActs.size > 0) {
+                  const puzzleTiming = (entity as any).timing || [];
+                  const hasMatchingAct = puzzleTiming.some((act: string) => 
+                    act && puzzleSelectedActs.has(act)
+                  );
+                  if (!hasMatchingAct) {
+                    return false;
+                  }
                 }
                 break;
                 

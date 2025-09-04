@@ -32,7 +32,7 @@
  * @see {@link applyPureDagreLayout} for layout algorithm
  */
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -62,16 +62,35 @@ import { FloatingActionButton } from './FloatingActionButton';
 import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
 
 /**
+ * Wrapper to add data-testid to all node components for E2E testing
+ * This ensures Playwright can reliably select nodes using [data-testid="node-{id}"]
+ * The wrapper clones the component's root element and adds the data-testid
+ */
+const withTestId = (Component: React.ComponentType<any>) => {
+  const WrappedComponent = (props: any) => {
+    // Pass a modified props that will be used by the node's root div
+    const propsWithTestId = {
+      ...props,
+      'data-testid': `node-${props.id}`
+    };
+    return <Component {...propsWithTestId} />;
+  };
+  WrappedComponent.displayName = `WithTestId(${Component.displayName || Component.name})`;
+  return WrappedComponent;
+};
+
+/**
  * Custom node component mapping for React Flow.
  * Each entity type has a specialized node component.
+ * Wrapped with data-testid for E2E testing.
  * 
  * @constant {Record<string, React.ComponentType>} nodeTypes
  */
 const nodeTypes = {
-  puzzle: PuzzleNode,
-  character: CharacterNode,
-  element: ElementNode,
-  timeline: TimelineNode,
+  puzzle: withTestId(PuzzleNode),
+  character: withTestId(CharacterNode),
+  element: withTestId(ElementNode),
+  timeline: withTestId(TimelineNode),
 };
 
 /**
@@ -92,19 +111,32 @@ function ViewportController({
   const viewportControls = useViewportManager(searchTerm, selectedNodeId, null, connectionDepth, nodes);
   
   // Initial fit to view on mount or when nodes change significantly
-  const hasNodes = nodes.length > 0;
   const fitAll = viewportControls.fitAll;
   
+  // Track previous node count to detect true 0→>0 transitions
+  const previousNodeCountRef = useRef(nodes.length);
+  
   useEffect(() => {
-    if (!hasNodes) return;
+    const previousCount = previousNodeCountRef.current;
+    const currentCount = nodes.length;
     
-    // Small delay to ensure nodes are rendered
-    const timer = setTimeout(() => {
-      fitAll();
-    }, 100);
+    // Only fit when truly going from 0 to >0 nodes (initial load or after complete clear)
+    // Ignore temporary empty states during mutations
+    if (previousCount === 0 && currentCount > 0) {
+      // Small delay to ensure nodes are rendered
+      const timer = setTimeout(() => {
+        fitAll();
+      }, 100);
+      
+      // Update ref after scheduling fitAll
+      previousNodeCountRef.current = currentCount;
+      
+      return () => clearTimeout(timer);
+    }
     
-    return () => clearTimeout(timer);
-  }, [hasNodes, fitAll]); // Only re-fit when going from 0 to >0 nodes
+    // Always update the ref to track current count
+    previousNodeCountRef.current = currentCount;
+  }, [nodes.length, fitAll]); // Track actual count, not boolean
   
   return null; // This component doesn't render anything
 }
@@ -137,6 +169,7 @@ function GraphViewComponent() {
   
   // Update view store when viewType changes (fixes Bug 6a)
   useEffect(() => {
+    console.log('[GraphView] View changed to:', viewType);
     useViewStore.setState({ currentViewType: viewType });
   }, [viewType]);
   
@@ -148,8 +181,10 @@ function GraphViewComponent() {
     isError: hasAnyError,
     refetch: refetchAll 
   } = useQuery({
-    queryKey: ['graph', 'complete', viewType],
-    queryFn: () => graphApi.getComplete(viewConfig),
+    queryKey: ['graph', 'complete'],
+    queryFn: () => {
+      return graphApi.getComplete(); // viewConfig removed - filtering happens client-side
+    },
     staleTime: 5 * 60 * 1000,
     enabled: !!viewConfig, // Only fetch when we have a view config
   });

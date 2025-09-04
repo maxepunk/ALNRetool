@@ -19,12 +19,13 @@ ALNRetool is a visualization and editing tool for the "About Last Night" murder 
 
 ## CRITICAL Considerations
 - This is an INTERNAL TOOL. It will only be used by 2-3 users.
+- IMPORTANT: THIS TOOL IS NOT IN PRODUCTION. **YOU CAN MAKE BREAKING CHANGES TO IMPROVE CODE QUALITY EFFICIENTLY**
 - Relationship handling between ROLLUP and RELATIONSHIP and TWO WAY RELATIONSHIP fields in Notion each need specific handling for CRUD operations. 
 - ALWAYS use FULL filepaths for TOOL CALLS.
 
 ## Currently working on: 
-@startTransition_Plan.md
-
+General Code Quality & UX Improvements.
+ 
 ## Changes recorded at: 
 CHANGELOG.md
 

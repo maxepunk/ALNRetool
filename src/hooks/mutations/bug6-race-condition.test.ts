@@ -2,22 +2,13 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { type ReactNode } from 'react';
-import { useUpdateElement } from './entityMutations';
+import { useEntityMutation } from './entityMutations';
 import { elementsApi } from '@/services/api';
 
 // Mock the API module to control mutation responses
 vi.mock('@/services/api');
 
-// Mock viewStore to control which view is "current" during tests
-let mockCurrentViewType = 'view-A';
-vi.mock('@/stores/viewStore', () => ({
-  useViewStore: {
-    getState: () => ({
-      currentViewType: mockCurrentViewType,
-      setViewType: vi.fn()
-    })
-  }
-}));
+// ViewStore mock no longer needed - mutations use unified cache key
 
 // Spy on console.warn to verify developer warnings
 const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -72,14 +63,13 @@ describe('Bug 6: Update Mutation Race Condition', () => {
     consoleWarnSpy.mockClear();
   });
 
-  it('should update the correct cache key when view changes during an in-flight mutation', async () => {
+  it('should update the unified cache key regardless of view changes during mutation', async () => {
     // Arrange
-    const viewA_QueryKey = ['graph', 'complete', 'view-A'];
-    const viewB_QueryKey = ['graph', 'complete', 'view-B'];
+    const queryKey = ['graph', 'complete'];
+    // With unified cache, there's only one cache key for all views
 
-    // Pre-populate the cache for two separate views with identical initial data
-    queryClient.setQueryData(viewA_QueryKey, JSON.parse(JSON.stringify(initialGraphData)));
-    queryClient.setQueryData(viewB_QueryKey, JSON.parse(JSON.stringify(initialGraphData)));
+    // Pre-populate the single unified cache
+    queryClient.setQueryData(queryKey, JSON.parse(JSON.stringify(initialGraphData)));
 
     // Mock a slow API response that we can resolve manually
     let resolveMutation: (value: unknown) => void;
@@ -88,36 +78,28 @@ describe('Bug 6: Update Mutation Race Condition', () => {
     });
     vi.mocked(elementsApi).update = vi.fn().mockReturnValue(mutationPromise);
 
-    const updatedEntity = { id: 'elem-1', name: 'Updated Name From View A', version: 2 };
+    const updatedEntity = { id: 'elem-1', name: 'Updated Name', version: 2 };
 
-    // Act 1: Render the hook with viewStore set to 'view-A' and trigger the mutation.
-    mockCurrentViewType = 'view-A';
+    // Act 1: Render the hook and trigger the mutation
     const { result } = renderHook(
-      () => useUpdateElement(), // uses viewStore
+      () => useEntityMutation('element', 'update'),
       { 
         wrapper
       }
     );
     
     act(() => {
-      result.current.mutate({ id: 'elem-1', name: 'Updated Name From View A' });
+      result.current.mutate({ id: 'elem-1', name: 'Updated Name' });
     });
 
-    // Assert 1: The optimistic update should only affect the cache for 'view-A'.
+    // Assert 1: The optimistic update should affect the unified cache
     await waitFor(() => {
-      const viewAData = queryClient.getQueryData(viewA_QueryKey) as any;
-      expect(viewAData.nodes[0].data.entity.name).toBe('Updated Name From View A');
-      expect(viewAData.nodes[0].data.metadata.isOptimistic).toBe(true);
-
-      const viewBData = queryClient.getQueryData(viewB_QueryKey) as any;
-      expect(viewBData.nodes[0].data.entity.name).toBe('Original Name'); // 'view-B' remains unchanged.
+      const data = queryClient.getQueryData(queryKey) as any;
+      expect(data.nodes[0].data.entity.name).toBe('Updated Name');
+      expect(data.nodes[0].data.metadata.isOptimistic).toBe(true);
     });
 
-    // Act 2: Simulate a rapid view switch to 'view-B' by changing the store.
-    // The original mutation is still in-flight.
-    mockCurrentViewType = 'view-B';
-
-    // Act 3: Resolve the original mutation's promise.
+    // Act 2: Resolve the mutation's promise
     await act(async () => {
       resolveMutation({ 
         success: true, 
@@ -151,22 +133,18 @@ describe('Bug 6: Update Mutation Race Condition', () => {
       await mutationPromise; // Ensure the promise settlement propagates
     });
 
-    // Assert 2: The 'onSuccess' callback from the original mutation should update
-    // the 'view-A' cache and leave the 'view-B' cache untouched.
+    // Assert 2: The onSuccess callback should update the unified cache
     await waitFor(() => {
-      const finalViewAData = queryClient.getQueryData(viewA_QueryKey) as any;
-      expect(finalViewAData.nodes[0].data.entity.name).toBe('Updated Name From View A');
-      expect(finalViewAData.nodes[0].data.entity.version).toBe(2);
-      expect(finalViewAData.nodes[0].data.metadata.isOptimistic).toBe(false); // Optimistic flag is cleared
-
-      const finalViewBData = queryClient.getQueryData(viewB_QueryKey) as any;
-      expect(finalViewBData.nodes[0].data.entity.name).toBe('Original Name'); // 'view-B' is still pristine.
+      const finalData = queryClient.getQueryData(queryKey) as any;
+      expect(finalData.nodes[0].data.entity.name).toBe('Updated Name');
+      expect(finalData.nodes[0].data.entity.version).toBe(2);
+      expect(finalData.nodes[0].data.metadata.isOptimistic).toBe(false); // Optimistic flag is cleared
     });
   });
 
   it('should complete cache update even if the component unmounts during mutation', async () => {
     // Arrange
-    const queryKey = ['graph', 'complete', 'view-A'];
+    const queryKey = ['graph', 'complete'];
     queryClient.setQueryData(queryKey, JSON.parse(JSON.stringify(initialGraphData)));
 
     let resolveMutation: (value: unknown) => void;
@@ -203,9 +181,8 @@ describe('Bug 6: Update Mutation Race Condition', () => {
     };
 
     // Act 1: Render hook and trigger the mutation.
-    mockCurrentViewType = 'view-A';
     const { unmount, result } = renderHook(
-      () => useUpdateElement(), // uses viewStore
+      () => useEntityMutation('element', 'update'),
       { wrapper }
     );
     
@@ -238,10 +215,10 @@ describe('Bug 6: Update Mutation Race Condition', () => {
     });
   });
 
-  it('should use view from viewStore for cache key', async () => {
-    // Arrange - viewStore provides 'view-A' as the current view
-    const viewQueryKey = ['graph', 'complete', 'view-A'];
-    queryClient.setQueryData(viewQueryKey, JSON.parse(JSON.stringify(initialGraphData)));
+  it('should use unified cache key for all mutations', async () => {
+    // Arrange - unified cache key for all views
+    const queryKey = ['graph', 'complete'];
+    queryClient.setQueryData(queryKey, JSON.parse(JSON.stringify(initialGraphData)));
     
     const updatedEntity = { id: 'elem-1', name: 'Updated via ViewStore', version: 2 };
     vi.mocked(elementsApi).update = vi.fn().mockResolvedValue({ 
@@ -274,9 +251,9 @@ describe('Bug 6: Update Mutation Race Condition', () => {
       }
     });
 
-    // Act: Render the hook which gets view from viewStore
+    // Act: Render the hook with unified cache key
     const { result } = renderHook(
-      () => useUpdateElement(), // Uses viewStore internally
+      () => useEntityMutation('element', 'update'),
       { wrapper }
     );
     
@@ -284,9 +261,9 @@ describe('Bug 6: Update Mutation Race Condition', () => {
       await result.current.mutateAsync({ id: 'elem-1', name: 'Updated via ViewStore' });
     });
 
-    // Assert: The cache should be updated using the view from viewStore
+    // Assert: The cache should be updated using the unified key
     await waitFor(() => {
-      const data = queryClient.getQueryData(viewQueryKey) as any;
+      const data = queryClient.getQueryData(queryKey) as any;
       expect(data.nodes[0].data.entity.name).toBe('Updated via ViewStore');
       expect(data.nodes[0].data.entity.version).toBe(2);
     });

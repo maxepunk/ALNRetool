@@ -16,7 +16,7 @@ import {
  * Custom React Flow node component for Character entities
  * Uses HexagonCard for visually distinct hexagonal shape
  */
-const CharacterNode = memo(({ data, selected }: NodeProps) => {
+const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-testid'?: string }) => {
   const nodeData = data as GraphNodeData<Character>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
@@ -83,7 +83,7 @@ const CharacterNode = memo(({ data, selected }: NodeProps) => {
   const icon = isNPC ? <Users className="h-5 w-5" /> : <User className="h-5 w-5" />;
   
   return (
-    <div style={{ position: 'relative', zIndex }}>
+    <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
       <HexagonCard
         size={size}
         title={entity.name}

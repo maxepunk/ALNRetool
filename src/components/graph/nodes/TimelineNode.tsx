@@ -15,7 +15,7 @@ import {
  * Custom React Flow node component for Timeline Event entities
  * Uses BaseNodeCard for consistent styling with timeline-specific features
  */
-const TimelineNode = memo(({ data, selected }: NodeProps) => {
+const TimelineNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-testid'?: string }) => {
   const nodeData = data as GraphNodeData<TimelineEvent>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
@@ -92,7 +92,8 @@ const TimelineNode = memo(({ data, selected }: NodeProps) => {
   };
   
   return (
-    <BaseNodeCard
+    <div data-testid={rest['data-testid'] || `node-${id}`}>
+      <BaseNodeCard
       nodeType="timeline"
       size={size}
       status={statuses}
@@ -110,6 +111,7 @@ const TimelineNode = memo(({ data, selected }: NodeProps) => {
     >
       {content}
     </BaseNodeCard>
+    </div>
   );
 });
 

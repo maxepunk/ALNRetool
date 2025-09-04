@@ -103,7 +103,7 @@ const elementInverseRelations: InverseRelation[] = [
  */
 const router = createEntityRouter({
   databaseId: ELEMENTS_DATABASE_ID,
-  entityName: 'elements',
+  entityName: 'element',
   transform: transformElement,
   toNotionProps: toNotionElementProperties,
   buildFilters: buildElementFilters,

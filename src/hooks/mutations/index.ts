@@ -1,62 +1,43 @@
 /**
  * Entity Mutation Hooks
  * 
- * Provides React hooks for updating entities in Notion via the API.
- * All hooks are generated using the unified entityMutations factory.
+ * Provides a unified hook for all entity mutations (create, update, delete)
+ * across all entity types (character, element, puzzle, timeline).
  * 
  * @module hooks/mutations
  * 
  * **Architecture:**
- * - Factory-based hook generation
+ * - Single unified hook replaces 18 individual hooks
+ * - Factory-based hook generation for type safety
  * - React Query mutation pattern
  * - Optimistic updates with rollback
  * - Automatic cache invalidation
  * - Error handling with recovery
  * 
- * **Features:**
- * - Type-safe entity updates
- * - Loading states
- * - Error messages
- * - Success callbacks
- * - Cache synchronization
- * 
  * **Usage:**
  * ```typescript
- * const { mutate } = useUpdateElement();
- * mutate({
- *   id: 'element-123',
- *   name: 'New Name'
- * });
+ * import { useEntityMutation } from '@/hooks/mutations';
+ * 
+ * // Create mutation
+ * const createMutation = useEntityMutation('character', 'create');
+ * await createMutation.mutateAsync({ name: 'New Character' });
+ * 
+ * // Update mutation
+ * const updateMutation = useEntityMutation('element', 'update');
+ * await updateMutation.mutateAsync({ id: 'elem-123', name: 'Updated' });
+ * 
+ * // Delete mutation
+ * const deleteMutation = useEntityMutation('puzzle', 'delete');
+ * await deleteMutation.mutateAsync({ id: 'puzzle-456' });
  * ```
  */
 
-// Re-export all mutation hooks from the unified factory
-export {
-  // Character mutations
-  useCreateCharacter,
-  useUpdateCharacter,
-  useDeleteCharacter,
-  
-  // Element mutations
-  useCreateElement,
-  useUpdateElement,
-  useDeleteElement,
-  
-  // Puzzle mutations
-  useCreatePuzzle,
-  useUpdatePuzzle,
-  useDeletePuzzle,
-  
-  // Timeline mutations (with aliases for backward compatibility)
-  useCreateTimeline,
-  useCreateTimeline as useCreateTimelineEvent,
-  useUpdateTimeline,
-  useUpdateTimeline as useUpdateTimelineEvent,
-  useDeleteTimeline,
-  useDeleteTimeline as useDeleteTimelineEvent,
-  
-  // Types
+// Export the unified hook and necessary types
+export { 
+  useEntityMutation,
+  createEntityMutation,
   type EntityType,
   type MutationType,
-  type Entity
+  type Entity,
+  type ParentRelationMetadata
 } from './entityMutations';

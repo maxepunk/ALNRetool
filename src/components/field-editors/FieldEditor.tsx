@@ -76,6 +76,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
     onBlur,
     isFocused,
     entityType,
+    currentEntityId,
   } = props;
 
   /**
@@ -88,7 +89,9 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
   switch (field.type) {
     case 'text':
       return (
-        <div className={cn(
+        <div 
+          data-testid={`field-${field.key}`}
+          className={cn(
           "space-y-2 transition-all",
           isFocused && "scale-[1.02]"
         )}>
@@ -124,7 +127,9 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
 
     case 'textarea':
       return (
-        <div className={cn(
+        <div 
+          data-testid={`field-${field.key}`}
+          className={cn(
           "space-y-2 transition-all",
           isFocused && "scale-[1.02]"
         )}>
@@ -161,13 +166,14 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
 
     case 'select':
       return (
-        <div className="space-y-2">
+        <div data-testid={`field-${field.key}`} className="space-y-2">
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
             {field.readOnly && <span className="text-muted-foreground text-xs ml-2">(computed)</span>}
           </Label>
           <Select
+            id={field.key}
             value={value || ''}
             onValueChange={onChange}
             disabled={disabled || field.readOnly}
@@ -194,7 +200,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
     case 'multiselect':
       const selectedValues = Array.isArray(value) ? value : [];
       return (
-        <div className="space-y-2">
+        <div data-testid={`field-${field.key}`} className="space-y-2">
           <Label className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -259,7 +265,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
 
     case 'url':
       return (
-        <div className="space-y-2">
+        <div data-testid={`field-${field.key}`} className="space-y-2">
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -283,7 +289,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
 
     case 'number':
       return (
-        <div className="space-y-2">
+        <div data-testid={`field-${field.key}`} className="space-y-2">
           <Label htmlFor={field.key} className="text-sm font-medium">
             {field.label}
             {field.required && <span className="text-destructive ml-1">*</span>}
@@ -309,7 +315,7 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
 
     case 'checkbox':
       return (
-        <div className="space-y-2">
+        <div data-testid={`field-${field.key}`} className="space-y-2">
           <div className="flex items-center space-x-2">
             <Checkbox
               id={field.key}
@@ -341,6 +347,8 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {...props}
           multiple={true}
           entityType={(field as any).entityType || entityType}
+          currentEntityId={currentEntityId}
+          currentEntityType={entityType}
         />
       );
 
@@ -350,6 +358,8 @@ export const FieldEditor: React.FC<FieldEditorProps> = (props) => {
           {...props}
           multiple={false}
           entityType={(field as any).entityType || entityType}
+          currentEntityId={currentEntityId}
+          currentEntityType={entityType}
         />
       );
 

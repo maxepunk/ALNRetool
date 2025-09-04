@@ -97,16 +97,7 @@ import type {
   Puzzle,
   TimelineEvent,
 } from '@/types/notion/app';
-import {
-  useUpdateCharacter,
-  useUpdateElement,
-  useUpdatePuzzle,
-  useUpdateTimelineEvent,
-  useDeleteCharacter,
-  useDeleteElement,
-  useDeletePuzzle,
-  useDeleteTimelineEvent,
-} from '@/hooks/mutations';
+import { useEntityMutation } from '@/hooks/mutations';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
 
@@ -306,58 +297,15 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     };
   }, []);
 
-  // Get appropriate mutation hook based on entity type
-  // View type is now managed by viewStore for cache key consistency
-  const updateCharacter = useUpdateCharacter();
-  const updateElement = useUpdateElement();
-  const updatePuzzle = useUpdatePuzzle();
-  const updateTimeline = useUpdateTimelineEvent();
-  
-  // Get delete mutation hooks
-  const deleteCharacter = useDeleteCharacter({
-    onSuccess: safeOnSuccess(() => onClose())
-  });
-  const deleteElement = useDeleteElement({
-    onSuccess: safeOnSuccess(() => onClose())
-  });
-  const deletePuzzle = useDeletePuzzle({
-    onSuccess: safeOnSuccess(() => onClose())
-  });
-  const deleteTimeline = useDeleteTimelineEvent({
+  // Get mutation hooks using unified hook
+  const updateMutation = useEntityMutation(entityType, 'update');
+  const deleteMutation = useEntityMutation(entityType, 'delete', {
     onSuccess: safeOnSuccess(() => onClose())
   });
 
-  // Select the right mutation based on entity type
-  const mutation = useMemo(() => {
-    switch (entityType) {
-      case 'character':
-        return updateCharacter;
-      case 'element':
-        return updateElement;
-      case 'puzzle':
-        return updatePuzzle;
-      case 'timeline':
-        return updateTimeline;
-      default:
-        return null;
-    }
-  }, [entityType, updateCharacter, updateElement, updatePuzzle, updateTimeline]);
-  
-  // Select the right delete mutation based on entity type
-  const deleteMutation = useMemo(() => {
-    switch (entityType) {
-      case 'character':
-        return deleteCharacter;
-      case 'element':
-        return deleteElement;
-      case 'puzzle':
-        return deletePuzzle;
-      case 'timeline':
-        return deleteTimeline;
-      default:
-        return null;
-    }
-  }, [entityType, deleteCharacter, deleteElement, deletePuzzle, deleteTimeline]);
+  // The mutation hooks are now directly available
+  const mutation = updateMutation;
+  const deleteEntityMutation = deleteMutation;
 
   // Combine external and internal saving states
   const isSaving = externalIsSaving || mutation?.isPending || false;
@@ -621,7 +569,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       const deleteData = 'version' in entity && entity.version !== undefined 
         ? { id: entity.id, version: entity.version }
         : entity.id;
-      await deleteMutation.mutateAsync(deleteData);
+      await deleteEntityMutation.mutateAsync(deleteData);
       // onClose is called from the mutation's onSuccess callback
     } catch (error) {
       // Error is already shown via toast in the mutation
@@ -673,7 +621,9 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   };
 
   return (
-    <div className={cn(
+    <div 
+      data-testid="detail-panel"
+      className={cn(
       "w-96 h-full bg-white/10 backdrop-blur-md border-l border-white/20 flex flex-col",
       isEntering && "animate-in slide-in-from-right duration-300",
       isExiting && "animate-out slide-out-to-right duration-200",
@@ -792,6 +742,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                       isFocused={focusedField === field.key}
                       allEntities={allEntities}
                       entityType={entityType}
+                      currentEntityId={entity?.id}
                     />
                   ))}
                 </CollapsibleSection>
@@ -820,6 +771,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
                       isFocused={focusedField === field.key}
                       allEntities={allEntities}
                       entityType={entityType}
+                      currentEntityId={entity?.id}
                     />
                   ))}
                 </CollapsibleSection>

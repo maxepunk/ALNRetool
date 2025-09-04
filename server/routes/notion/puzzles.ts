@@ -110,7 +110,7 @@ const puzzleInverseRelations: InverseRelation[] = [
  */
 const router = createEntityRouter({
   databaseId: PUZZLES_DATABASE_ID,
-  entityName: 'puzzles',
+  entityName: 'puzzle',
   transform: transformPuzzle,
   toNotionProps: toNotionPuzzleProperties,
   buildFilters: buildPuzzleFilters,

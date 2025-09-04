@@ -10,7 +10,7 @@ import { Puzzle as PuzzleIcon, User } from 'lucide-react';
  * Custom React Flow node component for Puzzle entities
  * Uses DiamondCard for distinctive diamond-shaped visualization
  */
-const PuzzleNode = memo(({ data, selected }: NodeProps) => {
+const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-testid'?: string }) => {
   const nodeData = data as GraphNodeData<Puzzle>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
@@ -67,7 +67,7 @@ const PuzzleNode = memo(({ data, selected }: NodeProps) => {
   ) : undefined;
 
   return (
-    <div style={{ position: 'relative', zIndex }}>
+    <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
       <DiamondCard
         title={entity.name}
         icon={<PuzzleIcon className="h-5 w-5" />}

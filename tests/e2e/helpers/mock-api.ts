@@ -154,7 +154,9 @@ function generateGraphData(): GraphData {
       position: { x: 0, y: 0 }, // Layout will be calculated client-side
       data: {
         label: char.name,
-        metadata: {},
+        metadata: {
+          entityType: 'character'
+        },
         entity: char
       }
     });
@@ -182,7 +184,9 @@ function generateGraphData(): GraphData {
       position: { x: 0, y: 0 },
       data: {
         label: elem.name,
-        metadata: {},
+        metadata: {
+          entityType: 'element'
+        },
         entity: elem
       }
     });
@@ -196,7 +200,9 @@ function generateGraphData(): GraphData {
       position: { x: 0, y: 0 },
       data: {
         label: puzzle.name,
-        metadata: {},
+        metadata: {
+          entityType: 'puzzle'
+        },
         entity: puzzle
       }
     });
@@ -227,13 +233,31 @@ export async function setupApiMocking(page: Page) {
   // Reset database state for each test
   resetMockDb();
 
-  // Mock graph data endpoint
-  await page.route('**/api/graph/data', async (route: Route) => {
+  // Mock graph complete endpoint (new unified endpoint)
+  await page.route('**/api/graph/complete', async (route: Route) => {
+    const graphData = generateGraphData();
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
+      headers: {
+        'X-Cache-Hit': 'false' // First request is always cache miss in mock
+      },
       body: JSON.stringify({
-        data: generateGraphData()
+        ...graphData,
+        metadata: {
+          totalNodes: graphData.nodes.length,
+          totalEdges: graphData.edges.length,
+          placeholderNodes: 0,
+          missingEntities: [],
+          entityCounts: {
+            characters: db.characters.length,
+            elements: db.elements.length,
+            puzzles: db.puzzles.length,
+            timeline: db.timeline.length
+          },
+          buildTime: 10,
+          cached: false
+        }
       })
     });
   });

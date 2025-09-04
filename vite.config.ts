@@ -128,6 +128,13 @@ export default defineConfig({
         classNameStrategy: 'non-scoped'
       }
     },
+    /** Exclude E2E tests that should run with Playwright */
+    exclude: [
+      'node_modules/**',      // Don't test dependencies
+      'dist/**',              // Don't test build output
+      'tests/e2e/**',         // E2E tests use Playwright, not Vitest
+      '**/*.spec.ts',         // Playwright spec files
+    ],
     /** Code coverage configuration with c8 */
     coverage: {
       /** Coverage report formats: console, JSON for CI, HTML for browsing */
@@ -142,6 +149,7 @@ export default defineConfig({
         '**/*.test.tsx',      // React component test files
         '**/*.spec.ts',       // Spec files
         '**/*.spec.tsx',      // React spec files
+        'tests/e2e/**',       // E2E tests
       ],
       /** Minimum coverage thresholds - build fails if not met */
       thresholds: {

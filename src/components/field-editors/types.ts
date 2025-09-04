@@ -49,6 +49,7 @@ export interface FieldEditorProps {
     timeline?: TimelineEvent[];
   };
   entityType?: 'character' | 'element' | 'puzzle' | 'timeline';
+  currentEntityId?: string;
 }
 
 // Validation

@@ -27,6 +27,7 @@ import type {
 interface RelationFieldEditorProps extends FieldEditorProps {
   entityType?: 'character' | 'element' | 'puzzle' | 'timeline';
   multiple?: boolean; // true for relation, false for relation-single
+  currentEntityType?: 'character' | 'element' | 'puzzle' | 'timeline'; // Type of the parent entity being edited
 }
 
 // Helper to find entity by ID across all entity types
@@ -87,6 +88,8 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   allEntities,
   entityType,
   multiple = true,
+  currentEntityId,
+  currentEntityType,
 }) => {
   const { openCreatePanel } = useCreationStore();
   
@@ -125,10 +128,6 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
       .map(id => findEntityById(id, allEntities, targetType))
       .filter(Boolean);
   }, [selectedIds, allEntities, targetType]);
-
-  // Get current entity context from field metadata (will be passed from DetailPanel)
-  const currentEntityId = (field as any).currentEntityId;
-  const currentEntityType = (field as any).currentEntityType;
   
   // Handle entity selection
   const handleSelect = useCallback((value: string) => {
@@ -192,7 +191,7 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   // Render read-only state
   if (field.readOnly) {
     return (
-      <div className="space-y-2">
+      <div data-testid={`field-${field.key}`} className="space-y-2">
         <Label className="text-sm font-medium">
           {field.label}
           <span className="text-muted-foreground text-xs ml-2">(computed)</span>
@@ -222,7 +221,9 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
   }
 
   return (
-    <div className={cn(
+    <div 
+      data-testid={`field-${field.key}`}
+      className={cn(
       "space-y-2 transition-all",
       isFocused && "scale-[1.02]"
     )}>

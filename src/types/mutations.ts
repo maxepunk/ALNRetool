@@ -8,8 +8,8 @@
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 import type { GraphDelta } from '../../server/types/delta';
 
-// Entity type union
-export type EntityType = 'characters' | 'elements' | 'puzzles' | 'timeline';
+// Entity type union - MUST match server/utils/entityTypeDetection.ts
+export type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
 export type Entity = Character | Element | Puzzle | TimelineEvent;
 
 // Mutation types
@@ -51,7 +51,6 @@ export interface MutationContext {
   tempId?: string;
   createdEdges?: string[];
   performanceStart?: number;
-  optimisticStartTime?: number;
 }
 
 // Cache update strategies

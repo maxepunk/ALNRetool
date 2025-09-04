@@ -38,9 +38,10 @@ export interface CacheUpdateContext<T extends Entity = Entity> {
 /**
  * Base cache updater interface
  * All strategies must implement this interface
+ * Supports both sync and async operations via union return type
  */
 export interface CacheUpdater {
-  update<T extends Entity>(context: CacheUpdateContext<T>): Promise<void>;
+  update<T extends Entity>(context: CacheUpdateContext<T>): Promise<void> | void;
   rollback<T extends Entity>(context: CacheUpdateContext<T>): void;
 }
 
@@ -80,7 +81,7 @@ export class InvalidateCacheUpdater implements CacheUpdater {
  * Provides instant UI updates but complex to maintain
  */
 export class OptimisticCacheUpdater implements CacheUpdater {
-  async update<T extends Entity>(context: CacheUpdateContext<T>): Promise<void> {
+  update<T extends Entity>(context: CacheUpdateContext<T>): void {
     const { queryClient, queryKey, entity, operation, tempId } = context;
     
     queryClient.setQueryData(queryKey, (oldData: CachedGraphData | undefined) => {
@@ -105,27 +106,82 @@ export class OptimisticCacheUpdater implements CacheUpdater {
                   entity,
                   metadata: {
                     ...(currentNode.data?.metadata || {})
-                    // Remove isOptimistic - not part of NodeMetadata type
                   }
                 }
               };
               
-              // Update edges to use real ID
+              // Update edges to use real ID with robust parsing
+              let edgesUpdated = 0;
+              let edgeUpdateErrors: string[] = [];
+              
               edges = edges.map(edge => {
                 if (edge.source === tempId || edge.target === tempId) {
+                  // Update source and target
+                  const newSource = edge.source === tempId ? entity.id : edge.source;
+                  const newTarget = edge.target === tempId ? entity.id : edge.target;
+                  
+                  // Update edge ID based on format with error recovery
+                  let newEdgeId = edge.id;
+                  try {
+                    if (edge.id.includes('::')) {
+                      // Format: e::source::fieldKey::target
+                      const parts = edge.id.split('::');
+                      if (parts.length === 4 && parts[1] && parts[3]) {
+                        parts[1] = parts[1] === tempId ? entity.id : parts[1];
+                        parts[3] = parts[3] === tempId ? entity.id : parts[3];
+                        newEdgeId = parts.join('::');
+                      } else {
+                        // Fallback: Try to preserve as much structure as possible
+                        edgeUpdateErrors.push(`Invalid field-based edge format: ${edge.id}, attempting recovery`);
+                        // Generate a new ID based on source and target
+                        const fieldKey = parts[2] || 'unknown';
+                        newEdgeId = `e::${newSource}::${fieldKey}::${newTarget}`;
+                      }
+                    } else if (edge.id.startsWith('e-')) {
+                      // Format: e-source-target
+                      // Only replace if it's a complete segment
+                      const segments = edge.id.split('-');
+                      newEdgeId = segments.map(seg => seg === tempId ? entity.id : seg).join('-');
+                    } else {
+                      // Unknown format - create a safe fallback ID
+                      edgeUpdateErrors.push(`Unknown edge ID format: ${edge.id}, using fallback`);
+                      // Generate a simple format ID as fallback
+                      newEdgeId = `e-${newSource}-${newTarget}`;
+                    }
+                  } catch (error) {
+                    // Last resort fallback if any error occurs
+                    console.error(`[Optimistic] Failed to update edge ID ${edge.id}:`, error);
+                    edgeUpdateErrors.push(`Critical error updating edge ${edge.id}: ${error}`);
+                    // Generate a safe fallback that won't break the graph
+                    newEdgeId = `e-${newSource}-${newTarget}-${Date.now()}`;
+                  }
+                  
+                  // Validate the update was successful
+                  if (newEdgeId !== edge.id) {
+                    edgesUpdated++;
+                    console.log(`[Optimistic] Updated edge ${edge.id} to ${newEdgeId}`);
+                  }
+                  
                   return {
                     ...edge,
-                    id: edge.id.replace(tempId, entity.id),
-                    source: edge.source === tempId ? entity.id : edge.source,
-                    target: edge.target === tempId ? entity.id : edge.target,
+                    id: newEdgeId,
+                    source: newSource,
+                    target: newTarget,
                     data: {
                       ...edge.data
-                      // Remove isOptimistic - not part of edge data type
                     }
                   };
                 }
                 return edge;
               });
+              
+              // Log validation results
+              if (edgesUpdated > 0) {
+                console.log(`[Optimistic] Successfully updated ${edgesUpdated} edge(s)`);
+              }
+              if (edgeUpdateErrors.length > 0) {
+                console.warn('[Optimistic] Edge update errors:', edgeUpdateErrors);
+              }
             }
           }
           break;
@@ -193,14 +249,15 @@ export class OptimisticCacheUpdater implements CacheUpdater {
  * Efficient and accurate, minimal network overhead
  */
 export class DeltaCacheUpdater implements CacheUpdater {
-  async update<T extends Entity>(context: CacheUpdateContext<T>): Promise<void> {
+  update<T extends Entity>(context: CacheUpdateContext<T>): void {
     const { queryClient, queryKey, delta, operation, tempId, entity } = context;
     
     if (!delta) {
       // Fallback to invalidation if no delta available
       console.warn('No delta available, falling back to invalidation');
       const invalidator = new InvalidateCacheUpdater();
-      return invalidator.update(context);
+      invalidator.update(context); // Don't return, just call it
+      return;
     }
     
     queryClient.setQueryData(queryKey, (oldData: CachedGraphData | undefined) => {
@@ -218,16 +275,6 @@ export class DeltaCacheUpdater implements CacheUpdater {
       //   // The mutation handler should detect this and trigger invalidation
       //   return oldData;
       // }
-      
-      // WARNING: Delta application on filtered views
-      // Check if this is a filtered view based on the query key
-      const viewType = queryKey[2]; // ['graph', 'complete', viewType]
-      if (viewType && viewType !== 'full-graph') {
-        console.warn(
-          `Applying delta to filtered view '${viewType}'. ` +
-          `This may add nodes that don't match the filter criteria.`
-        );
-      }
       
       // Create lookup maps for O(1) operations
       const nodeMap = new Map(oldData.nodes.map(n => [n.id, n]));
@@ -298,13 +345,23 @@ export class DeltaCacheUpdater implements CacheUpdater {
           const existingNode = nodeMap.get(update.id);
           if (existingNode) {
             // Deep merge the update with existing node
-            // Let the server data overwrite metadata (including clearing isOptimistic)
+            // Preserve client-side UI flags (isOptimistic, isFocused, searchMatch)
+            const existingMetadata = existingNode.data?.metadata || {};
+            const updateMetadata = update.data?.metadata || {};
+            
             const mergedNode = {
               ...existingNode,
               ...update,
               data: {
                 ...existingNode.data,
-                ...(update.data || {})
+                ...(update.data || {}),
+                metadata: {
+                  ...updateMetadata,
+                  // Preserve client-side UI state flags
+                  isOptimistic: existingMetadata.isOptimistic,
+                  isFocused: existingMetadata.isFocused,
+                  searchMatch: existingMetadata.searchMatch
+                }
               }
             } as GraphNode;
             nodeMap.set(update.id, mergedNode);
@@ -316,9 +373,25 @@ export class DeltaCacheUpdater implements CacheUpdater {
         
         // Add new nodes
         delta.changes.nodes.created?.forEach(node => {
-          // Don't apply the preserved flag here - let the server data come through clean
-          // The flag cleanup will be handled by setTimeout in onSuccess
-          nodeMap.set(node.id, node as GraphNode);
+          // For CREATE operations, preserve the isOptimistic flag from the temp node
+          // This ensures the UI shows the optimistic state until explicitly cleared
+          if (operation === 'create' && tempId && preservedOptimisticFlag && entity && 'id' in entity && node.id === entity.id) {
+            // This is the node replacing our temp node - preserve the flag
+            const nodeWithFlag = {
+              ...node,
+              data: {
+                ...node.data,
+                metadata: {
+                  ...(node.data?.metadata || {}),
+                  isOptimistic: true
+                }
+              }
+            } as GraphNode;
+            nodeMap.set(node.id, nodeWithFlag);
+          } else {
+            // Regular new node from delta
+            nodeMap.set(node.id, node as GraphNode);
+          }
         });
         
         // Remove deleted nodes
@@ -448,12 +521,17 @@ export function determineCacheStrategy(
 /**
  * Utility to measure cache update performance
  * Returns duration in milliseconds
+ * Handles both sync and async updaters
  */
 export async function measureCacheUpdate<T extends Entity>(
   updater: CacheUpdater,
   context: CacheUpdateContext<T>
 ): Promise<number> {
   const start = performance.now();
-  await updater.update(context);
+  const result = updater.update(context);
+  // Handle both sync and async updaters
+  if (result instanceof Promise) {
+    await result;
+  }
   return performance.now() - start;
 }

@@ -1,18 +1,13 @@
 import { useState } from 'react';
 import { X, Save, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
-import {
-  useCreateCharacter,
-  useCreateElement,
-  useCreatePuzzle,
-  useCreateTimelineEvent
-} from '@/hooks/mutations';
+import toast from 'react-hot-toast';
+import { useEntityMutation } from '@/hooks/mutations';
 import type { ParentContext } from '@/stores/creationStore';
 import { zIndex } from '@/config/zIndex';
 import { validateFields, fieldValidationConfigs } from '@/utils/fieldValidation';
+import { getFieldsByCategory } from '@/config/fieldRegistry';
+import { FieldEditor } from '@/components/field-editors';
 
 interface CreatePanelProps {
   entityType: 'character' | 'element' | 'puzzle' | 'timeline';
@@ -21,74 +16,17 @@ interface CreatePanelProps {
   onSuccess?: (entity: any) => void;
 }
 
-// Define minimal required fields for each entity type
-const REQUIRED_FIELDS = {
-  character: [
-    { key: 'name', label: 'Name', type: 'text' as const, required: true },
-    { 
-      key: 'type', 
-      label: 'Type', 
-      type: 'select' as const, 
-      required: true,
-      options: [
-        { value: 'Player', label: 'Player' },
-        { value: 'NPC', label: 'NPC' },
-      ]
-    },
-    { 
-      key: 'tier', 
-      label: 'Tier', 
-      type: 'select' as const, 
-      required: true,
-      options: [
-        { value: 'Core', label: 'Core' },
-        { value: 'Secondary', label: 'Secondary' },
-        { value: 'Tertiary', label: 'Tertiary' },
-      ]
-    },
-  ],
-  element: [
-    { key: 'name', label: 'Name', type: 'text' as const, required: true },
-  ],
-  puzzle: [
-    { key: 'name', label: 'Puzzle Name', type: 'text' as const, required: true },
-    { 
-      key: 'act', 
-      label: 'Act', 
-      type: 'select' as const, 
-      required: true,
-      options: [
-        { value: 'Act 1', label: 'Act 1' },
-        { value: 'Act 2', label: 'Act 2' },
-        { value: 'Act 3', label: 'Act 3' },
-      ]
-    },
-  ],
-  timeline: [
-    { key: 'date', label: 'Date', type: 'date' as const, required: true },
-    { key: 'description', label: 'Description', type: 'text' as const, required: true },
-  ],
-};
 
 export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: CreatePanelProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Get create mutation based on type
-  // View type is now managed by viewStore for cache key consistency
-  const createCharacter = useCreateCharacter();
-  const createElement = useCreateElement();
-  const createPuzzle = useCreatePuzzle();
-  const createTimelineEvent = useCreateTimelineEvent();
+  // Get create mutation based on type using unified hook
+  const createMutation = useEntityMutation(entityType, 'create');
 
-  const createMutation =
-    entityType === 'character' ? createCharacter :
-    entityType === 'element' ? createElement :
-    entityType === 'puzzle' ? createPuzzle :
-    createTimelineEvent;
-
-  // Get required fields for this entity type
-  const fields = REQUIRED_FIELDS[entityType];
+  // Get fields from registry - include both required and some optional fields
+  const basicFields = getFieldsByCategory(entityType, 'basic');
+  const fields = basicFields.filter(f => !f.readOnly); // Exclude computed fields
 
   const handleFieldChange = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -96,14 +34,13 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
   };
 
   const handleSave = async () => {
-    // Build validation rules for each field
+    // Build validation rules for each field based on field registry
     const fieldRules: Record<string, any[]> = {};
     fields.forEach(field => {
       if (field.required) {
-        // Use text.required for all types as it checks non-empty values
-        // This works for select and date fields too
-        // Structure allows for future type-specific rules if needed
-        fieldRules[field.key] = fieldValidationConfigs.text.required;
+        // Use type-specific validation if available, otherwise use text.required
+        const typeConfig = (fieldValidationConfigs as any)[field.type];
+        fieldRules[field.key] = typeConfig?.required || fieldValidationConfigs.text.required;
       }
     });
 
@@ -116,6 +53,7 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
     }
 
     try {
+      
       // Prepare entity data with parent relation metadata if applicable
       const entityData = {
         ...formData,
@@ -132,85 +70,25 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
         } : {})
       };
       
+      
       // Create entity (backend will handle parent relationship atomically)
       const result = await createMutation.mutateAsync(entityData);
       
       // Note: No need to separately update parent relationship anymore
       // The backend handles it atomically during creation
       
+      // Show success message
+      toast.success(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} created successfully`);
+      
       // The mutation returns the entity directly
       onSuccess?.(result);
       onClose();
     } catch (error) {
-      console.error('Failed to create entity:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to create ${entityType}: ${errorMessage}`);
     }
   };
 
-  const renderField = (field: typeof fields[0]) => {
-    switch (field.type) {
-      case 'select':
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={field.key}>{field.label}</Label>
-            <Select
-              id={field.key}
-              value={formData[field.key] || ''}
-              onValueChange={(value) => handleFieldChange(field.key, value)}
-              disabled={createMutation.isPending}
-            >
-              {!formData[field.key] && (
-                <option value="" disabled>
-                  Select {field.label.toLowerCase()}
-                </option>
-              )}
-              {field.options?.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
-            {errors[field.key] && (
-              <p className="text-sm text-red-500">{errors[field.key]}</p>
-            )}
-          </div>
-        );
-      
-      case 'date':
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={field.key}>{field.label}</Label>
-            <Input
-              id={field.key}
-              type="date"
-              value={formData[field.key] || ''}
-              onChange={(e) => handleFieldChange(field.key, e.target.value)}
-              disabled={createMutation.isPending}
-            />
-            {errors[field.key] && (
-              <p className="text-sm text-red-500">{errors[field.key]}</p>
-            )}
-          </div>
-        );
-      
-      default:
-        return (
-          <div key={field.key} className="space-y-2">
-            <Label htmlFor={field.key}>{field.label}</Label>
-            <Input
-              id={field.key}
-              type="text"
-              value={formData[field.key] || ''}
-              onChange={(e) => handleFieldChange(field.key, e.target.value)}
-              placeholder={`Enter ${field.label.toLowerCase()}`}
-              disabled={createMutation.isPending}
-            />
-            {errors[field.key] && (
-              <p className="text-sm text-red-500">{errors[field.key]}</p>
-            )}
-          </div>
-        );
-    }
-  };
 
   return (
     <div className="w-80 bg-white/10 backdrop-blur-md 
@@ -226,7 +104,17 @@ export function CreatePanel({ entityType, parentContext, onClose, onSuccess }: C
       </div>
 
       <div className="space-y-4 max-h-96 overflow-y-auto">
-        {fields.map(renderField)}
+        {fields.map(field => (
+          <FieldEditor
+            key={field.key}
+            field={field}
+            value={formData[field.key]}
+            onChange={(value) => handleFieldChange(field.key, value)}
+            error={errors[field.key]}
+            disabled={createMutation.isPending}
+            entityType={entityType}
+          />
+        ))}
       </div>
 
       <div className="flex gap-2 mt-4">

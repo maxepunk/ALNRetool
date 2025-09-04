@@ -8,7 +8,6 @@
  */
 
 import type { Node, Edge } from '@xyflow/react';
-import type { ViewConfig } from '@/lib/viewConfigs';
 
 /**
  * API base URL - same as other services
@@ -48,19 +47,16 @@ export const graphApi = {
   /**
    * Fetch complete graph with all nodes and edges
    * 
-   * @param viewConfig - Optional view configuration for filtering
    * @param includeMetadata - Whether to include graph metadata (default: true)
    * @returns Complete graph data ready for React Flow
    */
   async getComplete(
-    viewConfig?: ViewConfig,
     includeMetadata: boolean = true
   ): Promise<GraphResponse> {
     const params = new URLSearchParams();
     
-    if (viewConfig) {
-      params.append('viewConfig', JSON.stringify(viewConfig));
-    }
+    // REMOVED viewConfig serialization to enable cache unification
+    // All views now use the same URL for proper caching
     
     if (!includeMetadata) {
       params.append('includeMetadata', 'false');

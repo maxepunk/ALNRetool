@@ -32,12 +32,7 @@
  */
 
 import { useCallback } from 'react';
-import { 
-  useUpdateCharacter, 
-  useUpdateElement, 
-  useUpdatePuzzle, 
-  useUpdateTimelineEvent 
-} from '@/hooks/mutations';
+import { createEntityMutation, type EntityType as MutationEntityType } from '@/hooks/mutations';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 
 /**
@@ -48,9 +43,9 @@ type Entity = Character | Element | Puzzle | TimelineEvent;
 
 /**
  * Entity type discriminator.
- * @typedef {'character' | 'element' | 'puzzle' | 'timeline'} EntityType
+ * Using the type from mutations module for consistency.
  */
-type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
+type EntityType = MutationEntityType;
 
 /**
  * Hook that provides a unified entity save handler.
@@ -82,11 +77,11 @@ type EntityType = 'character' | 'element' | 'puzzle' | 'timeline';
  * };
  */
 export function useEntitySave() {
-  // Get all mutation hooks
-  const updateCharacter = useUpdateCharacter();
-  const updatePuzzle = useUpdatePuzzle();
-  const updateElement = useUpdateElement();
-  const updateTimeline = useUpdateTimelineEvent();
+  // Create mutation hooks for all entity types upfront (Rules of Hooks)
+  const characterMutation = createEntityMutation('character', 'update')();
+  const puzzleMutation = createEntityMutation('puzzle', 'update')();
+  const elementMutation = createEntityMutation('element', 'update')();
+  const timelineMutation = createEntityMutation('timeline', 'update')();
 
   /**
    * Unified save handler for all entity types.
@@ -119,63 +114,44 @@ export function useEntitySave() {
     // Extract version from original entity for optimistic locking
     const version = (entity as any)?.version;
 
-    // Call appropriate mutation based on entity type
+    // Select the appropriate mutation based on entity type
+    const mutation = 
+      type === 'character' ? characterMutation :
+      type === 'puzzle' ? puzzleMutation :
+      type === 'element' ? elementMutation :
+      type === 'timeline' ? timelineMutation :
+      null;
+      
+    if (!mutation) {
+      throw new Error(`Unknown entity type: ${type}`);
+    }
+    
+    // Call the mutation
     try {
-      switch (type) {
-        case 'character':
-          await updateCharacter.mutateAsync({ 
-            ...updates as Partial<Character>,
-            id: entityId,
-            version // Pass original version for If-Match header
-          });
-          break;
-          
-        case 'puzzle':
-          await updatePuzzle.mutateAsync({ 
-            ...updates as Partial<Puzzle>,
-            id: entityId,
-            version // Pass original version for If-Match header
-          });
-          break;
-          
-        case 'element':
-          await updateElement.mutateAsync({ 
-            ...updates as Partial<Element>,
-            id: entityId,
-            version // Pass original version for If-Match header
-          });
-          break;
-          
-        case 'timeline':
-          await updateTimeline.mutateAsync({ 
-            ...updates as Partial<TimelineEvent>,
-            id: entityId,
-            version // Pass original version for If-Match header
-          });
-          break;
-          
-        default:
-          throw new Error(`Unknown entity type: ${type}`);
-      }
+      await mutation.mutateAsync({
+        ...updates,
+        id: entityId,
+        version // Pass original version for If-Match header
+      });
     } catch (error) {
       console.error('Failed to save entity:', undefined, error instanceof Error ? error : new Error(String(error)));
       throw error;
     }
-  }, [updateCharacter, updatePuzzle, updateElement, updateTimeline]);
+  }, [characterMutation, puzzleMutation, elementMutation, timelineMutation]);
 
   // Return save handler and loading states
   return {
     handleEntitySave,
     isSaving: 
-      updateCharacter.isPending || 
-      updatePuzzle.isPending || 
-      updateElement.isPending || 
-      updateTimeline.isPending,
+      characterMutation.isPending || 
+      puzzleMutation.isPending || 
+      elementMutation.isPending || 
+      timelineMutation.isPending,
     error: 
-      updateCharacter.error || 
-      updatePuzzle.error || 
-      updateElement.error || 
-      updateTimeline.error
+      characterMutation.error || 
+      puzzleMutation.error || 
+      elementMutation.error || 
+      timelineMutation.error
   };
 }
 

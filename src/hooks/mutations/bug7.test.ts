@@ -9,21 +9,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { type ReactNode } from 'react';
-import { useDeleteElement } from './entityMutations';
+import { useEntityMutation } from './entityMutations';
 import { elementsApi } from '@/services/api';
 
 // Mock the API
 vi.mock('@/services/api');
 
-// Mock viewStore to provide consistent viewType for tests
-vi.mock('@/stores/viewStore', () => ({
-  useViewStore: {
-    getState: () => ({
-      currentViewType: 'test-view',
-      setViewType: vi.fn()
-    })
-  }
-}));
+// ViewStore mock no longer needed - mutations use unified cache key
 
 describe('Bug 7: Parent Entity Cache Refresh', () => {
   let queryClient: QueryClient;
@@ -108,7 +100,7 @@ describe('Bug 7: Parent Entity Cache Refresh', () => {
     };
 
     // Pre-populate cache
-    queryClient.setQueryData(['graph', 'complete', 'test-view'], graphData);
+    queryClient.setQueryData(['graph', 'complete'], graphData);
 
     // Mock successful delete
     vi.mocked(elementsApi).delete = vi.fn().mockResolvedValue({
@@ -121,7 +113,7 @@ describe('Bug 7: Parent Entity Cache Refresh', () => {
       React.createElement(QueryClientProvider, { client: queryClient }, children);
 
     const { result } = renderHook(
-      () => useDeleteElement(),
+      () => useEntityMutation('element', 'delete'),
       { wrapper }
     );
 
@@ -132,7 +124,7 @@ describe('Bug 7: Parent Entity Cache Refresh', () => {
 
     // Wait for optimistic update
     await waitFor(() => {
-      const updatedData = queryClient.getQueryData(['graph', 'complete', 'test-view']) as any;
+      const updatedData = queryClient.getQueryData(['graph', 'complete']) as any;
       
       // Assert: Parent's relationship array should be updated
       const parentNode = updatedData.nodes.find((n: any) => n.id === 'char-1');
@@ -209,7 +201,7 @@ describe('Bug 7: Parent Entity Cache Refresh', () => {
     };
 
     // Pre-populate cache
-    queryClient.setQueryData(['graph', 'complete', 'test-view'], graphData);
+    queryClient.setQueryData(['graph', 'complete'], graphData);
 
     // Mock successful delete
     vi.mocked(elementsApi).delete = vi.fn().mockResolvedValue({
@@ -222,7 +214,7 @@ describe('Bug 7: Parent Entity Cache Refresh', () => {
       React.createElement(QueryClientProvider, { client: queryClient }, children);
 
     const { result } = renderHook(
-      () => useDeleteElement(),
+      () => useEntityMutation('element', 'delete'),
       { wrapper }
     );
 
@@ -233,7 +225,7 @@ describe('Bug 7: Parent Entity Cache Refresh', () => {
 
     // Wait for optimistic update
     await waitFor(() => {
-      const updatedData = queryClient.getQueryData(['graph', 'complete', 'test-view']) as any;
+      const updatedData = queryClient.getQueryData(['graph', 'complete']) as any;
       
       // Assert: Both parent relationship arrays should be updated
       const puzzleNode = updatedData.nodes.find((n: any) => n.id === 'puzzle-1');

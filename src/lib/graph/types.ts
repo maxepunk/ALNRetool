@@ -783,6 +783,7 @@ export interface NodeMetadata {
   isConnected?: boolean; // Node included via connection depth
   isFocused?: boolean; // Node is the current focus node
   searchMatch?: boolean; // Node matches search term
+  isOptimistic?: boolean; // Node is optimistically updated (pending server confirmation)
   timelineConnections?: string[];
   collaborators?: string[];
   visualHints?: VisualHints;

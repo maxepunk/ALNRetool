@@ -126,7 +126,7 @@ const characterInverseRelations: InverseRelation[] = [
  */
 const router = createEntityRouter({
   databaseId: CHARACTERS_DATABASE_ID,
-  entityName: 'characters',
+  entityName: 'character',
   transform: transformCharacter,
   toNotionProps: toNotionCharacterProperties,
   buildFilters: buildCharacterFilters,

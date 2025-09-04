@@ -28,7 +28,7 @@ import {
  * Enhanced with better badge organization and dual-role indicators
  * Uses slot-based architecture for proper content arrangement
  */
-const ElementNode = memo(({ data, selected }: NodeProps) => {
+const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-testid'?: string }) => {
   const nodeData = data as GraphNodeData<Element>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
@@ -246,7 +246,7 @@ const ElementNode = memo(({ data, selected }: NodeProps) => {
   );
 
   return (
-    <div style={{ position: 'relative', zIndex }}>
+    <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
       <BaseNodeCard
         nodeType="element"
         size="medium"

@@ -19,7 +19,7 @@ import {
   transformTimelineEvent 
 } from '../../src/types/notion/transforms.js';
 import { synthesizeBidirectionalRelationships } from '../services/relationshipSynthesizer.js';
-import { buildCompleteGraph, filterGraphForView } from '../services/graphBuilder.js';
+import { buildCompleteGraph } from '../services/graphBuilder.js';
 import config from '../config/index.js';
 import { log } from '../utils/logger.js';
 import type { Character, Element, Puzzle, TimelineEvent } from '../../src/types/notion/app.js';
@@ -36,29 +36,30 @@ const router = Router();
  * 4. Returns nodes, edges, and metadata ready for React Flow
  * 
  * Query params:
- * - viewConfig: Optional view configuration for filtering
  * - includeMetadata: Whether to include graph metadata (default: true)
  */
 router.get('/complete', asyncHandler(async (req: Request, res: Response) => {
   const startTime = Date.now();
   
   // Extract query parameters
-  const viewConfig = req.query.viewConfig ? JSON.parse(req.query.viewConfig as string) : null;
   const includeMetadata = req.query.includeMetadata !== 'false';
   
-  // Create cache key
-  const cacheKey = viewConfig 
-    ? `graph_complete_${JSON.stringify(viewConfig)}`
-    : 'graph_complete_all';
+  // Use unified cache key (cache unification fix)
+  const cacheKey = 'graph_complete';
   
   // Check cache unless bypassed
   const bypassCache = req.headers['x-cache-bypass'] === 'true';
+  
   
   if (!bypassCache) {
     const cached = cacheService.get(cacheKey);
     if (cached) {
       res.setHeader('X-Cache-Hit', 'true');
       res.setHeader('X-Graph-Build-Time', '0');
+      // Update metadata to reflect that this is cached data
+      if (cached.metadata) {
+        cached.metadata.cached = true;
+      }
       return res.json(cached);
     }
   }
@@ -77,74 +78,37 @@ router.get('/complete', asyncHandler(async (req: Request, res: Response) => {
   const allPuzzles: Puzzle[] = [];
   const allTimeline: TimelineEvent[] = [];
   
-  // Fetch all characters
-  let characterCursor: string | undefined;
-  let hasMoreCharacters = true;
-  while (hasMoreCharacters) {
-    const result = await fetchAllPages(charactersDb, 100, characterCursor);
-    allCharacters.push(...result.pages.map(transformCharacter));
-    characterCursor = result.nextCursor || undefined;
-    hasMoreCharacters = result.hasMore;
+  // Helper function to fetch all entities of a specific type
+  async function fetchAllEntities<T>(
+    databaseId: string,
+    transformFn: (page: any) => T,
+    entityName: string,
+    targetArray: T[]
+  ): Promise<void> {
+    let cursor: string | undefined;
+    let hasMore = true;
     
-    // CRITICAL: Continue fetching even if we have 100+ items
-    if (characterCursor && result.pages.length === 100) {
-      log.debug('[Graph API] Fetching next batch of characters', { 
-        fetched: allCharacters.length,
-        cursor: characterCursor 
-      });
+    while (hasMore) {
+      const result = await fetchAllPages(databaseId, 100, cursor);
+      targetArray.push(...result.pages.map(transformFn));
+      cursor = result.nextCursor || undefined;
+      hasMore = result.hasMore;
+      
+      // CRITICAL: Continue fetching even if we have 100+ items
+      if (cursor && result.pages.length === 100) {
+        log.debug(`[Graph API] Fetching next batch of ${entityName}`, { 
+          fetched: targetArray.length,
+          cursor: cursor 
+        });
+      }
     }
   }
   
-  // Fetch all elements
-  let elementCursor: string | undefined;
-  let hasMoreElements = true;
-  while (hasMoreElements) {
-    const result = await fetchAllPages(elementsDb, 100, elementCursor);
-    allElements.push(...result.pages.map(transformElement));
-    elementCursor = result.nextCursor || undefined;
-    hasMoreElements = result.hasMore;
-    
-    if (elementCursor && result.pages.length === 100) {
-      log.debug('[Graph API] Fetching next batch of elements', { 
-        fetched: allElements.length,
-        cursor: elementCursor 
-      });
-    }
-  }
-  
-  // Fetch all puzzles
-  let puzzleCursor: string | undefined;
-  let hasMorePuzzles = true;
-  while (hasMorePuzzles) {
-    const result = await fetchAllPages(puzzlesDb, 100, puzzleCursor);
-    allPuzzles.push(...result.pages.map(transformPuzzle));
-    puzzleCursor = result.nextCursor || undefined;
-    hasMorePuzzles = result.hasMore;
-    
-    if (puzzleCursor && result.pages.length === 100) {
-      log.debug('[Graph API] Fetching next batch of puzzles', { 
-        fetched: allPuzzles.length,
-        cursor: puzzleCursor 
-      });
-    }
-  }
-  
-  // Fetch all timeline events
-  let timelineCursor: string | undefined;
-  let hasMoreTimeline = true;
-  while (hasMoreTimeline) {
-    const result = await fetchAllPages(timelineDb, 100, timelineCursor);
-    allTimeline.push(...result.pages.map(transformTimelineEvent));
-    timelineCursor = result.nextCursor || undefined;
-    hasMoreTimeline = result.hasMore;
-    
-    if (timelineCursor && result.pages.length === 100) {
-      log.debug('[Graph API] Fetching next batch of timeline', { 
-        fetched: allTimeline.length,
-        cursor: timelineCursor 
-      });
-    }
-  }
+  // Fetch all entity types using the helper function
+  await fetchAllEntities(charactersDb, transformCharacter, 'characters', allCharacters);
+  await fetchAllEntities(elementsDb, transformElement, 'elements', allElements);
+  await fetchAllEntities(puzzlesDb, transformPuzzle, 'puzzles', allPuzzles);
+  await fetchAllEntities(timelineDb, transformTimelineEvent, 'timeline', allTimeline);
   
   log.info('[Graph API] All entities fetched', {
     characters: allCharacters.length,
@@ -157,17 +121,12 @@ router.get('/complete', asyncHandler(async (req: Request, res: Response) => {
   const synthesized = synthesizeBidirectionalRelationships(allElements, allPuzzles, allTimeline, allCharacters);
   
   // Build complete graph
-  const fullGraph = buildCompleteGraph({
+  const graph = buildCompleteGraph({
     characters: synthesized.characters,
     elements: synthesized.elements,
     puzzles: synthesized.puzzles,
     timeline: synthesized.timeline,
   });
-  
-  // Apply view filtering if requested
-  const graph = viewConfig 
-    ? filterGraphForView(fullGraph, viewConfig)
-    : fullGraph;
   
   // Prepare response
   const response = {
@@ -175,7 +134,7 @@ router.get('/complete', asyncHandler(async (req: Request, res: Response) => {
     edges: graph.edges,
     ...(includeMetadata && {
       metadata: {
-        ...fullGraph.metadata,
+        ...graph.metadata,
         entityCounts: {
           characters: allCharacters.length,
           elements: allElements.length,
@@ -203,7 +162,7 @@ router.get('/complete', asyncHandler(async (req: Request, res: Response) => {
 /**
  * GET /api/graph/health - Health check endpoint
  */
-router.get('/health', (req: Request, res: Response) => {
+router.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     service: 'graph-builder',

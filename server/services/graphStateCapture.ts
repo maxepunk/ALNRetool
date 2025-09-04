@@ -86,7 +86,7 @@ export function generateEdgesForEntities(entities: any[]): Edge[] {
   
   return edges;
 }
-export async function captureGraphState(entityId: string, entityType: string): Promise<any | null> {
+export async function captureGraphState(entityId: string, entityType: EntityType): Promise<any | null> {
   try {
     // CRITICAL: Do NOT cache pre-mutation state!
     // WHY: If two mutations happen within cache window, the second will use
@@ -105,14 +105,14 @@ export async function captureGraphState(entityId: string, entityType: string): P
       const page = await notion.pages.retrieve({ page_id: entityId });
       
       // Transform based on entity type
-      if (entityType === 'characters') {
+      if (entityType === 'character') {
         targetEntity = transformCharacter(page as any);
         // Collect all related IDs from character
         targetEntity.ownedElementIds?.forEach((id: string) => relatedIds.add(id));
         targetEntity.associatedElementIds?.forEach((id: string) => relatedIds.add(id));
         targetEntity.characterPuzzleIds?.forEach((id: string) => relatedIds.add(id));
         targetEntity.timelineIds?.forEach((id: string) => relatedIds.add(id));
-      } else if (entityType === 'elements') {
+      } else if (entityType === 'element') {
         targetEntity = transformElement(page as any);
         // Use ACTUAL Element properties
         targetEntity.associatedCharacterIds?.forEach((id: string) => relatedIds.add(id));
@@ -123,7 +123,7 @@ export async function captureGraphState(entityId: string, entityType: string): P
         targetEntity.rewardedByPuzzleIds?.forEach((id: string) => relatedIds.add(id));
         if (targetEntity.timelineEventId) relatedIds.add(targetEntity.timelineEventId);
         if (targetEntity.containerPuzzleId) relatedIds.add(targetEntity.containerPuzzleId);
-      } else if (entityType === 'puzzles') {
+      } else if (entityType === 'puzzle') {
         targetEntity = transformPuzzle(page as any);
         targetEntity.characterIds?.forEach((id: string) => relatedIds.add(id));
         targetEntity.requiredElementIds?.forEach((id: string) => relatedIds.add(id));

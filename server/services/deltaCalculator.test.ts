@@ -413,8 +413,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [], // oldEdges
-          [], // newEdges
-          char2 // updatedEntity
+          [] // newEdges
         );
         
         expect(delta.changes.nodes.created).toHaveLength(0);
@@ -439,8 +438,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          elem2
+          []
         );
         
         expect(delta.changes.nodes.created).toHaveLength(0);
@@ -469,8 +467,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          puzzle2
+          []
         );
         
         expect(delta.changes.nodes.created).toHaveLength(0);
@@ -495,8 +492,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          timeline2
+          []
         );
         
         expect(delta.changes.nodes.created).toHaveLength(0);
@@ -517,8 +513,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          char2
+          []
         );
         
         expect(delta.changes.nodes.updated).toHaveLength(1);
@@ -536,8 +531,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          elem2
+          []
         );
         
         expect(delta.changes.nodes.updated).toHaveLength(1);
@@ -561,8 +555,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          char2
+          []
         );
         
         // Should detect as change because duplicate counts differ
@@ -584,8 +577,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          elem2
+          []
         );
         
         // Should not detect as change because same elements, just reordered
@@ -604,8 +596,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          char
+          []
         );
         
         expect(delta.changes.nodes.created).toHaveLength(1);
@@ -622,8 +613,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          elem
+          []
         );
         
         expect(delta.changes.nodes.deleted).toHaveLength(1);
@@ -649,8 +639,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          char1Updated
+          []
         );
         
         // Only char-1 should be marked as updated
@@ -679,8 +668,7 @@ describe('DeltaCalculator', () => {
           oldNodes,
           newNodes,
           [],
-          [],
-          char2  // The updated entity
+          []
         );
         
         expect(delta.changes.nodes.updated).toHaveLength(1); // char updated
@@ -721,8 +709,7 @@ describe('DeltaCalculator', () => {
           nodes,
           nodes,  // Same nodes
           oldEdges,
-          newEdges,
-          char
+          newEdges
         );
         
         expect(delta.changes.edges.created).toHaveLength(1);
@@ -749,8 +736,7 @@ describe('DeltaCalculator', () => {
           nodes,
           nodes,
           oldEdges,
-          newEdges,
-          char
+          newEdges
         );
         
         expect(delta.changes.edges.deleted).toHaveLength(1);
@@ -779,8 +765,7 @@ describe('DeltaCalculator', () => {
           nodes,
           nodes,
           oldEdges,
-          newEdges,
-          char
+          newEdges
         );
         
         expect(delta.changes.edges.updated).toHaveLength(1);
@@ -814,8 +799,7 @@ describe('DeltaCalculator', () => {
           nodes,
           nodes,
           oldEdges,
-          newEdges,
-          char
+          newEdges
         );
         
         expect(delta.changes.edges.created).toHaveLength(1);

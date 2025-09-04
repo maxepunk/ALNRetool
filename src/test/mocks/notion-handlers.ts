@@ -506,9 +506,26 @@ const updateRelationships = (
 
 // MSW Handlers
 export const notionHandlers = [
-  // ===== GRAPH DATA ENDPOINT =====
-  http.get('*/api/graph/data', () => {
-    return HttpResponse.json(generateGraphData());
+  // ===== GRAPH COMPLETE ENDPOINT (new unified endpoint) =====
+  http.get('*/api/graph/complete', () => {
+    const graphData = generateGraphData();
+    return HttpResponse.json({
+      ...graphData,
+      metadata: {
+        totalNodes: graphData.nodes.length,
+        totalEdges: graphData.edges.length,
+        placeholderNodes: 0,
+        missingEntities: [],
+        entityCounts: {
+          characters: db.characters.length,
+          elements: db.elements.length,
+          puzzles: db.puzzles.length,
+          timeline: db.timeline.length
+        },
+        buildTime: 10,
+        cached: false
+      }
+    });
   }),
 
   // ===== CHARACTER ENDPOINTS =====

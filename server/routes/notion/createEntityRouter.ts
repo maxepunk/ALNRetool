@@ -12,9 +12,10 @@ import { log } from '../../utils/logger.js';
 import { AppError } from '../../middleware/errorHandler.js';
 import type { NotionPage } from '../../../src/types/notion/raw.js';
 import type { Character, Element, Puzzle, TimelineEvent } from '../../../src/types/notion/app.js';
-import { captureGraphState } from '../../services/graphStateCapture.js';
+import { captureGraphState, fetchGraphStateForIds } from '../../services/graphStateCapture.js';
 import { deltaCalculator } from '../../services/deltaCalculator.js';
 import type { GraphState, GraphDelta } from '../../types/delta.js';
+import type { EntityType } from '../../utils/entityTypeDetection.js';
 
 /**
  * Configuration for inverse relation updates
@@ -208,6 +209,11 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       // Extract parent relationship metadata from request
       const { _parentRelation, ...entityData } = req.body;
       
+      // DEBUG: Log incoming request
+      if (_parentRelation) {
+        log.info('[DEBUG] Received _parentRelation:', _parentRelation);
+      }
+      
       // Handle parent relation if present - set relationship on child entity if needed
       if (_parentRelation) {
         const { parentType, parentId, fieldKey } = _parentRelation;
@@ -240,7 +246,19 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         _parentRelation.fieldKey === 'characterIds';
       
       if (_parentRelation && !handledOnChild) {
+        // Validate _parentRelation structure before use
+        if (!_parentRelation.parentType || !_parentRelation.parentId || !_parentRelation.fieldKey) {
+          throw new Error('Invalid _parentRelation structure: missing required fields');
+        }
         const { parentType, parentId, fieldKey } = _parentRelation;
+        
+        log.info('[DEBUG] Updating parent relation:', {
+          parentType,
+          parentId,
+          fieldKey,
+          childId: response.id,
+          handledOnChild
+        });
         
         try {
           // Import the appropriate mapper function and field mapping
@@ -279,7 +297,11 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
           
           // Update the parent with the new relationship
           // Bug fix #1: fieldKey already includes 'Ids', don't append it again
-          const updateProps = { [fieldKey]: updatedIds };
+          // Bug fix #2: Single relations (ending with 'Id') expect a string, not array
+          const isSingleRelation = fieldKey.endsWith('Id') && !fieldKey.endsWith('Ids');
+          const updateProps = isSingleRelation 
+            ? { [fieldKey]: response.id }  // Single relation: pass just the ID
+            : { [fieldKey]: updatedIds };  // Multi relation: pass array
           const parentProperties = parentMapper(updateProps);
           
           await notion.pages.update({
@@ -337,32 +359,75 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       
       if (includeDelta) {
         try {
-          // For CREATE, we need to generate the "after" state
-          // The delta shows what nodes/edges were added
-          const afterState = await captureGraphState(response.id, config.entityName);
+          let afterState: GraphState | null = null;
+
+          // If parent relation exists, capture both parent and child for complete delta
+          if (_parentRelation && _parentRelation.parentId && !handledOnChild) {
+            const entitiesToCapture = [response.id, _parentRelation.parentId];
+            
+            try {
+              // Use fetchGraphStateForIds to get both entities
+              afterState = await fetchGraphStateForIds(entitiesToCapture);
+              
+              if (!afterState) {
+                // Fallback to child-only if parent capture fails
+                log.warn('[Delta] Parent capture failed, using child-only delta', {
+                  parentId: _parentRelation.parentId
+                });
+                afterState = await captureGraphState(response.id, config.entityName as EntityType);
+              }
+            } catch (parentError) {
+              log.warn('[Delta] Parent capture failed with error, falling back to child-only', {
+                parentId: _parentRelation.parentId,
+                error: parentError instanceof Error ? parentError.message : String(parentError)
+              });
+              // Fallback to child-only delta
+              afterState = await captureGraphState(response.id, config.entityName as EntityType);
+            }
+          } else {
+            // No parent relation, capture child only
+            afterState = await captureGraphState(response.id, config.entityName as EntityType);
+          }
           
           if (afterState && afterState.nodes && afterState.edges) {
-            // For CREATE, everything in afterState is "created"
+            // Classify nodes: child is created, parent is updated
+            const createdNodes: typeof afterState.nodes = [];
+            const updatedNodes: typeof afterState.nodes = [];
+            
+            for (const node of afterState.nodes) {
+              if (node.id === response.id) {
+                // Child entity is newly created
+                createdNodes.push(node);
+              } else if (_parentRelation && node.id === _parentRelation.parentId) {
+                // Parent entity was updated with new relationship
+                updatedNodes.push(node);
+              } else {
+                // Other related nodes that exist in the graph
+                updatedNodes.push(node);
+              }
+            }
+            
             delta = {
-              entity: transformed as Character | Element | Puzzle | TimelineEvent,
               changes: {
                 nodes: {
-                  created: afterState.nodes, // All nodes are new
-                  updated: [],
+                  created: createdNodes,
+                  updated: updatedNodes,
                   deleted: []
                 },
                 edges: {
-                  created: afterState.edges, // All edges are new
+                  created: afterState.edges,
                   updated: [],
                   deleted: []
                 }
               }
             };
             
-            log.info('[Delta] Generated delta for CREATE', {
+            log.info('[Delta] Generated delta for CREATE with parent update', {
               entityType: config.entityName,
               entityId: response.id,
-              nodesCreated: afterState.nodes.length,
+              parentId: _parentRelation?.parentId,
+              nodesCreated: createdNodes.length,
+              nodesUpdated: updatedNodes.length,
               edgesCreated: afterState.edges.length
             });
           } else {
@@ -399,10 +464,31 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
     const { id } = req.params;
     let graphStateBefore: GraphState | null = null;
     
+    // H2: Version control check using If-Match header (same as PUT endpoint)
+    const ifMatchHeader = req.headers['if-match'];
+    if (ifMatchHeader) {
+      // Fetch current page to check version
+      const currentPage = await notion.pages.retrieve({ page_id: id }) as NotionPage;
+      const currentLastEdited = currentPage.last_edited_time;
+      
+      // Strip quotes from If-Match header for comparison (RFC 7232 ETags are quoted)
+      const providedVersion = ifMatchHeader.replace(/^"|"$/g, '');
+      
+      // Compare versions (If-Match should contain the lastEdited timestamp)
+      if (providedVersion !== currentLastEdited) {
+        // Version mismatch - return 409 Conflict
+        throw new AppError(
+          409,
+          'VERSION_CONFLICT',
+          'Version conflict: Entity has been modified by another user'
+        );
+      }
+    }
+    
     // Capture graph state before deletion for delta calculation
     // WHY: Need the before state to calculate what nodes/edges will be removed
     try {
-      graphStateBefore = await captureGraphState(id, config.entityName);
+      graphStateBefore = await captureGraphState(id, config.entityName as EntityType);
       log.info(`[Delta] Captured graph state before ${config.entityName} deletion`, {
         entityId: id,
         nodeCount: graphStateBefore?.nodes.length ?? 0,
@@ -457,17 +543,19 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         
         if (config.inverseRelations && config.inverseRelations.length > 0) {
           // Complex deletion - inverse relations modified other entities
-          // We need to re-capture to get the updated state of related entities
-          // Note: The deleted entity won't be in the graph anymore
-          graphStateAfter = await captureGraphState(id, config.entityName);
-          
-          // Since the entity is deleted, manually remove it from the captured state
-          // (it might still appear if there's a race condition)
-          graphStateAfter = {
-            nodes: graphStateAfter.nodes.filter((n: any) => n.id !== id),
-            edges: graphStateAfter.edges.filter((e: any) => e.source !== id && e.target !== id),
-            capturedAt: graphStateAfter.capturedAt
-          };
+          // FIX: Capture the state of related entities, not the deleted one
+          const relatedEntityIds = graphStateBefore.nodes
+            .map((n: any) => n.id)
+            .filter((nodeId: string) => nodeId !== id);
+
+          if (relatedEntityIds.length > 0) {
+            // Import the helper function
+            const { fetchGraphStateForIds } = await import('../../services/graphStateCapture.js');
+            graphStateAfter = await fetchGraphStateForIds(relatedEntityIds);
+          } else {
+            // No related entities, so the after state is empty
+            graphStateAfter = { nodes: [], edges: [], capturedAt: Date.now() };
+          }
         } else {
           // Simple deletion - no inverse relations, safe to simulate
           graphStateAfter = {
@@ -516,10 +604,8 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
           continue;
         }
         
-        // TODO: Replace with centralized utility function getCollectionNameForEntityType(entityType)
-        const entityName = entityType === 'timeline' 
-          ? 'timeline' 
-          : `${entityType}s`;
+        // FIX: Use entityType directly - cache keys use singular form (e.g., 'character_abc123')
+        const entityName = entityType;
         
         log.info('[Cache] Invalidating related entity from delta (DELETE)', { 
           entityId: node.id, 
@@ -555,7 +641,7 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       // Capture graph state before mutation for delta calculation
       // WHY: Need to compare before/after states to calculate minimal changes
       try {
-        graphStateBefore = await captureGraphState(req.params.id, config.entityName);
+        graphStateBefore = await captureGraphState(req.params.id, config.entityName as EntityType);
         log.info(`[Delta] Captured graph state before ${config.entityName} update`, {
           entityId: req.params.id,
           nodeCount: graphStateBefore?.nodes.length ?? 0,
@@ -709,10 +795,8 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
             continue;
           }
           
-          // TODO: Replace with centralized utility function getCollectionNameForEntityType(entityType)
-          const entityName = entityType === 'timeline' 
-            ? 'timeline' 
-            : `${entityType}s`;
+          // FIX: Use entityType directly - cache keys use singular form (e.g., 'character_abc123')
+          const entityName = entityType;
           
           log.info('[Cache] Invalidating related entity from delta', { 
             entityId: node.id, 

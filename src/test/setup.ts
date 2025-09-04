@@ -60,7 +60,13 @@ vi.mock('@xyflow/react', () => ({
     Arrow: 'arrow',
     ArrowClosed: 'arrowclosed',
   },
+  BackgroundVariant: {
+    Dots: 'dots',
+    Lines: 'lines',
+    Cross: 'cross',
+  },
   ReactFlow: vi.fn(() => null),
+  ReactFlowProvider: vi.fn(({ children }: any) => children),
   Background: vi.fn(() => null),
   Controls: vi.fn(() => null),
   MiniMap: vi.fn(() => null),

@@ -156,7 +156,7 @@ export const ArrayFieldEditor: React.FC<ArrayFieldEditorProps> = ({
   // Render read-only state
   if (field.readOnly) {
     return (
-      <div className="space-y-2">
+      <div data-testid={`field-${field.key}`} className="space-y-2">
         <Label className="text-sm font-medium">
           {field.label}
           <span className="text-muted-foreground text-xs ml-2">(computed)</span>
@@ -184,7 +184,9 @@ export const ArrayFieldEditor: React.FC<ArrayFieldEditorProps> = ({
   }
 
   return (
-    <div className={cn(
+    <div 
+      data-testid={`field-${field.key}`}
+      className={cn(
       "space-y-2 transition-all",
       isFocused && "scale-[1.02]"
     )}>
