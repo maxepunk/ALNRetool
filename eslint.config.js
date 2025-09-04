@@ -49,7 +49,8 @@ export default tseslint.config(
     ignores: [
       'dist',         // Build output directory
       'node_modules', // Third-party dependencies
-      '.DS_Store'     // macOS system files
+      '.DS_Store',    // macOS system files
+      'coverage'      // Test coverage reports (generated files)
     ],
   },
   
@@ -251,7 +252,47 @@ export default tseslint.config(
   },
   
   /**
-   * Configuration 6: Test files and demos
+   * Configuration 6: E2E test files (Playwright)
+   * TypeScript files in tests directory with TypeScript parsing enabled
+   */
+  {
+    /** Target TypeScript files in tests/e2e directory */
+    files: ['tests/**/*.{ts,tsx}'],
+    
+    /** Language configuration for test files */
+    languageOptions: {
+      /** Browser and Node.js globals for E2E tests */
+      globals: { ...globals.browser, ...globals.node },
+      /** TypeScript parser for proper syntax support */
+      parser: tseslint.parser,
+      /** Basic parser options without strict type checking for tests */
+      parserOptions: {
+        /** Use latest ECMAScript features */
+        ecmaVersion: 'latest',
+        /** ES modules syntax */
+        sourceType: 'module',
+      },
+    },
+    
+    /** TypeScript plugin */
+    plugins: {
+      '@typescript-eslint': tseslint.plugin,
+    },
+    
+    /** E2E test rules - relaxed for test code */
+    rules: {
+      /** Basic TypeScript rules without type checking */
+      ...tseslint.configs.recommended.rules,
+      
+      /** Allow any type in E2E test helpers */
+      '@typescript-eslint/no-explicit-any': 'off',
+      /** Allow unused variables in tests */
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
+  
+  /**
+   * Configuration 7: Test files and demos
    * Relaxed rules for test code, mocks, and demo components
    */
   {
@@ -272,6 +313,10 @@ export default tseslint.config(
       'react-refresh/only-export-components': 'off',
       /** Allow unused variables in tests for better readability */
       '@typescript-eslint/no-unused-vars': 'off',
+      /** Allow components without display names in test helpers */
+      'react/display-name': 'off',
+      /** Allow React hooks in test helper functions */
+      'react-hooks/rules-of-hooks': 'off',
     },
   },
   

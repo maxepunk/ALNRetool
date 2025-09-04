@@ -336,7 +336,7 @@ describe('useEntitySave', () => {
       
       // Reset mock back to original implementation
       vi.clearAllMocks();
-      (createEntityMutation as any).mockImplementation((entityType: string, action: string) => {
+      (createEntityMutation as any).mockImplementation((entityType: string) => {
         return () => {
           const mockMap: Record<string, any> = {
             'character': mockUpdateCharacter,

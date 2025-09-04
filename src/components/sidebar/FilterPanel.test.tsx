@@ -182,7 +182,7 @@ describe('FilterPanel Components', () => {
     
     describe('Multiselect Filter Type', () => {
       it('should render checkboxes with badges for selected items', async () => {
-        const user = userEvent.setup();
+        await userEvent.setup();
         mockGetFilter.mockReturnValue(['item1', 'item2']);
         
         render(
@@ -264,7 +264,10 @@ describe('FilterPanel Components', () => {
         expect(removeButtons).toHaveLength(2);
         
         // Click first remove button (for item1)
-        await user.click(removeButtons[0]);
+        const firstButton = removeButtons[0];
+        if (firstButton) {
+          await user.click(firstButton);
+        }
         
         // Should remove item1, keep item2
         expect(mockSetFilter).toHaveBeenCalledWith('multiFilter', ['item2']);

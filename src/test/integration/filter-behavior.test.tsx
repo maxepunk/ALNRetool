@@ -21,7 +21,7 @@ import {
   PuzzleFilterPanel, 
   ElementFilterPanel 
 } from '@/components/sidebar/FilterPanel';
-import { DepthSlider } from '@/components/sidebar/DepthSlider';
+// DepthSlider import removed - not used directly in this test file
 import { useFilterStore } from '@/stores/filterStore';
 import type { Node as GraphNode } from '@xyflow/react';
 import { server } from '@/test/setup';
@@ -286,8 +286,7 @@ function LocationDisplay() {
   return <div data-testid="current-url">{location.search}</div>;
 }
 
-// Create a singleton query client for test access
-let queryClientSingleton: QueryClient;
+// Query client will be created per test in renderWithProviders
 
 // Helper function to render with all providers
 function renderWithProviders(component: React.ReactElement) {
@@ -297,7 +296,7 @@ function renderWithProviders(component: React.ReactElement) {
       mutations: { retry: false }
     }
   });
-  queryClientSingleton = queryClient;
+  // Query client is scoped to this test
 
   return render(
     <QueryClientProvider client={queryClient}>

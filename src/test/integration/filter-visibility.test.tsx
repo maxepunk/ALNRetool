@@ -8,8 +8,8 @@
  * - Tests the interaction between master visibility and granular filters
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
@@ -81,11 +81,13 @@ describe('Entity Type Visibility Toggle - Master Control Behavior', () => {
         characterType: 'all',
         selectedTiers: new Set(['Core', 'Secondary', 'Tertiary']),
         ownershipStatus: new Set(),
-        selectedCharacterId: null
+        selectedCharacterId: null,
+        highlightShared: false
       },
       puzzleFilters: {
         selectedActs: new Set(['Act 0', 'Act 1', 'Act 2']),
-        completionStatus: 'all'
+        completionStatus: 'all',
+        selectedPuzzleId: null
       }
     });
   });

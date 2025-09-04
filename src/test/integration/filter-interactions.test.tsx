@@ -215,11 +215,13 @@ describe('Filter Component Interactions', () => {
         selectedTiers: new Set(['Core', 'Secondary', 'Tertiary']),
         ownershipStatus: new Set(),
         characterType: 'all',
-        selectedCharacterId: null
+        selectedCharacterId: null,
+        highlightShared: false
       },
       puzzleFilters: {
         selectedActs: new Set(['Act 0', 'Act 1', 'Act 2']),
-        completionStatus: 'all'
+        completionStatus: 'all',
+        selectedPuzzleId: null
       },
       contentFilters: {
         contentStatus: new Set(),

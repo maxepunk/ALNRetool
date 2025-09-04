@@ -12,7 +12,7 @@ import userEvent from '@testing-library/user-event';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter } from 'react-router-dom';
-import { http, HttpResponse, delay } from 'msw';
+import { http, HttpResponse } from 'msw';
 import { ViewContextProvider } from '@/contexts/ViewContext';
 import GraphView from '@/components/graph/GraphView';
 import type { Character, Puzzle, Element } from '@/types/notion/app';
@@ -94,7 +94,7 @@ vi.mock('@/components/graph/GraphView', () => ({
       }
     };
     
-    const handleSave = (entityType: string, entityId: string, updates: any) => {
+    const handleSave = (_entityType: string, entityId: string, updates: any) => {
       // Update the entity data
       setNodes(prevNodes => prevNodes.map(node => 
         node.id === entityId 
