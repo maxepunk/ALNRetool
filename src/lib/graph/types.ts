@@ -380,7 +380,8 @@ export const EntityTypes = {
   CHARACTER: 'character',
   ELEMENT: 'element',
   PUZZLE: 'puzzle',
-  TIMELINE: 'timeline'
+  TIMELINE: 'timeline',
+  CLUSTER: 'cluster',
 } as const;
 
 export type EntityType = typeof EntityTypes[keyof typeof EntityTypes];
@@ -472,6 +473,36 @@ export const RelationshipTypes = {
 } as const;
 
 export type RelationshipType = typeof RelationshipTypes[keyof typeof RelationshipTypes];
+
+/**
+ * Defines the types of clusters that can be generated.
+ */
+export type ClusterType = 'puzzle' | 'character' | 'timeline' | 'element';
+
+/**
+ * Defines the structure for a cluster definition, used for computation and storage.
+ */
+export interface ClusterDefinition {
+  id: string;
+  label: string;
+  clusterType: ClusterType;
+  childIds: string[];
+  defaultExpanded: boolean;
+}
+
+/**
+ * Defines the clustering data attached to a cluster node's data property.
+ */
+export interface ClusteringData {
+  isCluster: true;
+  clusterType: ClusterType;
+  childIds: string[];
+  childCount: number;
+  childPreviews?: Array<{
+    type: string;
+    label: string;
+  }>;
+}
 
 /**
  * Placeholder node data structure for missing entities in murder mystery investigation visualization.
@@ -777,6 +808,7 @@ export interface NodeMetadata {
   isParent?: boolean;
   isChild?: boolean;
   parentId?: string;
+  isCluster?: boolean;
   
   // Filter-related metadata
   isFiltered?: boolean; // Node passed the active filters
@@ -884,9 +916,11 @@ export interface NodeMetadata {
  * @see {@link ViewTypes} For supported investigation view modes
  */
 export interface GraphNodeData<T = any> {
-  label: string;
+  label:string;
   metadata: NodeMetadata;
   entity: T; // The original entity data (Character, Element, Puzzle, or TimelineEntry) - always required for non-placeholder nodes
+  clustering?: ClusteringData;
+  aggregatedEdges?: { count: number };
   
   // Optional properties used by ViewSpecificOptimizer
   timestamp?: number;

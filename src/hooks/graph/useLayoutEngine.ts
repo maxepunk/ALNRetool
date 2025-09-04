@@ -19,7 +19,8 @@
 import { useMemo } from 'react';
 import type { GraphNode, GraphEdge } from '@/lib/graph/types';
 import type { ViewConfig } from '@/lib/viewConfigs';
-import { applyPureDagreLayout } from '@/lib/graph/layout/dagre';
+import { applyPureDagreLayout, applyClusterAwareLayout } from '@/lib/graph/layout/dagre';
+import { useClusterStore } from '@/stores/clusterStore';
 
 interface UseLayoutEngineParams {
   // Nodes and edges to layout
@@ -55,41 +56,51 @@ export function useLayoutEngine({
   visibleEdges,
   viewConfig,
 }: UseLayoutEngineParams): UseLayoutEngineResult {
+  const { clusteringEnabled, clusters, expandedClusters } = useClusterStore();
+
   // Extract layout properties for stable dependencies
   const layoutDirection = viewConfig.layout.direction || 'LR';
   const nodeSpacing = viewConfig.layout.spacing?.nodeSpacing || 100;
   const rankSpacing = viewConfig.layout.spacing?.rankSpacing || 300;
 
   return useMemo(() => {
-    // Handle empty graph
     if (visibleNodes.length === 0) {
       return { layoutedNodes: [] };
     }
     
-    // Build layout configuration
     const layoutConfig = {
-      direction: (layoutDirection === 'LR' || layoutDirection === 'TB')
-        ? layoutDirection
-        : 'LR' as const,
+      direction: (layoutDirection === 'LR' || layoutDirection === 'TB') ? layoutDirection : 'LR' as const,
       nodeSpacing: nodeSpacing,
       rankSpacing: rankSpacing
     };
     
-    // Apply layout algorithm
-    const layoutedNodes = applyPureDagreLayout(
-      visibleNodes,
-      visibleEdges,
-      layoutConfig
-    );
+    let layoutedNodes: GraphNode[];
+
+    if (clusteringEnabled && clusters.size > 0) {
+      layoutedNodes = applyClusterAwareLayout(
+        visibleNodes,
+        visibleEdges,
+        clusters,
+        expandedClusters,
+        layoutConfig
+      );
+    } else {
+      layoutedNodes = applyPureDagreLayout(
+        visibleNodes,
+        visibleEdges,
+        layoutConfig
+      );
+    }
     
     return { layoutedNodes };
   }, [
-    // Nodes and edges
     visibleNodes,
     visibleEdges,
-    // Layout configuration as individual stable values
     layoutDirection,
     nodeSpacing,
-    rankSpacing
+    rankSpacing,
+    clusteringEnabled,
+    clusters,
+    expandedClusters,
   ]);
 }

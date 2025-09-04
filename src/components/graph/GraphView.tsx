@@ -48,6 +48,7 @@ import PuzzleNode from './nodes/PuzzleNode';
 import CharacterNode from './nodes/CharacterNode';
 import ElementNode from './nodes/ElementNode';
 import TimelineNode from './nodes/TimelineNode';
+import ClusterNode from './nodes/ClusterNode';
 import { DetailPanel } from '@/components/DetailPanel';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { useQuery } from '@tanstack/react-query';
@@ -56,12 +57,14 @@ import { useViewportManager } from '@/hooks/useGraphState';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
 import { useFilterSelectors } from '@/hooks/useFilterSelectors';
 import { useFilterStore } from '@/stores/filterStore';
+import { useClusterStore } from '@/stores/clusterStore';
 import { useViewStore } from '@/stores/viewStore';
 import { FilterStatusBar } from './FilterStatusBar';
 import { FloatingActionButton } from './FloatingActionButton';
 import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
 import { LayoutProgress } from './LayoutProgress/LayoutProgress';
 import { useGraphInteractions } from '@/hooks/useGraphInteractions';
+import { useClusterComputation } from '@/hooks/useClusterComputation';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -93,6 +96,7 @@ const nodeTypes = {
   character: withTestId(CharacterNode),
   element: withTestId(ElementNode),
   timeline: withTestId(TimelineNode),
+  cluster: withTestId(ClusterNode),
 };
 
 /**
@@ -201,6 +205,31 @@ function GraphViewComponent() {
   const serverNodes = graphData?.nodes || [];
   const serverEdges = graphData?.edges || [];
   
+  // --- Clustering ---
+  const setClusters = useClusterStore(state => state.setClusters);
+  const clearAllClusters = useClusterStore(state => state.clearAllClusters);
+  const clusteringEnabled = useClusterStore(state => state.clusteringEnabled);
+  const clusters = useClusterStore(state => state.clusters);
+
+  const { data: computedClusters } = useClusterComputation(
+    serverNodes,
+    serverEdges,
+    clusteringEnabled
+  );
+
+  useEffect(() => {
+    if (clusteringEnabled) {
+      if (computedClusters) {
+        setClusters(computedClusters);
+      }
+    } else {
+      if (clusters.size > 0) {
+        clearAllClusters();
+      }
+    }
+  }, [clusteringEnabled, computedClusters, setClusters, clearAllClusters, clusters.size]);
+  // --- End Clustering ---
+
   // Extract entities from nodes for DetailPanel
   const allEntities = useMemo(() => {
     const characters: any[] = [];

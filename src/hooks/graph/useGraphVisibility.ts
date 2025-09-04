@@ -54,57 +54,98 @@ interface UseGraphVisibilityResult {
  * });
  * ```
  */
+import { useClusterStore } from '@/stores/clusterStore';
+
 export function useGraphVisibility({
   filteredNodes,
   allEdges,
   selectedNodeId,
   connectionDepth,
 }: UseGraphVisibilityParams): UseGraphVisibilityResult {
+  const { clusters, expandedClusters, clusteringEnabled } = useClusterStore();
+
   return useMemo(() => {
-    // Step 1: Get IDs of filtered nodes
-    const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
-    
-    // Step 2: Apply visibility rules based on selection and depth
-    const visibleNodeIds = getVisibleNodeIds(
-      filteredNodeIds,
-      allEdges,
-      selectedNodeId,
-      connectionDepth || 0
-    );
-    
-    // Step 3: Build final nodes with metadata
-    const nodeMap = new Map(filteredNodes.map(n => [n.id, n]));
-    const visibleNodes = Array.from(visibleNodeIds)
-      .map(nodeId => nodeMap.get(nodeId))
-      .filter((node): node is GraphNode => node !== undefined)
-      .map(node => ({
-        ...node,
-        data: {
-          ...node.data,
-          metadata: {
-            ...node.data.metadata,
-            isFiltered: filteredNodeIds.has(node.id),
-            isSelected: node.id === selectedNodeId
+    // --- Default Non-Clustering Logic ---
+    if (!clusteringEnabled || clusters.size === 0) {
+      const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
+      const visibleNodeIds = getVisibleNodeIds(
+        filteredNodeIds,
+        allEdges,
+        selectedNodeId,
+        connectionDepth || 0
+      );
+
+      const nodeMap = new Map(filteredNodes.map(n => [n.id, n]));
+      const visibleNodes = Array.from(visibleNodeIds)
+        .map(nodeId => nodeMap.get(nodeId))
+        .filter((node): node is GraphNode => node !== undefined)
+        .map(node => ({
+          ...node,
+          data: {
+            ...node.data,
+            metadata: { ...node.data.metadata, isSelected: node.id === selectedNodeId }
           }
-        }
-      }));
+        }));
+
+      const visibleEdges = allEdges.filter(
+        edge => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+      );
+
+      return { visibleNodeIds, visibleNodes, visibleEdges };
+    }
+
+    // --- Clustering Logic ---
     
-    // Step 4: Filter edges for visible nodes
-    const visibleEdges = allEdges.filter(
-      edge => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+    // 1. Determine which nodes are hidden inside collapsed clusters
+    const hiddenNodeIds = new Set<string>();
+    clusters.forEach((cluster, clusterId) => {
+        if (!expandedClusters.has(clusterId)) {
+            cluster.childIds.forEach(id => hiddenNodeIds.add(id));
+        }
+    });
+
+    // 2. Determine base set of visible nodes for connection depth calculation
+    // This includes all nodes that are not inside a collapsed cluster.
+    const baseVisibleNodeIds = new Set(
+        filteredNodes.filter(n => !hiddenNodeIds.has(n.id)).map(n => n.id)
+    );
+
+    // 3. Apply connection depth logic
+    const finalVisibleNodeIds = getVisibleNodeIds(
+        baseVisibleNodeIds,
+        allEdges,
+        selectedNodeId,
+        connectionDepth || 0
     );
     
+    // 4. Construct the final list of nodes to be passed to the layout engine
+    const nodeMap = new Map(filteredNodes.map(n => [n.id, n]));
+    const visibleNodes = Array.from(finalVisibleNodeIds)
+        .map(id => nodeMap.get(id))
+        .filter((n): n is GraphNode => !!n)
+        .map(node => ({
+            ...node,
+            data: { ...node.data, metadata: { ...node.data.metadata, isSelected: node.id === selectedNodeId } }
+        }));
+    
+    // 5. Filter edges to only include those connecting the final visible nodes.
+    // Edge aggregation will be handled by the layout engine.
+    const visibleEdges = allEdges.filter(
+        edge => finalVisibleNodeIds.has(edge.source) && finalVisibleNodeIds.has(edge.target)
+    );
+
     return {
-      visibleNodeIds,
+      visibleNodeIds: finalVisibleNodeIds,
       visibleNodes,
-      visibleEdges
+      visibleEdges,
     };
   }, [
-    // Nodes and edges
     filteredNodes,
     allEdges,
-    // Visibility controls
     selectedNodeId,
-    connectionDepth
+    connectionDepth,
+    clusters,
+    expandedClusters,
+    clusteringEnabled,
   ]);
 }

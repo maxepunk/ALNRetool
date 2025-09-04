@@ -580,4 +580,186 @@ function getNodeHeight(node: GraphNode): number {
 //   return { minX, minY, maxX, maxY };
 // }
 
+import type { ClusterDefinition } from '../types';
+
+/**
+ * Finds the parent cluster of a given node.
+ * @internal
+ */
+export function findParentCluster(
+  nodeId: string,
+  clusters: Map<string, ClusterDefinition>
+): ClusterDefinition | undefined {
+  for (const cluster of clusters.values()) {
+    if (cluster.childIds.includes(nodeId)) {
+      return cluster;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Creates aggregated edges for collapsed clusters to simplify the graph for layout.
+ * @internal
+ */
+export function createAggregatedEdges(
+  edges: GraphEdge[],
+  clusters: Map<string, ClusterDefinition>,
+  hiddenNodeIds: Set<string>
+): GraphEdge[] {
+  const aggregatedEdges: GraphEdge[] = [];
+  const edgeGroups = new Map<string, GraphEdge[]>();
+
+  edges.forEach(edge => {
+    const sourceHidden = hiddenNodeIds.has(edge.source);
+    const targetHidden = hiddenNodeIds.has(edge.target);
+
+    if (!sourceHidden && !targetHidden) {
+      // Case 1: Both nodes are visible. Keep the edge as is.
+      aggregatedEdges.push(edge);
+    } else {
+      const sourceParent = sourceHidden ? findParentCluster(edge.source, clusters) : null;
+      const targetParent = targetHidden ? findParentCluster(edge.target, clusters) : null;
+
+      const finalSource = sourceParent ? sourceParent.id : edge.source;
+      const finalTarget = targetParent ? targetParent.id : edge.target;
+
+      // Avoid self-loops on clusters
+      if (finalSource === finalTarget) {
+        return;
+      }
+
+      const key = `${finalSource}-${finalTarget}`;
+      const group = edgeGroups.get(key) || [];
+      group.push(edge);
+      edgeGroups.set(key, group);
+    }
+  });
+
+  // Create a single aggregated edge for each group
+  edgeGroups.forEach((edgeGroup, key) => {
+    const [source, target] = key.split('-');
+    aggregatedEdges.push({
+      id: `aggregated-${key}`,
+      source,
+      target,
+      type: 'aggregated',
+      data: {
+        relationshipType: 'aggregated' as any,
+        weight: Math.max(...edgeGroup.map(e => e.data?.weight || 1)),
+        edgeCount: edgeGroup.length,
+        label: edgeGroup.length > 1 ? `${edgeGroup.length} connections` : undefined,
+      },
+      style: {
+        strokeWidth: Math.min(edgeGroup.length, 5),
+        stroke: '#94a3b8',
+      },
+    });
+  });
+
+  return aggregatedEdges;
+}
+
+
+export function applyClusterAwareLayout(
+  nodes: GraphNode[],
+  edges: GraphEdge[],
+  clusters: Map<string, ClusterDefinition>,
+  expandedClusters: Set<string>,
+  options: PureDagreLayoutOptions = {}
+): GraphNode[] {
+  const nodeMap = new Map(nodes.map(n => [n.id, n]));
+
+  // Create visual nodes for each cluster
+  const clusterNodes: GraphNode[] = Array.from(clusters.values()).map(cluster => ({
+    id: cluster.id,
+    type: 'cluster',
+    position: { x: 0, y: 0 },
+    data: {
+      label: cluster.label,
+      metadata: {
+        entityType: 'cluster',
+        entityId: cluster.id,
+        isCluster: true,
+      },
+      entity: {} as any,
+      clustering: {
+        isCluster: true,
+        clusterType: cluster.clusterType,
+        childIds: cluster.childIds,
+        childCount: cluster.childIds.length,
+        childPreviews: cluster.childIds.slice(0, 3).map(id => {
+          const node = nodeMap.get(id);
+          return {
+            type: node?.data.metadata.entityType,
+            label: node?.data.label,
+          };
+        }).filter(Boolean),
+      }
+    },
+    width: 250,
+    height: expandedClusters.has(cluster.id) ? 80 : 120,
+  }));
+
+  // Identify nodes hidden inside collapsed clusters
+  const hiddenNodeIds = new Set<string>();
+  clusters.forEach((cluster, clusterId) => {
+    if (!expandedClusters.has(clusterId)) {
+      cluster.childIds.forEach(id => hiddenNodeIds.add(id));
+    }
+  });
+
+  const visibleNodes = nodes.filter(n => !hiddenNodeIds.has(n.id));
+  const allVisibleLayoutNodes = [...clusterNodes, ...visibleNodes];
+
+  // Create aggregated edges for layout
+  const aggregatedEdges = createAggregatedEdges(edges, clusters, hiddenNodeIds);
+
+  // First pass: Layout only the visible nodes and clusters
+  const layoutedVisibleNodes = applyPureDagreLayout(allVisibleLayoutNodes, aggregatedEdges, options);
+  const layoutedNodeMap = new Map(layoutedVisibleNodes.map(n => [n.id, n]));
+
+  // Second pass: Position hidden nodes relative to their parent cluster
+  const finalNodes: GraphNode[] = [];
+  const processedIds = new Set<string>();
+
+  // Add all layouted nodes first
+  layoutedVisibleNodes.forEach(node => {
+    finalNodes.push(node);
+    processedIds.add(node.id);
+  });
+
+  // Position and hide the nodes that were not part of the layout
+  nodes.forEach(node => {
+    if (hiddenNodeIds.has(node.id)) {
+      const parentCluster = findParentCluster(node.id, clusters);
+      if (parentCluster) {
+        const parentNode = layoutedNodeMap.get(parentCluster.id);
+        if (parentNode) {
+          finalNodes.push({
+            ...node,
+            position: {
+              x: parentNode.position.x + 10,
+              y: parentNode.position.y + 10,
+            },
+            hidden: true,
+          });
+          processedIds.add(node.id);
+        }
+      }
+    } else if (!processedIds.has(node.id)) {
+      // This case handles nodes that were visible but somehow not in the layouted output
+      // It's a safeguard.
+      const layoutedNode = layoutedNodeMap.get(node.id);
+      if (layoutedNode) {
+        finalNodes.push(layoutedNode);
+      } else {
+        finalNodes.push(node); // Add as is if no layout info found
+      }
+      processedIds.add(node.id);
+    }
+  });
+
+  return finalNodes;
+}
 
