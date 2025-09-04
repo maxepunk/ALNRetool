@@ -66,7 +66,9 @@ vi.mock('@xyflow/react', () => ({
     fitView: vi.fn(),
     fitBounds: vi.fn(),
     getViewport: () => ({ x: 0, y: 0, zoom: 1 }),
-    setViewport: vi.fn()
+    setViewport: vi.fn(),
+    getNodes: vi.fn().mockReturnValue([]),
+    getEdges: vi.fn().mockReturnValue([]),
   })
 }));
 

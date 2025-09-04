@@ -195,40 +195,42 @@ function GraphViewComponent() {
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!viewConfig, // Only fetch when we have a view config
+    select: (data) => {
+      const allEntities = {
+        characters: [] as any[],
+        elements: [] as any[],
+        puzzles: [] as any[],
+        timeline: [] as any[],
+      };
+      if (data && data.nodes) {
+        data.nodes.forEach((node: any) => {
+          if (node.data?.entity && node.data?.metadata?.entityType) {
+            switch (node.data.metadata.entityType) {
+              case 'character':
+                allEntities.characters.push(node.data.entity);
+                break;
+              case 'element':
+                allEntities.elements.push(node.data.entity);
+                break;
+              case 'puzzle':
+                allEntities.puzzles.push(node.data.entity);
+                break;
+              case 'timeline':
+                allEntities.timeline.push(node.data.entity);
+                break;
+            }
+          }
+        });
+      }
+      return { ...data, allEntities };
+    },
   });
   
   // Extract nodes and edges from graph response
   const serverNodes = graphData?.nodes || [];
   const serverEdges = graphData?.edges || [];
+  const allEntities = graphData?.allEntities || { characters: [], elements: [], puzzles: [], timeline: [] };
   
-  // Extract entities from nodes for DetailPanel
-  const allEntities = useMemo(() => {
-    const characters: any[] = [];
-    const elements: any[] = [];
-    const puzzles: any[] = [];
-    const timeline: any[] = [];
-    
-    serverNodes.forEach((node: any) => {
-      if (node.data?.entity && node.data?.metadata?.entityType) {
-        switch (node.data.metadata.entityType) {
-          case 'character':
-            characters.push(node.data.entity);
-            break;
-          case 'element':
-            elements.push(node.data.entity);
-            break;
-          case 'puzzle':
-            puzzles.push(node.data.entity);
-            break;
-          case 'timeline':
-            timeline.push(node.data.entity);
-            break;
-        }
-      }
-    });
-    
-    return { characters, elements, puzzles, timeline };
-  }, [serverNodes]);
   
   // Log metadata if available
   useEffect(() => {
