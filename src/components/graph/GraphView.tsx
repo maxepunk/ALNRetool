@@ -32,14 +32,15 @@
  * @see {@link applyPureDagreLayout} for layout algorithm
  */
 
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
   BackgroundVariant,
-  ReactFlowProvider
+  ReactFlowProvider,
+  useReactFlow
 } from '@xyflow/react';
 import type { Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -60,6 +61,8 @@ import { useViewStore } from '@/stores/viewStore';
 import { FilterStatusBar } from './FilterStatusBar';
 import { FloatingActionButton } from './FloatingActionButton';
 import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
+import { LayoutProgress } from './LayoutProgress/LayoutProgress';
+import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -167,6 +170,13 @@ function GraphViewComponent() {
   // Get view configuration from route
   const { config: viewConfig, viewType } = useViewConfig();
   
+  // Get React Flow instance for viewport control
+  const { fitView } = useReactFlow();
+  
+  // State for layout progress tracking
+  const [isLayouting, setIsLayouting] = useState(false);
+  const [layoutProgress, setLayoutProgress] = useState(0);
+  
   // Update view store when viewType changes (fixes Bug 6a)
   useEffect(() => {
     console.log('[GraphView] View changed to:', viewType);
@@ -250,6 +260,30 @@ function GraphViewComponent() {
   
   // Removed graphVersion anti-pattern that caused infinite re-renders
   
+  // Connect keyboard interactions and advanced graph handling
+  const {
+    handleNodeClick: interactionNodeClick,
+    handleNodeDoubleClick,
+    handleEdgeClick: interactionEdgeClick,
+    handleSelectionChange,
+  } = useGraphInteractions({
+    onNodeDoubleClick: (node) => {
+      // Focus on double-clicked node with smooth animation
+      fitView({ 
+        nodes: [{ id: node.id } as Node], 
+        padding: 0.5, 
+        duration: 400 
+      });
+    },
+    onNodesDelete: (nodes) => {
+      // Handle node deletion if needed in future
+      console.log('Delete nodes:', nodes);
+    },
+    onEdgesDelete: (edges) => {
+      // Handle edge deletion if needed in future
+      console.log('Delete edges:', edges);
+    }
+  });
 
   // Initialize filters when view changes to ensure requested entities are visible
   useEffect(() => {
@@ -264,6 +298,14 @@ function GraphViewComponent() {
    * Use the new consolidated graph layout hook to calculate everything in one go.
    * Now using server-provided nodes and edges!
    */
+  // Track when layout calculation starts
+  useEffect(() => {
+    if (serverNodes.length > 0) {
+      setIsLayouting(true);
+      setLayoutProgress(30); // Start at 30% when beginning layout
+    }
+  }, [serverNodes.length]);
+  
   const { layoutedNodes, filteredEdges, totalUniverseNodes } = useGraphLayout({
     nodes: serverNodes,
     edges: serverEdges,
@@ -282,6 +324,19 @@ function GraphViewComponent() {
     elementBasicTypes,
     elementStatus
   });
+  
+  // Layout calculation complete
+  useEffect(() => {
+    if (layoutedNodes.length > 0 && isLayouting) {
+      setLayoutProgress(100); // Complete
+      // Hide progress after a short delay
+      const timer = setTimeout(() => {
+        setIsLayouting(false);
+        setLayoutProgress(0);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [layoutedNodes.length, isLayouting]);
 
   // Direct pass-through of computed nodes and edges to React Flow
   // This eliminates the race condition caused by useEffect synchronization delay
@@ -313,14 +368,17 @@ function GraphViewComponent() {
     return { entity, entityType };
   }, [selectedNodeId, layoutedNodes]);
 
-  // Click handlers for node interaction
-  const onNodeClick = (nodeId: string) => {
+  // Click handlers for node interaction - now merged with interaction handlers
+  const onNodeClick = (_event: React.MouseEvent, node: Node) => {
     // Open detail panel for the clicked node
-    setSelectedNode(nodeId);
+    setSelectedNode(node.id);
+    // Also handle multi-select and other interaction logic
+    interactionNodeClick(_event, node);
   };
   
-  const onEdgeClick = () => {
-    // Edge click handler - currently no action needed
+  const onEdgeClick = (event: React.MouseEvent, edge: any) => {
+    // Handle edge interactions
+    interactionEdgeClick(event, edge);
   };
 
   // Handle detail panel close - clears selection
@@ -378,11 +436,22 @@ function GraphViewComponent() {
           hasActiveFilters={hasActiveFilters()}
         />
         
+        {/* Layout Progress Indicator */}
+        {isLayouting && (
+          <LayoutProgress
+            progress={layoutProgress}
+            algorithm="Dagre"
+            className="z-50"
+          />
+        )}
+        
         <ReactFlow
           nodes={reactFlowNodes}
           edges={reactFlowEdges}
-          onNodeClick={(_, node) => onNodeClick(node.id)}
+          onNodeClick={onNodeClick}
+          onNodeDoubleClick={handleNodeDoubleClick}
           onEdgeClick={onEdgeClick}
+          onSelectionChange={handleSelectionChange}
           nodeTypes={nodeTypes}
           minZoom={0.05}
           maxZoom={2}
@@ -409,6 +478,10 @@ function GraphViewComponent() {
           <Controls />
           <MiniMap 
             nodeColor={(node) => {
+              // Highlight selected nodes first
+              if (node.selected) return '#ff0072'; // Hot pink for selected
+              
+              // Then by type
               switch (node.type) {
                 case 'puzzle': return '#f59e0b'; // amber
                 case 'character': return '#10b981'; // green
@@ -425,10 +498,10 @@ function GraphViewComponent() {
             zoomable
             pannable
             style={{
-              width: 200,
-              height: 150,
-              // Hide MiniMap only when we have no nodes to show
-              opacity: reactFlowNodes.length === 0 ? 0 : 1,
+              width: 150,  // Reduced from 200
+              height: 100, // Reduced from 150
+              // Slight transparency for better UX
+              opacity: reactFlowNodes.length === 0 ? 0 : 0.9,
               pointerEvents: reactFlowNodes.length === 0 ? 'none' : 'auto'
             }}
           />

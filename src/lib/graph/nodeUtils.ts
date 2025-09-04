@@ -66,7 +66,11 @@ export function getNodeFilterStyles<T>(metadata: GraphNodeData<T>['metadata']) {
     outlineColor = 'rgb(37, 99, 235)'; // blue-600 - deeper blue
     outlineWidth = 3;
   } else if (isDimmed) {
-    opacity = 0.5; // Stronger dimming for better contrast
+    opacity = 0.2; // Much stronger dimming for better contrast (was 0.5)
+  } else if (metadata.searchMatch === false) {
+    // Very dim for non-matching nodes during active search
+    // searchMatch is false when there's a search term but this node doesn't match
+    opacity = 0.15;
   }
 
   return {
