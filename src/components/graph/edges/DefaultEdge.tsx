@@ -1,5 +1,5 @@
 import { memo, useState, useRef, useEffect } from 'react';
-import { BaseEdge, getBezierPath, EdgeLabelRenderer } from '@xyflow/react';
+import { BaseEdge, getBezierPath, EdgeLabelRenderer, useNodes } from '@xyflow/react';
 import type { BezierEdgeProps } from '@xyflow/react';
 import { getEdgeAnimationClasses } from '@/lib/animations';
 import { cn } from '@/lib/utils';
@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
  */
 const DefaultEdge = memo(({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -21,7 +23,7 @@ const DefaultEdge = memo(({
   label,
   labelStyle,
   data,
-}: BezierEdgeProps & { data?: any }) => {
+}: BezierEdgeProps & { data?: any; source?: string; target?: string }) => {
   const [isHovered, setIsHovered] = useState(false);
   const pathRef = useRef<SVGPathElement>(null);
   
@@ -33,6 +35,16 @@ const DefaultEdge = memo(({
     targetY,
     targetPosition,
   });
+
+  // Check if either connected node has pending relationship updates
+  const nodes = useNodes();
+  const isPendingUpdate = source && target && nodes.length > 0 ? 
+    (() => {
+      const sourceNode = nodes.find(n => n.id === source);
+      const targetNode = nodes.find(n => n.id === target);
+      return (sourceNode?.data?.metadata as any)?.pendingRelationshipUpdate || 
+             (targetNode?.data?.metadata as any)?.pendingRelationshipUpdate;
+    })() : false;
 
   // Determine edge style based on relationship type
   const relationshipType = data?.relationshipType || data?.Type || 'requirement';
@@ -114,13 +126,15 @@ const DefaultEdge = memo(({
           markerEnd={showArrow ? (markerEnd || 'url(#arrowclosed)') : undefined}
           style={{
             ...style,
-            stroke: isHovered ? hoverStrokeColor : strokeColor,
-            strokeWidth: isHovered ? strokeWidth + 1 : strokeWidth,
-            strokeDasharray: strokeDasharray,
-            transition: 'stroke 0.3s ease-in-out, stroke-width 0.3s ease-in-out, filter 0.3s ease-in-out',
-            filter: isHovered ? `drop-shadow(0 0 8px ${hoverStrokeColor}88)` : undefined,
+            stroke: isPendingUpdate ? '#fbbf24' : (isHovered ? hoverStrokeColor : strokeColor), // amber-400 for pending
+            strokeWidth: isPendingUpdate ? strokeWidth + 0.5 : (isHovered ? strokeWidth + 1 : strokeWidth),
+            strokeDasharray: isPendingUpdate ? '5 5' : strokeDasharray,
+            opacity: isPendingUpdate ? 0.6 : 1,
+            transition: 'stroke 0.3s ease-in-out, stroke-width 0.3s ease-in-out, filter 0.3s ease-in-out, opacity 0.3s ease-in-out',
+            filter: isPendingUpdate ? 'drop-shadow(0 0 6px #fbbf2488)' : (isHovered ? `drop-shadow(0 0 8px ${hoverStrokeColor}88)` : undefined),
+            animation: isPendingUpdate ? 'pulse 2s infinite' : undefined,
           }}
-          className={cn('edge-hover', edgeTypeClass, animationClasses)}
+          className={cn('edge-hover', edgeTypeClass, animationClasses, isPendingUpdate && 'animate-pulse')}
           interactionWidth={0} // We handle interaction with our transparent path
         />
         

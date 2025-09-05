@@ -6,201 +6,155 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ALNRetool is a visualization and editing tool for the "About Last Night" murder mystery game. It provides an interactive graph interface for managing characters, puzzles, story elements, and timeline events stored in Notion databases.
 
-## Technical Documentation (READ to update your memory on MOST RECENT best practices)
-- /docs/REACT_QUERY_V5_REACT_18.md
-
 ## Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite, React Flow (@xyflow/react), Zustand, TanStack Query
+- **Frontend**: React 18, TypeScript, Vite, React Flow (@xyflow/react), Zustand, TanStack Query v5
 - **Backend**: Express.js v5, TypeScript, Notion API client
 - **Testing**: Vitest, Playwright, MSW for API mocking
 - **Styling**: Tailwind CSS v4, Framer Motion
-- **Data**: Notion API as primary database
 
-## CRITICAL Considerations
-- This is an INTERNAL TOOL. It will only be used by 2-3 users.
-- IMPORTANT: THIS TOOL IS NOT IN PRODUCTION. **YOU CAN MAKE BREAKING CHANGES TO IMPROVE CODE QUALITY EFFICIENTLY**
-- Relationship handling between ROLLUP and RELATIONSHIP and TWO WAY RELATIONSHIP fields in Notion each need specific handling for CRUD operations. 
-- ALWAYS use FULL filepaths for TOOL CALLS.
-
-## Currently working on: 
-@TooltipPlan.md
-
-## Changes recorded at: 
-CHANGELOG.md
-
-
-## CRITICAL: TypeScript Error Checking
-
-**WARNING**: Never use `npx tsc` directly on individual files! This will give false errors.
-- ❌ **WRONG**: `npx tsc --noEmit src/hooks/mutations/entityMutations.ts` 
-- ✅ **CORRECT**: `npm run typecheck`
-
-The direct tsc command uses default ES5 target and lacks path mappings, creating phantom syntax errors that don't exist with the project's actual configuration. This has caused hours of wasted debugging time chasing non-existent brace mismatches.
-
-## Key Development Commands
+## Development Commands
 
 ```bash
 # Development
-npm run dev                # Start both client (port 5173) and server (port 3001) concurrently
+npm run dev                # Start both client (port 5173) and server (port 3001)
 npm run dev:client         # Start only Vite client
-npm run dev:server         # Start only Express server with hot reload
+npm run dev:server         # Start only Express server
 
 # Building
-npm run build              # Build both client and server for production
-npm run build:client       # Build client only
-npm run build:server       # Build server only
+npm run build              # Build both client and server
 npm start                  # Start production server
-
-# Testing
-npm test                   # Run tests in watch mode
-npm run test:run           # Run all tests once with increased memory
-npm run test:coverage      # Run tests with coverage report
-npm run test:ui            # Open Vitest UI
-npm run test:integration   # Run integration tests
-npm run test:smoke         # Run smoke tests
-
-# Test Batches (for large test suites)
-npm run test:batch:components  # Test components only
-npm run test:batch:hooks       # Test hooks only  
-npm run test:batch:lib         # Test lib utilities only
 
 # Code Quality
 npm run lint               # Run ESLint
-npm run typecheck          # Run TypeScript type checking for both client and server
+npm run typecheck          # Run TypeScript type checking
+
+# Testing
+npm test                   # Run tests in watch mode
+npm run test:run           # Run all tests once with 4GB memory allocation
+npm run test:coverage      # Run with coverage (80% threshold enforced)
+
+# Run Specific Tests
+npx vitest run src/components/CreatePanel.test.tsx    # Single file
+npx vitest src/hooks/mutations                        # Pattern match
+
+# E2E Testing
+npm run test:e2e           # Run Playwright tests
+npm run test:e2e:debug     # Debug E2E tests
 ```
 
-## Running a Single Test
+## Critical Architecture Patterns
 
-```bash
-# Run a specific test file
-npx vitest run src/components/CreatePanel.test.tsx
-npx vitest run src/hooks/useGraphState.test.ts
-
-# Run tests in watch mode for a specific pattern
-npx vitest src/hooks/mutations
-
-# Run with Playwright for E2E
-npm run test:e2e:edges
+### 1. Entity CRUD Flow
+The system uses a factory pattern for consistent entity handling:
+```
+UI Component → useMutation hook → API client → Express router → Notion API
+                    ↓                              ↓
+            Optimistic Update              Entity Transform
+                    ↓                              ↓
+            Cache Update ← ← ← ← ← ← Server Response
 ```
 
-## Architecture Overview
+**Key Files**:
+- `/server/routes/notion/createEntityRouter.ts` - Factory that generates all CRUD endpoints
+- `/src/hooks/mutations/entityMutations.ts` - Frontend mutation factory with optimistic updates
+- `/src/types/notion/transforms.ts` - Pure transform functions (Notion → App entities)
 
-### Frontend Structure
-- **src/components/**: React components organized by feature
-  - `graph/`: Graph visualization components (nodes, edges, views)
-  - `sidebar/`: Filter and navigation panels
-  - `field-editors/`: Form field components for entity editing
-  - `ui/`: Reusable UI components
-  
-- **src/hooks/**: Custom React hooks
-  - `graph/`: Graph-specific hooks (visibility, layout)
-  - `mutations/`: Data mutation hooks with TanStack Query
-  - `detail-panel/`: Entity form management
+### 2. Optimistic Updates & React 18 Batching
 
-- **src/services/**: API clients and data services
-  - `api.ts`: Main API client with request batching
-  - `graphApi.ts`: Graph-specific API endpoints
+**Critical Issue**: React 18's automatic batching causes race conditions with fast server responses.
 
-- **src/stores/**: Zustand state stores
-  - `filterStore.ts`: Filter and visibility state
-  - `creationStore.ts`: Entity creation state
-  - `uiStore.ts`: UI preferences
+**Solution**: We use `setTimeout(0)` to create task boundaries between optimistic and server updates. This is architecturally correct - it leverages JavaScript's event loop to ensure optimistic updates render before server data arrives.
 
-- **src/lib/graph/**: Graph utilities and algorithms
-  - `nodeCreators.ts`: Node factory functions
-  - `filtering.ts`: Entity filtering logic
-  - `layout/`: Layout algorithms (Dagre)
+See detailed explanation in `/src/hooks/mutations/entityMutations.ts` lines 9-39.
 
-### Backend Structure
-- **server/routes/**: Express route handlers
-  - `notion/`: Entity-specific routes (characters, elements, puzzles, timeline)
-  - `graph.ts`: Graph data endpoints
-  - `cache.ts`: Cache management endpoints
+### 3. Notion API Partial Response Handling
 
-- **server/services/**:
-  - `notion.ts`: Notion API client wrapper
-  - `cache.ts`: In-memory caching with TTL
-  - `graphBuilder.ts`: Graph data transformation
-  - `relationshipSynthesizer.ts`: Bidirectional relationship resolution
+**Problem**: Notion's update endpoint returns only the properties sent in the request, not the complete entity.
 
-- **server/middleware/**:
-  - `auth.ts`: API key authentication
-  - `validation.ts`: Request validation
-  - `errorHandler.ts`: Centralized error handling
+**Solution**: The `smartMergeEntityUpdate` function in `/server/utils/entityMerger.ts` preserves unmodified fields by:
+1. Fetching the complete entity before update
+2. Applying partial updates from Notion's response
+3. Intelligently merging to prevent data loss
 
-## Environment Variables
+### 4. Graph Visualization Pipeline
 
-Required for server (copy `.env.example` to `.env`):
+```
+Notion Data → Backend Transform → Graph Builder → React Flow Nodes
+                    ↓                   ↓              ↓
+              Entity Objects      Relationships    Visual Graph
+                                       ↓
+                              Relationship Synthesizer
+                              (Bidirectional Resolution)
+```
+
+**State Management**: Direct management in GraphView component (centralized state was abandoned in Sprint 2 to avoid React Flow conflicts).
+
+### 5. Dual Caching Strategy
+
+**Server Cache** (node-cache, 5min TTL):
+- Reduces Notion API calls
+- Handles rate limiting (100 req/min)
+- Located in `/server/services/cache.ts`
+
+**Client Cache** (TanStack Query):
+- Optimistic updates
+- Background refetching
+- Stale-while-revalidate pattern
+
+### 6. Filter & Visibility System
+
+Three-layer filtering architecture:
+1. **Data Filtering** (`filterStore.ts`) - Which entities to include
+2. **Visibility Calculation** (`useGraphVisibility.ts`) - Depth-based visibility
+3. **Layout Engine** (`useGraphLayout.ts`) - Dagre positioning
+
+**Important**: Depth filtering ONLY applies when a node is selected.
+
+## Critical Gotchas
+
+### TypeScript Compilation
+**NEVER** use `npx tsc` directly on files - it uses wrong config and shows phantom errors:
 ```bash
-NOTION_API_KEY=your-notion-integration-token
+# ❌ WRONG - Will show false errors
+npx tsc --noEmit src/hooks/mutations/entityMutations.ts
+
+# ✅ CORRECT
+npm run typecheck
+```
+
+### Known Issues
+- **UPDATE mutations are currently broken** - Under active development
+- **Auth middleware** requires Origin header to be localhost in development
+
+### Environment Variables
+Required in `.env`:
+```bash
+NOTION_API_KEY=your-token
 NOTION_CHARACTERS_DB=database-id
-NOTION_ELEMENTS_DB=database-id  
+NOTION_ELEMENTS_DB=database-id
 NOTION_PUZZLES_DB=database-id
 NOTION_TIMELINE_DB=database-id
-API_KEY=optional-api-key-for-auth/zen
-PORT=3001
-NODE_ENV=development|production
 ```
-**IMPORTANT: In Dev, Auth Middleware REQUIRES Origin to be set as Localhost**
 
-## API Endpoints
+## Key Architectural Decisions
 
-Main endpoints (all prefixed with `/api`):
-- `GET /api/health` - Health check (no auth)
-- `GET /api/notion/characters` - Fetch characters with filtering
-- `GET /api/notion/elements` - Fetch story elements
-- `GET /api/notion/puzzles` - Fetch puzzles
-- `GET /api/notion/timeline` - Fetch timeline events
-- `GET /api/graph/data` - Get complete graph data with relationships
-- `PUT /api/notion/{entity}/:id` - Update entity properties
-- `GET /api/cache/stats` - Cache statistics
-- `POST /api/cache/clear` - Clear cache
+1. **Factory Pattern for Routers**: All entity routers generated from single factory for consistency
+2. **Pure Transform Functions**: Transforms have single responsibility - no merge logic
+3. **Graph Context Pattern**: `GraphDataContext` provides entity lookup across all nodes
+4. **Relationship Types**: ROLLUP vs RELATION fields require different update strategies
+5. **Breaking Changes OK**: Internal tool for 2-3 users - prioritize code quality over stability
 
-All endpoints support:
-- Cursor-based pagination (`cursor`, `limit` params)
-- Filtering by various properties
-- Caching with 5-minute TTL
-- Rate limiting (100 req/min)
+## Testing Philosophy
 
-## Testing Approach
+Three-tier approach:
+1. **Behavioral Tests**: Contract specifications independent of implementation
+2. **Unit Tests**: Realistic inputs matching runtime conditions  
+3. **Integration Tests**: Full flow through MSW handlers
 
-- **Unit Tests**: Use Vitest with happy-dom for component and hook testing
-- **Integration Tests**: Test API endpoints with real Notion API calls
-- **E2E Tests**: Playwright tests in `tests/e2e/`
-- **Mocks**: MSW handlers in `src/test/mocks/` for API simulation
-- **Coverage**: Minimum 80% coverage thresholds enforced
-- **Test Environment**: Tests run in parallel with fork pool isolation for speed and safety
+Test files use `.test.ts(x)` extension and run in isolated forks for safety.
 
-## Key Libraries & Patterns
+## Current Work Tracking
 
-- **React Flow**: Graph visualization with custom nodes/edges
-- **TanStack Query**: Server state management with caching
-- **Zustand**: Client state management
-- **Dagre**: Graph layout algorithm
-- **Bottleneck**: Rate limiting for Notion API calls
-- **Node-cache**: Server-side caching
-
-## Common Patterns
-
-1. **Entity Types**: `Character`, `Element`, `Puzzle`, `TimelineEvent`
-2. **Node Types**: Each entity has corresponding React Flow node component
-3. **Mutations**: Use `entityMutations` factory for CRUD operations
-4. **Caching**: Both client (React Query) and server (node-cache) caching
-5. **Error Handling**: Centralized error boundaries and API error handler
-
-## Performance Considerations
-
-- Request batching for parallel API calls
-- Memoization in graph calculations
-- Virtual rendering for large graphs
-- Progressive loading with pagination
-- Optimistic updates for better UX
-
-## Build Configuration
-
-- **TypeScript**: Uses project references with separate configs for app (`tsconfig.app.json`) and server (`tsconfig.server.json`)
-- **Path Aliases**: `@/*` maps to `src/*` for cleaner imports
-- **Vite**: Configured with tree-shaking, source maps, and dependency optimization
-- **Test Isolation**: Each test file runs in its own fork for safety
-- **Coverage Requirements**: 80% minimum coverage for branches, functions, lines, and statements
+- Active development: See `updateMutationFixes.md`
+- Change history: See `CHANGELOG.md`

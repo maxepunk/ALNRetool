@@ -32,7 +32,9 @@ import { createEntityRouter, type InverseRelation } from './createEntityRouter.j
 import { buildCharacterFilters } from '../../services/filterBuilder.js';
 import { transformCharacter } from '../../../src/types/notion/transforms.js';
 import { toNotionCharacterProperties } from '../../services/notionPropertyMappers.js';
+// Entity merger now handled in createEntityRouter
 import config from '../../config/index.js';
+import type { Character } from '../../../src/types/notion/app.js';
 
 /**
  * Notion database ID for characters collection.
@@ -124,9 +126,10 @@ const characterInverseRelations: InverseRelation[] = [
  * @see {@link transformCharacter} for data transformation
  * @see {@link buildCharacterFilters} for filter construction
  */
-const router = createEntityRouter({
+const router = createEntityRouter<Character>({
   databaseId: CHARACTERS_DATABASE_ID,
   entityName: 'character',
+  entityType: 'character',
   transform: transformCharacter,
   toNotionProps: toNotionCharacterProperties,
   buildFilters: buildCharacterFilters,

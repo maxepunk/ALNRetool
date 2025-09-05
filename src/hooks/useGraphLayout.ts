@@ -18,61 +18,65 @@
  */
 
 import { useMemo } from 'react';
+import Fuse from 'fuse.js';
 import type { GraphNode } from '@/lib/graph/types';
-import type { Node, Edge } from '@xyflow/react';
+import type { Edge } from '@xyflow/react';
 import type { ViewConfig } from '@/lib/viewConfigs';
-import { filterTimelineEdges } from '@/lib/graph/filtering';
+import { useDebounce } from '@/hooks/useDebounce';
 
 // Import the 2 composable hooks (filtering is now inline, relationships come from server)
 import { useGraphVisibility } from './graph/useGraphVisibility';
 import { useLayoutEngine } from './graph/useLayoutEngine';
 
 interface UseGraphLayoutParams {
-  nodes: Node[];
-  edges: Edge[];
+  // Entities from server (with relationships already embedded)
+  nodes: GraphNode[];
+  edges: any[];
+  
+  // View configuration
   viewConfig: ViewConfig;
-  // Individual filter values to avoid object recreation
-  searchTerm: string;
-  selectedNodeId: string | null;
-  connectionDepth: number | null;
-  entityVisibility: {
+  
+  // Filters - all optional with sensible defaults
+  searchTerm?: string;
+  selectedNodeId?: string | null;
+  connectionDepth?: number | null;
+  entityVisibility?: {
     character: boolean;
-    element: boolean;
     puzzle: boolean;
+    element: boolean;
     timeline: boolean;
   };
-  // Character filter primitives
-  characterType: string;
-  characterSelectedTiers: Set<string>;
-  // Puzzle filter primitives
-  puzzleSelectedActs: Set<string>;
-  // Element filter primitives
-  elementBasicTypes: Set<string>;
-  elementStatus: Set<string>;
+  
+  // Character-specific filters
+  characterType?: 'all' | 'Player' | 'NPC';
+  characterSelectedTiers?: Set<string>;
+  
+  // Puzzle-specific filters
+  puzzleSelectedActs?: Set<string>;
+  
+  // Content/Element filters
+  elementBasicTypes?: Set<string>;
+  elementStatus?: Set<string>;
 }
 
 interface UseGraphLayoutResult {
-  layoutedNodes: GraphNode[];
-  filteredEdges: Edge[];
-  totalUniverseNodes: number;
+  reactFlowNodes: GraphNode[];
+  reactFlowEdges: Edge[];
+  visibleNodeIds: Set<string>;
 }
 
 /**
- * Orchestrates the graph layout pipeline through hook composition.
- * Each sub-hook manages its own memoization for optimal performance.
+ * Main graph layout hook that orchestrates filtering and positioning.
  * 
- * **Pipeline:**
- * 1. Apply filters to server-provided nodes
- * 2. Use server-provided edges directly
- * 3. useGraphVisibility → Apply visibility rules
- * 4. useLayoutEngine → Position nodes
- * 
- * @param params - All graph configuration parameters
- * @returns Layouted nodes and edges ready for React Flow
+ * Flow:
+ * 1. Apply filters to server nodes (but keep all nodes, mark as hidden)
+ * 2. Apply visibility rules based on selection and depth
+ * 3. Apply layout algorithm to position nodes
+ * 4. Transform to React Flow format
  * 
  * @example
  * ```typescript
- * const { layoutedNodes, filteredEdges } = useGraphLayout({
+ * const { reactFlowNodes, reactFlowEdges } = useGraphLayout({
  *   characters,
  *   elements,
  *   puzzles,
@@ -97,8 +101,28 @@ export const useGraphLayout = ({
   elementStatus,
 }: UseGraphLayoutParams): UseGraphLayoutResult => {
   
+  // Debounce search term to prevent excessive recalculation (300ms delay)
+  const debouncedSearchTerm = useDebounce(searchTerm || '', 300);
+  
+  // Create Fuse instance for fuzzy search
+  const searchMatcher = useMemo(() => {
+    if (!nodes.length || !debouncedSearchTerm) return null;
+    
+    const fuse = new Fuse(nodes, {
+      keys: [
+        'data.label',
+        'id'
+      ],
+      threshold: 0.4,  // 0.0 = exact match, 1.0 = match anything
+      includeScore: true,
+    });
+    
+    const searchResults = fuse.search(debouncedSearchTerm);
+    return new Set(searchResults.map(r => r.item.id));
+  }, [nodes, debouncedSearchTerm]);
+  
   // Step 1: Apply filters to server-provided nodes
-  // Convert server nodes to GraphNodes and apply filters
+  // Filter nodes out completely for proper layout recalculation and performance
   const filteredNodes = useMemo(() => {
     return nodes
       .filter((node: any) => {
@@ -108,18 +132,15 @@ export const useGraphLayout = ({
           return true; // Show them for now to visualize data issues
         }
         
-        // Apply search filter
-        const label = node.data?.label;
-        if (searchTerm && label && typeof label === 'string') {
-          if (!label.toLowerCase().includes(searchTerm.toLowerCase())) {
-            return false;
-          }
+        // Apply fuzzy search filter (using debounced term)
+        if (debouncedSearchTerm && searchMatcher && !searchMatcher.has(node.id)) {
+          return false;
         }
         
         // Apply entity visibility filters
         const entityType = node.data?.metadata?.entityType;
         if (entityType && typeof entityType === 'string') {
-          if (!entityVisibility[entityType as keyof typeof entityVisibility]) {
+          if (!entityVisibility || !entityVisibility[entityType as keyof typeof entityVisibility]) {
             return false;
           }
           
@@ -133,14 +154,14 @@ export const useGraphLayout = ({
                   return false;
                 }
                 // Character tier filter
-                if (characterSelectedTiers.size > 0 && !characterSelectedTiers.has(entity.tier || '')) {
+                if (characterSelectedTiers && characterSelectedTiers.size > 0 && !characterSelectedTiers.has(entity.tier || '')) {
                   return false;
                 }
                 break;
                 
               case 'puzzle':
                 // Puzzle act filter - check timing array (matches nodeCreators.ts pattern)
-                if (puzzleSelectedActs.size > 0) {
+                if (puzzleSelectedActs && puzzleSelectedActs.size > 0) {
                   const puzzleTiming = (entity as any).timing || [];
                   const hasMatchingAct = puzzleTiming.some((act: string) => 
                     act && puzzleSelectedActs.has(act)
@@ -153,11 +174,11 @@ export const useGraphLayout = ({
                 
               case 'element':
                 // Element type filter
-                if (elementBasicTypes.size > 0 && !elementBasicTypes.has(entity.basicType || '')) {
+                if (elementBasicTypes && elementBasicTypes.size > 0 && !elementBasicTypes.has(entity.basicType || '')) {
                   return false;
                 }
                 // Element status filter
-                if (elementStatus.size > 0 && !elementStatus.has(entity.status || '')) {
+                if (elementStatus && elementStatus.size > 0 && !elementStatus.has(entity.status || '')) {
                   return false;
                 }
                 break;
@@ -165,14 +186,18 @@ export const useGraphLayout = ({
           }
         }
         
+        // Keep the node
         return true;
       })
       .map(node => ({
         ...node,
         type: node.type || 'default',
+        // CRITICAL: Preserve selection state when filtering changes
+        // This prevents React Flow from losing selection and clearing selectedNodeId
+        selected: node.id === selectedNodeId,
       } as GraphNode));
-  }, [nodes, searchTerm, entityVisibility, characterType, characterSelectedTiers, 
-      puzzleSelectedActs, elementBasicTypes, elementStatus]);
+  }, [nodes, debouncedSearchTerm, searchMatcher, entityVisibility, characterType, characterSelectedTiers, 
+      puzzleSelectedActs, elementBasicTypes, elementStatus, selectedNodeId]);
   
   // Step 2: Use server-provided edges directly, ensuring type compatibility
   const allEdges = edges as any[];
@@ -180,80 +205,49 @@ export const useGraphLayout = ({
   
   // Step 3: Apply visibility rules
   // This hook memoizes based on selection and connection depth
-  const { visibleNodes, allEdges: layoutEdges } = useGraphVisibility({
+  const { visibleNodes, visibleEdges, allEdges: layoutEdges } = useGraphVisibility({
     filteredNodes,
     allEdges,
-    selectedNodeId,
-    connectionDepth,
+    selectedNodeId: selectedNodeId || null,
+    connectionDepth: connectionDepth || null,
   });
   
   
-  // Step 4: Apply layout to visible nodes
-  // This hook memoizes based on nodes/edges/config
-  // IMPORTANT: Use ALL edges for layout to maintain proper positioning
-  // even when some nodes are temporarily hidden
+  // Step 4: Apply layout to visible nodes (not filtered nodes!)
+  // Layout will recalculate when nodes are filtered, providing visual feedback
   const { layoutedNodes } = useLayoutEngine({
-    visibleNodes,
-    allEdges: layoutEdges,  // Use all edges for layout calculations
+    visibleNodes: visibleNodes,  // FIX: Use actual visible nodes from visibility hook
+    allEdges: layoutEdges,
     viewConfig,
   });
   
-  // Calculate total universe size for UI feedback
-  const totalUniverseNodes = nodes.length;
-  
-  // Safely map GraphEdge[] to Edge[] for React Flow compatibility
-  // This ensures data integrity is preserved during the conversion
-  // IMPORTANT: Filter edges based on currently visible nodes to ensure
-  // Timeline edges appear when Timeline nodes are toggled visible
-  const filteredEdges: Edge[] = useMemo(() => {
-    // DIAGNOSTIC: Log what we're filtering from
+  // Step 5: Build final React Flow nodes and edges
+  const { reactFlowNodes, reactFlowEdges, visibleNodeIds } = useMemo(() => {
+    // Create a set of visible node IDs (from actual visible nodes after depth filtering)
+    const visibleIds = new Set(layoutedNodes.map(n => n.id));
     
-    // Create a set of visible node IDs for efficient lookup
-    const visibleNodeSet = new Set(layoutedNodes.map(n => n.id));
+    // Transform nodes to React Flow format
+    const rfNodes = layoutedNodes.map(node => ({
+      ...node,
+    })) as GraphNode[];
     
-    // First, filter edges for visible nodes
-    let visibleEdges = layoutEdges.filter(edge => 
-      visibleNodeSet.has(edge.source) && 
-      visibleNodeSet.has(edge.target)
-    );
+    // Use the pre-filtered visible edges from visibility hook
+    const rfEdges = visibleEdges
+      .map(edge => ({
+        ...edge,
+        type: edge.type || 'default',
+      })) as Edge[];
     
-    // Apply Timeline edge filtering if enabled
-    if (viewConfig.layout?.filterTimelineEdges) {
-      visibleEdges = filterTimelineEdges(visibleEdges, layoutedNodes, true);
-    }
-    
-    // Map to React Flow Edge format
-    return visibleEdges.map(edge => ({
-      id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      type: edge.type,
-      animated: edge.animated,
-      style: edge.style,
-      data: edge.data,
-      label: edge.label,
-      labelStyle: edge.labelStyle,
-      labelShowBg: edge.labelShowBg,
-      labelBgStyle: edge.labelBgStyle,
-      labelBgPadding: edge.labelBgPadding,
-      labelBgBorderRadius: edge.labelBgBorderRadius,
-      markerStart: edge.markerStart,
-      markerEnd: edge.markerEnd,
-      sourceHandle: edge.sourceHandle,
-      targetHandle: edge.targetHandle,
-      hidden: edge.hidden,
-      deletable: edge.deletable,
-      focusable: edge.focusable,
-      selected: edge.selected,
-      zIndex: edge.zIndex,
-      interactionWidth: edge.interactionWidth,
-    } satisfies Edge));
-  }, [layoutEdges, layoutedNodes, viewConfig.layout?.filterTimelineEdges]);
-  
+    return {
+      reactFlowNodes: rfNodes,
+      reactFlowEdges: rfEdges,
+      visibleNodeIds: visibleIds,
+    };
+  }, [layoutedNodes, visibleEdges]);
   
   return {
-    layoutedNodes,
-    filteredEdges,
-    totalUniverseNodes,
+    reactFlowNodes,
+    reactFlowEdges,
+    visibleNodeIds,
   };
 };

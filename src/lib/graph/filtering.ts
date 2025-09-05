@@ -129,14 +129,34 @@ export function getVisibleNodeIds(
   connectionDepth: number
 ): Set<string> {
   // Priority 1: A specific node is selected. Handle this case first.
-  if (selectedNodeId && filteredNodeIds.has(selectedNodeId)) {
+  // IMPORTANT: Always show selected node, even if it doesn't match filters
+  // This ensures clearing search maintains focus on the selected item
+  if (selectedNodeId) {
     // If connection depth is 0 with a selection, show ONLY the selected node.
     if (connectionDepth === 0) {
       return new Set([selectedNodeId]);
     }
     
-    // Otherwise, find and show its neighbors.
-    return getNodesWithinDepth(selectedNodeId, edges, connectionDepth);
+    // Otherwise, find and show its neighbors within the specified depth
+    // This gives us the selected node + all connected nodes within N hops
+    const connectedNodes = getNodesWithinDepth(selectedNodeId, edges, connectionDepth);
+    
+    // Also include any filtered nodes that happen to be visible
+    // This allows search to work additively with selection
+    if (filteredNodeIds.size > 0) {
+      // If the selected node matches filters, just return its connections
+      if (filteredNodeIds.has(selectedNodeId)) {
+        return connectedNodes;
+      } else {
+        // If selected node doesn't match filters, still show it and its connections
+        // but also include any other nodes that match the filter
+        const combined = new Set(connectedNodes);
+        filteredNodeIds.forEach(id => combined.add(id));
+        return combined;
+      }
+    }
+    
+    return connectedNodes;
   }
   
   // Priority 2: No selection, and depth is 0. Just show the base filtered nodes.

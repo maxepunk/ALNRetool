@@ -30,6 +30,7 @@ import { createEntityRouter, type InverseRelation } from './createEntityRouter.j
 import { transformTimelineEvent } from '../../../src/types/notion/transforms.js';
 import { toNotionTimelineProperties } from '../../services/notionPropertyMappers.js';
 import config from '../../config/index.js';
+import type { TimelineEvent } from '../../../src/types/notion/app.js';
 
 /**
  * Notion database ID for timeline events collection.
@@ -115,9 +116,10 @@ const timelineInverseRelations: InverseRelation[] = [
  * @see {@link transformTimelineEvent} for data transformation
  * @see {@link toNotionTimelineProperties} for property mapping
  */
-export default createEntityRouter({
+export default createEntityRouter<TimelineEvent>({
   databaseId: TIMELINE_DATABASE_ID,
   entityName: 'timeline',
+  entityType: 'timeline',
   transform: transformTimelineEvent,
   toNotionProps: toNotionTimelineProperties,
   inverseRelations: timelineInverseRelations

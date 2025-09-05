@@ -485,6 +485,187 @@ describe('Cache Updaters', () => {
         expect(updatedData.edges).toHaveLength(1);
         expect(updatedData.edges[0]!.type).toBe('owns');
       });
+
+      it('should preserve unmodified relationships during UPDATE', async () => {
+        // Setup entity with relationships
+        const initialEntity = createTestCharacter('char-1');
+        initialEntity.ownedElementIds = ['elem-1', 'elem-2'];
+        initialEntity.associatedElementIds = ['elem-3', 'elem-4'];
+        initialEntity.characterPuzzleIds = ['puzzle-1', 'puzzle-2'];
+        initialEntity.name = 'Original Name';
+        
+        const initialData: CachedGraphData = {
+          nodes: [{
+            id: 'char-1',
+            type: 'character',
+            position: { x: 0, y: 0 },
+            data: {
+              label: 'Original Name',
+              entity: initialEntity,
+              metadata: { entityType: 'character', pendingMutationCount: 0 }
+            }
+          }],
+          edges: [],
+          metadata: {
+            lastFetch: Date.now(),
+            version: 1
+          }
+        };
+        
+        queryClient.setQueryData(QUERY_KEY, initialData);
+        
+        // Update only the name, not relationships
+        const updatedEntity = { ...initialEntity };
+        updatedEntity.name = 'Updated Name';
+        // Note: relationships remain the same
+        
+        const delta: GraphDelta = {
+          changes: {
+            nodes: {
+              created: [],
+              updated: [{
+                id: 'char-1',
+                type: 'character',
+                position: { x: 0, y: 0 },
+                data: {
+                  label: 'Updated Name',
+                  entity: updatedEntity,
+                  metadata: { entityType: 'character' }
+                }
+              }],
+              deleted: []
+            },
+            edges: {
+              created: [],
+              updated: [],
+              deleted: []
+            }
+          }
+        };
+        
+        const context: CacheUpdateContext = {
+          queryClient,
+          queryKey: QUERY_KEY,
+          strategy: 'delta',
+          entity: updatedEntity,
+          delta,
+          operation: 'update',
+        };
+        
+        await updater.update(context);
+        
+        const result = queryClient.getQueryData(QUERY_KEY) as CachedGraphData;
+        const updatedNode = result.nodes[0]!;
+        
+        // Verify name was updated
+        expect(updatedNode.data.entity.name).toBe('Updated Name');
+        expect(updatedNode.data.label).toBe('Updated Name');
+        
+        // Verify relationships were preserved
+        expect(updatedNode.data.entity.ownedElementIds).toEqual(['elem-1', 'elem-2']);
+        expect(updatedNode.data.entity.associatedElementIds).toEqual(['elem-3', 'elem-4']);
+        expect(updatedNode.data.entity.characterPuzzleIds).toEqual(['puzzle-1', 'puzzle-2']);
+        
+        // Verify UI state was preserved
+        expect(updatedNode.data.metadata.pendingMutationCount).toBe(0);
+      });
+
+      it('should handle partial API response with preserved relationships from server merge', async () => {
+        // CRITICAL TEST: This validates our server-side fix for partial updates
+        // When Notion API returns only updated fields, our server merges with old data
+        // The delta should contain the complete entity with preserved relationships
+        
+        // Setup: Cache with entity that has relationships
+        const initialEntity = createTestCharacter('char-1');
+        initialEntity.ownedElementIds = ['elem-1', 'elem-2'];
+        initialEntity.associatedElementIds = ['elem-3'];
+        initialEntity.characterPuzzleIds = ['puzzle-1'];
+        initialEntity.name = 'Alice';
+        
+        const initialData: CachedGraphData = {
+          nodes: [{
+            id: 'char-1',
+            type: 'character',
+            position: { x: 0, y: 0 },
+            data: {
+              label: 'Alice',
+              entity: initialEntity,
+              metadata: { 
+                entityType: 'character',
+                pendingMutationCount: 0,
+                isFocused: true // UI state to preserve
+              }
+            }
+          }],
+          edges: [
+            { id: 'e::char-1::ownedElementIds::elem-1', source: 'char-1', target: 'elem-1', type: 'owns' },
+            { id: 'e::char-1::ownedElementIds::elem-2', source: 'char-1', target: 'elem-2', type: 'owns' }
+          ],
+          metadata: { lastFetch: Date.now(), version: 1 }
+        };
+        
+        queryClient.setQueryData(QUERY_KEY, initialData);
+        
+        // Simulate server response after partial update:
+        // Server merged the partial update with old data to preserve relationships
+        const mergedEntity = { ...initialEntity, name: 'Alice Updated' };
+        
+        // Delta from server contains complete entity (thanks to server-side merge)
+        const delta: GraphDelta = {
+          changes: {
+            nodes: {
+              created: [],
+              updated: [{
+                id: 'char-1',
+                type: 'character',
+                position: { x: 0, y: 0 },
+                data: {
+                  label: 'Alice Updated',
+                  entity: mergedEntity, // Complete entity with preserved relationships
+                  metadata: { entityType: 'character' }
+                }
+              }],
+              deleted: []
+            },
+            edges: {
+              created: [],
+              updated: [],
+              deleted: []
+            }
+          }
+        };
+        
+        const context: CacheUpdateContext = {
+          queryClient,
+          queryKey: QUERY_KEY,
+          strategy: 'delta',
+          entity: mergedEntity,
+          delta,
+          operation: 'update',
+        };
+        
+        await updater.update(context);
+        
+        const result = queryClient.getQueryData(QUERY_KEY) as CachedGraphData;
+        const updatedNode = result.nodes[0]!;
+        
+        // Verify the update was applied
+        expect(updatedNode.data.entity.name).toBe('Alice Updated');
+        
+        // CRITICAL: Verify relationships were preserved through server merge
+        expect(updatedNode.data.entity.ownedElementIds).toEqual(['elem-1', 'elem-2']);
+        expect(updatedNode.data.entity.associatedElementIds).toEqual(['elem-3']);
+        expect(updatedNode.data.entity.characterPuzzleIds).toEqual(['puzzle-1']);
+        
+        // Verify edges remain unchanged
+        expect(result.edges).toHaveLength(2);
+        expect(result.edges[0]!.id).toBe('e::char-1::ownedElementIds::elem-1');
+        expect(result.edges[1]!.id).toBe('e::char-1::ownedElementIds::elem-2');
+        
+        // Verify UI state was preserved
+        expect(updatedNode.data.metadata.isFocused).toBe(true);
+        expect(updatedNode.data.metadata.pendingMutationCount).toBe(0);
+      });
     });
 
     describe('DELETE operation', () => {

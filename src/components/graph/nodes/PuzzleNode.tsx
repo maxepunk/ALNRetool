@@ -7,6 +7,7 @@ import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { Puzzle as PuzzleIcon, User } from 'lucide-react';
 import { useGraphData } from '@/contexts/GraphDataContext';
 import { formatCountTooltip, puzzleStatusDescriptions } from '@/lib/graph/tooltipHelpers';
+import { isNodeOptimistic } from '@/lib/graph/utils';
 
 /**
  * Custom React Flow node component for Puzzle entities
@@ -16,7 +17,7 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
   const nodeData = data as GraphNodeData<Puzzle>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
-  const isOptimistic = (metadata as any).isOptimistic || false;
+  const isOptimistic = isNodeOptimistic(metadata);
   
   // Get entity lookup functions for tooltips
   const { getEntityName, getEntityNames } = useGraphData();

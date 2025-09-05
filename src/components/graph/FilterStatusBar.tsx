@@ -8,7 +8,7 @@ import { memo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Info, Target, Network, X } from 'lucide-react';
+import { Info, Target, Network, X, Search } from 'lucide-react';
 import { useFilterStore } from '@/stores/filterStore';
 
 interface FilterStatusBarProps {
@@ -27,9 +27,10 @@ export const FilterStatusBar = memo(function FilterStatusBar({
   hasActiveFilters
 }: FilterStatusBarProps) {
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
+  const searchTerm = useFilterStore((state) => state.searchTerm);
   
   // Don't show if no filters are active and all nodes are visible
-  if (!hasActiveFilters && totalNodes === visibleNodes && !selectedNode) {
+  if (!hasActiveFilters && totalNodes === visibleNodes && !selectedNode && !searchTerm) {
     return null;
   }
 
@@ -78,6 +79,14 @@ export const FilterStatusBar = memo(function FilterStatusBar({
           <Network className="h-3 w-3" />
           <span>{getDescription()}</span>
         </div>
+
+        {/* Search term indicator */}
+        {searchTerm && (
+          <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+            <Search className="h-3 w-3 text-purple-600 dark:text-purple-400" />
+            <span>Filtering: "{searchTerm}"</span>
+          </div>
+        )}
 
         {/* Selected node indicator */}
         {selectedNode && (

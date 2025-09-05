@@ -97,6 +97,31 @@ const ENTITY_TO_NODE_TYPE_MAP: Record<EntityType, string> = {
   'timeline': 'timelineEvent'
 };
 
+// Helper function to get inverse relationship field for bidirectional updates
+// This maps from a source field to its corresponding field on the target entity
+function getInverseRelationshipField(sourceEntityType: EntityType, fieldKey: string): string | null {
+  // Map of entity type + field to inverse field
+  const relationshipMap: Record<string, string | null> = {
+    // Puzzle -> Character relationships
+    'puzzle:ownerId': 'characterPuzzleIds', // When changing Puzzle.ownerId, update Character.characterPuzzleIds
+    
+    // Element -> Character relationships  
+    'element:ownerId': 'ownedElementIds', // When changing Element.ownerId, update Character.ownedElementIds
+    
+    // Timeline -> Character relationships
+    'timeline:charactersInvolvedIds': null, // No inverse on Character for timeline involvement
+    
+    // Element -> Puzzle relationships
+    'element:puzzleIds': 'puzzleElementIds', // When changing Element.puzzleIds, update Puzzle.puzzleElementIds
+    
+    // Element -> Timeline relationships
+    'element:timelineIds': 'memoryEvidenceIds', // When changing Element.timelineIds, update Timeline.memoryEvidenceIds
+  };
+  
+  const key = `${sourceEntityType}:${fieldKey}`;
+  return relationshipMap[key] || null;
+}
+
 
 // Helper function to get API module for entity type
 function getApiModule(entityType: EntityType) {
@@ -298,7 +323,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
                   entityType: ENTITY_TO_NODE_TYPE_MAP[entityType],
                   searchMatch: true,
                   isFocused: false,
-                  isOptimistic: true, // Flag for visual feedback
+                  pendingMutationCount: 1, // New node starts with 1 pending mutation
                 },
               },
             };
@@ -330,15 +355,176 @@ function createEntityMutation<T extends Entity | void = Entity>(
               // Bug 8 Fix: Capture previous state for granular rollback
               previousNode = { ...nodes[nodeIndex] };
               
+              // Enhanced relationship handling: Update edges optimistically
+              const currentEntity = nodes[nodeIndex].data.entity;
+              const relationshipFields = Object.keys(variables).filter(key => {
+                // Skip the entity's own ID field
+                if (key === 'id' || key === 'name' || key === 'version' || key === 'lastEdited') return false;
+                // Check if field name suggests it's a relationship
+                return key.endsWith('Id') || key.endsWith('Ids');
+              });
+              
+              console.log('[DEBUG] UPDATE relationship fields detected:', relationshipFields);
+              console.log('[DEBUG] Current entity:', currentEntity);
+              console.log('[DEBUG] Update variables:', variables);
+              
+              // Process relationship changes to update edges
+              let edges = [...(newData.edges || [])];
+              const isRelationshipUpdate = relationshipFields.length > 0;
+              console.log('[DEBUG] Is relationship update:', isRelationshipUpdate);
+              
+              for (const fieldKey of relationshipFields) {
+                const oldValue = currentEntity[fieldKey];
+                const newValue = variables[fieldKey];
+                
+                // Handle single relationship (fieldId)
+                if (fieldKey.endsWith('Id') && !fieldKey.endsWith('Ids')) {
+                  // Remove old edge if exists
+                  if (oldValue) {
+                    const oldEdgeIndex = edges.findIndex((e: any) => 
+                      e.source === variables.id && e.target === oldValue && e.data?.relationField === fieldKey
+                    );
+                    if (oldEdgeIndex !== -1) {
+                      deletedEdges.push({ ...edges[oldEdgeIndex] });
+                      edges.splice(oldEdgeIndex, 1);
+                    }
+                    
+                    // Handle bidirectional relationship: update the old target's array
+                    // For example, if changing a Puzzle's ownerId, update old owner's puzzleIds
+                    const oldTargetNodeIndex = nodes.findIndex(n => n.id === oldValue);
+                    if (oldTargetNodeIndex !== -1) {
+                      const inverseField = getInverseRelationshipField(entityType, fieldKey);
+                      if (inverseField) {
+                        // Save previous state for rollback
+                        modifiedParentNodes.push({
+                          id: nodes[oldTargetNodeIndex].id,
+                          previousState: { ...nodes[oldTargetNodeIndex] }
+                        });
+                        
+                        // Remove this entity from the old target's array
+                        const currentArray = nodes[oldTargetNodeIndex].data.entity[inverseField] || [];
+                        nodes[oldTargetNodeIndex] = {
+                          ...nodes[oldTargetNodeIndex],
+                          data: {
+                            ...nodes[oldTargetNodeIndex].data,
+                            entity: {
+                              ...nodes[oldTargetNodeIndex].data.entity,
+                              [inverseField]: currentArray.filter((id: string) => id !== variables.id)
+                            }
+                          }
+                        };
+                      }
+                    }
+                  }
+                  
+                  // Add new edge if value is set
+                  if (newValue) {
+                    const newEdgeId = `e::${variables.id}::${fieldKey}::${newValue}`;
+                    const newEdge = {
+                      id: newEdgeId,
+                      source: variables.id,
+                      target: newValue,
+                      type: 'relation',
+                      data: {
+                        relationField: fieldKey,
+                        isOptimistic: true
+                      }
+                    };
+                    console.log('[DEBUG] Creating new edge:', newEdge);
+                    edges.push(newEdge);
+                    createdEdges.push(newEdgeId);
+                    console.log('[DEBUG] Edges after adding:', edges.length, 'edges');
+                    
+                    // Handle bidirectional relationship: update the new target's array
+                    const newTargetNodeIndex = nodes.findIndex(n => n.id === newValue);
+                    if (newTargetNodeIndex !== -1) {
+                      const inverseField = getInverseRelationshipField(entityType, fieldKey);
+                      if (inverseField) {
+                        // Save previous state for rollback if not already saved
+                        if (!modifiedParentNodes.find(p => p.id === nodes[newTargetNodeIndex].id)) {
+                          modifiedParentNodes.push({
+                            id: nodes[newTargetNodeIndex].id,
+                            previousState: { ...nodes[newTargetNodeIndex] }
+                          });
+                        }
+                        
+                        // Add this entity to the new target's array
+                        const currentArray = nodes[newTargetNodeIndex].data.entity[inverseField] || [];
+                        nodes[newTargetNodeIndex] = {
+                          ...nodes[newTargetNodeIndex],
+                          data: {
+                            ...nodes[newTargetNodeIndex].data,
+                            entity: {
+                              ...nodes[newTargetNodeIndex].data.entity,
+                              [inverseField]: [...currentArray, variables.id]
+                            }
+                          }
+                        };
+                      }
+                    }
+                  }
+                }
+                
+                // Handle array relationships (fieldIds)
+                if (fieldKey.endsWith('Ids')) {
+                  const oldIds = Array.isArray(oldValue) ? oldValue : [];
+                  const newIds = Array.isArray(newValue) ? newValue : [];
+                  
+                  // Remove edges for IDs that are no longer in the array
+                  const removedIds = oldIds.filter((id: string) => !newIds.includes(id));
+                  for (const removedId of removedIds) {
+                    const edgeIndex = edges.findIndex((e: any) => 
+                      e.source === variables.id && e.target === removedId && e.data?.relationField === fieldKey
+                    );
+                    if (edgeIndex !== -1) {
+                      deletedEdges.push({ ...edges[edgeIndex] });
+                      edges.splice(edgeIndex, 1);
+                    }
+                  }
+                  
+                  // Add edges for new IDs
+                  const addedIds = newIds.filter((id: string) => !oldIds.includes(id));
+                  for (const addedId of addedIds) {
+                    const newEdgeId = `e::${variables.id}::${fieldKey}::${addedId}`;
+                    const newEdge = {
+                      id: newEdgeId,
+                      source: variables.id,
+                      target: addedId,
+                      type: 'relation',
+                      data: {
+                        relationField: fieldKey,
+                        isOptimistic: true
+                      }
+                    };
+                    edges.push(newEdge);
+                    createdEdges.push(newEdgeId);
+                  }
+                }
+              }
+              
+              // Update edges if relationships changed
+              if (isRelationshipUpdate) {
+                newData.edges = edges;
+              }
+              
               nodes[nodeIndex] = {
                 ...nodes[nodeIndex],
                 data: {
                   ...nodes[nodeIndex].data,
-                  entity: { ...nodes[nodeIndex].data.entity, ...variables },
+                  entity: { 
+                    ...nodes[nodeIndex].data.entity,
+                    ...Object.fromEntries(
+                      Object.entries(variables)
+                        .filter(([key, value]) => value !== undefined && key !== 'id')
+                    )
+                  },
                   label: variables.name || nodes[nodeIndex].data.label,
                   metadata: {
                     ...nodes[nodeIndex].data.metadata,
-                    isOptimistic: true,
+                    // INCREMENT mutation counter instead of boolean flag
+                    pendingMutationCount: (nodes[nodeIndex].data.metadata.pendingMutationCount || 0) + 1,
+                    // Mark if this update includes relationship changes
+                    pendingRelationshipUpdate: isRelationshipUpdate,
                   },
                 },
               };
@@ -409,7 +595,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
           console.log('[DEBUG] onMutate setQueryData complete, nodes:', nodes.length);
           if (mutationType === 'update') {
             const updatedNode = nodes.find((n: any) => n.id === variables.id);
-            console.log('[DEBUG] Updated node isOptimistic:', updatedNode?.data?.metadata?.isOptimistic);
+            console.log('[DEBUG] Updated node pendingMutationCount:', updatedNode?.data?.metadata?.pendingMutationCount);
           }
           return { ...newData, nodes };
         });
@@ -475,7 +661,7 @@ function createEntityMutation<T extends Entity | void = Entity>(
         } 
         // 2. Handle UPDATE/DELETE failure with granular rollback (Bug 8 Fix)
         else if (mutationType === 'update' && ctx.previousNode) {
-          // Granular rollback for UPDATE: restore only the specific node
+          // Granular rollback for UPDATE: restore node and edges
           console.log('[DEBUG] Rolling back UPDATE, previousNode:', ctx.previousNode);
           queryClient.setQueryData(ctx.queryKey, (current: any) => {
             if (!current) return current;
@@ -487,7 +673,30 @@ function createEntityMutation<T extends Entity | void = Entity>(
               nodes[nodeIndex] = ctx.previousNode;
             }
             
-            return { ...current, nodes };
+            // Restore edges: remove created edges and restore deleted ones
+            let edges = [...(current.edges || [])];
+            
+            // Remove optimistically created edges
+            if (ctx.createdEdges?.length) {
+              edges = edges.filter((e: any) => !ctx.createdEdges!.includes(e.id));
+            }
+            
+            // Restore deleted edges
+            if (ctx.deletedEdges?.length) {
+              edges = [...edges, ...ctx.deletedEdges];
+            }
+            
+            // Restore modified parent nodes (for bidirectional relationships)
+            if (ctx.modifiedParentNodes?.length) {
+              for (const parent of ctx.modifiedParentNodes) {
+                const parentIndex = nodes.findIndex(n => n.id === parent.id);
+                if (parentIndex !== -1) {
+                  nodes[parentIndex] = parent.previousState;
+                }
+              }
+            }
+            
+            return { ...current, nodes, edges };
           });
         }
         else if (mutationType === 'delete' && (ctx.deletedNode || ctx.modifiedParentNodes?.length)) {
@@ -539,7 +748,9 @@ function createEntityMutation<T extends Entity | void = Entity>(
                   ...node.data,
                   metadata: {
                     ...node.data.metadata,
-                    isOptimistic: false  // Remove all optimistic flags
+                    // Decrement counter and clear legacy flag
+                    pendingMutationCount: Math.max(0, (node.data?.metadata?.pendingMutationCount || 0) - 1),
+                    isOptimistic: false  // Remove legacy optimistic flag
                   }
                 }
               })),
@@ -548,6 +759,36 @@ function createEntityMutation<T extends Entity | void = Entity>(
                 ? (current.edges || []).filter((e: any) => !ctx.createdEdges!.includes(e.id))
                 : current.edges
             };
+          });
+        }
+        
+        // DECREMENT pendingMutationCount after rollback for failed mutations
+        // This is needed because onMutate incremented the counter, and now we need to decrement it
+        if (mutationType === 'update' && variables.id) {
+          queryClient.setQueryData(ctx.queryKey, (current: any) => {
+            if (!current) return current;
+            
+            const nodes = current.nodes.map((node: any) => {
+              if (node.id === variables.id) {
+                const currentCount = node.data?.metadata?.pendingMutationCount || 0;
+                if (currentCount > 0) {
+                  return {
+                    ...node,
+                    data: {
+                      ...node.data,
+                      metadata: {
+                        ...node.data.metadata,
+                        pendingMutationCount: Math.max(0, currentCount - 1),
+                        isOptimistic: false // Also clear legacy flag
+                      }
+                    }
+                  };
+                }
+              }
+              return node;
+            });
+            
+            return { ...current, nodes };
           });
         }
         
@@ -641,12 +882,12 @@ function createEntityMutation<T extends Entity | void = Entity>(
               // Wrap in Promise for proper async/await handling
               await new Promise<void>((resolve) => {
                 setTimeout(() => {
-                  console.log('[DEBUG] About to apply delta, checking current isOptimistic state');
+                  console.log('[DEBUG] About to apply delta, checking current pendingMutationCount state');
                   const currentData: any = queryClient.getQueryData(ctx.queryKey);
                   const currentNode = currentData?.nodes?.find((n: any) => 
                     n.id === variables.id || n.id === ctx.tempId
                   );
-                  console.log('[DEBUG] Before delta: isOptimistic =', currentNode?.data?.metadata?.isOptimistic);
+                  console.log('[DEBUG] Before delta: pendingMutationCount =', currentNode?.data?.metadata?.pendingMutationCount);
                   
                   updater.update(updateContext);
                   
@@ -654,34 +895,44 @@ function createEntityMutation<T extends Entity | void = Entity>(
                   const afterNode = afterData?.nodes?.find((n: any) => 
                     n.id === variables.id || n.id === responseData.data?.id
                   );
-                  console.log('[DEBUG] After delta: isOptimistic =', afterNode?.data?.metadata?.isOptimistic);
+                  console.log('[DEBUG] After delta: pendingMutationCount =', afterNode?.data?.metadata?.pendingMutationCount);
                   
                   // EVENT-DRIVEN CLEANUP: Clear optimistic flag immediately after delta
                   // This replaces the 100ms timer approach - flag is cleared as soon as
                   // server data is successfully applied, not on an arbitrary timer.
-                  if (responseData.data?.id && afterNode?.data?.metadata?.isOptimistic) {
+                  // DECREMENT mutation counter after successful delta application
+                  // Always attempt to decrement if we have a valid response ID
+                  if (responseData.data?.id) {
                     queryClient.setQueryData(ctx.queryKey, (oldData: any) => {
                       if (!oldData) return oldData;
                       
                       const nodes = oldData.nodes?.map((node: any) => {
-                        if (node.id === responseData.data.id && node.data?.metadata?.isOptimistic) {
-                          return {
-                            ...node,
-                            data: {
-                              ...node.data,
-                              metadata: {
-                                ...node.data.metadata,
-                                isOptimistic: false
+                        if (node.id === responseData.data.id) {
+                          const currentCount = node.data?.metadata?.pendingMutationCount || 0;
+                          const hasLegacyFlag = node.data?.metadata?.isOptimistic;
+                          
+                          // Only update if there's a counter to decrement or legacy flag to clear
+                          if (currentCount > 0 || hasLegacyFlag) {
+                            return {
+                              ...node,
+                              data: {
+                                ...node.data,
+                                metadata: {
+                                  ...node.data.metadata,
+                                  pendingMutationCount: Math.max(0, currentCount - 1),
+                                  isOptimistic: false, // Clear legacy flag if present
+                                  pendingRelationshipUpdate: false
+                                }
                               }
-                            }
-                          };
+                            };
+                          }
                         }
                         return node;
                       }) || [];
                       
                       return { ...oldData, nodes };
                     });
-                    console.log('[DEBUG] Cleared isOptimistic flag after successful delta application');
+                    console.log('[DEBUG] Decremented pendingMutationCount after successful delta application');
                   }
                   
                   resolve();

@@ -191,17 +191,15 @@ export class OptimisticCacheUpdater implements CacheUpdater {
           const updateIndex = nodes.findIndex(n => n.id === entity.id);
           if (updateIndex !== -1 && nodes[updateIndex]) {
             const nodeToUpdate = nodes[updateIndex];
-            // OPTIMISTIC FIX: Preserve isOptimistic flag if it exists
-            const existingIsOptimistic = nodeToUpdate.data?.metadata?.isOptimistic;
+            // Note: pendingMutationCount and isOptimistic are managed by mutation hooks, not here
             nodes[updateIndex] = {
               ...nodeToUpdate,
               data: {
                 ...nodeToUpdate.data,
                 entity,
                 metadata: {
-                  ...(nodeToUpdate.data?.metadata || {}),
-                  // Preserve isOptimistic if it was true
-                  ...(existingIsOptimistic ? { isOptimistic: true } : {})
+                  ...(nodeToUpdate.data?.metadata || {})
+                  // Don't preserve isOptimistic - mutation hooks handle this
                 }
               }
             };
@@ -283,15 +281,8 @@ export class DeltaCacheUpdater implements CacheUpdater {
       // CRITICAL FIX: Handle temp ID replacement for CREATE operations
       // The server doesn't know about client-side temp IDs, so we must
       // replace them with the real ID from the delta entity
-      let preservedOptimisticFlag = false;
       if (operation === 'create' && tempId && entity && 'id' in entity) {
         const realId = entity.id;
-        
-        // OPTIMISTIC FIX: Preserve the isOptimistic flag from temp node
-        const tempNode = nodeMap.get(tempId);
-        if (tempNode?.data?.metadata && 'isOptimistic' in tempNode.data.metadata) {
-          preservedOptimisticFlag = tempNode.data.metadata.isOptimistic === true;
-        }
         
         // Remove the temp node if it exists
         if (nodeMap.has(tempId)) {
@@ -347,18 +338,28 @@ export class DeltaCacheUpdater implements CacheUpdater {
             // Deep merge the update with existing node
             // Preserve client-side UI flags (isOptimistic, isFocused, searchMatch)
             const existingMetadata = existingNode.data?.metadata || {};
-            const updateMetadata = update.data?.metadata || {};
+            
+            // Destructure to exclude data property from spread
+            const { data: updateData, ...updateWithoutData } = update;
             
             const mergedNode = {
               ...existingNode,
-              ...update,
+              ...updateWithoutData,  // Spread everything except data
               data: {
-                ...existingNode.data,
-                ...(update.data || {}),
+                ...existingNode.data,     // Original cache data
+                ...(updateData || {}),    // Server updates
+                // CRITICAL FIX: Deep merge entity to prevent data loss on partial updates
+                // Server sends complete entities in UPDATE deltas, merge to preserve client-side state
+                entity: {
+                  ...(existingNode.data?.entity || {}),
+                  ...(updateData?.entity || {})
+                },
                 metadata: {
-                  ...updateMetadata,
-                  // Preserve client-side UI state flags
-                  isOptimistic: existingMetadata.isOptimistic,
+                  ...(existingNode.data?.metadata || {}),
+                  ...(updateData?.metadata || {}),
+                  // CRITICAL: Preserve mutation state that's managed by mutation hooks
+                  pendingMutationCount: existingMetadata.pendingMutationCount,
+                  // Preserve UI state flags that should persist across updates
                   isFocused: existingMetadata.isFocused,
                   searchMatch: existingMetadata.searchMatch
                 }
@@ -373,25 +374,9 @@ export class DeltaCacheUpdater implements CacheUpdater {
         
         // Add new nodes
         delta.changes.nodes.created?.forEach(node => {
-          // For CREATE operations, preserve the isOptimistic flag from the temp node
-          // This ensures the UI shows the optimistic state until explicitly cleared
-          if (operation === 'create' && tempId && preservedOptimisticFlag && entity && 'id' in entity && node.id === entity.id) {
-            // This is the node replacing our temp node - preserve the flag
-            const nodeWithFlag = {
-              ...node,
-              data: {
-                ...node.data,
-                metadata: {
-                  ...(node.data?.metadata || {}),
-                  isOptimistic: true
-                }
-              }
-            } as GraphNode;
-            nodeMap.set(node.id, nodeWithFlag);
-          } else {
-            // Regular new node from delta
-            nodeMap.set(node.id, node as GraphNode);
-          }
+          // Add new node from delta
+          // Note: pendingMutationCount is managed by mutation hooks, not here
+          nodeMap.set(node.id, node as GraphNode);
         });
         
         // Remove deleted nodes

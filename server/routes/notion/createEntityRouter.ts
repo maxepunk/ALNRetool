@@ -44,8 +44,11 @@ export interface EntityRouterConfig<T> {
   /** Entity name for caching and logging */
   entityName: string;
   
+  /** Entity type (character, element, puzzle, timeline) */
+  entityType?: string;
+  
   /** Transform function from Notion page to entity type */
-  transform: (page: NotionPage) => T;
+  transform: (page: NotionPage, existingEntity?: T) => T;
   
   /** Optional function to convert entity to Notion properties for updates */
   toNotionProps?: (entity: Partial<T>) => any;
@@ -55,6 +58,12 @@ export interface EntityRouterConfig<T> {
   
   /** Optional inverse relations to maintain */
   inverseRelations?: InverseRelation[];
+  
+  /** Relationship field names to preserve during partial updates */
+  relationshipFields?: string[];
+  
+  /** Optional validation function for updates */
+  validateUpdate?: (oldEntity: T, newEntity: T, updatePayload: any) => string[];
 }
 
 /**
@@ -655,19 +664,26 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         });
       }
       
-      // Get old data if we have inverse relations
-      if (config.inverseRelations && config.inverseRelations.length > 0) {
-        try {
-          const oldPage = await notion.pages.retrieve({ 
-            page_id: req.params.id 
-          }) as NotionPage;
-          oldData = config.transform(oldPage);
-        } catch (error) {
-          log.error('Failed to retrieve old data for inverse relations', {
-            entityId: req.params.id,
-            error: error instanceof Error ? error.message : String(error)
-          });
-        }
+      // ALWAYS fetch old data for updates to handle partial responses
+      // WHY: Notion only returns properties that were updated, causing data loss
+      // without merging with existing data
+      try {
+        const oldPage = await notion.pages.retrieve({ 
+          page_id: req.params.id 
+        }) as NotionPage;
+        oldData = config.transform(oldPage);
+      } catch (error) {
+        // CRITICAL: Cannot safely update without old data
+        // Partial responses would cause data loss
+        log.error('Failed to retrieve old data for safe update', {
+          entityId: req.params.id,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        throw new AppError(
+          500,
+          'FETCH_OLD_DATA_FAILED',
+          'Unable to fetch current data for safe update. Please try again.'
+        );
       }
       
       // H2: Version control check using If-Match header
@@ -698,7 +714,27 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
         properties
       }) as NotionPage;
       
-      const transformed = config.transform(response);
+      // Transform the partial response (pure transform, no merge)
+      const partialTransformed = config.transform(response);
+      
+      // Merge with old data to preserve missing fields
+      // Import merge utility
+      const { smartMergeEntityUpdate, validateMerge } = await import('../../utils/entityMerger.js');
+      const transformed = oldData 
+        ? smartMergeEntityUpdate(oldData, partialTransformed, req.body)
+        : partialTransformed;
+      
+      // Validate no unexpected data loss occurred
+      if (oldData) {
+        const issues = validateMerge(oldData, transformed, req.body);
+        if (issues.length > 0) {
+          log.warn('[Delta] Potential data loss detected during update', {
+            entityId: req.params.id,
+            entityType: config.entityType,
+            issues
+          });
+        }
+      }
       
       // Update inverse relations if configured
       if (config.inverseRelations && oldData) {
@@ -740,10 +776,39 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
             };
           } else {
             // Complex update - inverse relations modified other entities
-            // Bug 4 Fix: Use the SAME set of entity IDs from before state
-            // WHY: This ensures recently unlinked entities are included in after state
-            const entityIdsInScope = graphStateBefore.nodes.map((n: any) => n.id);
-            graphStateAfter = await fetchGraphStateForIds(entityIdsInScope);
+            // CRITICAL FIX: Only fetch entities that were ACTUALLY affected by inverse relations
+            // Previous bug: Fetching ALL entities from before state caused false "updated" deltas
+            
+            // Build set of entity IDs that need to be fetched:
+            // 1. The primary entity being updated
+            const affectedEntityIds = new Set<string>([req.params.id]);
+            
+            // 2. Add entities that were affected by inverse relations
+            // These are entities whose relationships were modified
+            if (oldData && transformed && config.inverseRelations) {
+              for (const relation of config.inverseRelations) {
+                // Get old and new related IDs for this relation
+                const oldRelatedIds = oldData[relation.sourceField] || [];
+                const newRelatedIds = transformed[relation.sourceField] || [];
+                
+                // Entities that were added or removed from the relationship
+                const added = newRelatedIds.filter((id: string) => !oldRelatedIds.includes(id));
+                const removed = oldRelatedIds.filter((id: string) => !newRelatedIds.includes(id));
+                
+                // Add these to the set of affected entities
+                [...added, ...removed].forEach(id => affectedEntityIds.add(id));
+              }
+            }
+            
+            log.info('[Delta] Fetching after state for affected entities only', {
+              primaryEntity: req.params.id,
+              affectedCount: affectedEntityIds.size,
+              affectedIds: Array.from(affectedEntityIds)
+            });
+            
+            // Convert set to array for the fetch function
+            const entityIdsToFetch = Array.from(affectedEntityIds);
+            graphStateAfter = await fetchGraphStateForIds(entityIdsToFetch);
           }
           
           // Only calculate delta if we have both states

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useGraphData } from '@/contexts/GraphDataContext';
 import { formatCountTooltip } from '@/lib/graph/tooltipHelpers';
+import { isNodeOptimistic } from '@/lib/graph/utils';
 
 /**
  * Custom React Flow node component for Timeline Event entities
@@ -21,7 +22,7 @@ const TimelineNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-
   const nodeData = data as GraphNodeData<TimelineEvent>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
-  const isOptimistic = (metadata as any).isOptimistic || false;
+  const isOptimistic = isNodeOptimistic(metadata);
   
   // Get entity lookup functions for tooltips
   const { getEntityNames } = useGraphData();

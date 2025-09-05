@@ -27,7 +27,9 @@ import { createEntityRouter, type InverseRelation } from './createEntityRouter.j
 import { buildElementFilters } from '../../services/filterBuilder.js';
 import { transformElement } from '../../../src/types/notion/transforms.js';
 import { toNotionElementProperties } from '../../services/notionPropertyMappers.js';
+// Entity merger now handled in createEntityRouter
 import config from '../../config/index.js';
+import type { Element } from '../../../src/types/notion/app.js';
 
 /**
  * Notion database ID for elements collection.
@@ -101,9 +103,10 @@ const elementInverseRelations: InverseRelation[] = [
  * @see {@link createEntityRouter} for factory implementation
  * @see {@link transformElement} for data transformation
  */
-const router = createEntityRouter({
+const router = createEntityRouter<Element>({
   databaseId: ELEMENTS_DATABASE_ID,
   entityName: 'element',
+  entityType: 'element',
   transform: transformElement,
   toNotionProps: toNotionElementProperties,
   buildFilters: buildElementFilters,
