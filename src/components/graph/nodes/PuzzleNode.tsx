@@ -5,6 +5,9 @@ import type { Puzzle } from '@/types/notion/app';
 import DiamondCard, { type NodeStatus } from './DiamondCard';
 import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { Puzzle as PuzzleIcon, User } from 'lucide-react';
+import { useGraphData } from '@/contexts/GraphDataContext';
+// TODO Phase 6: Uncomment when DiamondCard is updated
+// import { formatCountTooltip, puzzleStatusDescriptions } from '@/lib/graph/tooltipHelpers';
 
 /**
  * Custom React Flow node component for Puzzle entities
@@ -15,6 +18,11 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
   const isOptimistic = (metadata as any).isOptimistic || false;
+  
+  // Get entity lookup functions for tooltips
+  const { getEntityName } = useGraphData();
+  // TODO Phase 6: Add getEntityNames when DiamondCard is updated
+  // const { getEntityName, getEntityNames } = useGraphData();
   
   // Use shared hook for filter styles
   const { 
@@ -59,12 +67,32 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
     statuses.push('ready');
   }
   
+  // Get owner name for tooltip
+  const ownerName = entity.ownerId ? getEntityName(entity.ownerId, 'character') : 'Unassigned';
+  
   // Owner badge - simplified (only show when zoomed in enough)
   const ownerBadge = shouldShowBadges && entity.ownerId ? (
-    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100/80 backdrop-blur-sm">
+    <div 
+      className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100/80 backdrop-blur-sm"
+      title={`Owner: ${ownerName}`}
+    >
       <User className="h-3 w-3 text-gray-600" />
     </div>
   ) : undefined;
+
+  // TODO Phase 6: Uncomment when DiamondCard is updated to accept tooltip props
+  // Get element names for tooltips
+  // const requirementNames = entity.puzzleElementIds ? getEntityNames(entity.puzzleElementIds, 'element') : [];
+  // const rewardNames = entity.rewardIds ? getEntityNames(entity.rewardIds, 'element') : [];
+  
+  // Build tooltips
+  // const requirementsTooltip = formatCountTooltip('Requirements', requirementNames);
+  // const rewardsTooltip = formatCountTooltip('Rewards', rewardNames);
+  
+  // Complexity tooltip
+  const complexity = getComplexity();
+  // const totalConnections = (entity.puzzleElementIds?.length || 0) + (entity.rewardIds?.length || 0);
+  // const complexityTooltip = `Complexity: ${complexity} (${totalConnections} total connections)`;
 
   return (
     <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
@@ -79,13 +107,18 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
         ownerBadge={ownerBadge}
         isParent={isParent}
         isChild={isChild}
-        complexity={getComplexity()}
+        complexity={complexity}
         size="medium"
         maxCount={5}
         outlineColor={isOptimistic ? '#10b981' : outlineColor}
         outlineWidth={isOptimistic ? 3 : outlineWidth}
         opacity={isOptimistic ? 0.8 : opacity}
         className={isOptimistic ? 'animate-pulse' : undefined}
+        // Tooltip props will be added in Phase 6 when DiamondCard is updated
+        // requirementsTooltip={requirementsTooltip}
+        // rewardsTooltip={rewardsTooltip}
+        // complexityTooltip={complexityTooltip}
+        // statusTooltips={puzzleStatusDescriptions}
       />
     </div>
   );
