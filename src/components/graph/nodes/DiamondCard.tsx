@@ -41,6 +41,11 @@ interface DiamondCardProps extends Partial<NodeProps> {
   outlineColor?: string;
   outlineWidth?: number;
   opacity?: number;
+  // Tooltip props for rich hover information
+  requirementsTooltip?: string;
+  rewardsTooltip?: string;
+  statusTooltips?: Record<NodeStatus, string>;
+  complexityTooltip?: string;
 }
 
 // Size configurations for diamond
@@ -133,6 +138,10 @@ const DiamondCard = memo(({
   outlineColor = '',
   outlineWidth = 0,
   opacity = 1,
+  requirementsTooltip,
+  rewardsTooltip,
+  statusTooltips,
+  complexityTooltip,
 }: DiamondCardProps) => {
   // Adjust size based on hierarchy
   const actualSize = isParent ? 'parent' : isChild ? 'child' : size;
@@ -216,6 +225,7 @@ const DiamondCard = memo(({
                     'text-xs px-1.5 py-0 h-4 backdrop-blur-sm',
                     statusVariants[status].className
                   )}
+                  title={statusTooltips?.[status]}
                 >
                   {statusVariants[status].label}
                 </Badge>
@@ -247,7 +257,10 @@ const DiamondCard = memo(({
           <div className="flex items-center justify-between gap-2 mt-1">
             {/* Requirements */}
             {requirementsCount > 0 && (
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center"
+                title={requirementsTooltip}
+              >
                 <span className="text-xs font-semibold text-amber-600">↓{requirementsCount}</span>
                 <CountIndicator count={requirementsCount} max={maxCount} color="amber" />
               </div>
@@ -262,7 +275,10 @@ const DiamondCard = memo(({
             
             {/* Rewards */}
             {rewardsCount > 0 && (
-              <div className="flex flex-col items-center">
+              <div 
+                className="flex flex-col items-center"
+                title={rewardsTooltip}
+              >
                 <span className="text-xs font-semibold text-emerald-600">↑{rewardsCount}</span>
                 <CountIndicator count={rewardsCount} max={maxCount} color="emerald" />
               </div>
@@ -270,7 +286,10 @@ const DiamondCard = memo(({
           </div>
 
           {/* Complexity Indicator (corner dot) */}
-          <div className="absolute top-2 right-2">
+          <div 
+            className="absolute top-2 right-2"
+            title={complexityTooltip}
+          >
             <div className={cn(
               'w-3 h-3 rounded-full shadow-md ring-2 ring-white/30',
               complexity === 'simple' ? 'bg-purple-500' :

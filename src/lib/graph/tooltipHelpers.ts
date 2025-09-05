@@ -127,6 +127,7 @@ export const puzzleStatusDescriptions = {
   'draft': 'Draft: Missing required elements',
   'ready': 'Ready: All requirements configured',
   'locked': 'Locked: Prerequisites not met',
+  'chained': 'Chained: Connected to parent or child puzzles',
   'error': 'Error: Configuration issue detected'
 } as const;
 
