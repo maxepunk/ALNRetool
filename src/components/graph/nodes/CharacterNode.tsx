@@ -11,6 +11,8 @@ import {
   Puzzle,
   Users
 } from 'lucide-react';
+import { useGraphData } from '@/contexts/GraphDataContext';
+import { formatCountTooltip, characterTierDescriptions } from '@/lib/graph/tooltipHelpers';
 
 /**
  * Custom React Flow node component for Character entities
@@ -21,6 +23,9 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
   const isOptimistic = (metadata as any).isOptimistic || false;
+  
+  // Get entity lookup functions for tooltips
+  const { getEntityNames } = useGraphData();
   
   // Use shared hook for filter styles
   const { 
@@ -49,22 +54,32 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
     <Badge 
       variant="outline"
       className="text-[10px] px-1.5 py-0 h-4 bg-white/80 text-blue-900 border-blue-300 font-semibold"
+      title={`Character Tier: ${characterTierDescriptions[entity.tier as keyof typeof characterTierDescriptions] || entity.tier}`}
     >
       {entity.tier}
     </Badge>
   ) : undefined;
   
   // Build stats section (zoom-aware)
+  const elementNames = entity.ownedElementIds ? getEntityNames(entity.ownedElementIds, 'element') : [];
+  const puzzleNames = entity.characterPuzzleIds ? getEntityNames(entity.characterPuzzleIds, 'puzzle') : [];
+  
   const footerSlot = shouldShowStats ? (
     <div className="flex justify-between items-center text-xs">
       {entity.ownedElementIds && entity.ownedElementIds.length > 0 && (
-        <span className="flex items-center text-white font-medium">
+        <span 
+          className="flex items-center text-white font-medium"
+          title={formatCountTooltip('Owned Elements', elementNames)}
+        >
           <Package className="h-3 w-3 mr-0.5" />
           {entity.ownedElementIds.length}
         </span>
       )}
       {entity.characterPuzzleIds && entity.characterPuzzleIds.length > 0 && (
-        <span className="flex items-center text-white font-medium">
+        <span 
+          className="flex items-center text-white font-medium"
+          title={formatCountTooltip('Associated Puzzles', puzzleNames)}
+        >
           <Puzzle className="h-3 w-3 mr-0.5" />
           {entity.characterPuzzleIds.length}
         </span>
@@ -73,14 +88,20 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
   ) : undefined;
   
   // Main content (zoom-aware)
+  const isLoglineTruncated = entity.characterLogline && entity.characterLogline.length > 60;
   const content = shouldShowDetails && entity.characterLogline ? (
-    <div className="text-xs text-teal-800 italic line-clamp-2 text-center">
+    <div 
+      className="text-xs text-teal-800 italic line-clamp-2 text-center"
+      title={isLoglineTruncated ? entity.characterLogline : undefined}
+    >
       {entity.characterLogline}
     </div>
   ) : undefined;
   
   // Choose icon based on character type
-  const icon = isNPC ? <Users className="h-5 w-5" /> : <User className="h-5 w-5" />;
+  const icon = isNPC ? 
+    <span title="Non-Player Character (NPC)"><Users className="h-5 w-5" /></span> : 
+    <span title="Player Character"><User className="h-5 w-5" /></span>;
   
   return (
     <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
