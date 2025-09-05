@@ -8,6 +8,8 @@ import OwnerBadge from './OwnerBadge';
 import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useGraphData } from '@/contexts/GraphDataContext';
+import { formatCountTooltip, memoryTypeDescriptions } from '@/lib/graph/tooltipHelpers';
 import { 
   Package,
   Star,
@@ -34,6 +36,9 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
   const hasError = metadata.errorState !== undefined;
   const hasSF = entity.sfPatterns !== undefined && Object.keys(entity.sfPatterns).length > 0;
   const isOptimistic = (metadata as any).isOptimistic || false;
+  
+  // Get entity lookup functions for tooltips
+  const { getEntityNames } = useGraphData();
   
   // Use shared hook for filter styles FIRST
   const { 
@@ -64,6 +69,12 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
   const isRequirement = entity.requiredForPuzzleIds && entity.requiredForPuzzleIds.length > 0;
   const isReward = entity.rewardedByPuzzleIds && entity.rewardedByPuzzleIds.length > 0;
   const isDualRole = isRequirement && isReward;
+  
+  // Get puzzle names for tooltips
+  const requirementPuzzleNames = entity.requiredForPuzzleIds ? 
+    getEntityNames(entity.requiredForPuzzleIds, 'puzzle') : [];
+  const rewardPuzzleNames = entity.rewardedByPuzzleIds ? 
+    getEntityNames(entity.rewardedByPuzzleIds, 'puzzle') : [];
   
   // Memory type icon and color
   const getMemoryTypeIcon = () => {
@@ -101,6 +112,11 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
           <Badge 
             variant="default" 
             className="text-xs px-1.5 py-0 h-5 bg-purple-600/90 backdrop-blur-sm flex items-center gap-1 border-purple-400"
+            title={`SF Pattern${entity.sfPatterns?.valueRating ? 
+              ` - Value: ${entity.sfPatterns.valueRating}/5` : ''
+            }${entity.sfPatterns?.memoryType ? 
+              ` - Type: ${entity.sfPatterns.memoryType}` : ''
+            }`}
           >
             <Shield className="h-3 w-3" />
             <span className="font-medium">SF</span>
@@ -125,6 +141,7 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
           <Badge 
             variant="outline" 
             className={cn('text-xs px-1.5 py-0 h-5 flex items-center gap-1', getMemoryTypeColor())}
+            title={memoryTypeDescriptions[entity.sfPatterns.memoryType as keyof typeof memoryTypeDescriptions] || entity.sfPatterns.memoryType}
           >
             {getMemoryTypeIcon()}
             <span className="font-medium">{entity.sfPatterns.memoryType[0]}</span>
@@ -139,7 +156,9 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
             <Badge 
               variant="outline" 
               className="text-xs px-1.5 py-0 h-5 bg-gradient-to-r from-blue-100 to-green-100 border-purple-300 flex items-center gap-0.5"
-              title="Dual-role: Both requirement and reward"
+              title={`Dual-role Element
+${formatCountTooltip('Required for', requirementPuzzleNames)}
+${formatCountTooltip('Rewarded by', rewardPuzzleNames)}`}
             >
               <ArrowLeft className="h-3 w-3 text-blue-600" />
               <Zap className="h-2.5 w-2.5 text-purple-600" />
@@ -149,7 +168,7 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
             <Badge 
               variant="outline" 
               className="text-xs px-1.5 py-0 h-5 bg-blue-100 border-blue-300 flex items-center gap-0.5"
-              title="Requirement for puzzles"
+              title={formatCountTooltip('Required for puzzles', requirementPuzzleNames)}
             >
               <ArrowLeft className="h-3 w-3 text-blue-600" />
               <span className="font-medium text-blue-700">{entity.requiredForPuzzleIds.length}</span>
@@ -158,7 +177,7 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
             <Badge 
               variant="outline" 
               className="text-xs px-1.5 py-0 h-5 bg-green-100 border-green-300 flex items-center gap-0.5"
-              title="Reward from puzzles"
+              title={formatCountTooltip('Reward from puzzles', rewardPuzzleNames)}
             >
               <span className="font-medium text-green-700">{entity.rewardedByPuzzleIds.length}</span>
               <ArrowRight className="h-3 w-3 text-green-600" />
@@ -173,7 +192,12 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
   const footerSlot = shouldShowStats ? (
     <div className="flex justify-between items-center text-xs">
       {/* Element Type */}
-      <div className="flex items-center gap-1">
+      <div 
+        className="flex items-center gap-1"
+        title={`${entity.isContainer ? 'Container' : 'Prop'} - ${
+          entity.basicType || 'Standard element'
+        }`}
+      >
         {entity.isContainer ? (
           <Box className="h-3 w-3 text-violet-600" />
         ) : (
@@ -186,7 +210,11 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
       
       {/* RFID if present */}
       {entity.sfPatterns?.rfid && (
-        <span className="flex items-center text-violet-700 font-mono text-xs font-medium">
+        <span 
+          className="flex items-center text-violet-700 font-mono text-xs font-medium"
+          title={`Radio Frequency ID: ${entity.sfPatterns.rfid}
+Used for tracking and identification in the SF system`}
+        >
           <Hash className="h-3 w-3 mr-0.5" />
           {entity.sfPatterns.rfid}
         </span>
@@ -208,7 +236,11 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
     <div className="space-y-1">
       {/* Narrative Threads */}
       {entity.narrativeThreads && entity.narrativeThreads.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div 
+          className="flex flex-wrap gap-1"
+          title={`All narrative threads (${entity.narrativeThreads.length}):
+${entity.narrativeThreads.join(', ')}`}
+        >
           {entity.narrativeThreads.slice(0, 2).map((thread, i) => (
             <Badge
               key={i}
