@@ -62,6 +62,7 @@ import { FloatingActionButton } from './FloatingActionButton';
 import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
 import { LayoutProgress } from './LayoutProgress/LayoutProgress';
 import { useGraphInteractions } from '@/hooks/useGraphInteractions';
+import { GraphDataContextProvider } from '@/contexts/GraphDataContext';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -407,16 +408,17 @@ function GraphViewComponent() {
   }
 
   return (
-    <div className="h-full w-full flex">
-      <div className="flex-1 relative">
-        {/* Filter status bar with comprehensive feedback */}
-        <FilterStatusBar
-          totalNodes={totalUniverseNodes}
-          visibleNodes={layoutedNodes.length}
-          connectionDepth={connectionDepth ?? 0}
-          selectedNode={selectedNodeData}
-          hasActiveFilters={hasActiveFilters()}
-        />
+    <GraphDataContextProvider allEntities={allEntities}>
+      <div className="h-full w-full flex">
+        <div className="flex-1 relative">
+          {/* Filter status bar with comprehensive feedback */}
+          <FilterStatusBar
+            totalNodes={totalUniverseNodes}
+            visibleNodes={layoutedNodes.length}
+            connectionDepth={connectionDepth ?? 0}
+            selectedNode={selectedNodeData}
+            hasActiveFilters={hasActiveFilters()}
+          />
         
         {/* Layout Progress Indicator */}
         {isLayouting && (
@@ -503,7 +505,8 @@ function GraphViewComponent() {
           allEntities={allEntities}
         />
       )}
-    </div>
+      </div>
+    </GraphDataContextProvider>
   );
 }
 
