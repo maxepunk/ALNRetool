@@ -216,7 +216,10 @@ const BaseNodeCard = memo(({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold truncate" title={title}>
+              <h3 
+                className="font-semibold truncate" 
+                title={title.length > 20 ? title : undefined}
+              >
                 {title}
               </h3>
             </div>
