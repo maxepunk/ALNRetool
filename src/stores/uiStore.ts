@@ -35,6 +35,7 @@ export interface UIState {
   // Layout preferences
   detailPanelPosition: 'right' | 'bottom';
   detailPanelSize: number;
+  detailPanelMinimized: boolean;
 }
 
 export interface UIActions {
@@ -57,6 +58,8 @@ export interface UIActions {
   // Layout actions
   setDetailPanelPosition: (position: 'right' | 'bottom') => void;
   setDetailPanelSize: (size: number) => void;
+  toggleDetailPanelMinimized: () => void;
+  setDetailPanelMinimized: (minimized: boolean) => void;
   
   // Reset to defaults
   resetUIPreferences: () => void;
@@ -82,6 +85,7 @@ const defaultUIState: UIState = {
   theme: 'system',
   detailPanelPosition: 'right',
   detailPanelSize: 400,
+  detailPanelMinimized: false,
 };
 
 /**
@@ -140,6 +144,10 @@ export const useUIStore = create<UIStore>()(
       // Layout actions
       setDetailPanelPosition: (position) => set({ detailPanelPosition: position }),
       setDetailPanelSize: (size) => set({ detailPanelSize: size }),
+      toggleDetailPanelMinimized: () => set((state) => ({ 
+        detailPanelMinimized: !state.detailPanelMinimized 
+      })),
+      setDetailPanelMinimized: (minimized) => set({ detailPanelMinimized: minimized }),
 
       // Reset to defaults
       resetUIPreferences: () => set(defaultUIState),
@@ -160,3 +168,4 @@ export const useEnableGraphAnimations = () => useUIStore(state => state.enableGr
 export const useTheme = () => useUIStore(state => state.theme);
 export const useDetailPanelPosition = () => useUIStore(state => state.detailPanelPosition);
 export const useDetailPanelSize = () => useUIStore(state => state.detailPanelSize);
+export const useDetailPanelMinimized = () => useUIStore(state => state.detailPanelMinimized);

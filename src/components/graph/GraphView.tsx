@@ -64,6 +64,8 @@ import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
 import { LayoutProgress } from './LayoutProgress/LayoutProgress';
 import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 import { GraphDataContextProvider } from '@/contexts/GraphDataContext';
+import { useUIStore } from '@/stores/uiStore';
+import { cn } from '@/lib/utils';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -172,6 +174,9 @@ function ViewportController({
 function GraphViewComponent() {
   // Get view configuration from route
   const { config: viewConfig, viewType } = useViewConfig();
+  
+  // Get UI store state for DetailPanel minimization
+  const isDetailPanelMinimized = useUIStore(state => state.detailPanelMinimized);
   
   // React Flow instance not needed anymore since double-click removed
   
@@ -410,27 +415,41 @@ function GraphViewComponent() {
 
   return (
     <GraphDataContextProvider allEntities={allEntities}>
-      <div className="h-full w-full flex">
-        <div className="flex-1 relative">
-          {/* Filter status bar with comprehensive feedback */}
-          <FilterStatusBar
-            totalNodes={totalUniverseNodes}
-            visibleNodes={visibleNodeIds.size}
-            connectionDepth={connectionDepth ?? 0}
-            selectedNode={selectedNodeData}
-            hasActiveFilters={hasActiveFilters()}
-          />
-        
-        {/* Layout Progress Indicator */}
-        {isLayouting && (
-          <LayoutProgress
-            progress={layoutProgress}
-            algorithm="Dagre"
-            className="z-50"
+      <div className={cn(
+        "h-full w-full",
+        selectedEntity && isDetailPanelMinimized ? "flex flex-col" : "flex"
+      )}>
+        {/* Detail Panel - Horizontal bar at top when minimized */}
+        {selectedEntity && isDetailPanelMinimized && (
+          <DetailPanel
+            entity={selectedEntity.entity}
+            entityType={selectedEntity.entityType}
+            onClose={handleDetailPanelClose}
+            allEntities={allEntities}
           />
         )}
         
-        <ReactFlow
+        <div className="flex-1 relative flex">
+          <div className="flex-1 relative">
+            {/* Filter status bar with comprehensive feedback */}
+            <FilterStatusBar
+              totalNodes={totalUniverseNodes}
+              visibleNodes={visibleNodeIds.size}
+              connectionDepth={connectionDepth ?? 0}
+              selectedNode={selectedNodeData}
+              hasActiveFilters={hasActiveFilters()}
+            />
+          
+          {/* Layout Progress Indicator */}
+          {isLayouting && (
+            <LayoutProgress
+              progress={layoutProgress}
+              algorithm="Dagre"
+              className="z-50"
+            />
+          )}
+          
+          <ReactFlow
           nodes={reactFlowNodes}
           edges={reactFlowEdges}
           onNodeClick={handleNodeClick}
@@ -489,23 +508,24 @@ function GraphViewComponent() {
               pointerEvents: reactFlowNodes.length === 0 ? 'none' : 'auto'
             }}
           />
-        </ReactFlow>
+          </ReactFlow>
+          
+          {/* Floating Action Button - hide when detail panel is open */}
+          <FloatingActionButton
+            hidden={!!selectedNodeId}
+          />
+        </div>
         
-        {/* Floating Action Button - hide when detail panel is open */}
-        <FloatingActionButton
-          hidden={!!selectedNodeId}
-        />
+        {/* Detail Panel - Right sidebar when not minimized */}
+        {selectedEntity && !isDetailPanelMinimized && (
+          <DetailPanel
+            entity={selectedEntity.entity}
+            entityType={selectedEntity.entityType}
+            onClose={handleDetailPanelClose}
+            allEntities={allEntities}
+          />
+        )}
       </div>
-      
-      {/* Detail Panel */}
-      {selectedEntity && (
-        <DetailPanel
-          entity={selectedEntity.entity}
-          entityType={selectedEntity.entityType}
-          onClose={handleDetailPanelClose}
-          allEntities={allEntities}
-        />
-      )}
       </div>
     </GraphDataContextProvider>
   );

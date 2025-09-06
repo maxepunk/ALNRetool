@@ -35,7 +35,7 @@
  */
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { X, Save, XCircle, ChevronDown, ChevronRight, Loader2, Check, AlertCircle, Trash2 } from 'lucide-react';
+import { X, Save, XCircle, ChevronDown, ChevronRight, Loader2, Check, AlertCircle, Trash2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -100,6 +100,7 @@ import type {
 import { useEntityMutation } from '@/hooks/mutations';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
+import { useUIStore } from '@/stores/uiStore';
 
 /**
  * Union type for all entity types.
@@ -267,6 +268,10 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // Get current view config for correct cache targeting
   const { config } = useViewConfig();
   
+  // Get UI store state and actions for minimization
+  const isMinimized = useUIStore(state => state.detailPanelMinimized);
+  const toggleMinimized = useUIStore(state => state.toggleDetailPanelMinimized);
+  
   // Track if component is mounted to prevent stale callbacks (Bug 6 fix)
   const isMountedRef = useRef(true);
   const currentViewNameRef = useRef(config.name);
@@ -376,6 +381,19 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
       return () => clearTimeout(timer);
     }
   }, [hasValidationError]);
+  
+  // Keyboard shortcut for minimizing (Cmd/Ctrl + M)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'm') {
+        e.preventDefault();
+        toggleMinimized();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleMinimized]);
 
   /**
    * Handle field value changes with validation.
@@ -620,11 +638,52 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     return entityType.charAt(0).toUpperCase() + entityType.slice(1);
   };
 
+  // For minimized mode, render as a horizontal bar
+  if (isMinimized) {
+    return (
+      <div 
+        data-testid="detail-panel"
+        className={cn(
+          "w-full h-12 bg-white/10 backdrop-blur-md border-b border-white/20 flex items-center px-4 gap-4 transition-all duration-300",
+          saveSuccess && "ring-2 ring-green-500/20"
+        )}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleMinimized}
+          className="hover:bg-white/10"
+          title="Expand panel (Cmd/Ctrl+M)"
+        >
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+        <span className="text-xl" title={getEntityTypeName()}>{getEntityIcon()}</span>
+        {entity && 'name' in entity && entity.name && (
+          <span className="text-sm font-medium text-foreground truncate max-w-xs" title={entity.name}>
+            {entity.name}
+          </span>
+        )}
+        <Badge variant="outline" className="ml-auto">
+          {getEntityTypeName()}
+        </Badge>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          className="hover:bg-white/10"
+          title="Close panel"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  // Full panel mode - render as right sidebar
   return (
     <div 
       data-testid="detail-panel"
       className={cn(
-      "w-96 h-full bg-white/10 backdrop-blur-md border-l border-white/20 flex flex-col",
+      "w-96 h-full bg-white/10 backdrop-blur-md border-l border-white/20 flex flex-col transition-all duration-300",
       isEntering && "animate-in slide-in-from-right duration-300",
       isExiting && "animate-out slide-out-to-right duration-200",
       saveSuccess && "ring-2 ring-green-500/20",
@@ -632,41 +691,50 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     )}>
       {/* Header */}
       <div className="flex items-center justify-between p-6 border-b border-white/10">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{getEntityIcon()}</span>
-          <div>
-            <h3 className="text-lg font-semibold text-foreground">
-              {getEntityTypeName()} Details
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {fieldStats.editable}/{fieldStats.total} fields editable ({fieldStats.percentage}%)
-            </p>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{getEntityIcon()}</span>
+            <div>
+              <h3 className="text-lg font-semibold text-foreground">
+                {getEntityTypeName()} Details
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                {fieldStats.editable}/{fieldStats.total} fields editable ({fieldStats.percentage}%)
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowDeleteConfirm(true)}
-            className="hover:bg-destructive/20 text-destructive"
-            title="Delete entity"
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Trash2 className="h-4 w-4" />
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="hover:bg-white/10"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleMinimized}
+              className="hover:bg-white/10"
+              title="Minimize panel (Cmd/Ctrl+M)"
+            >
+              <Minimize2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDeleteConfirm(true)}
+              className="hover:bg-destructive/20 text-destructive"
+              title="Delete entity"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
       </div>
 
       {/* Content */}
