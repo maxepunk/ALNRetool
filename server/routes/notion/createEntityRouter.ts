@@ -182,27 +182,23 @@ async function updateInverseRelations(
     }
   }
   
-  // Execute all updates in parallel with Promise.allSettled
-  // This ensures all operations complete even if some fail
+  // Execute all updates in parallel with Promise.all for atomicity
+  // If any update fails, the entire operation fails
   if (updatePromises.length > 0) {
-    const results = await Promise.allSettled(updatePromises);
-    
-    // Log summary of results
-    const failed = results.filter(r => r.status === 'rejected').length;
-    const succeeded = results.filter(r => r.status === 'fulfilled').length;
-    
-    if (failed > 0) {
-      log.warn(`[InverseRelations] Completed with partial failures`, {
-        entityId,
-        succeeded,
-        failed,
-        total: results.length
-      });
-    } else if (succeeded > 0) {
+    try {
+      await Promise.all(updatePromises);
+      
       log.info(`[InverseRelations] Successfully updated all relations`, {
         entityId,
-        succeeded
+        count: updatePromises.length
       });
+    } catch (error) {
+      log.error(`[InverseRelations] Failed to update relations atomically`, {
+        entityId,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      // Re-throw to ensure the entire mutation fails
+      throw new Error(`Failed to update inverse relations: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
