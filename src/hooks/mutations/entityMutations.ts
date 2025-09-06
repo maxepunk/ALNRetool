@@ -747,33 +747,14 @@ class OptimisticUpdater {
 
 /**
  * Helper function to get inverse relationship field for bidirectional updates.
- * Maps from a source field to its corresponding field on the target entity.
- * 
- * @param sourceEntityType - Type of entity being updated
- * @param fieldKey - Field being changed (e.g., 'ownerId', 'puzzleIds')
- * @returns Inverse field name or null if no inverse relationship exists
+ * DEPRECATED: This function contains incorrect field mappings and is unused.
+ * The actual inverse relationships are handled server-side.
+ * TODO: Remove this function and rely on server delta responses.
  */
-function getInverseRelationshipField(sourceEntityType: EntityType, fieldKey: string): string | null {
-  // Map of entity type + field to inverse field
-  const relationshipMap: Record<string, string | null> = {
-    // Puzzle -> Character relationships
-    'puzzle:ownerId': 'characterPuzzleIds', // When changing Puzzle.ownerId, update Character.characterPuzzleIds
-    
-    // Element -> Character relationships  
-    'element:ownerId': 'ownedElementIds', // When changing Element.ownerId, update Character.ownedElementIds
-    
-    // Timeline -> Character relationships
-    'timeline:charactersInvolvedIds': null, // No inverse on Character for timeline involvement
-    
-    // Element -> Puzzle relationships
-    'element:puzzleIds': 'puzzleElementIds', // When changing Element.puzzleIds, update Puzzle.puzzleElementIds
-    
-    // Element -> Timeline relationships
-    'element:timelineIds': 'memoryEvidenceIds', // When changing Element.timelineIds, update Timeline.memoryEvidenceIds
-  };
-  
-  const key = `${sourceEntityType}:${fieldKey}`;
-  return relationshipMap[key] || null;
+function getInverseRelationshipField(_sourceEntityType: EntityType, _fieldKey: string): string | null {
+  // This function is dead code - the mappings are incorrect
+  // Keeping minimal stub to avoid breaking any potential references
+  return null;
 }
 
 // ============================================================================
@@ -1030,127 +1011,29 @@ export function useEntityMutation<T extends Entity = Entity>(
             edges: updatedEdges,
           };
         } else if (mutationType === 'update') {
-          // For failed UPDATE: restore entity data and edges from snapshot
-          // Find the node that was optimistically updated
+          // For failed UPDATE: restore from snapshot with simplified approach
+          // The snapshot contains the state before this mutation
           const nodeToRestore = context.snapshot.nodes.find((n: GraphNode) => 
             (n as any).id === payload.id
           );
           
           if (nodeToRestore) {
-            // Restore the node's entity data but preserve counters from concurrent mutations
-            // Also restore any bidirectionally updated nodes
+            // Restore the node and edges from snapshot
+            // Remove only this mutation's tracking ID
             const updatedNodes = old.nodes.map(node => {
-              const nodeId = (node as any).id;
-              
-              // Primary node being updated
-              if (nodeId === payload.id) {
-                // Remove this mutation's ID from the tracking list
-                const currentIds = node.data.metadata?.pendingMutationIds || [];
-                const idSet = new Set(currentIds);
-                if (context?.mutationId) {
-                  idSet.delete(context.mutationId);
-                }
-                const newIds = Array.from(idSet);
-                
-                // Only restore the fields that THIS mutation changed
-                // Keep changes from other concurrent mutations
-                const restoredEntity = { ...node.data.entity };
-                
-                // Restore only the fields that were in the failed mutation's payload
-                Object.keys(payload).forEach(key => {
-                  if (key !== 'id' && nodeToRestore.data.entity[key] !== undefined) {
-                    restoredEntity[key] = nodeToRestore.data.entity[key];
-                  }
-                });
-                
-                return {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    entity: restoredEntity,
-                    metadata: {
-                      ...node.data.metadata,
-                      pendingMutationIds: newIds,
-                      pendingMutationCount: newIds.length
-                    }
-                  }
-                };
+              if ((node as any).id === payload.id) {
+                // Restore the entire node from snapshot but update mutation tracking
+                return OptimisticStateManager.removeNodeMutationId(nodeToRestore, context?.mutationId);
               }
-              
-              // Check if this node was bidirectionally updated (find it in snapshot)
-              const snapshotNode = context.snapshot?.nodes.find((n: GraphNode) => 
-                (n as any).id === nodeId
-              );
-              
-              if (snapshotNode && JSON.stringify(snapshotNode.data.entity) !== JSON.stringify(node.data.entity)) {
-                // This node was modified, restore its entity data but remove mutation ID
-                const currentIds = node.data.metadata?.pendingMutationIds || [];
-                const idSet = new Set(currentIds);
-                if (context?.mutationId) {
-                  idSet.delete(context.mutationId);
-                }
-                const newIds = Array.from(idSet);
-                
-                return {
-                  ...snapshotNode,
-                  data: {
-                    ...snapshotNode.data,
-                    metadata: {
-                      ...snapshotNode.data.metadata,
-                      pendingMutationIds: newIds,
-                      pendingMutationCount: newIds.length
-                    }
-                  }
-                };
-              }
-              
               return node;
             });
             
-            // CRITICAL FIX: Only restore edges touched by THIS mutation
-            // This ensures concurrent mutations aren't affected by this rollback
-            const restoredEdges = old.edges.map(edge => {
-              // Only restore edges that this mutation touched
-              if (context.touchedEdgeIds?.has(edge.id)) {
-                // Find the original edge in snapshot
-                const originalEdge = context.snapshot?.edges.find((e: GraphEdge) => e.id === edge.id);
-                if (originalEdge) {
-                  // Restore the original edge but remove mutation ID
-                  const currentIds = edge.data?.pendingMutationIds || [];
-                  const idSet = new Set(currentIds);
-                  if (context?.mutationId) {
-                    idSet.delete(context.mutationId);
-                  }
-                  const newIds = Array.from(idSet);
-                  return {
-                    ...originalEdge,
-                    data: {
-                      ...originalEdge.data,
-                      pendingMutationIds: newIds,
-                      pendingMutationCount: newIds.length
-                    }
-                  };
-                }
-                // If edge was created by this mutation, remove it by returning null
-                return null;
-              }
-              // Keep edges not touched by this mutation unchanged
-              return edge;
-            }).filter(e => e !== null) as GraphEdge[];
-            
-            // Add back any edges that were removed by this mutation
-            if (context.touchedEdgeIds && context.snapshot) {
-              context.snapshot.edges.forEach((snapEdge: GraphEdge) => {
-                if (context.touchedEdgeIds.has(snapEdge.id) && !restoredEdges.find(e => e.id === snapEdge.id)) {
-                  restoredEdges.push(snapEdge);
-                }
-              });
-            }
-            
+            // Restore edges from snapshot
+            // Any concurrent mutations will reapply their changes via onSuccess
             return {
               ...old,
               nodes: updatedNodes,
-              edges: restoredEdges,
+              edges: context.snapshot.edges,
             };
           }
           
