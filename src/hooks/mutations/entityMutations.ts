@@ -1083,6 +1083,7 @@ export function useEntityMutation<T extends Entity = Entity>(
                   ...node,
                   data: {
                     ...node.data,
+                    label: nodeToRestore.data.label, // Restore the label too
                     entity: restoredEntity,
                     metadata: {
                       ...node.data.metadata,

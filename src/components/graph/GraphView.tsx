@@ -259,9 +259,15 @@ function GraphViewComponent() {
     entityVisibility,
     characterSelectedTiers,
     characterType,
+    characterOwnershipStatus,
+    characterHighlightShared,
     puzzleSelectedActs,
+    puzzleCompletionStatus,
     elementBasicTypes,
     elementStatus,
+    elementContentStatus,
+    elementHasIssues,
+    elementLastEditedRange,
     hasActiveFilters
   } = filters;
   
@@ -301,11 +307,17 @@ function GraphViewComponent() {
     // Character filters as primitives
     characterType,
     characterSelectedTiers,
+    characterOwnershipStatus,
+    characterHighlightShared,
     // Puzzle filters as primitives
     puzzleSelectedActs,
+    puzzleCompletionStatus,
     // Element filters as primitives
     elementBasicTypes,
-    elementStatus
+    elementStatus,
+    elementContentStatus,
+    elementHasIssues,
+    elementLastEditedRange
   });
   
   // Layout calculation complete

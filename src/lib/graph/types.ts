@@ -893,6 +893,7 @@ export interface GraphNodeData<T = any> {
   label: string;
   metadata: NodeMetadata;
   entity: T; // The original entity data (Character, Element, Puzzle, or TimelineEntry) - always required for non-placeholder nodes
+  highlightShared?: boolean; // Visual effect flag for shared character highlighting
   
   // Optional properties used by ViewSpecificOptimizer
   timestamp?: number;

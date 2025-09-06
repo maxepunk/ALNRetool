@@ -38,7 +38,7 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
     shouldShowBadges, 
     shouldShowStats,
     shouldShowDetails 
-  } = useNodeFilterStyles(metadata, selected);
+  } = useNodeFilterStyles(metadata, selected, nodeData.highlightShared);
   
   // Determine character properties
   const isNPC = entity.type === 'NPC';

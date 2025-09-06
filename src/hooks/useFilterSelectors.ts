@@ -41,13 +41,19 @@ export interface FilterSelectors {
   // Character filters
   characterSelectedTiers: Set<string>;
   characterType: 'all' | 'Player' | 'NPC';
+  characterOwnershipStatus: Set<'Owned' | 'Accessible' | 'Shared' | 'Locked'>;
+  characterHighlightShared: boolean;
   
   // Puzzle filters
   puzzleSelectedActs: Set<string>;
+  puzzleCompletionStatus: 'all' | 'completed' | 'incomplete';
   
   // Content filters
   elementBasicTypes: Set<string>;
   elementStatus: Set<string>;
+  elementContentStatus: Set<'draft' | 'review' | 'approved' | 'published'>;
+  elementHasIssues: boolean | null;
+  elementLastEditedRange: 'today' | 'week' | 'month' | 'all';
   
   // Actions (not part of filter state, but needed by GraphView)
   setSelectedNode: (nodeId: string | null) => void;
@@ -93,13 +99,19 @@ export function useFilterSelectors(): FilterSelectors {
     // Character filters
     characterSelectedTiers: state.characterFilters.selectedTiers,
     characterType: state.characterFilters.characterType,
+    characterOwnershipStatus: state.characterFilters.ownershipStatus,
+    characterHighlightShared: state.characterFilters.highlightShared,
     
     // Puzzle filters
     puzzleSelectedActs: state.puzzleFilters.selectedActs,
+    puzzleCompletionStatus: state.puzzleFilters.completionStatus,
     
     // Content filters
     elementBasicTypes: state.contentFilters.elementBasicTypes,
     elementStatus: state.contentFilters.elementStatus,
+    elementContentStatus: state.contentFilters.contentStatus,
+    elementHasIssues: state.contentFilters.hasIssues,
+    elementLastEditedRange: state.contentFilters.lastEditedRange,
     
     // Actions
     setSelectedNode: state.setSelectedNode,
@@ -121,9 +133,15 @@ export function useFilterValues() {
     entityVisibility: state.entityVisibility,
     characterSelectedTiers: state.characterFilters.selectedTiers,
     characterType: state.characterFilters.characterType,
+    characterOwnershipStatus: state.characterFilters.ownershipStatus,
+    characterHighlightShared: state.characterFilters.highlightShared,
     puzzleSelectedActs: state.puzzleFilters.selectedActs,
+    puzzleCompletionStatus: state.puzzleFilters.completionStatus,
     elementBasicTypes: state.contentFilters.elementBasicTypes,
     elementStatus: state.contentFilters.elementStatus,
+    elementContentStatus: state.contentFilters.contentStatus,
+    elementHasIssues: state.contentFilters.hasIssues,
+    elementLastEditedRange: state.contentFilters.lastEditedRange,
   })));
 }
 

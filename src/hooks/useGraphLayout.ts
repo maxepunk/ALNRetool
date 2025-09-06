@@ -50,13 +50,19 @@ interface UseGraphLayoutParams {
   // Character-specific filters
   characterType?: 'all' | 'Player' | 'NPC';
   characterSelectedTiers?: Set<string>;
+  characterOwnershipStatus?: Set<'Owned' | 'Accessible' | 'Shared' | 'Locked'>;
+  characterHighlightShared?: boolean;
   
   // Puzzle-specific filters
   puzzleSelectedActs?: Set<string>;
+  puzzleCompletionStatus?: 'all' | 'completed' | 'incomplete';
   
   // Content/Element filters
   elementBasicTypes?: Set<string>;
   elementStatus?: Set<string>;
+  elementContentStatus?: Set<'draft' | 'review' | 'approved' | 'published'>;
+  elementHasIssues?: boolean | null;
+  elementLastEditedRange?: 'today' | 'week' | 'month' | 'all';
 }
 
 interface UseGraphLayoutResult {
@@ -96,9 +102,15 @@ export const useGraphLayout = ({
   entityVisibility,
   characterType,
   characterSelectedTiers,
+  characterOwnershipStatus,
+  characterHighlightShared,
   puzzleSelectedActs,
+  puzzleCompletionStatus,
   elementBasicTypes,
   elementStatus,
+  elementContentStatus,
+  elementHasIssues,
+  elementLastEditedRange,
 }: UseGraphLayoutParams): UseGraphLayoutResult => {
   
   // Debounce search term to prevent excessive recalculation (300ms delay)
@@ -157,6 +169,23 @@ export const useGraphLayout = ({
                 if (characterSelectedTiers && characterSelectedTiers.size > 0 && !characterSelectedTiers.has(entity.tier || '')) {
                   return false;
                 }
+                // Character ownership status filter
+                if (characterOwnershipStatus && characterOwnershipStatus.size > 0) {
+                  const hasOwned = entity.ownedElementIds?.length > 0;
+                  const hasAccessible = entity.characterPuzzleIds?.length > 0;
+                  const hasShared = entity.connections?.length > 0;
+                  const isLocked = !hasOwned && !hasAccessible && !hasShared;
+                  
+                  const ownershipMatches = 
+                    (characterOwnershipStatus.has('Owned') && hasOwned) ||
+                    (characterOwnershipStatus.has('Accessible') && hasAccessible) ||
+                    (characterOwnershipStatus.has('Shared') && hasShared) ||
+                    (characterOwnershipStatus.has('Locked') && isLocked);
+                    
+                  if (!ownershipMatches) {
+                    return false;
+                  }
+                }
                 break;
                 
               case 'puzzle':
@@ -170,6 +199,17 @@ export const useGraphLayout = ({
                     return false;
                   }
                 }
+                // Puzzle completion status filter
+                if (puzzleCompletionStatus && puzzleCompletionStatus !== 'all') {
+                  // A puzzle is complete if it has rewards (simplified logic)
+                  const isComplete = entity.rewardIds?.length > 0;
+                  if (puzzleCompletionStatus === 'completed' && !isComplete) {
+                    return false;
+                  }
+                  if (puzzleCompletionStatus === 'incomplete' && isComplete) {
+                    return false;
+                  }
+                }
                 break;
                 
               case 'element':
@@ -180,6 +220,47 @@ export const useGraphLayout = ({
                 // Element status filter
                 if (elementStatus && elementStatus.size > 0 && !elementStatus.has(entity.status || '')) {
                   return false;
+                }
+                // Element content status filter (map from status field)
+                if (elementContentStatus && elementContentStatus.size > 0) {
+                  const statusMap: Record<string, string> = {
+                    'Idea/Placeholder': 'draft',
+                    'In development': 'draft',
+                    'Writing Complete': 'review',
+                    'Design Complete': 'review',
+                    'Ready for Playtest': 'approved',
+                    'Done': 'published'
+                  };
+                  const mappedStatus = statusMap[entity.status] || 'draft';
+                  if (!elementContentStatus.has(mappedStatus as any)) {
+                    return false;
+                  }
+                }
+                // Element has issues filter
+                if (elementHasIssues !== null && elementHasIssues !== undefined) {
+                  const hasIssuePattern = /TODO|FIXME|ISSUE|BUG/i.test(entity.descriptionText || '');
+                  if (elementHasIssues && !hasIssuePattern) {
+                    return false;
+                  }
+                  if (!elementHasIssues && hasIssuePattern) {
+                    return false;
+                  }
+                }
+                // Element last edited range filter
+                if (elementLastEditedRange && elementLastEditedRange !== 'all') {
+                  const lastEdited = new Date(entity.lastEdited || 0);
+                  const now = new Date();
+                  const daysDiff = (now.getTime() - lastEdited.getTime()) / (1000 * 60 * 60 * 24);
+                  
+                  if (elementLastEditedRange === 'today' && daysDiff >= 1) {
+                    return false;
+                  }
+                  if (elementLastEditedRange === 'week' && daysDiff > 7) {
+                    return false;
+                  }
+                  if (elementLastEditedRange === 'month' && daysDiff > 30) {
+                    return false;
+                  }
                 }
                 break;
             }
@@ -195,9 +276,18 @@ export const useGraphLayout = ({
         // CRITICAL: Preserve selection state when filtering changes
         // This prevents React Flow from losing selection and clearing selectedNodeId
         selected: node.id === selectedNodeId,
+        data: {
+          ...node.data,
+          // Add highlight shared flag for visual effect on character nodes
+          highlightShared: characterHighlightShared && 
+                          node.data?.metadata?.entityType === 'character' &&
+                          node.data?.entity?.connections?.length > 0
+        }
       } as GraphNode));
-  }, [nodes, debouncedSearchTerm, searchMatcher, entityVisibility, characterType, characterSelectedTiers, 
-      puzzleSelectedActs, elementBasicTypes, elementStatus, selectedNodeId]);
+  }, [nodes, debouncedSearchTerm, searchMatcher, entityVisibility, characterType, characterSelectedTiers,
+      characterOwnershipStatus, characterHighlightShared, puzzleSelectedActs, puzzleCompletionStatus,
+      elementBasicTypes, elementStatus, elementContentStatus, elementHasIssues, elementLastEditedRange,
+      selectedNodeId]);
   
   // Step 2: Use server-provided edges directly, ensuring type compatibility
   const allEdges = edges as any[];

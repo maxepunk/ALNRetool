@@ -47,11 +47,11 @@ export type NodeSize = keyof typeof NODE_SIZE_CONFIGS;
  * Get filter-based styling information for a node
  * Returns state flags and colors for custom outline implementations
  */
-export function getNodeFilterStyles<T>(metadata: GraphNodeData<T>['metadata']) {
+export function getNodeFilterStyles<T>(metadata: GraphNodeData<T>['metadata'], highlightShared?: boolean) {
   const isFocused = metadata.isFocused || false;
   const isFiltered = metadata.isFiltered || false;
   const isConnected = metadata.isConnected || false;
-  const isHighlighted = metadata.searchMatch || isFocused;
+  const isHighlighted = metadata.searchMatch || isFocused || highlightShared;
   const isDimmed = isConnected && !isFocused && !isFiltered;
 
   // Define outline styles based on state
@@ -62,6 +62,9 @@ export function getNodeFilterStyles<T>(metadata: GraphNodeData<T>['metadata']) {
   if (isFocused) {
     outlineColor = 'rgb(250, 204, 21)'; // yellow-400 - stronger yellow
     outlineWidth = 4;
+  } else if (highlightShared) {
+    outlineColor = 'rgb(139, 92, 246)'; // purple-500 - for shared characters
+    outlineWidth = 3;
   } else if (isFiltered) {
     outlineColor = 'rgb(37, 99, 235)'; // blue-600 - deeper blue
     outlineWidth = 3;

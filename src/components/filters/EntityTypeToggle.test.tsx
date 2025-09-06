@@ -125,19 +125,25 @@ describe('EntityTypeToggle - Master Visibility Control', () => {
       
       const { container } = render(<EntityTypeToggle />);
       
-      // Hidden entities should have opacity-60 class
-      const allEntityContainers = container.querySelectorAll('.flex.items-center.justify-between.p-2.rounded-lg.border');
+      // Get all label elements that contain entity names
+      const labels = container.querySelectorAll('label[for^="entity-"]');
       
-      // Check that we have 4 entity containers
-      expect(allEntityContainers).toHaveLength(4);
+      // Check that we have 4 entity labels
+      expect(labels).toHaveLength(4);
       
-      // First two (character at index 0, puzzle at index 1) should have opacity-60 since they're hidden
-      expect(allEntityContainers[0]).toHaveClass('opacity-60');
-      expect(allEntityContainers[1]).toHaveClass('opacity-60');
+      // Find specific entity labels and check their text styling
+      const characterLabel = Array.from(labels).find(l => l.getAttribute('for') === 'entity-character');
+      const puzzleLabel = Array.from(labels).find(l => l.getAttribute('for') === 'entity-puzzle');
+      const elementLabel = Array.from(labels).find(l => l.getAttribute('for') === 'entity-element');
+      const timelineLabel = Array.from(labels).find(l => l.getAttribute('for') === 'entity-timeline');
       
-      // Last two (element at index 2, timeline at index 3) should not have opacity-60 since they're visible  
-      expect(allEntityContainers[2]).not.toHaveClass('opacity-60');
-      expect(allEntityContainers[3]).not.toHaveClass('opacity-60');
+      // Hidden entities should have text-gray-500 class on their span
+      expect(characterLabel?.querySelector('span')).toHaveClass('text-gray-500');
+      expect(puzzleLabel?.querySelector('span')).toHaveClass('text-gray-500');
+      
+      // Visible entities should have font-medium class on their span
+      expect(elementLabel?.querySelector('span')).toHaveClass('font-medium');
+      expect(timelineLabel?.querySelector('span')).toHaveClass('font-medium');
     });
   });
   

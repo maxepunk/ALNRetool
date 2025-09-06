@@ -294,20 +294,22 @@ describe('Entity Type Visibility Toggle - Master Control Behavior', () => {
       
       renderWithProviders(<EntityTypeToggle />);
       
-      // Get the character entity container
-      const entityContainers = screen.getAllByRole('checkbox')
-        .map(checkbox => checkbox.closest('.flex.items-center.justify-between.p-2.rounded-lg.border'));
+      // Get the character checkbox by its ID
+      const characterCheckbox = screen.getByRole('checkbox', { name: /characters/i });
       
-      const characterContainer = entityContainers[0];
+      // The label contains the span with text styling - find it directly
+      const characterLabel = screen.getByText('Characters', { selector: 'span.text-xs' });
       
-      // Initially visible - no opacity class
-      expect(characterContainer).not.toHaveClass('opacity-60');
+      // Initially visible - should have font-medium class
+      expect(characterLabel).toHaveClass('font-medium');
+      expect(characterLabel).not.toHaveClass('text-gray-500');
       
       // Hide characters
-      await user.click(screen.getByLabelText('Characters'));
+      await user.click(characterCheckbox);
       
-      // Should now have opacity class
-      expect(characterContainer).toHaveClass('opacity-60');
+      // Should now have text-gray-500 class instead of font-medium
+      expect(characterLabel).toHaveClass('text-gray-500');
+      expect(characterLabel).not.toHaveClass('font-medium');
     });
     
     it('should show correct count in visibility badge', async () => {

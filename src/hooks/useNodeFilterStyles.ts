@@ -15,14 +15,15 @@ import type { ReactFlowState } from '@xyflow/react';
  */
 export function useNodeFilterStyles<T>(
   metadata: GraphNodeData<T>['metadata'],
-  selected?: boolean
+  selected?: boolean,
+  highlightShared?: boolean
 ) {
   // Use useStore instead of useReactFlow to avoid context issues
   const zoom = useStore((state: ReactFlowState) => state.transform[2]);
 
   const filterStyles = useMemo(
-    () => getNodeFilterStyles(metadata),
-    [metadata.isFocused, metadata.isFiltered, metadata.isConnected, metadata.searchMatch]
+    () => getNodeFilterStyles(metadata, highlightShared),
+    [metadata.isFocused, metadata.isFiltered, metadata.isConnected, metadata.searchMatch, highlightShared]
   );
 
   const zIndex = useMemo(

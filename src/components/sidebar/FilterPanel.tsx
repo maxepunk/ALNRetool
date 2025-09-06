@@ -136,7 +136,7 @@ export function FilterPanel({ title, filters }: FilterPanelProps) {
           <div key={key} className="space-y-2">
             <Label>{config.label}</Label>
             <div className="flex flex-wrap gap-1">
-              {selected.map((value: string) => (
+              {(Array.isArray(selected) ? selected : []).map((value: string) => (
                 <Badge key={value} variant="secondary" className="pr-1">
                   {value}
                   <Button
@@ -144,7 +144,8 @@ export function FilterPanel({ title, filters }: FilterPanelProps) {
                     size="sm"
                     className="h-4 w-4 p-0 ml-1"
                     onClick={() => {
-                      store.setFilter(key, selected.filter((v: string) => v !== value));
+                      const currentArray = Array.isArray(selected) ? selected : [];
+                      store.setFilter(key, currentArray.filter((v: string) => v !== value));
                     }}
                   >
                     <X className="h-3 w-3" />
@@ -157,12 +158,13 @@ export function FilterPanel({ title, filters }: FilterPanelProps) {
                 <div key={option.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`${key}-${option.value}`}
-                    checked={selected.includes(option.value)}
+                    checked={Array.isArray(selected) && selected.includes(option.value)}
                     onCheckedChange={(checked) => {
+                      const currentArray = Array.isArray(selected) ? selected : [];
                       if (checked) {
-                        store.setFilter(key, [...selected, option.value]);
+                        store.setFilter(key, [...currentArray, option.value]);
                       } else {
-                        store.setFilter(key, selected.filter((v: string) => v !== option.value));
+                        store.setFilter(key, currentArray.filter((v: string) => v !== option.value));
                       }
                     }}
                   />
