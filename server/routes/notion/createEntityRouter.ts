@@ -721,7 +721,7 @@ export function createEntityRouter<T>(config: EntityRouterConfig<T>) {
       // Import merge utility
       const { smartMergeEntityUpdate, validateMerge } = await import('../../utils/entityMerger.js');
       const transformed = oldData 
-        ? smartMergeEntityUpdate(oldData, partialTransformed, req.body)
+        ? smartMergeEntityUpdate(oldData, partialTransformed as Partial<T>, req.body)
         : partialTransformed;
       
       // Validate no unexpected data loss occurred

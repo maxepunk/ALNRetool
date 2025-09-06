@@ -80,7 +80,10 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
           source: 'puzzle-1',
           target: 'char-1',
           type: 'relation',
-          data: { relationField: 'ownerId' },
+          data: { 
+            metadata: { relationField: 'ownerId' },
+            pendingMutationCount: 0
+          },
         },
       ],
     };
@@ -125,7 +128,7 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
       // Puzzle node should be updated
       const puzzleNode = data.nodes.find((n: any) => n.id === 'puzzle-1');
       expect(puzzleNode.data.entity.ownerId).toBe('char-2');
-      // Note: isOptimistic flag may already be cleared if server responds quickly
+      // Note: pendingMutationCount may already be 0 if server responds quickly
 
       // Old edge should be removed
       const oldEdge = data.edges.find((e: any) => 
@@ -140,7 +143,7 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
       expect(newEdge).toBeDefined();
       expect(newEdge.source).toBe('puzzle-1');
       expect(newEdge.target).toBe('char-2');
-      expect(newEdge.data.isOptimistic).toBe(true);
+      expect(newEdge.data.pendingMutationCount).toBe(0); // Should be 0 after successful mutation
 
       // Bidirectional updates: old owner should have puzzle removed
       const oldOwner = data.nodes.find((n: any) => n.id === 'char-1');
@@ -176,14 +179,20 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
           source: 'elem-1',
           target: 'puzzle-1',
           type: 'relation',
-          data: { relationField: 'puzzleIds' },
+          data: { 
+            metadata: { relationField: 'puzzleIds' },
+            pendingMutationCount: 0
+          },
         },
         {
           id: 'e::elem-1::puzzleIds::puzzle-2',
           source: 'elem-1',
           target: 'puzzle-2',
           type: 'relation',
-          data: { relationField: 'puzzleIds' },
+          data: { 
+            metadata: { relationField: 'puzzleIds' },
+            pendingMutationCount: 0
+          },
         },
       ],
     };
@@ -231,11 +240,11 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
         e.id === 'e::elem-1::puzzleIds::puzzle-3'
       );
       expect(edge3).toBeDefined();
-      expect(edge3.data.isOptimistic).toBe(true);
+      expect(edge3.data.pendingMutationCount).toBe(0); // Should be 0 after successful mutation
     });
   });
 
-  it('should rollback edge changes on mutation failure', async () => {
+  it('should apply optimistic updates immediately even for mutations that will fail', async () => {
     // Arrange
     const initialData = {
       nodes: [
@@ -252,6 +261,32 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
             metadata: {},
           },
         },
+        {
+          id: 'char-1',
+          type: 'character',
+          data: {
+            entity: {
+              id: 'char-1',
+              name: 'Old Owner',
+              characterPuzzleIds: ['puzzle-1'],
+            },
+            label: 'Old Owner',
+            metadata: {},
+          },
+        },
+        {
+          id: 'char-2',
+          type: 'character',
+          data: {
+            entity: {
+              id: 'char-2',
+              name: 'New Owner',
+              characterPuzzleIds: [],
+            },
+            label: 'New Owner',
+            metadata: {},
+          },
+        },
       ],
       edges: [
         {
@@ -259,7 +294,10 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
           source: 'puzzle-1',
           target: 'char-1',
           type: 'relation',
-          data: { relationField: 'ownerId' },
+          data: { 
+            metadata: { relationField: 'ownerId' },
+            pendingMutationCount: 0
+          },
         },
       ],
     };
@@ -267,10 +305,12 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
     const queryKey = ['graph', 'complete'];
     queryClient.setQueryData(queryKey, JSON.parse(JSON.stringify(initialData)));
 
-    // Mock API failure
-    vi.mocked(puzzlesApi).update = vi.fn().mockRejectedValue(
-      new Error('Update failed')
-    );
+    // Mock API with controlled promise that we'll reject later
+    let rejectMutation: (error: Error) => void;
+    const mutationPromise = new Promise((_, reject) => {
+      rejectMutation = reject;
+    });
+    vi.mocked(puzzlesApi).update = vi.fn().mockReturnValue(mutationPromise);
 
     // Act
     const { result } = renderHook(
@@ -278,23 +318,128 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
       { wrapper: createWrapper(queryClient) }
     );
 
-    act(() => {
-      result.current.mutate({
-        id: 'puzzle-1',
-        ownerId: 'char-2', // Try to change owner
-      });
+    // Trigger mutation
+    result.current.mutate({
+      id: 'puzzle-1',
+      ownerId: 'char-2', // Try to change owner
     });
 
-    // Wait for optimistic update
+    // Assert - Check optimistic update was applied immediately
     await waitFor(() => {
       const data = queryClient.getQueryData(queryKey) as any;
+      
+      // New edge should be created optimistically
       const newEdge = data.edges.find((e: any) => 
         e.id === 'e::puzzle-1::ownerId::char-2'
       );
-      expect(newEdge).toBeDefined(); // Optimistic edge created
+      expect(newEdge).toBeDefined();
+      expect(newEdge.data.pendingMutationCount).toBe(1); // Should be 1 during optimistic phase
+      
+      // Old edge should be removed optimistically
+      const oldEdge = data.edges.find((e: any) => 
+        e.id === 'e::puzzle-1::ownerId::char-1'
+      );
+      expect(oldEdge).toBeUndefined();
+      
+      // Node should be updated optimistically
+      const puzzleNode = data.nodes.find((n: any) => n.id === 'puzzle-1');
+      expect(puzzleNode.data.entity.ownerId).toBe('char-2');
+      expect(puzzleNode.data.metadata.pendingMutationCount).toBe(1);
+      
+      // Bidirectional updates should be applied optimistically
+      const oldOwner = data.nodes.find((n: any) => n.id === 'char-1');
+      expect(oldOwner.data.entity.characterPuzzleIds).toEqual([]);
+      
+      const newOwner = data.nodes.find((n: any) => n.id === 'char-2');
+      expect(newOwner.data.entity.characterPuzzleIds).toContain('puzzle-1');
+    }, { timeout: 100 });
+
+    // Cleanup - reject the promise to prevent hanging
+    rejectMutation!(new Error('Update failed'));
+    
+    // Wait for error to be processed before test ends
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+  });
+
+  it('should restore original state after mutation failure', async () => {
+    // Arrange
+    const initialData = {
+      nodes: [
+        {
+          id: 'puzzle-1',
+          type: 'puzzle',
+          data: {
+            entity: {
+              id: 'puzzle-1',
+              name: 'Test Puzzle',
+              ownerId: 'char-1',
+            },
+            label: 'Test Puzzle',
+            metadata: {},
+          },
+        },
+        {
+          id: 'char-1',
+          type: 'character',
+          data: {
+            entity: {
+              id: 'char-1',
+              name: 'Old Owner',
+              characterPuzzleIds: ['puzzle-1'],
+            },
+            label: 'Old Owner',
+            metadata: {},
+          },
+        },
+        {
+          id: 'char-2',
+          type: 'character',
+          data: {
+            entity: {
+              id: 'char-2',
+              name: 'New Owner',
+              characterPuzzleIds: [],
+            },
+            label: 'New Owner',
+            metadata: {},
+          },
+        },
+      ],
+      edges: [
+        {
+          id: 'e::puzzle-1::ownerId::char-1',
+          source: 'puzzle-1',
+          target: 'char-1',
+          type: 'relation',
+          data: { 
+            metadata: { relationField: 'ownerId' },
+            pendingMutationCount: 0
+          },
+        },
+      ],
+    };
+
+    const queryKey = ['graph', 'complete'];
+    queryClient.setQueryData(queryKey, JSON.parse(JSON.stringify(initialData)));
+
+    // Mock API failure - immediate rejection for predictable rollback
+    vi.mocked(puzzlesApi).update = vi.fn().mockRejectedValue(new Error('Update failed'));
+
+    // Act
+    const { result } = renderHook(
+      () => useEntityMutation('puzzle', 'update'),
+      { wrapper: createWrapper(queryClient) }
+    );
+
+    // Trigger mutation
+    result.current.mutate({
+      id: 'puzzle-1',
+      ownerId: 'char-2', // Try to change owner
     });
 
-    // Wait for rollback after failure
+    // Assert - Wait for rollback to complete and verify original state is restored
     await waitFor(() => {
       const data = queryClient.getQueryData(queryKey) as any;
       
@@ -303,6 +448,7 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
         e.id === 'e::puzzle-1::ownerId::char-1'
       );
       expect(oldEdge).toBeDefined();
+      expect(oldEdge.data.pendingMutationCount).toBe(0); // Should be 0 after rollback
 
       // Optimistic edge should be removed
       const newEdge = data.edges.find((e: any) => 
@@ -313,7 +459,14 @@ describe('UPDATE Mutation: Optimistic Relationship Updates', () => {
       // Node should be restored to original state
       const puzzleNode = data.nodes.find((n: any) => n.id === 'puzzle-1');
       expect(puzzleNode.data.entity.ownerId).toBe('char-1');
-      expect(puzzleNode.data.metadata.isOptimistic).toBeFalsy();
+      expect(puzzleNode.data.metadata.pendingMutationCount).toBe(0);
+      
+      // Bidirectional updates should be reverted
+      const oldOwner = data.nodes.find((n: any) => n.id === 'char-1');
+      expect(oldOwner.data.entity.characterPuzzleIds).toContain('puzzle-1');
+      
+      const newOwner = data.nodes.find((n: any) => n.id === 'char-2');
+      expect(newOwner.data.entity.characterPuzzleIds).toEqual([]);
     });
   });
 });

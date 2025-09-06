@@ -82,7 +82,7 @@ export const HeaderSearch = memo(function HeaderSearch({ isMobile = false, class
         {/* Status display */}
         {searchTerm && (
           <div className="text-xs text-muted-foreground">
-            Filtering nodes matching "{searchTerm}"
+            Filtering nodes matching &quot;{searchTerm}&quot;
           </div>
         )}
       </div>

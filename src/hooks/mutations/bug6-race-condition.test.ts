@@ -96,7 +96,7 @@ describe('Bug 6: Update Mutation Race Condition', () => {
     await waitFor(() => {
       const data = queryClient.getQueryData(queryKey) as any;
       expect(data.nodes[0].data.entity.name).toBe('Updated Name');
-      expect(data.nodes[0].data.metadata.isOptimistic).toBe(true);
+      expect(data.nodes[0].data.metadata.pendingMutationCount).toBeGreaterThan(0);
     });
 
     // Act 2: Resolve the mutation's promise
@@ -117,7 +117,7 @@ describe('Bug 6: Update Mutation Race Condition', () => {
                   id: updatedEntity.id,
                   label: updatedEntity.name,
                   entity: updatedEntity,
-                  metadata: { entityType: 'element', isOptimistic: false }
+                  metadata: { entityType: 'element', pendingMutationCount: 0 }
                 }
               }],
               deleted: []
@@ -138,7 +138,7 @@ describe('Bug 6: Update Mutation Race Condition', () => {
       const finalData = queryClient.getQueryData(queryKey) as any;
       expect(finalData.nodes[0].data.entity.name).toBe('Updated Name');
       expect(finalData.nodes[0].data.entity.version).toBe(2);
-      expect(finalData.nodes[0].data.metadata.isOptimistic).toBe(false); // Optimistic flag is cleared
+      expect(finalData.nodes[0].data.metadata.pendingMutationCount).toBe(0); // Optimistic state cleared
     });
   });
 
@@ -211,7 +211,7 @@ describe('Bug 6: Update Mutation Race Condition', () => {
       const finalData = queryClient.getQueryData(queryKey) as any;
       expect(finalData.nodes[0].data.entity.name).toBe('Updated After Unmount');
       expect(finalData.nodes[0].data.entity.version).toBe(2);
-      expect(finalData.nodes[0].data.metadata.isOptimistic).toBe(false);
+      expect(finalData.nodes[0].data.metadata.pendingMutationCount).toBe(0);
     });
   });
 

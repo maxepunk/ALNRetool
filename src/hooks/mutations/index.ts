@@ -35,9 +35,7 @@
 // Export the unified hook and necessary types
 export { 
   useEntityMutation,
-  createEntityMutation,
   type EntityType,
   type MutationType,
-  type Entity,
-  type ParentRelationMetadata
+  type Entity
 } from './entityMutations';

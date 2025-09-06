@@ -8,7 +8,7 @@
  * PRINCIPLE: Test the actual user experience through the mutation hooks
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { http, HttpResponse } from 'msw';
@@ -90,23 +90,24 @@ describe('INTEGRATION: Partial Update Behavior', () => {
 
         // SIMULATE THE BUG: Notion returns only updated fields
         // Transform would turn this into arrays of empty for missing fields
-        const partialFromNotionTransform: Character = {
-          id,
-          entityType: 'character',
-          name: body.name || existing.name,
-          type: body.type || 'NPC',           // Transform default
-          tier: body.tier || 'Tertiary',      // Transform default
-          // CRITICAL: These become empty when not in response
-          ownedElementIds: body.ownedElementIds !== undefined ? body.ownedElementIds : [],
-          associatedElementIds: body.associatedElementIds !== undefined ? body.associatedElementIds : [],
-          characterPuzzleIds: body.characterPuzzleIds !== undefined ? body.characterPuzzleIds : [],
-          eventIds: body.eventIds !== undefined ? body.eventIds : [],
-          connections: body.connections !== undefined ? body.connections : [],
-          primaryAction: body.primaryAction !== undefined ? body.primaryAction : '',
-          characterLogline: body.characterLogline !== undefined ? body.characterLogline : '',
-          overview: body.overview !== undefined ? body.overview : '',
-          emotionTowardsCEO: body.emotionTowardsCEO !== undefined ? body.emotionTowardsCEO : ''
-        };
+        // Commented out - kept for documentation of the bug
+        // const partialFromNotionTransform: Character = {
+        //   id,
+        //   entityType: 'character',
+        //   name: body.name || existing.name,
+        //   type: body.type || 'NPC',           // Transform default
+        //   tier: body.tier || 'Tertiary',      // Transform default
+        //   // CRITICAL: These become empty when not in response
+        //   ownedElementIds: body.ownedElementIds !== undefined ? body.ownedElementIds : [],
+        //   associatedElementIds: body.associatedElementIds !== undefined ? body.associatedElementIds : [],
+        //   characterPuzzleIds: body.characterPuzzleIds !== undefined ? body.characterPuzzleIds : [],
+        //   eventIds: body.eventIds !== undefined ? body.eventIds : [],
+        //   connections: body.connections !== undefined ? body.connections : [],
+        //   primaryAction: body.primaryAction !== undefined ? body.primaryAction : '',
+        //   characterLogline: body.characterLogline !== undefined ? body.characterLogline : '',
+        //   overview: body.overview !== undefined ? body.overview : '',
+        //   emotionTowardsCEO: body.emotionTowardsCEO !== undefined ? body.emotionTowardsCEO : ''
+        // };
 
         // CORRECT BEHAVIOR: Server should merge properly
         const merged = {
@@ -155,7 +156,7 @@ describe('INTEGRATION: Partial Update Behavior', () => {
       });
 
       // VERIFY: Name changed, everything else preserved
-      const updated = result.current.data?.data;  // MutationResponse has { success, data, delta }
+      const updated = result.current.data as Character | undefined;  // Type assertion for Character
       expect(updated?.name).toBe('Alice Updated');
       
       // CRITICAL: These must be preserved
@@ -192,7 +193,7 @@ describe('INTEGRATION: Partial Update Behavior', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      const updated = result.current.data?.data;
+      const updated = result.current.data as Character | undefined;
       
       // VERIFY: Cleared array is empty
       expect(updated?.ownedElementIds).toEqual([]);
@@ -241,22 +242,23 @@ describe('INTEGRATION: Partial Update Behavior', () => {
           // SIMULATE BUG: Return partial response that transforms would convert to empty arrays
           if (body.name && Object.keys(body).length === 1) {
             // This is what a buggy implementation might return
-            const buggyResponse: Character = {
-              id,
-              entityType: 'character',
-              name: body.name,
-              type: 'NPC',              // Default from transform
-              tier: 'Tertiary',         // Default from transform  
-              ownedElementIds: [],      // Empty from transform!
-              associatedElementIds: [], // Empty from transform!
-              characterPuzzleIds: [],   // Empty from transform!
-              eventIds: [],             // Empty from transform!
-              connections: [],          // Empty from transform!
-              primaryAction: '',        // Empty from transform!
-              characterLogline: '',     // Empty from transform!
-              overview: '',             // Empty from transform!
-              emotionTowardsCEO: ''     // Empty from transform!
-            };
+            // Commented out - kept for documentation of the bug
+            // const buggyResponse: Character = {
+            //   id,
+            //   entityType: 'character',
+            //   name: body.name,
+            //   type: 'NPC',              // Default from transform
+            //   tier: 'Tertiary',         // Default from transform  
+            //   ownedElementIds: [],      // Empty from transform!
+            //   associatedElementIds: [], // Empty from transform!
+            //   characterPuzzleIds: [],   // Empty from transform!
+            //   eventIds: [],             // Empty from transform!
+            //   connections: [],          // Empty from transform!
+            //   primaryAction: '',        // Empty from transform!
+            //   characterLogline: '',     // Empty from transform!
+            //   overview: '',             // Empty from transform!
+            //   emotionTowardsCEO: ''     // Empty from transform!
+            // };
 
             // WITH THE FIX: Server should merge properly
             const properlyMerged = {
@@ -289,7 +291,7 @@ describe('INTEGRATION: Partial Update Behavior', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      const updated = result.current.data?.data;
+      const updated = result.current.data as Character | undefined;
 
       // CRITICAL: With the fix, relationships must be preserved
       expect(updated?.ownedElementIds).toEqual(['elem-1', 'elem-2']);
@@ -358,7 +360,7 @@ describe('INTEGRATION: Partial Update Behavior', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      const updated = result.current.data?.data;
+      const updated = result.current.data as Element | undefined;
       
       expect(updated?.status).toBe('Done');
       expect(updated?.sfPatterns).toEqual({ rfid: 'ELEM001', valueRating: 5 });
@@ -385,7 +387,7 @@ describe('INTEGRATION: Partial Update Behavior', () => {
         expect(result.current.isSuccess).toBe(true);
       });
 
-      const updated = result.current.data?.data;
+      const updated = result.current.data as Character | undefined;
       
       // MUST preserve original tier, not use default
       expect(updated?.tier).toBe('Core');  // NOT 'Tertiary'!

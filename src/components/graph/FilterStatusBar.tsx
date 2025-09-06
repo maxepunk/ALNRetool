@@ -84,7 +84,7 @@ export const FilterStatusBar = memo(function FilterStatusBar({
         {searchTerm && (
           <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
             <Search className="h-3 w-3 text-purple-600 dark:text-purple-400" />
-            <span>Filtering: "{searchTerm}"</span>
+            <span>Filtering: &quot;{searchTerm}&quot;</span>
           </div>
         )}
 

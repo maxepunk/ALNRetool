@@ -209,7 +209,7 @@ describe('BEHAVIORAL SPECIFICATION: Partial Update Handling', () => {
       // GIVEN: Two concurrent updates to the same entity
       const existing: Element = createElementWithData({
         name: 'Original',
-        status: 'In Progress',
+        status: 'In development',
         ownerId: 'char-1'
       });
 
