@@ -526,8 +526,14 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
 
 
     try {
-      // Use mutation if available, otherwise fallback to onSave prop
-      if (mutation) {
+      // Prioritize onSave prop if it exists, otherwise use internal mutation
+      if (onSave) {
+        await onSave(changes);
+        setIsDirty(false);
+        setSaveSuccess(true);
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else if (mutation) {
         // Pass original version for optimistic locking
         const version = entity?.version;
         await mutation.mutateAsync({ 
@@ -539,12 +545,6 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         setSaveSuccess(true);
         // Reset mutation state to allow subsequent saves
         mutation.reset();
-        // Clear success message after 3 seconds
-        setTimeout(() => setSaveSuccess(false), 3000);
-      } else if (onSave) {
-        await onSave(changes);
-        setIsDirty(false);
-        setSaveSuccess(true);
         // Clear success message after 3 seconds
         setTimeout(() => setSaveSuccess(false), 3000);
       }
@@ -663,6 +663,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             size="icon"
             onClick={onClose}
             className="hover:bg-white/10"
+            title="Close"
           >
             <X className="h-4 w-4" />
           </Button>
