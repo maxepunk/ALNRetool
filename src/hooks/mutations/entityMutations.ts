@@ -25,6 +25,7 @@ import type { Entity, EntityType, MutationType, MutationResponse } from '@/types
 import type { NodeMetadata, GraphEdge, GraphNode } from '@/lib/graph/types';
 import { charactersApi, elementsApi, puzzlesApi, timelineApi } from '@/services/api';
 import toast from 'react-hot-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 // ============================================================================
 // TYPES
@@ -43,6 +44,8 @@ interface OptimisticContext {
   tempId: string | null;
   originalEdges?: GraphEdge[]; // Store original edge state for rollback
   optimisticEdges?: GraphEdge[]; // Store optimistic edges from UPDATE mutations
+  mutationId: string; // Unique identifier for this mutation
+  touchedEdgeIds: Set<string>; // Track which edges this mutation created/modified
 }
 
 // ============================================================================
@@ -55,7 +58,61 @@ interface OptimisticContext {
  */
 class OptimisticStateManager {
   /**
-   * Increment pendingMutationCount for a node
+   * Add a mutation ID to node's tracking list
+   */
+  static addNodeMutationId(node: GraphNode, mutationId?: string): GraphNode {
+    if (!mutationId) {
+      // Fallback to simple increment for backward compatibility
+      return this.incrementNodeCounter(node);
+    }
+    
+    const currentIds = node.data.metadata?.pendingMutationIds || [];
+    const idSet = new Set(currentIds);
+    idSet.add(mutationId);
+    const newIds = Array.from(idSet);
+    
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        metadata: {
+          ...node.data.metadata,
+          pendingMutationIds: newIds,
+          pendingMutationCount: newIds.length,
+        },
+      },
+    };
+  }
+
+  /**
+   * Remove a mutation ID from node's tracking list
+   */
+  static removeNodeMutationId(node: GraphNode, mutationId?: string): GraphNode {
+    if (!mutationId) {
+      // Fallback to simple decrement for backward compatibility
+      return this.decrementNodeCounter(node);
+    }
+    
+    const currentIds = node.data.metadata?.pendingMutationIds || [];
+    const idSet = new Set(currentIds);
+    idSet.delete(mutationId);
+    const newIds = Array.from(idSet);
+    
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        metadata: {
+          ...node.data.metadata,
+          pendingMutationIds: newIds,
+          pendingMutationCount: newIds.length,
+        },
+      },
+    };
+  }
+
+  /**
+   * Increment pendingMutationCount for a node (legacy method, kept for compatibility)
    */
   static incrementNodeCounter(node: GraphNode): GraphNode {
     const currentCount = node.data.metadata?.pendingMutationCount || 0;
@@ -72,7 +129,7 @@ class OptimisticStateManager {
   }
 
   /**
-   * Decrement pendingMutationCount for a node (minimum 0)
+   * Decrement pendingMutationCount for a node (legacy method, kept for compatibility)
    */
   static decrementNodeCounter(node: GraphNode): GraphNode {
     const currentCount = node.data.metadata?.pendingMutationCount || 0;
@@ -106,7 +163,57 @@ class OptimisticStateManager {
   }
 
   /**
-   * Increment pendingMutationCount for an edge
+   * Add a mutation ID to edge's tracking list
+   */
+  static addEdgeMutationId(edge: GraphEdge, mutationId?: string): GraphEdge {
+    if (!mutationId) {
+      // Fallback to simple increment for backward compatibility
+      return this.incrementEdgeCounter(edge);
+    }
+    
+    const existingData = edge.data || { relationshipType: 'ownership' as const };
+    const currentIds = existingData.pendingMutationIds || [];
+    const idSet = new Set(currentIds);
+    idSet.add(mutationId);
+    const newIds = Array.from(idSet);
+    
+    return {
+      ...edge,
+      data: {
+        ...existingData,
+        pendingMutationIds: newIds,
+        pendingMutationCount: newIds.length,
+      },
+    };
+  }
+
+  /**
+   * Remove a mutation ID from edge's tracking list
+   */
+  static removeEdgeMutationId(edge: GraphEdge, mutationId?: string): GraphEdge {
+    if (!mutationId) {
+      // Fallback to simple decrement for backward compatibility
+      return this.decrementEdgeCounter(edge);
+    }
+    
+    const existingData = edge.data || { relationshipType: 'ownership' as const };
+    const currentIds = existingData.pendingMutationIds || [];
+    const idSet = new Set(currentIds);
+    idSet.delete(mutationId);
+    const newIds = Array.from(idSet);
+    
+    return {
+      ...edge,
+      data: {
+        ...existingData,
+        pendingMutationIds: newIds,
+        pendingMutationCount: newIds.length,
+      },
+    };
+  }
+
+  /**
+   * Increment pendingMutationCount for an edge (legacy method, kept for compatibility)
    */
   static incrementEdgeCounter(edge: GraphEdge): GraphEdge {
     const currentCount = edge.data?.pendingMutationCount || 0;
@@ -121,7 +228,7 @@ class OptimisticStateManager {
   }
 
   /**
-   * Decrement pendingMutationCount for an edge (minimum 0)
+   * Decrement pendingMutationCount for an edge (legacy method, kept for compatibility)
    */
   static decrementEdgeCounter(edge: GraphEdge): GraphEdge {
     const currentCount = edge.data?.pendingMutationCount || 0;
@@ -174,15 +281,17 @@ class OptimisticUpdater {
     operation: MutationType,
     entityType: EntityType,
     payload: any,
-    tempId: string | null
+    tempId: string | null,
+    touchedEdgeIds?: Set<string>,
+    mutationId?: string
   ): GraphData {
     switch (operation) {
       case 'create':
-        return this.handleCreate(cache, entityType, payload, tempId!);
+        return this.handleCreate(cache, entityType, payload, tempId!, touchedEdgeIds, mutationId);
       case 'update':
-        return this.handleUpdate(cache, payload, entityType);
+        return this.handleUpdate(cache, payload, entityType, touchedEdgeIds, mutationId);
       case 'delete':
-        return this.handleDelete(cache, payload);
+        return this.handleDelete(cache, payload, touchedEdgeIds, mutationId);
       default:
         return cache;
     }
@@ -192,7 +301,9 @@ class OptimisticUpdater {
     cache: GraphData,
     entityType: EntityType,
     payload: any,
-    tempId: string
+    tempId: string,
+    touchedEdgeIds?: Set<string>,
+    mutationId?: string
   ): GraphData {
     // Default dimensions based on entity type
     const dimensions = {
@@ -223,8 +334,8 @@ class OptimisticUpdater {
       connectable: true,
     } as GraphNode;
     
-    // Use OptimisticStateManager to set initial counter
-    const newNode = OptimisticStateManager.incrementNodeCounter(baseNode);
+    // Use OptimisticStateManager to track this mutation
+    const newNode = OptimisticStateManager.addNodeMutationId(baseNode, mutationId);
 
     const updatedCache = {
       ...cache,
@@ -252,6 +363,11 @@ class OptimisticUpdater {
         },
       };
 
+      // Track this edge as touched by this mutation
+      if (touchedEdgeIds) {
+        touchedEdgeIds.add(edgeId);
+      }
+
       // Ensure edges array exists
       if (!updatedCache.edges) updatedCache.edges = [];
       
@@ -264,7 +380,7 @@ class OptimisticUpdater {
     return updatedCache;
   }
 
-  private handleUpdate(cache: GraphData, payload: any, entityType: EntityType): GraphData {
+  private handleUpdate(cache: GraphData, payload: any, entityType: EntityType, touchedEdgeIds?: Set<string>, mutationId?: string): GraphData {
     let updatedCache = { ...cache };
     
     // CRITICAL: Capture current entity BEFORE updates to detect relationship changes
@@ -280,8 +396,8 @@ class OptimisticUpdater {
           }
         });
         
-        // Use OptimisticStateManager to increment counter
-        const nodeWithCounter = OptimisticStateManager.incrementNodeCounter(node);
+        // Use OptimisticStateManager to track this mutation
+        const nodeWithCounter = OptimisticStateManager.addNodeMutationId(node, mutationId);
         
         return {
           ...nodeWithCounter,
@@ -305,7 +421,7 @@ class OptimisticUpdater {
 
     // Handle relationship edge synchronization with ORIGINAL entity data
     if (currentEntity) {
-      updatedCache = this.handleRelationshipEdges(updatedCache, currentEntity, payload, entityType);
+      updatedCache = this.handleRelationshipEdges(updatedCache, currentEntity, payload, entityType, touchedEdgeIds);
     }
 
     return updatedCache;
@@ -318,7 +434,8 @@ class OptimisticUpdater {
     cache: GraphData, 
     currentEntity: any, 
     payload: any, 
-    entityType: EntityType
+    entityType: EntityType,
+    touchedEdgeIds?: Set<string>
   ): GraphData {
     let updatedEdges = [...(cache.edges || [])];
     
@@ -340,7 +457,8 @@ class OptimisticUpdater {
           payload.id, 
           fieldKey, 
           oldValue, 
-          newValue
+          newValue,
+          touchedEdgeIds
         );
         
         // Apply bidirectional updates to inverse entities
@@ -353,7 +471,8 @@ class OptimisticUpdater {
           payload.id, 
           fieldKey, 
           oldValue as string[] | null, 
-          newValue as string[] | null
+          newValue as string[] | null,
+          touchedEdgeIds
         );
         
         // Apply bidirectional updates for array relationships
@@ -376,7 +495,8 @@ class OptimisticUpdater {
     sourceId: string,
     fieldKey: string,
     oldValue: string | null,
-    newValue: string | null
+    newValue: string | null,
+    touchedEdgeIds?: Set<string>
   ): GraphEdge[] {
     let updatedEdges = [...edges];
     
@@ -387,6 +507,11 @@ class OptimisticUpdater {
         e.data?.metadata?.relationField === fieldKey
       );
       if (oldEdgeIndex !== -1) {
+        const removedEdge = updatedEdges[oldEdgeIndex];
+        // Track the removed edge
+        if (touchedEdgeIds && removedEdge?.id) {
+          touchedEdgeIds.add(removedEdge.id);
+        }
         updatedEdges.splice(oldEdgeIndex, 1);
       }
     }
@@ -407,6 +532,10 @@ class OptimisticUpdater {
           pendingMutationCount: 1, // Mark as optimistic
         },
       };
+      // Track the new edge
+      if (touchedEdgeIds) {
+        touchedEdgeIds.add(newEdgeId);
+      }
       updatedEdges.push(newEdge);
     }
     
@@ -421,7 +550,8 @@ class OptimisticUpdater {
     sourceId: string,
     fieldKey: string,
     oldValue: string[] | null,
-    newValue: string[] | null
+    newValue: string[] | null,
+    touchedEdgeIds?: Set<string>
   ): GraphEdge[] {
     let updatedEdges = [...edges];
     
@@ -437,6 +567,11 @@ class OptimisticUpdater {
           e.data?.metadata?.relationField === fieldKey
         );
         if (edgeIndex !== -1) {
+          const removedEdge = updatedEdges[edgeIndex];
+          // Track the removed edge
+          if (touchedEdgeIds && removedEdge?.id) {
+            touchedEdgeIds.add(removedEdge.id);
+          }
           updatedEdges.splice(edgeIndex, 1);
         }
       }
@@ -446,6 +581,10 @@ class OptimisticUpdater {
     newIds.forEach(targetId => {
       if (!oldIds.has(targetId)) {
         const newEdgeId = `e::${sourceId}::${fieldKey}::${targetId}`;
+        // Track the new edge
+        if (touchedEdgeIds) {
+          touchedEdgeIds.add(newEdgeId);
+        }
         const newEdge: GraphEdge = {
           id: newEdgeId,
           source: sourceId,
@@ -537,7 +676,7 @@ class OptimisticUpdater {
     };
   }
 
-  private handleDelete(cache: GraphData, payload: any): GraphData {
+  private handleDelete(cache: GraphData, payload: any, touchedEdgeIds?: Set<string>, _mutationId?: string): GraphData {
     const id = typeof payload === 'string' ? payload : payload.id;
     
     // Find the node being deleted to get its type
@@ -582,6 +721,15 @@ class OptimisticUpdater {
       
       return node;
     });
+    
+    // Track edges that will be removed
+    if (touchedEdgeIds) {
+      cache.edges.forEach(edge => {
+        if (edge.source === id || edge.target === id) {
+          touchedEdgeIds.add(edge.id);
+        }
+      });
+    }
     
     // Now filter out the deleted node and its edges
     return {
@@ -698,15 +846,21 @@ export function useEntityMutation<T extends Entity = Entity>(
       // Snapshot the previous value
       const snapshot = queryClient.getQueryData<GraphData>(queryKey);
       
+      // Generate unique mutation ID for tracking
+      const mutationId = uuidv4();
+      
       // Generate temp ID for creates
       const tempId = mutationType === 'create' 
         ? `temp-${Date.now()}-${Math.random()}` 
         : null;
       
+      // Track which edges this mutation creates/modifies
+      const touchedEdgeIds = new Set<string>();
+      
       // Optimistically update the cache
       queryClient.setQueryData<GraphData>(queryKey, (old) => {
         if (!old) return old;
-        const updated = optimisticUpdater.apply(old, mutationType, entityType, payload, tempId);
+        const updated = optimisticUpdater.apply(old, mutationType, entityType, payload, tempId, touchedEdgeIds, mutationId);
         
         
         return updated;
@@ -720,7 +874,9 @@ export function useEntityMutation<T extends Entity = Entity>(
         snapshot, 
         tempId,
         originalEdges: snapshot?.edges, // Store original edges for rollback
-        optimisticEdges: mutationType === 'update' ? updatedData?.edges : undefined // Store optimistic edges to preserve in onSuccess
+        optimisticEdges: mutationType === 'update' ? updatedData?.edges : undefined, // Store optimistic edges to preserve in onSuccess
+        mutationId,
+        touchedEdgeIds
       };
     },
 
@@ -756,18 +912,20 @@ export function useEntityMutation<T extends Entity = Entity>(
           });
 
           // Update any edges that reference the temporary ID and decrement their counters
+          // Only touch edges that this mutation created
           const updatedEdges = old.edges.map(edge => {
-            if (edge.target === context.tempId) {
-              return OptimisticStateManager.decrementEdgeCounter({
-                ...edge,
-                target: data.id,
-              });
-            }
-            if (edge.source === context.tempId) {
-              return OptimisticStateManager.decrementEdgeCounter({
-                ...edge,
-                source: data.id,
-              });
+            // Only update edges touched by this mutation
+            if (context?.touchedEdgeIds?.has(edge.id)) {
+              // Update temp IDs to real IDs
+              let updatedEdge = { ...edge };
+              if (edge.target === context.tempId) {
+                updatedEdge.target = data.id;
+              }
+              if (edge.source === context.tempId) {
+                updatedEdge.source = data.id;
+              }
+              // Remove mutation ID for this edge
+              return OptimisticStateManager.removeEdgeMutationId(updatedEdge, context.mutationId);
             }
             return edge;
           });
@@ -789,21 +947,18 @@ export function useEntityMutation<T extends Entity = Entity>(
                   label: data.name || node.data.label,
                 },
               };
-              // Decrement counter for completed mutation
-              return OptimisticStateManager.decrementNodeCounter(merged);
+              // Remove mutation ID for completed mutation
+              return OptimisticStateManager.removeNodeMutationId(merged, context?.mutationId);
             }
             return node;
           });
 
-          // CRITICAL FIX: Preserve edge changes from optimistic update
-          // Use optimistic edges if available (relationship changes), otherwise keep current edges
-          const finalEdges = context?.optimisticEdges || old.edges;
-          
-          // Decrement edge counters for completed mutation
-          const updatedEdges = finalEdges.map((edge: GraphEdge) => {
-            // Only decrement if edge is related to the updated entity
-            if (edge.source === data.id || edge.target === data.id) {
-              return OptimisticStateManager.decrementEdgeCounter(edge);
+          // CRITICAL FIX: Only decrement edges touched by THIS mutation
+          // This prevents race conditions when multiple mutations are in flight
+          const updatedEdges = old.edges.map((edge: GraphEdge) => {
+            // Only decrement if this mutation touched this specific edge
+            if (context?.touchedEdgeIds?.has(edge.id)) {
+              return OptimisticStateManager.removeEdgeMutationId(edge, context?.mutationId);
             }
             return edge;
           });
@@ -814,11 +969,19 @@ export function useEntityMutation<T extends Entity = Entity>(
             edges: updatedEdges,
           };
         } else if (mutationType === 'delete') {
-          // Remove deleted node
+          // Remove deleted node and decrement counters on touched edges
+          const updatedEdges = old.edges.map((edge: GraphEdge) => {
+            // Decrement counter if this mutation touched this edge
+            if (context?.touchedEdgeIds?.has(edge.id)) {
+              return OptimisticStateManager.removeEdgeMutationId(edge, context?.mutationId);
+            }
+            return edge;
+          });
+          
           return {
             ...old,
             nodes: old.nodes.filter(n => n.id !== data.id),
-            edges: old.edges.filter(e => e.source !== data.id && e.target !== data.id),
+            edges: updatedEdges.filter(e => e.source !== data.id && e.target !== data.id),
           };
         }
         
@@ -881,18 +1044,34 @@ export function useEntityMutation<T extends Entity = Entity>(
               
               // Primary node being updated
               if (nodeId === payload.id) {
-                // Get current counter (may include other mutations)
-                const currentCounter = node.data.metadata.pendingMutationCount || 0;
-                // Decrement by 1 for this failed mutation
-                const newCounter = Math.max(0, currentCounter - 1);
+                // Remove this mutation's ID from the tracking list
+                const currentIds = node.data.metadata?.pendingMutationIds || [];
+                const idSet = new Set(currentIds);
+                if (context?.mutationId) {
+                  idSet.delete(context.mutationId);
+                }
+                const newIds = Array.from(idSet);
+                
+                // Only restore the fields that THIS mutation changed
+                // Keep changes from other concurrent mutations
+                const restoredEntity = { ...node.data.entity };
+                
+                // Restore only the fields that were in the failed mutation's payload
+                Object.keys(payload).forEach(key => {
+                  if (key !== 'id' && nodeToRestore.data.entity[key] !== undefined) {
+                    restoredEntity[key] = nodeToRestore.data.entity[key];
+                  }
+                });
                 
                 return {
-                  ...nodeToRestore,
+                  ...node,
                   data: {
-                    ...nodeToRestore.data,
+                    ...node.data,
+                    entity: restoredEntity,
                     metadata: {
-                      ...nodeToRestore.data.metadata,
-                      pendingMutationCount: newCounter
+                      ...node.data.metadata,
+                      pendingMutationIds: newIds,
+                      pendingMutationCount: newIds.length
                     }
                   }
                 };
@@ -904,9 +1083,13 @@ export function useEntityMutation<T extends Entity = Entity>(
               );
               
               if (snapshotNode && JSON.stringify(snapshotNode.data.entity) !== JSON.stringify(node.data.entity)) {
-                // This node was modified, restore its entity data but preserve counter
-                const currentCounter = node.data.metadata.pendingMutationCount || 0;
-                const newCounter = Math.max(0, currentCounter - 1);
+                // This node was modified, restore its entity data but remove mutation ID
+                const currentIds = node.data.metadata?.pendingMutationIds || [];
+                const idSet = new Set(currentIds);
+                if (context?.mutationId) {
+                  idSet.delete(context.mutationId);
+                }
+                const newIds = Array.from(idSet);
                 
                 return {
                   ...snapshotNode,
@@ -914,7 +1097,8 @@ export function useEntityMutation<T extends Entity = Entity>(
                     ...snapshotNode.data,
                     metadata: {
                       ...snapshotNode.data.metadata,
-                      pendingMutationCount: newCounter
+                      pendingMutationIds: newIds,
+                      pendingMutationCount: newIds.length
                     }
                   }
                 };
@@ -923,27 +1107,45 @@ export function useEntityMutation<T extends Entity = Entity>(
               return node;
             });
             
-            // Restore only edges affected by this mutation
-            // Identify edges that were changed by comparing snapshot to current
-            const affectedEdgeIds = new Set<string>();
-            
-            // Find edges that exist in snapshot but not in current (were deleted)
-            context.snapshot.edges.forEach((snapEdge: GraphEdge) => {
-              if (!old.edges.find(e => e.id === snapEdge.id)) {
-                affectedEdgeIds.add(snapEdge.id);
+            // CRITICAL FIX: Only restore edges touched by THIS mutation
+            // This ensures concurrent mutations aren't affected by this rollback
+            const restoredEdges = old.edges.map(edge => {
+              // Only restore edges that this mutation touched
+              if (context.touchedEdgeIds?.has(edge.id)) {
+                // Find the original edge in snapshot
+                const originalEdge = context.snapshot?.edges.find((e: GraphEdge) => e.id === edge.id);
+                if (originalEdge) {
+                  // Restore the original edge but remove mutation ID
+                  const currentIds = edge.data?.pendingMutationIds || [];
+                  const idSet = new Set(currentIds);
+                  if (context?.mutationId) {
+                    idSet.delete(context.mutationId);
+                  }
+                  const newIds = Array.from(idSet);
+                  return {
+                    ...originalEdge,
+                    data: {
+                      ...originalEdge.data,
+                      pendingMutationIds: newIds,
+                      pendingMutationCount: newIds.length
+                    }
+                  };
+                }
+                // If edge was created by this mutation, remove it by returning null
+                return null;
               }
-            });
+              // Keep edges not touched by this mutation unchanged
+              return edge;
+            }).filter(e => e !== null) as GraphEdge[];
             
-            // Find edges that exist in current but not in snapshot (were added)
-            old.edges.forEach(edge => {
-              if (!context.snapshot?.edges.find((e: GraphEdge) => e.id === edge.id)) {
-                affectedEdgeIds.add(edge.id);
-              }
-            });
-            
-            // Restore affected edges from snapshot, keep unaffected edges from current
-            const restoredEdges = old.edges.filter(e => !affectedEdgeIds.has(e.id))
-              .concat(context.snapshot.edges.filter((e: GraphEdge) => affectedEdgeIds.has(e.id)));
+            // Add back any edges that were removed by this mutation
+            if (context.touchedEdgeIds && context.snapshot) {
+              context.snapshot.edges.forEach((snapEdge: GraphEdge) => {
+                if (context.touchedEdgeIds.has(snapEdge.id) && !restoredEdges.find(e => e.id === snapEdge.id)) {
+                  restoredEdges.push(snapEdge);
+                }
+              });
+            }
             
             return {
               ...old,
@@ -960,10 +1162,24 @@ export function useEntityMutation<T extends Entity = Entity>(
               (n as any).id === payload.id
             );
             if (nodeToRestore) {
+              // Restore edges touched by this mutation
+              const restoredEdges = [...old.edges];
+              
+              // Add back edges that were removed
+              if (context.touchedEdgeIds) {
+                context.snapshot.edges.forEach((snapEdge: GraphEdge) => {
+                  if (context.touchedEdgeIds.has(snapEdge.id) && !restoredEdges.find(e => e.id === snapEdge.id)) {
+                    // Remove mutation ID since the deletion failed
+                    const updatedEdge = OptimisticStateManager.removeEdgeMutationId(snapEdge, context?.mutationId);
+                    restoredEdges.push(updatedEdge);
+                  }
+                });
+              }
+              
               return {
                 ...old,
-                nodes: [...old.nodes, OptimisticStateManager.decrementNodeCounter(nodeToRestore)],
-                edges: context.snapshot.edges,
+                nodes: [...old.nodes, OptimisticStateManager.removeNodeMutationId(nodeToRestore, context?.mutationId)],
+                edges: restoredEdges,
               };
             }
           }

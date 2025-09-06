@@ -68,6 +68,7 @@ export interface EntityRouterConfig<T> {
 
 /**
  * Updates inverse relations when an entity is modified
+ * Uses Promise.allSettled for parallel execution to improve performance
  */
 async function updateInverseRelations(
   entityId: string,
@@ -75,6 +76,9 @@ async function updateInverseRelations(
   newData: any,
   relations: InverseRelation[]
 ): Promise<void> {
+  // Build array of all update operations
+  const updatePromises: Promise<void>[] = [];
+  
   for (const relation of relations) {
     const oldIds = new Set(oldData?.[relation.sourceField] || []);
     const newIds = new Set(newData?.[relation.sourceField] || []);
@@ -95,74 +99,110 @@ async function updateInverseRelations(
       continue;
     }
     
-    // Update added relations
+    // Create promises for added relations
     for (const targetId of addedIds) {
-      try {
-        // Get current target entity
-        const targetPage = await notion.pages.retrieve({ 
-          page_id: targetId as string
-        }) as NotionPage;
-        
-        const targetProp = targetPage.properties[relation.targetField];
-        const currentRelatedIds = (targetProp && 'relation' in targetProp) ? targetProp.relation : [];
-        const currentIds = currentRelatedIds.map((r: any) => r.id);
-        
-        // Add this entity if not already present
-        if (!currentIds.includes(entityId)) {
-          await notion.pages.update({
-            page_id: targetId as string,
-            properties: {
-              [relation.targetField]: {
-                relation: [...currentRelatedIds, { id: entityId }]
-              }
-            }
-          });
+      const updatePromise = (async () => {
+        try {
+          // Get current target entity
+          const targetPage = await notion.pages.retrieve({ 
+            page_id: targetId as string
+          }) as NotionPage;
           
-          // Invalidate target cache
-          // Invalidate the specific entity and any cache keys containing its ID
-          cacheService.invalidatePattern(`*_${targetId}`);
+          const targetProp = targetPage.properties[relation.targetField];
+          const currentRelatedIds = (targetProp && 'relation' in targetProp) ? targetProp.relation : [];
+          const currentIds = currentRelatedIds.map((r: any) => r.id);
+          
+          // Add this entity if not already present
+          if (!currentIds.includes(entityId)) {
+            await notion.pages.update({
+              page_id: targetId as string,
+              properties: {
+                [relation.targetField]: {
+                  relation: [...currentRelatedIds, { id: entityId }]
+                }
+              }
+            });
+            
+            // Invalidate target cache
+            // Invalidate the specific entity and any cache keys containing its ID
+            cacheService.invalidatePattern(`*_${targetId}`);
+          }
+        } catch (error) {
+          log.error('Failed to update inverse relation (add)', {
+            targetId,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          // Re-throw to be caught by Promise.allSettled
+          throw error;
         }
-      } catch (error) {
-        log.error('Failed to update inverse relation', {
-          targetId,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
+      })();
+      
+      updatePromises.push(updatePromise);
     }
     
-    // Update removed relations
+    // Create promises for removed relations
     for (const targetId of removedIds) {
-      try {
-        // Get current target entity
-        const targetPage = await notion.pages.retrieve({ 
-          page_id: targetId as string
-        }) as NotionPage;
-        
-        const targetProp = targetPage.properties[relation.targetField];
-        const currentRelatedIds = (targetProp && 'relation' in targetProp) ? targetProp.relation : [];
-        const filteredIds = currentRelatedIds.filter((r: any) => r.id !== entityId);
-        
-        // Remove this entity if present
-        if (filteredIds.length !== currentRelatedIds.length) {
-          await notion.pages.update({
-            page_id: targetId as string,
-            properties: {
-              [relation.targetField]: {
-                relation: filteredIds
-              }
-            }
-          });
+      const updatePromise = (async () => {
+        try {
+          // Get current target entity
+          const targetPage = await notion.pages.retrieve({ 
+            page_id: targetId as string
+          }) as NotionPage;
           
-          // Invalidate target cache
-          // Invalidate the specific entity and any cache keys containing its ID
-          cacheService.invalidatePattern(`*_${targetId}`);
+          const targetProp = targetPage.properties[relation.targetField];
+          const currentRelatedIds = (targetProp && 'relation' in targetProp) ? targetProp.relation : [];
+          const filteredIds = currentRelatedIds.filter((r: any) => r.id !== entityId);
+          
+          // Remove this entity if present
+          if (filteredIds.length !== currentRelatedIds.length) {
+            await notion.pages.update({
+              page_id: targetId as string,
+              properties: {
+                [relation.targetField]: {
+                  relation: filteredIds
+                }
+              }
+            });
+            
+            // Invalidate target cache
+            // Invalidate the specific entity and any cache keys containing its ID
+            cacheService.invalidatePattern(`*_${targetId}`);
+          }
+        } catch (error) {
+          log.error('Failed to update inverse relation (remove)', {
+            targetId,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          // Re-throw to be caught by Promise.allSettled
+          throw error;
         }
-      } catch (error) {
-        log.error('Failed to update inverse relation', {
-          targetId,
-          error: error instanceof Error ? error.message : String(error)
-        });
-      }
+      })();
+      
+      updatePromises.push(updatePromise);
+    }
+  }
+  
+  // Execute all updates in parallel with Promise.allSettled
+  // This ensures all operations complete even if some fail
+  if (updatePromises.length > 0) {
+    const results = await Promise.allSettled(updatePromises);
+    
+    // Log summary of results
+    const failed = results.filter(r => r.status === 'rejected').length;
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    
+    if (failed > 0) {
+      log.warn(`[InverseRelations] Completed with partial failures`, {
+        entityId,
+        succeeded,
+        failed,
+        total: results.length
+      });
+    } else if (succeeded > 0) {
+      log.info(`[InverseRelations] Successfully updated all relations`, {
+        entityId,
+        succeeded
+      });
     }
   }
   

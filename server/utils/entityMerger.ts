@@ -97,12 +97,51 @@ export function smartMergeEntityUpdate<T extends Entity>(
 ): T {
   const merged = { ...oldEntity };
   
+  // Helper to check if a field was in the original request
+  // Handles both direct field names and also checks common variations
+  const wasFieldInRequest = (entityFieldName: string): boolean => {
+    if (!updatePayload) return false;
+    
+    // Direct check - field name matches exactly
+    if (entityFieldName in updatePayload) return true;
+    
+    // For ID fields, also check without the 'Id' or 'Ids' suffix
+    // e.g., 'ownerId' might be sent as 'owner'
+    if (entityFieldName.endsWith('Id')) {
+      const withoutId = entityFieldName.slice(0, -2);
+      if (withoutId in updatePayload) return true;
+    }
+    if (entityFieldName.endsWith('Ids')) {
+      const withoutIds = entityFieldName.slice(0, -3);
+      if (withoutIds in updatePayload) return true;
+      // Also check singular form
+      const singular = withoutIds.slice(0, -1);
+      if (singular in updatePayload) return true;
+    }
+    
+    // Common field name variations
+    const variations: Record<string, string[]> = {
+      'descriptionText': ['description'],
+      'descriptionSolution': ['solution'],
+      'characterLogline': ['logline'],
+      'emotionTowardsCEO': ['emotion'],
+    };
+    
+    if (variations[entityFieldName]) {
+      for (const variant of variations[entityFieldName]) {
+        if (variant in updatePayload) return true;
+      }
+    }
+    
+    return false;
+  };
+  
   for (const key in partialEntity) {
     const newValue = partialEntity[key];
     const oldValue = oldEntity[key];
     
-    // Skip undefined
-    if (newValue === undefined) {
+    // Skip undefined UNLESS it was explicitly in the request
+    if (newValue === undefined && !wasFieldInRequest(key)) {
       continue;
     }
     
@@ -120,7 +159,7 @@ export function smartMergeEntityUpdate<T extends Entity>(
       // If the new array is empty and old had data
       if (newValue.length === 0 && oldValue.length > 0) {
         // Check if this field was explicitly in the update request
-        if (updatePayload && !(key in updatePayload)) {
+        if (!wasFieldInRequest(key)) {
           // Field wasn't updated by user - preserve old value
           continue;
         }
@@ -140,8 +179,23 @@ export function smartMergeEntityUpdate<T extends Entity>(
       // If new is undefined/null and old had value
       if (!newValue && oldValue) {
         // Check if explicitly cleared
-        if (updatePayload && !(key in updatePayload)) {
+        if (!wasFieldInRequest(key)) {
           // Not in update - preserve old
+          continue;
+        }
+        // If it WAS in the request, allow it to be cleared
+        // This handles both null and undefined being sent explicitly
+      }
+    }
+    
+    // For text fields that come back empty
+    const isTextField = typeof newValue === 'string' && typeof oldValue === 'string';
+    if (isTextField) {
+      // If new is empty and old had content
+      if (newValue === '' && oldValue !== '') {
+        // Check if this was explicitly cleared
+        if (!wasFieldInRequest(key)) {
+          // Field wasn't in request - preserve old value
           continue;
         }
       }

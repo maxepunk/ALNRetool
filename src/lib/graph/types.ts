@@ -789,6 +789,7 @@ export interface NodeMetadata {
   isFocused?: boolean; // Node is the current focus node
   searchMatch?: boolean; // Node matches search term
   pendingMutationCount?: number; // Number of pending mutations for this entity (replaces isOptimistic boolean)
+  pendingMutationIds?: string[]; // Array of mutation IDs currently pending (for accurate tracking)
   timelineConnections?: string[];
   collaborators?: string[];
   visualHints?: VisualHints;
@@ -1119,6 +1120,7 @@ export interface GraphEdge extends Omit<Edge, 'data'> {
     metadata?: Record<string, unknown>;
     isVirtual?: boolean; // For layout-only edges (not rendered)
     pendingMutationCount?: number; // Number of pending mutations for this edge (unified optimistic tracking)
+    pendingMutationIds?: string[]; // Array of mutation IDs currently pending (for accurate tracking)
   };
   animated?: boolean;
   style?: React.CSSProperties;
