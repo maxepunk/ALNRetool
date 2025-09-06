@@ -747,33 +747,49 @@ class OptimisticUpdater {
 
 /**
  * Helper function to get inverse relationship field for bidirectional updates.
- * Maps from a source field to its corresponding field on the target entity.
- * 
- * @param sourceEntityType - Type of entity being updated
- * @param fieldKey - Field being changed (e.g., 'ownerId', 'puzzleIds')
- * @returns Inverse field name or null if no inverse relationship exists
+ * Maps relationship fields to their inverse counterparts for optimistic updates.
+ * The server also handles these, but we need them for immediate UI feedback.
  */
 function getInverseRelationshipField(sourceEntityType: EntityType, fieldKey: string): string | null {
-  // Map of entity type + field to inverse field
-  const relationshipMap: Record<string, string | null> = {
-    // Puzzle -> Character relationships
-    'puzzle:ownerId': 'characterPuzzleIds', // When changing Puzzle.ownerId, update Character.characterPuzzleIds
+  // Create a key combining entity type and field for lookup
+  const lookupKey = `${sourceEntityType}:${fieldKey}`;
+  
+  // Mapping of source field to inverse field based on actual Notion schema
+  const inverseFieldMap: Record<string, string> = {
+    // Puzzle -> Character (owner relationship)
+    'puzzle:ownerId': 'characterPuzzleIds',
     
-    // Element -> Character relationships  
-    'element:ownerId': 'ownedElementIds', // When changing Element.ownerId, update Character.ownedElementIds
+    // Element -> Character (owner relationship)  
+    'element:ownerId': 'ownedElementIds',
     
-    // Timeline -> Character relationships
-    'timeline:charactersInvolvedIds': null, // No inverse on Character for timeline involvement
+    // Timeline -> Character (characters involved)
+    'timeline:charactersInvolvedIds': 'eventIds',
     
     // Element -> Puzzle relationships
-    'element:puzzleIds': 'puzzleElementIds', // When changing Element.puzzleIds, update Puzzle.puzzleElementIds
+    'element:requiredForPuzzleIds': 'puzzleElementIds',
+    'element:rewardedByPuzzleIds': 'rewardIds',
     
-    // Element -> Timeline relationships
-    'element:timelineIds': 'memoryEvidenceIds', // When changing Element.timelineIds, update Timeline.memoryEvidenceIds
+    // Element -> Element (container relationships)
+    'element:containerId': 'contentIds',
+    'element:contentIds': 'containerId',
+    
+    // Puzzle -> Element relationships
+    'puzzle:puzzleElementIds': 'requiredForPuzzleIds',
+    'puzzle:rewardIds': 'rewardedByPuzzleIds',
+    'puzzle:lockedItemId': 'containerPuzzleId',
+    
+    // Puzzle -> Puzzle (parent/sub relationships)
+    'puzzle:parentItemId': 'subPuzzleIds',
+    'puzzle:subPuzzleIds': 'parentItemId',
+    
+    // Character -> Element relationships
+    'character:ownedElementIds': 'ownerId',
+    
+    // Character -> Timeline relationships
+    'character:eventIds': 'charactersInvolvedIds',
   };
   
-  const key = `${sourceEntityType}:${fieldKey}`;
-  return relationshipMap[key] || null;
+  return inverseFieldMap[lookupKey] || null;
 }
 
 // ============================================================================
@@ -1031,7 +1047,7 @@ export function useEntityMutation<T extends Entity = Entity>(
           };
         } else if (mutationType === 'update') {
           // For failed UPDATE: restore entity data and edges from snapshot
-          // Find the node that was optimistically updated
+          // Must handle bidirectional updates by restoring ALL affected nodes
           const nodeToRestore = context.snapshot.nodes.find((n: GraphNode) => 
             (n as any).id === payload.id
           );
@@ -1083,7 +1099,7 @@ export function useEntityMutation<T extends Entity = Entity>(
               );
               
               if (snapshotNode && JSON.stringify(snapshotNode.data.entity) !== JSON.stringify(node.data.entity)) {
-                // This node was modified, restore its entity data but remove mutation ID
+                // This node was modified by bidirectional update, restore it
                 const currentIds = node.data.metadata?.pendingMutationIds || [];
                 const idSet = new Set(currentIds);
                 if (context?.mutationId) {
