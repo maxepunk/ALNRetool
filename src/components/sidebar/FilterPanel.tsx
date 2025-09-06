@@ -19,6 +19,7 @@ interface FilterConfig {
   min?: number;
   max?: number;
   step?: number;
+  layout?: 'vertical' | 'horizontal' | 'grid'; // Layout option for compact display
 }
 
 interface FilterPanelProps {
@@ -33,26 +34,52 @@ export function FilterPanel({ title, filters }: FilterPanelProps) {
   const renderFilter = (key: string, config: FilterConfig) => {
     switch (config.type) {
       case 'checkbox':
+        // Handle single boolean checkbox (like highlightShared)
+        if (config.options?.length === 1 && config.options[0]?.value === 'true') {
+          return (
+            <div key={key} className="flex items-center space-x-2">
+              <Checkbox
+                id={key}
+                checked={store.getFilter(key) === true}
+                onCheckedChange={(checked) => {
+                  store.setFilter(key, checked);
+                }}
+              />
+              <Label htmlFor={key}>{config.options[0]?.label || config.label}</Label>
+            </div>
+          );
+        }
+        // Handle multi-checkbox with layout options
+        const containerClass = config.layout === 'horizontal' 
+          ? "flex flex-wrap gap-3"
+          : config.layout === 'grid'
+          ? "grid grid-cols-2 gap-2"
+          : "space-y-2";
+          
         return (
           <div key={key} className="space-y-2">
             <Label>{config.label}</Label>
-            {config.options?.map(option => (
-              <div key={option.value} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${key}-${option.value}`}
-                  checked={store.getFilter(key)?.includes(option.value)}
-                  onCheckedChange={(checked) => {
-                    const current = store.getFilter(key) || [];
-                    if (checked) {
-                      store.setFilter(key, [...current, option.value]);
-                    } else {
-                      store.setFilter(key, current.filter((v: string) => v !== option.value));
-                    }
-                  }}
-                />
-                <Label htmlFor={`${key}-${option.value}`}>{option.label}</Label>
-              </div>
-            ))}
+            <div className={containerClass}>
+              {config.options?.map(option => (
+                <div key={option.value} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`${key}-${option.value}`}
+                    checked={store.getFilter(key)?.includes(option.value)}
+                    onCheckedChange={(checked) => {
+                      const current = store.getFilter(key) || [];
+                      if (checked) {
+                        store.setFilter(key, [...current, option.value]);
+                      } else {
+                        store.setFilter(key, current.filter((v: string) => v !== option.value));
+                      }
+                    }}
+                  />
+                  <Label htmlFor={`${key}-${option.value}`} className="text-xs">
+                    {option.label}
+                  </Label>
+                </div>
+              ))}
+            </div>
           </div>
         );
       
@@ -181,10 +208,29 @@ export const CharacterFilterPanel = () => (
       tiers: {
         type: 'multiselect',
         label: 'Tiers',
+        layout: 'horizontal', // Compact horizontal layout
         options: [
           { value: 'Core', label: 'Core' },
           { value: 'Secondary', label: 'Secondary' },
           { value: 'Tertiary', label: 'Tertiary' }
+        ]
+      },
+      ownershipStatus: {
+        type: 'multiselect',
+        label: 'Ownership Status',
+        layout: 'grid', // 2x2 grid layout
+        options: [
+          { value: 'Owned', label: 'Owned' },
+          { value: 'Accessible', label: 'Accessible' },
+          { value: 'Shared', label: 'Shared' },
+          { value: 'Locked', label: 'Locked' }
+        ]
+      },
+      highlightShared: {
+        type: 'checkbox',
+        label: 'Highlight Shared',
+        options: [
+          { value: 'true', label: 'Highlight Shared Elements' }
         ]
       }
     }}
@@ -199,6 +245,7 @@ export const PuzzleFilterPanel = () => (
       acts: {
         type: 'multiselect',
         label: 'Acts',
+        layout: 'horizontal', // Compact horizontal layout
         options: [
           { value: 'Act 0', label: 'Act 0' },
           { value: 'Act 1', label: 'Act 1' },
@@ -248,6 +295,36 @@ export const ElementFilterPanel = () => (
           { value: 'Source Prop/print', label: 'Source Prop/Print' },
           { value: 'Ready for Playtest', label: 'Ready for Playtest' },
           { value: 'Done', label: 'Done' }
+        ]
+      },
+      contentStatus: {
+        type: 'multiselect',
+        label: 'Content Status',
+        layout: 'grid', // 2x2 grid layout
+        options: [
+          { value: 'draft', label: 'Draft' },
+          { value: 'review', label: 'Review' },
+          { value: 'approved', label: 'Approved' },
+          { value: 'published', label: 'Published' }
+        ]
+      },
+      hasIssues: {
+        type: 'radio',
+        label: 'Has Issues',
+        options: [
+          { value: 'all', label: 'All' },
+          { value: 'true', label: 'Yes' },
+          { value: 'false', label: 'No' }
+        ]
+      },
+      lastEditedRange: {
+        type: 'radio',
+        label: 'Last Edited',
+        options: [
+          { value: 'all', label: 'All' },
+          { value: 'today', label: 'Today' },
+          { value: 'week', label: 'This Week' },
+          { value: 'month', label: 'This Month' }
         ]
       }
     }}

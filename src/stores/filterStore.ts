@@ -582,18 +582,34 @@ export const useFilterStore = create<FilterStore>()(
               return Array.from(state.characterFilters.selectedTiers);
             case 'characterTypes':
               return state.characterFilters.characterType;
+            case 'ownershipStatus':
+              return Array.from(state.characterFilters.ownershipStatus);
+            case 'highlightShared':
+              return state.characterFilters.highlightShared;
+            case 'selectedCharacterId':
+              return state.characterFilters.selectedCharacterId;
             
             // Puzzle filters  
             case 'acts':
               return Array.from(state.puzzleFilters.selectedActs);
             case 'completionStatus':
               return state.puzzleFilters.completionStatus;
+            case 'selectedPuzzleId':
+              return state.puzzleFilters.selectedPuzzleId;
               
-            // Element filters (new)
+            // Element filters
             case 'basicTypes':
               return state.contentFilters.elementBasicTypes ? Array.from(state.contentFilters.elementBasicTypes) : [];
             case 'status':
               return state.contentFilters.elementStatus ? Array.from(state.contentFilters.elementStatus) : [];
+            case 'contentStatus':
+              return Array.from(state.contentFilters.contentStatus);
+            case 'hasIssues':
+              // Convert nullable boolean to radio value
+              if (state.contentFilters.hasIssues === null) return 'all';
+              return state.contentFilters.hasIssues ? 'true' : 'false';
+            case 'lastEditedRange':
+              return state.contentFilters.lastEditedRange;
               
             // Graph depth
             case 'depth':
@@ -633,6 +649,35 @@ export const useFilterStore = create<FilterStore>()(
                 });
               }
               break;
+              
+            case 'ownershipStatus':
+              if (Array.isArray(value)) {
+                set({
+                  characterFilters: {
+                    ...state.characterFilters,
+                    ownershipStatus: new Set(value)
+                  }
+                });
+              }
+              break;
+              
+            case 'highlightShared':
+              set({
+                characterFilters: {
+                  ...state.characterFilters,
+                  highlightShared: Boolean(value)
+                }
+              });
+              break;
+              
+            case 'selectedCharacterId':
+              set({
+                characterFilters: {
+                  ...state.characterFilters,
+                  selectedCharacterId: value
+                }
+              });
+              break;
             
             // Puzzle filters
             case 'acts':
@@ -656,8 +701,17 @@ export const useFilterStore = create<FilterStore>()(
                 });
               }
               break;
+              
+            case 'selectedPuzzleId':
+              set({
+                puzzleFilters: {
+                  ...state.puzzleFilters,
+                  selectedPuzzleId: value
+                }
+              });
+              break;
             
-            // Element filters (new)
+            // Element filters
             case 'basicTypes':
               if (Array.isArray(value)) {
                 set({
@@ -675,6 +729,41 @@ export const useFilterStore = create<FilterStore>()(
                   contentFilters: {
                     ...state.contentFilters,
                     elementStatus: new Set(value)
+                  }
+                });
+              }
+              break;
+              
+            case 'contentStatus':
+              if (Array.isArray(value)) {
+                set({
+                  contentFilters: {
+                    ...state.contentFilters,
+                    contentStatus: new Set(value)
+                  }
+                });
+              }
+              break;
+              
+            case 'hasIssues':
+              // Convert radio value to nullable boolean
+              let hasIssuesValue = null;
+              if (value === 'true') hasIssuesValue = true;
+              else if (value === 'false') hasIssuesValue = false;
+              set({
+                contentFilters: {
+                  ...state.contentFilters,
+                  hasIssues: hasIssuesValue
+                }
+              });
+              break;
+              
+            case 'lastEditedRange':
+              if (typeof value === 'string') {
+                set({
+                  contentFilters: {
+                    ...state.contentFilters,
+                    lastEditedRange: value as 'today' | 'week' | 'month' | 'all'
                   }
                 });
               }

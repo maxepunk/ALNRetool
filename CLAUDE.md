@@ -63,8 +63,6 @@ These patterns may appear problematic but are deliberate architectural decisions
 
 2. **Throwing Errors on Delta Failures**: Delta generation failures intentionally crash the request to ensure cache consistency. The primary operation succeeded, but we fail loudly to prevent UI inconsistencies.
 
-3. **Dead Code in Frontend Mutations**: The `getInverseRelationshipField` function references non-existent fields. This is unused legacy code, not a bug to fix.
-
 ## Critical Architecture Patterns
 
 ### 1. MutationPipelineV3 Pattern
@@ -129,9 +127,6 @@ NODE_OPTIONS='--max-old-space-size=4096' vitest run
 
 ### Delta Generation Failures are INTENTIONAL
 When you see `throw new Error('Delta generation failed')` in `createEntityRouter.ts`, this is BY DESIGN. The comment "CHANGED: Make delta failures visible instead of silent" indicates this was a deliberate choice to prevent silent cache inconsistencies. Do NOT change this to return success with error indicators.
-
-### Dead Code in entityMutations.ts
-The `getInverseRelationshipField` function in `src/hooks/mutations/entityMutations.ts:756` contains outdated field mappings (e.g., `'element:puzzleIds'` which doesn't exist). This is dead code that should be removed, NOT fixed. The actual app uses `requiredForPuzzleIds`.
 
 ### Known Issues
 - **Auth middleware** requires Origin header to be localhost in development
@@ -215,7 +210,6 @@ server/
 When running precommit validation, be aware that external tools may flag the following as issues when they are actually intentional:
 
 - **"API rate limiting risk"** - Already handled by Bottleneck in `server/services/notion.ts`
-- **"Frontend/backend field mismatch"** - The mismatched code is dead/unused
 - **"Delta generation failures"** - Intentionally fail requests for visibility
 - **"Too many Promise.allSettled calls"** - Rate limited by Bottleneck, safe to run in parallel
 

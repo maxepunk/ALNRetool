@@ -7,18 +7,37 @@
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/uiStore';
+import { Eye, Globe, Users, Puzzle, Package } from 'lucide-react';
 
 // Import sub-components
 import { SidebarNavigation } from '../sidebar/SidebarNavigation';
-import { CharacterFilterPanel, PuzzleFilterPanel, ElementFilterPanel } from '../sidebar/FilterPanel';
+import { ElementFilterPanel } from '../sidebar/FilterPanel';
+import { CharacterFiltersWithFocus } from '../sidebar/CharacterFiltersWithFocus';
+import { PuzzleFiltersWithFocus } from '../sidebar/PuzzleFiltersWithFocus';
 import { DepthSlider } from '../sidebar/DepthSlider';
 import { ActiveFiltersSummary } from '../sidebar/ActiveFiltersSummary';
 import { ThemeToggle } from '../sidebar/ThemeToggle';
 import EntityTypeToggle from '../filters/EntityTypeToggle';
+import { FocusNodeSelector } from '../sidebar/FocusNodeSelector';
+import { CollapsibleSection } from '../sidebar/CollapsibleSection';
+import { 
+  useCharacterFilterCount,
+  usePuzzleFilterCount, 
+  useElementFilterCount,
+  useGraphControlCount,
+  useEntityVisibilityCount
+} from '@/lib/filters/activeFilterCounter';
 
 export default function Sidebar() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const isOpen = !sidebarCollapsed;
+  
+  // Get active filter counts
+  const characterCount = useCharacterFilterCount();
+  const puzzleCount = usePuzzleFilterCount();
+  const elementCount = useElementFilterCount();
+  const graphCount = useGraphControlCount();
+  const visibilityCount = useEntityVisibilityCount();
 
   return (
     <div
@@ -66,16 +85,57 @@ export default function Sidebar() {
           <Separator className="my-2 opacity-50" />
 
           {/* View-specific Filters */}
-          <div className="px-3 py-2 space-y-2 pb-6">
-            {/* Entity Visibility Toggles (Option 2) */}
-            <EntityTypeToggle />
-            <Separator className="my-2 opacity-30" />
+          <div className="px-3 py-2 space-y-3 pb-6">
+            {/* Entity Visibility Toggles */}
+            <CollapsibleSection 
+              title="Visibility" 
+              icon={<Eye className="h-4 w-4" />}
+              activeCount={visibilityCount}
+              defaultOpen={true}
+            >
+              <EntityTypeToggle />
+            </CollapsibleSection>
             
-            {/* Entity-specific Filters */}
-            <CharacterFilterPanel />
-            <PuzzleFilterPanel />
-            <ElementFilterPanel />
-            <DepthSlider />
+            {/* Graph Control */}
+            <CollapsibleSection 
+              title="Graph Control" 
+              icon={<Globe className="h-4 w-4" />}
+              activeCount={graphCount}
+              defaultOpen={true}
+            >
+              <DepthSlider />
+              <FocusNodeSelector />
+            </CollapsibleSection>
+            
+            {/* Character Filters */}
+            <CollapsibleSection 
+              title="Characters" 
+              icon={<Users className="h-4 w-4" />}
+              activeCount={characterCount}
+              defaultOpen={false}
+            >
+              <CharacterFiltersWithFocus />
+            </CollapsibleSection>
+            
+            {/* Puzzle Filters */}
+            <CollapsibleSection 
+              title="Puzzles" 
+              icon={<Puzzle className="h-4 w-4" />}
+              activeCount={puzzleCount}
+              defaultOpen={false}
+            >
+              <PuzzleFiltersWithFocus />
+            </CollapsibleSection>
+            
+            {/* Element Filters */}
+            <CollapsibleSection 
+              title="Elements" 
+              icon={<Package className="h-4 w-4" />}
+              activeCount={elementCount}
+              defaultOpen={false}
+            >
+              <ElementFilterPanel />
+            </CollapsibleSection>
           </div>
         </div>
       </div>

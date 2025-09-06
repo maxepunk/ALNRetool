@@ -98,47 +98,28 @@ const EntityTypeToggle = memo(() => {
         </div>
       </div>
       
-      {/* Entity type toggles */}
-      <div className="space-y-2">
-        {entityConfig.map(({ key, label, icon: Icon, color, bgColor, borderColor }) => {
+      {/* Entity type toggles - Compact 2x2 grid */}
+      <div className="grid grid-cols-2 gap-2">
+        {entityConfig.map(({ key, label, icon: Icon, color }) => {
           const isVisible = entityVisibility[key];
           
           return (
-            <div
-              key={key}
-              className={cn(
-                "flex items-center justify-between p-2 rounded-lg border transition-all",
-                isVisible ? cn(bgColor, borderColor) : "bg-gray-50 border-gray-200 opacity-60"
-              )}
-            >
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`entity-${key}`}
-                  checked={isVisible}
-                  onCheckedChange={() => toggleEntityVisibility(key)}
-                  className="data-[state=checked]:bg-primary"
-                />
-                <Label 
-                  htmlFor={`entity-${key}`}
-                  className="flex items-center gap-2 cursor-pointer select-none"
-                >
-                  <Icon className={cn("h-4 w-4", isVisible ? color : "text-gray-400")} />
-                  <span className={cn("text-sm", isVisible ? "font-medium" : "text-gray-500")}>
-                    {label}
-                  </span>
-                </Label>
-              </div>
-              
-              {/* Optional: Add count of filtered items for this type */}
-              {isVisible && (
-                <Badge 
-                  variant="outline" 
-                  className={cn("text-xs", borderColor, color)}
-                >
-                  {/* This would need to be connected to actual filtered counts */}
-                  All
-                </Badge>
-              )}
+            <div key={key} className="flex items-center space-x-1.5">
+              <Checkbox
+                id={`entity-${key}`}
+                checked={isVisible}
+                onCheckedChange={() => toggleEntityVisibility(key)}
+                className="data-[state=checked]:bg-primary"
+              />
+              <Label 
+                htmlFor={`entity-${key}`}
+                className="flex items-center gap-1 cursor-pointer select-none flex-1"
+              >
+                <Icon className={cn("h-3.5 w-3.5", isVisible ? color : "text-gray-400")} />
+                <span className={cn("text-xs", isVisible ? "font-medium" : "text-gray-500")}>
+                  {label}
+                </span>
+              </Label>
             </div>
           );
         })}
