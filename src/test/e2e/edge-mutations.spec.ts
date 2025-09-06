@@ -1,4 +1,5 @@
-import { test, expect, Page, BrowserContext } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import type { Page, BrowserContext } from '@playwright/test';
 import { setupApiMocking, simulateServerError, resetMockDb } from './helpers/mock-api';
 
 /**

@@ -99,7 +99,7 @@ test.describe('Cache Unification', () => {
 
   test('verifies server cache headers', async ({ page }) => {
     // First request should be cache miss
-    const response1 = await page.goto('http://localhost:5173/graph/full-graph');
+    await page.goto('http://localhost:5173/graph/full-graph');
     await page.waitForSelector('.react-flow__node', { timeout: 30000 });
     
     // Monitor the actual API response

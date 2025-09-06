@@ -1,4 +1,0 @@
-
-> aln-retool@0.0.0 typecheck
-> tsc --project tsconfig.app.json --noEmit && tsc --project tsconfig.server.json --noEmit
-

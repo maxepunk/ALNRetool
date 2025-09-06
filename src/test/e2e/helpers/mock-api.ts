@@ -9,8 +9,8 @@ import type {
   ElementBasicType,
   ElementStatus,
   Act
-} from '../../../src/types/notion/app';
-import type { GraphData, GraphNode, GraphEdge } from '../../../src/lib/graph/types';
+} from '../../../types/notion/app';
+import type { GraphData, GraphNode, GraphEdge } from '../../../lib/graph/types';
 
 /**
  * Mock API helper for Playwright e2e tests
@@ -105,16 +105,14 @@ const getInitialDbState = (): MockDb => ({
     {
       id: 'puzzle-test-1',
       name: 'Test Puzzle',
-      descriptionText: 'Test puzzle description',
-      solution: 'Test solution',
       descriptionSolution: 'Test solution description',
-      hints: [],
-      associatedCharacterIds: [],
+      puzzleElementIds: [],
+      lockedItemId: undefined,
+      ownerId: undefined,
+      rewardIds: [],
+      parentItemId: undefined,
       subPuzzleIds: [],
-      requiredElementIds: [],
-      rewardedElementIds: [],
-      sourceEventIds: [],
-      containerElementId: undefined,
+      storyReveals: [],
       timing: [],
       narrativeThreads: [],
       version: 1
@@ -162,7 +160,7 @@ function generateGraphData(): GraphData {
     });
 
     // Add edges for owned elements
-    char.ownedElementIds?.forEach(elementId => {
+    char.ownedElementIds?.forEach((elementId: string) => {
       edges.push({
         id: `e::${char.id}::ownedElementIds::${elementId}`,
         source: char.id,
@@ -207,16 +205,16 @@ function generateGraphData(): GraphData {
       }
     });
 
-    // Add edges for character relationships
-    puzzle.associatedCharacterIds?.forEach(charId => {
+    // Add edges for puzzle elements
+    puzzle.puzzleElementIds?.forEach((elementId: string) => {
       edges.push({
-        id: `e::${puzzle.id}::associatedCharacterIds::${charId}`,
+        id: `e::${puzzle.id}::puzzleElementIds::${elementId}`,
         source: puzzle.id,
-        target: charId,
-        type: 'association',
+        target: elementId,
+        type: 'requirement',
         data: {
-          relationshipType: 'association' as const,
-          metadata: { field: 'associatedCharacterIds' }
+          relationshipType: 'requirement' as const,
+          metadata: { field: 'puzzleElementIds' }
         }
       });
     });
@@ -304,13 +302,8 @@ export async function setupApiMocking(page: Page) {
       };
       db.characters.push(newCharacter);
 
-      // Update puzzle relationships if creating from puzzle
-      if (body.puzzleId) {
-        const puzzle = db.puzzles.find(p => p.id === body.puzzleId);
-        if (puzzle) {
-          puzzle.associatedCharacterIds = [...(puzzle.associatedCharacterIds || []), newCharacter.id];
-        }
-      }
+      // Puzzles no longer have direct character associations
+      // Character-puzzle relationships are handled through other fields
 
       await route.fulfill({
         status: 200,
@@ -369,7 +362,7 @@ export async function setupApiMocking(page: Page) {
         // Remove from old owner
         const oldOwner = db.characters.find(c => c.id === element.ownerId);
         if (oldOwner) {
-          oldOwner.ownedElementIds = oldOwner.ownedElementIds.filter(eId => eId !== element.id);
+          oldOwner.ownedElementIds = oldOwner.ownedElementIds.filter((eId: string) => eId !== element.id);
         }
         
         // Add to new owner
