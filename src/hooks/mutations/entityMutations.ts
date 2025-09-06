@@ -1046,29 +1046,127 @@ export function useEntityMutation<T extends Entity = Entity>(
             edges: updatedEdges,
           };
         } else if (mutationType === 'update') {
-          // For failed UPDATE: restore from snapshot with simplified approach
-          // The snapshot contains the state before this mutation
+          // For failed UPDATE: restore entity data and edges from snapshot
+          // Must handle bidirectional updates by restoring ALL affected nodes
           const nodeToRestore = context.snapshot.nodes.find((n: GraphNode) => 
             (n as any).id === payload.id
           );
           
           if (nodeToRestore) {
-            // Restore the node and edges from snapshot
-            // Remove only this mutation's tracking ID
+            // Restore the node's entity data but preserve counters from concurrent mutations
+            // Also restore any bidirectionally updated nodes
             const updatedNodes = old.nodes.map(node => {
-              if ((node as any).id === payload.id) {
-                // Restore the entire node from snapshot but update mutation tracking
-                return OptimisticStateManager.removeNodeMutationId(nodeToRestore, context?.mutationId);
+              const nodeId = (node as any).id;
+              
+              // Primary node being updated
+              if (nodeId === payload.id) {
+                // Remove this mutation's ID from the tracking list
+                const currentIds = node.data.metadata?.pendingMutationIds || [];
+                const idSet = new Set(currentIds);
+                if (context?.mutationId) {
+                  idSet.delete(context.mutationId);
+                }
+                const newIds = Array.from(idSet);
+                
+                // Only restore the fields that THIS mutation changed
+                // Keep changes from other concurrent mutations
+                const restoredEntity = { ...node.data.entity };
+                
+                // Restore only the fields that were in the failed mutation's payload
+                Object.keys(payload).forEach(key => {
+                  if (key !== 'id' && nodeToRestore.data.entity[key] !== undefined) {
+                    restoredEntity[key] = nodeToRestore.data.entity[key];
+                  }
+                });
+                
+                return {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    entity: restoredEntity,
+                    metadata: {
+                      ...node.data.metadata,
+                      pendingMutationIds: newIds,
+                      pendingMutationCount: newIds.length
+                    }
+                  }
+                };
               }
+              
+              // Check if this node was bidirectionally updated (find it in snapshot)
+              const snapshotNode = context.snapshot?.nodes.find((n: GraphNode) => 
+                (n as any).id === nodeId
+              );
+              
+              if (snapshotNode && JSON.stringify(snapshotNode.data.entity) !== JSON.stringify(node.data.entity)) {
+                // This node was modified by bidirectional update, restore it
+                const currentIds = node.data.metadata?.pendingMutationIds || [];
+                const idSet = new Set(currentIds);
+                if (context?.mutationId) {
+                  idSet.delete(context.mutationId);
+                }
+                const newIds = Array.from(idSet);
+                
+                return {
+                  ...snapshotNode,
+                  data: {
+                    ...snapshotNode.data,
+                    metadata: {
+                      ...snapshotNode.data.metadata,
+                      pendingMutationIds: newIds,
+                      pendingMutationCount: newIds.length
+                    }
+                  }
+                };
+              }
+              
               return node;
             });
             
-            // Restore edges from snapshot
-            // Any concurrent mutations will reapply their changes via onSuccess
+            // CRITICAL FIX: Only restore edges touched by THIS mutation
+            // This ensures concurrent mutations aren't affected by this rollback
+            const restoredEdges = old.edges.map(edge => {
+              // Only restore edges that this mutation touched
+              if (context.touchedEdgeIds?.has(edge.id)) {
+                // Find the original edge in snapshot
+                const originalEdge = context.snapshot?.edges.find((e: GraphEdge) => e.id === edge.id);
+                if (originalEdge) {
+                  // Restore the original edge but remove mutation ID
+                  const currentIds = edge.data?.pendingMutationIds || [];
+                  const idSet = new Set(currentIds);
+                  if (context?.mutationId) {
+                    idSet.delete(context.mutationId);
+                  }
+                  const newIds = Array.from(idSet);
+                  return {
+                    ...originalEdge,
+                    data: {
+                      ...originalEdge.data,
+                      pendingMutationIds: newIds,
+                      pendingMutationCount: newIds.length
+                    }
+                  };
+                }
+                // If edge was created by this mutation, remove it by returning null
+                return null;
+              }
+              // Keep edges not touched by this mutation unchanged
+              return edge;
+            }).filter(e => e !== null) as GraphEdge[];
+            
+            // Add back any edges that were removed by this mutation
+            if (context.touchedEdgeIds && context.snapshot) {
+              context.snapshot.edges.forEach((snapEdge: GraphEdge) => {
+                if (context.touchedEdgeIds.has(snapEdge.id) && !restoredEdges.find(e => e.id === snapEdge.id)) {
+                  restoredEdges.push(snapEdge);
+                }
+              });
+            }
+            
             return {
               ...old,
               nodes: updatedNodes,
-              edges: context.snapshot.edges,
+              edges: restoredEdges,
             };
           }
           
