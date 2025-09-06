@@ -747,14 +747,49 @@ class OptimisticUpdater {
 
 /**
  * Helper function to get inverse relationship field for bidirectional updates.
- * DEPRECATED: This function contains incorrect field mappings and is unused.
- * The actual inverse relationships are handled server-side.
- * TODO: Remove this function and rely on server delta responses.
+ * Maps relationship fields to their inverse counterparts for optimistic updates.
+ * The server also handles these, but we need them for immediate UI feedback.
  */
-function getInverseRelationshipField(_sourceEntityType: EntityType, _fieldKey: string): string | null {
-  // This function is dead code - the mappings are incorrect
-  // Keeping minimal stub to avoid breaking any potential references
-  return null;
+function getInverseRelationshipField(sourceEntityType: EntityType, fieldKey: string): string | null {
+  // Create a key combining entity type and field for lookup
+  const lookupKey = `${sourceEntityType}:${fieldKey}`;
+  
+  // Mapping of source field to inverse field based on actual Notion schema
+  const inverseFieldMap: Record<string, string> = {
+    // Puzzle -> Character (owner relationship)
+    'puzzle:ownerId': 'characterPuzzleIds',
+    
+    // Element -> Character (owner relationship)  
+    'element:ownerId': 'ownedElementIds',
+    
+    // Timeline -> Character (characters involved)
+    'timeline:charactersInvolvedIds': 'eventIds',
+    
+    // Element -> Puzzle relationships
+    'element:requiredForPuzzleIds': 'puzzleElementIds',
+    'element:rewardedByPuzzleIds': 'rewardIds',
+    
+    // Element -> Element (container relationships)
+    'element:containerId': 'contentIds',
+    'element:contentIds': 'containerId',
+    
+    // Puzzle -> Element relationships
+    'puzzle:puzzleElementIds': 'requiredForPuzzleIds',
+    'puzzle:rewardIds': 'rewardedByPuzzleIds',
+    'puzzle:lockedItemId': 'containerPuzzleId',
+    
+    // Puzzle -> Puzzle (parent/sub relationships)
+    'puzzle:parentItemId': 'subPuzzleIds',
+    'puzzle:subPuzzleIds': 'parentItemId',
+    
+    // Character -> Element relationships
+    'character:ownedElementIds': 'ownerId',
+    
+    // Character -> Timeline relationships
+    'character:eventIds': 'charactersInvolvedIds',
+  };
+  
+  return inverseFieldMap[lookupKey] || null;
 }
 
 // ============================================================================
