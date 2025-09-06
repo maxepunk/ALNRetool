@@ -11,27 +11,25 @@ const mockUpdateTimeline = vi.fn();
 
 // Mock the mutation hooks module
 vi.mock('@/hooks/mutations', () => ({
-  createEntityMutation: vi.fn((entityType) => {
-    // Return a hook function that returns mutation object
-    return () => {
-      const mockMap: Record<string, any> = {
-        'character': mockUpdateCharacter,
-        'element': mockUpdateElement,
-        'puzzle': mockUpdatePuzzle,
-        'timeline': mockUpdateTimeline
-      };
-      
-      return {
-        mutateAsync: mockMap[entityType] || vi.fn(),
-        isPending: false,
-        error: null
-      };
+  useEntityMutation: vi.fn((entityType) => {
+    // Return mutation object directly (it's a hook, not a factory)
+    const mockMap: Record<string, any> = {
+      'character': mockUpdateCharacter,
+      'element': mockUpdateElement,
+      'puzzle': mockUpdatePuzzle,
+      'timeline': mockUpdateTimeline
+    };
+    
+    return {
+      mutateAsync: mockMap[entityType] || vi.fn(),
+      isPending: false,
+      error: null
     };
   })
 }));
 
 // Import the mocked factory for dynamic testing
-import { createEntityMutation } from '@/hooks/mutations';
+import { useEntityMutation } from '@/hooks/mutations';
 
 describe('useEntitySave', () => {
   beforeEach(() => {
@@ -304,12 +302,12 @@ describe('useEntitySave', () => {
   describe('Loading States', () => {
     it('should aggregate loading states from all mutations', () => {
       // Update the mock to return pending state
-      (createEntityMutation as any).mockImplementationOnce((entityType: string) => {
-        return () => ({
+      (useEntityMutation as any).mockImplementationOnce((entityType: string) => {
+        return {
           mutateAsync: vi.fn(),
           isPending: entityType === 'character' ? true : false,
           error: null
-        });
+        };
       });
 
       const { result } = renderHook(() => useEntitySave());
@@ -321,12 +319,12 @@ describe('useEntitySave', () => {
     it('should aggregate errors from all mutations', () => {
       // Update the mock to return error state
       const testError = new Error('Test error');
-      (createEntityMutation as any).mockImplementation((entityType: string) => {
-        return () => ({
+      (useEntityMutation as any).mockImplementation((entityType: string) => {
+        return {
           mutateAsync: vi.fn(),
           isPending: false,
           error: entityType === 'element' ? testError : null
-        });
+        };
       });
 
       const { result } = renderHook(() => useEntitySave());
@@ -336,20 +334,18 @@ describe('useEntitySave', () => {
       
       // Reset mock back to original implementation
       vi.clearAllMocks();
-      (createEntityMutation as any).mockImplementation((entityType: string) => {
-        return () => {
-          const mockMap: Record<string, any> = {
+      (useEntityMutation as any).mockImplementation((entityType: string) => {
+        const mockMap: Record<string, any> = {
             'character': mockUpdateCharacter,
             'element': mockUpdateElement,
             'puzzle': mockUpdatePuzzle,
             'timeline': mockUpdateTimeline
-          };
-          
-          return {
-            mutateAsync: mockMap[entityType] || vi.fn(),
-            isPending: false,
-            error: null
-          };
+        };
+        
+        return {
+          mutateAsync: mockMap[entityType] || vi.fn(),
+          isPending: false,
+          error: null
         };
       });
     });

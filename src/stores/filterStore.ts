@@ -301,12 +301,9 @@ export const useFilterStore = create<FilterStore>()(
         // Universal filter actions
         setSearchTerm: (term) => set({ searchTerm: term }),
         clearSearch: () => set({ searchTerm: '' }),
-        setSelectedNode: (nodeId) => set((state) => ({
-          selectedNodeId: nodeId,
-          // Clear connection depth when deselecting a node
-          // Connection depth only makes sense with a selected node
-          connectionDepth: nodeId === null ? 0 : state.connectionDepth
-        })),
+        setSelectedNode: (nodeId) => set({ 
+          selectedNodeId: nodeId 
+        }),
 
         // Graph view settings actions
         setConnectionDepth: (depth) => set({ connectionDepth: depth }),

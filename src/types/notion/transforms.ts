@@ -262,20 +262,20 @@ export function transformElement(page: NotionPage): Element {
     descriptionText,
     sfPatterns: parseSFPatterns(descriptionText),
     basicType: (getSelect(props[ElementProperties.BASIC_TYPE]) || 'Prop') as ElementBasicType,
-    ownerId: getRelationIds(props[ElementProperties.OWNER])[0],
-    containerId: getRelationIds(props[ElementProperties.CONTAINER])[0],
+    ownerId: getRelationIds(props[ElementProperties.OWNER])[0] || undefined,
+    containerId: getRelationIds(props[ElementProperties.CONTAINER])[0] || undefined,
     contentIds: getRelationIds(props[ElementProperties.CONTENTS]),
-    timelineEventId: getRelationIds(props[ElementProperties.TIMELINE_EVENT])[0],
+    timelineEventId: getRelationIds(props[ElementProperties.TIMELINE_EVENT])[0] || undefined,
     status: (getStatus(props[ElementProperties.STATUS]) || 'Idea/Placeholder') as ElementStatus,
     firstAvailable: getSelect(props[ElementProperties.FIRST_AVAILABLE]) as Act,
     requiredForPuzzleIds: getRelationIds(props[ElementProperties.REQUIRED_FOR_PUZZLE]),
     rewardedByPuzzleIds: getRelationIds(props[ElementProperties.REWARDED_BY_PUZZLE]),
-    containerPuzzleId: getRelationIds(props[ElementProperties.CONTAINER_PUZZLE])[0],
+    containerPuzzleId: getRelationIds(props[ElementProperties.CONTAINER_PUZZLE])[0] || undefined,
     narrativeThreads: getMultiSelect(props[ElementProperties.NARRATIVE_THREADS]),
     associatedCharacterIds: getRollupStrings(props[ElementProperties.ASSOCIATED_CHARACTERS]),
     puzzleChain: getRollupStrings(props[ElementProperties.PUZZLE_CHAIN]),
     productionNotes: getRichText(props[ElementProperties.PRODUCTION_NOTES]),
-    filesMedia: [], // TODO: Parse files when needed
+    filesMedia: [], // Files not available from Notion API in this context
     contentLink: getUrl(props[ElementProperties.CONTENT_LINK]) || undefined,
     isContainer: getFormula(props[ElementProperties.IS_CONTAINER]) === true
   };
@@ -291,10 +291,10 @@ export function transformPuzzle(page: NotionPage): Puzzle {
     lastEdited: page.last_edited_time,
     descriptionSolution: getRichText(props[PuzzleProperties.DESCRIPTION_SOLUTION]),
     puzzleElementIds: getRelationIds(props[PuzzleProperties.PUZZLE_ELEMENTS]),
-    lockedItemId: getRelationIds(props[PuzzleProperties.LOCKED_ITEM])[0],
-    ownerId: getRollupStrings(props[PuzzleProperties.OWNER])[0],
+    lockedItemId: getRelationIds(props[PuzzleProperties.LOCKED_ITEM])[0] || undefined,
+    ownerId: getRollupStrings(props[PuzzleProperties.OWNER])[0] || undefined,
     rewardIds: getRelationIds(props[PuzzleProperties.REWARDS]),
-    parentItemId: getRelationIds(props[PuzzleProperties.PARENT_ITEM])[0],
+    parentItemId: getRelationIds(props[PuzzleProperties.PARENT_ITEM])[0] || undefined,
     subPuzzleIds: getRelationIds(props[PuzzleProperties.SUB_PUZZLES]),
     storyReveals: getRollupStrings(props[PuzzleProperties.STORY_REVEALS]),
     timing: getRollupStrings(props[PuzzleProperties.TIMING]) as Act[],
@@ -309,7 +309,7 @@ export function transformTimelineEvent(page: NotionPage): TimelineEvent {
   
   return {
     id: normalizeUuid(page.id),
-    name: description || 'Untitled Event', // Add name field
+    name: description || 'Untitled Event',
     entityType: 'timeline' as const,
     lastEdited: page.last_edited_time,
     description: description || '',

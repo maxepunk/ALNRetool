@@ -7,7 +7,8 @@
  * @module services/graphApi
  */
 
-import type { Node, Edge } from '@xyflow/react';
+import type { Edge } from '@xyflow/react';
+import type { GraphNode } from '@/lib/graph/types';
 
 /**
  * API base URL - same as other services
@@ -18,7 +19,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
  * Graph API response structure
  */
 export interface GraphResponse {
-  nodes: Node[];
+  nodes: GraphNode[];
   edges: Edge[];
   metadata?: {
     totalNodes: number;

@@ -83,6 +83,9 @@ export function useGraphVisibility({
       .filter((node): node is GraphNode => node !== undefined)
       .map(node => ({
         ...node,
+        // CRITICAL: Preserve the selected property for React Flow
+        // This prevents selection loss when nodes array changes
+        selected: node.selected || node.id === selectedNodeId,
         data: {
           ...node.data,
           metadata: {

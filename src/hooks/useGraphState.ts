@@ -193,30 +193,43 @@ export function useViewportManager(
     
     setTimeout(() => {
       switch (priority) {
-        case 3: // Selected node
+        case 3: // Selected node - highest priority
           if (selectedNodeId) {
-            fitToNodes([selectedNodeId], { padding: 0.2, duration: 600 });
+            // When a node is selected, always focus on it
+            // The visibleNodes array from the graph already contains the correct subset
+            // based on selection + connection depth filtering from getVisibleNodeIds
+            if (visibleNodes && visibleNodes.length > 0) {
+              // Use the actual visible nodes which are already filtered correctly
+              // by getVisibleNodeIds to include selected + connections at depth N
+              fitToNodes(visibleNodes.map(n => n.id), { padding: 0.25, duration: 600 });
+            } else {
+              // Fallback to just the selected node if no visible nodes info
+              fitToNodes([selectedNodeId], { padding: 0.2, duration: 600 });
+            }
           }
           break;
           
-        case 2: // Search results
+        case 2: // Search results - only when no selection
           if (searchTerm?.trim()) {
             fitToSearchResults(searchTerm, { padding: 0.25, duration: 600 });
           }
           break;
           
-        case 1: // All visible nodes
+        case 1: // All visible nodes - lowest priority
         default:
-          // If we have specific visible nodes, fit to them
-          if (visibleNodes && visibleNodes.length > 0) {
-            fitToNodes(visibleNodes.map(n => n.id), { padding: 0.3, duration: 600 });
-          } else if (visibleNodes && visibleNodes.length === 0) {
-            // No visible nodes - likely due to connection depth with no selection
-            // Don't change viewport to avoid zooming to empty space
-            console.warn('[ViewportManager] No visible nodes to fit - maintaining current viewport');
-          } else {
-            // Fallback to fit all
-            zoomToFit();
+          // Only change viewport if we don't have a selection
+          if (!selectedNodeId) {
+            // If we have specific visible nodes, fit to them
+            if (visibleNodes && visibleNodes.length > 0) {
+              fitToNodes(visibleNodes.map(n => n.id), { padding: 0.3, duration: 600 });
+            } else if (visibleNodes && visibleNodes.length === 0) {
+              // No visible nodes - likely due to connection depth with no selection
+              // Don't change viewport to avoid zooming to empty space
+              console.warn('[ViewportManager] No visible nodes to fit - maintaining current viewport');
+            } else {
+              // Fallback to fit all
+              zoomToFit();
+            }
           }
           break;
       }
@@ -246,7 +259,8 @@ export function useViewportManager(
       const normalizedPrevSearch = prev.searchTerm?.trim() || '';
       
       // Skip if both are effectively empty (performance optimization)
-      if (!normalizedSearch && !normalizedPrevSearch && searchChanged) {
+      // BUT only skip if there's no selected node - otherwise we need to maintain focus
+      if (!normalizedSearch && !normalizedPrevSearch && searchChanged && !selectedNodeId) {
         previousState.current.searchTerm = normalizedSearch;
         return;
       }

@@ -48,6 +48,7 @@ import PuzzleNode from './nodes/PuzzleNode';
 import CharacterNode from './nodes/CharacterNode';
 import ElementNode from './nodes/ElementNode';
 import TimelineNode from './nodes/TimelineNode';
+import PlaceholderNode from './nodes/PlaceholderNode';
 import { DetailPanel } from '@/components/DetailPanel';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { useQuery } from '@tanstack/react-query';
@@ -94,6 +95,8 @@ const nodeTypes = {
   character: withTestId(CharacterNode),
   element: withTestId(ElementNode),
   timeline: withTestId(TimelineNode),
+  // Placeholder nodes use default rendering for missing/broken references
+  placeholder: withTestId(PlaceholderNode),
 };
 
 /**
@@ -281,7 +284,7 @@ function GraphViewComponent() {
     }
   }, [serverNodes.length]);
   
-  const { layoutedNodes, filteredEdges, totalUniverseNodes } = useGraphLayout({
+  const { reactFlowNodes, reactFlowEdges, visibleNodeIds } = useGraphLayout({
     nodes: serverNodes,
     edges: serverEdges,
     viewConfig,
@@ -302,7 +305,7 @@ function GraphViewComponent() {
   
   // Layout calculation complete
   useEffect(() => {
-    if (layoutedNodes.length > 0 && isLayouting) {
+    if (reactFlowNodes.length > 0 && isLayouting) {
       setLayoutProgress(100); // Complete
       // Hide progress after a short delay
       const timer = setTimeout(() => {
@@ -311,13 +314,11 @@ function GraphViewComponent() {
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [layoutedNodes.length, isLayouting]);
+  }, [reactFlowNodes.length, isLayouting]);
 
-  // Direct pass-through of computed nodes and edges to React Flow
-  // This eliminates the race condition caused by useEffect synchronization delay
-  // React Flow will always render with the current computed values
-  const reactFlowNodes = layoutedNodes as Node[];
-  const reactFlowEdges = filteredEdges;
+  // For compatibility with existing code
+  const layoutedNodes = reactFlowNodes;
+  const totalUniverseNodes = serverNodes.length;
   
   // Connect keyboard interactions and advanced graph handling
   const {
@@ -414,7 +415,7 @@ function GraphViewComponent() {
           {/* Filter status bar with comprehensive feedback */}
           <FilterStatusBar
             totalNodes={totalUniverseNodes}
-            visibleNodes={layoutedNodes.length}
+            visibleNodes={visibleNodeIds.size}
             connectionDepth={connectionDepth ?? 0}
             selectedNode={selectedNodeData}
             hasActiveFilters={hasActiveFilters()}

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useGraphData } from '@/contexts/GraphDataContext';
 import { formatCountTooltip, memoryTypeDescriptions } from '@/lib/graph/tooltipHelpers';
+import { isNodeOptimistic } from '@/lib/graph/utils';
 import { 
   Package,
   Star,
@@ -35,7 +36,7 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
   const hasSF = entity.sfPatterns !== undefined && Object.keys(entity.sfPatterns).length > 0;
-  const isOptimistic = (metadata as any).isOptimistic || false;
+  const isOptimistic = isNodeOptimistic(metadata);
   
   // Get entity lookup functions for tooltips
   const { getEntityNames } = useGraphData();

@@ -32,7 +32,7 @@
  */
 
 import { useCallback } from 'react';
-import { createEntityMutation, type EntityType as MutationEntityType } from '@/hooks/mutations';
+import { useEntityMutation, type EntityType as MutationEntityType } from '@/hooks/mutations';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 
 /**
@@ -78,10 +78,10 @@ type EntityType = MutationEntityType;
  */
 export function useEntitySave() {
   // Create mutation hooks for all entity types upfront (Rules of Hooks)
-  const characterMutation = createEntityMutation('character', 'update')();
-  const puzzleMutation = createEntityMutation('puzzle', 'update')();
-  const elementMutation = createEntityMutation('element', 'update')();
-  const timelineMutation = createEntityMutation('timeline', 'update')();
+  const characterMutation = useEntityMutation('character', 'update');
+  const puzzleMutation = useEntityMutation('puzzle', 'update');
+  const elementMutation = useEntityMutation('element', 'update');
+  const timelineMutation = useEntityMutation('timeline', 'update');
 
   /**
    * Unified save handler for all entity types.

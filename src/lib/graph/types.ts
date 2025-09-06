@@ -788,7 +788,7 @@ export interface NodeMetadata {
   isConnected?: boolean; // Node included via connection depth
   isFocused?: boolean; // Node is the current focus node
   searchMatch?: boolean; // Node matches search term
-  isOptimistic?: boolean; // Node is optimistically updated (pending server confirmation)
+  pendingMutationCount?: number; // Number of pending mutations for this entity (replaces isOptimistic boolean)
   timelineConnections?: string[];
   collaborators?: string[];
   visualHints?: VisualHints;
@@ -1118,6 +1118,7 @@ export interface GraphEdge extends Omit<Edge, 'data'> {
     label?: string; // For edge labels
     metadata?: Record<string, unknown>;
     isVirtual?: boolean; // For layout-only edges (not rendered)
+    pendingMutationCount?: number; // Number of pending mutations for this edge (unified optimistic tracking)
   };
   animated?: boolean;
   style?: React.CSSProperties;

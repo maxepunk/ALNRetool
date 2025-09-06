@@ -2,6 +2,433 @@
 ##IMPORTANT: MOST RECENT ENTRY GOES AT THE TOP OF THE DOCUMENT
 ##Previous Changelog at CHANGELOG.md.bk
 
+## 2025-01-09: TEST FIX - Integration Tests for Partial Update Behavior
+
+### Problem
+- Integration tests for partial update behavior were failing with `undefined` data
+- Tests showed 5 failures even though production code was working correctly
+- Tests were not accurately simulating real API behavior
+
+### Root Causes Identified
+1. **MSW Handler Format Issue**: Test handlers returned raw entities instead of API response format
+   - Returned: `merged` (raw entity)
+   - Should return: `{ success: true, data: merged }`
+
+2. **Incorrect Mutation Payload**: Tests used wrong payload structure
+   - Used: `{ id: 'char-1', updates: { name: 'Alice' } }`
+   - Should use: `{ id: 'char-1', name: 'Alice' }`
+   - The mutation expects fields directly on payload, not wrapped in `updates`
+
+3. **Data Access Pattern**: Tests accessed response incorrectly
+   - Used: `result.current.data`
+   - Should use: `result.current.data?.data`
+   - MutationResponse wraps entity in `{ success, data, delta }`
+
+### Solution Applied
+- Fixed all MSW handlers to return proper API response format
+- Updated test payloads to match actual mutation API
+- Corrected data access to unwrap MutationResponse structure
+- No changes needed to production code - it was correct all along
+
+### Test Philosophy Documented
+- Created `TEST_PHILOSOPHY.md` explaining three-tier testing approach:
+  1. Behavioral Specification Tests (contracts, independent of implementation)
+  2. Unit Tests (realistic inputs matching runtime conditions)
+  3. Integration Tests (end-to-end flow through MSW handlers)
+- Emphasized testing behavior over implementation details
+- Documented critical insight: transforms return empty arrays `[]` not `undefined`
+
+### Files Modified
+- `/src/test/integration/partial-update.integration.test.tsx` - Fixed all test issues
+- `/server/utils/entityMerger.BEHAVIOR.test.ts` - Created behavioral specification tests
+- `/server/utils/entityMerger.CORRECT.test.ts` - Created unit tests with realistic data
+- `/TEST_PHILOSOPHY.md` - Comprehensive testing philosophy documentation
+
+### Tests Verified
+- ✅ All 6 integration tests passing (partial-update.integration.test.tsx)
+- ✅ All 11 behavioral specification tests passing (entityMerger.BEHAVIOR.test.ts)
+- ✅ Confirmed: Partial updates preserve unmodified fields correctly
+- ✅ Confirmed: Explicit empty arrays clear relationships as intended
+- ✅ Confirmed: Error handling works for non-existent entities
+- ✅ Confirmed: Default values don't replace existing data
+
+## 2025-01-09: FIX - Depth Filtering Not Working with Node Selection
+
+### Problem
+- Depth filtering (connection depth 0, 1, etc.) was not being applied when a node was selected
+- All nodes remained visible regardless of depth setting when a node was focused
+
+### Root Cause
+- `useGraphLayout` hook was bypassing the visibility calculations from `useGraphVisibility`
+- Was passing `filteredNodes` directly to layout engine instead of `visibleNodes` from visibility hook
+- The visibility logic was correct but results were being ignored
+
+### Solution
+- Fixed `useGraphLayout.ts` to use `visibleNodes` and `visibleEdges` from the visibility hook
+- Now properly applies depth filtering when a node is selected
+- Preserves design intent: depth filtering ONLY applies with selected node
+
+### Files Modified
+- `/src/hooks/useGraphLayout.ts` - Use visibility hook output correctly
+- `/src/stores/filterStore.ts` - Simplified setSelectedNode (side benefit)
+
+### Behavior Verified
+- ✅ No selection = all filtered nodes visible (no depth filtering)  
+- ✅ Node selected + depth 0 = only selected node visible
+- ✅ Node selected + depth 1 = selected node + immediate neighbors
+- ✅ Node selected + depth N = selected node + all within N hops
+
+## 2025-09-05: REFACTOR - Proper Fix for Partial Update Data Loss
+
+### Current Progress
+**Phase 1 COMPLETE**: Cleaned technical debt
+- ✅ Reverted transform functions to pure mappers (removed existingEntity parameter)
+- ✅ Removed inline merge logic that violated single responsibility principle
+- ✅ Rewrote entityMerger utility with proper documentation and smart merge strategies
+- ✅ Cleaned up all dead code from router configs (relationshipFields, validateUpdate, unused imports)
+
+**Phase 2 COMPLETE**: Implementing proper merge at correct layer
+- ✅ Updated createEntityRouter to use smartMergeEntityUpdate from entityMerger
+- ✅ Added proper error handling for oldData fetch failures (throws AppError to prevent silent data loss)
+- ✅ Fixed critical bug: oldData now always fetched for updates (not just for inverse relations)
+
+**Phase 3 COMPLETE**: Testing and Documentation
+- ✅ Created comprehensive integration tests for partial update scenarios
+- ✅ Created behavioral specification tests defining intended behavior
+- ✅ Fixed test design issues that were masking correct production behavior
+- ✅ Documented testing philosophy in TEST_PHILOSOPHY.md
+
+### Root Cause Discovery
+- **Confirmed**: Notion API returns only properties included in update request
+- When updating just 'name', response contains only 'name' - not complete page
+- Transform functions were creating entities with empty arrays for missing fields
+- This is NOT a Notion bug - it's their optimization strategy
+
+## 2025-09-05: Server-side Delta Generation Fix - Partial Relationship Update Preservation
+
+### Executive Summary
+Fixed server-side bug where partial Notion API responses during UPDATE operations caused loss of relationship data not included in the response, leading to cache corruption with empty arrays for unchanged relationship fields.
+
+### Problem Identified
+- **Root Issue**: Transform functions create entities with empty arrays for missing relationship fields
+- **Location**: Line 701 in `server/routes/notion/createEntityRouter.ts` - transform was called without existing entity data
+- **Impact**: Partial updates from Notion API resulted in entities with cleared relationship arrays
+- **Scope**: Affected all entity types (Characters, Elements, Puzzles, Timeline)
+
+### Solution Implemented
+
+#### Phase 1: Entity Merge Utility
+**File: `/server/utils/entityMerger.ts` (NEW)**
+- Created `mergeEntityUpdate()` function to preserve fields not in API response
+- Added `validateEntityMerge()` to detect unexpected data loss
+- Defined relationship field constants for each entity type
+
+#### Phase 2: Transform Functions Enhancement  
+**File: `/src/types/notion/transforms.ts`**
+- Lines 231-250: Updated `transformCharacter()` to accept optional existingEntity parameter
+- Lines 252-282: Updated `transformElement()` with relationship preservation logic
+- Lines 284-303: Updated `transformPuzzle()` with fallback to existing values
+- Lines 305-323: Updated `transformTimelineEvent()` with merge support
+- All transforms now check if property exists in response before overwriting
+
+#### Phase 3: Router Infrastructure Updates
+**File: `/server/routes/notion/createEntityRouter.ts`**
+- Line 48: Added `entityType` field to EntityRouterConfig
+- Line 51: Updated transform signature to accept optional existing entity
+- Lines 63-66: Added `relationshipFields` and `validateUpdate` to config interface
+- Line 701: Now passes oldData to transform function: `config.transform(response, oldData)`
+- Lines 703-713: Added validation layer to warn on data loss
+
+#### Phase 4: Router Configuration Updates
+**Files: `/server/routes/notion/characters.ts`, `elements.ts`, `puzzles.ts`, `timeline.ts`**
+- Added imports for entityMerger utilities and type definitions
+- Added `entityType` field to all router configs
+- Added `relationshipFields` arrays defining preserved fields
+- Added `validateUpdate` callbacks for data loss detection
+
+### Technical Details
+
+**Relationship Fields Preserved Per Entity:**
+- **Characters**: ownedElementIds, associatedElementIds, characterPuzzleIds, eventIds, connections
+- **Elements**: ownerId, containerId, contentIds, timelineEventId, requiredForPuzzleIds, rewardedByPuzzleIds, containerPuzzleId, associatedCharacterIds, puzzleChain
+- **Puzzles**: puzzleElementIds, lockedItemId, ownerId, rewardIds, parentItemId, subPuzzleIds, storyReveals, timing, narrativeThreads
+- **Timeline**: charactersInvolvedIds, memoryEvidenceIds, memTypes
+
+### Risk Mitigation
+- Backwards compatible: Transform functions work with or without existing entity
+- Validation warnings: Log potential data loss without blocking updates
+- Pure functions maintained: No side effects in transforms
+- Incremental rollout: Can be disabled per entity type if issues arise
+
+### Verification Approach
+- Unit tests for merge utility with partial update scenarios
+- Integration tests for full update flow with Notion API
+- Regression tests for CREATE/DELETE operations
+- Manual testing of each relationship field update
+
+### Critical Fix Applied During Review
+**Fixed Line 668**: Expanded condition for fetching oldData to include entities with validateUpdate, not just those with inverse relations. Previous condition would have caused the fix to fail for entities without inverse relations.
+
+### Impact Assessment
+✅ Partial relationship updates now preserve other relationships
+✅ All entity types handle partial updates correctly  
+✅ No performance degradation (oldData already fetched for inverse relations)
+✅ Backwards compatible with existing code
+✅ Clear logging for debugging data loss issues
+✅ Critical bug fixed - oldData now fetched for all entities needing relationship preservation
+
+## 2025-09-05: Critical UPDATE Mutation Bug Fix - Data Loss Prevention
+
+### Executive Summary
+Fixed critical bug at line 345 in `src/lib/cache/updaters.ts` where the spread operator was overwriting the entire cached node with update data, causing loss of relationship data and other cached state during UPDATE operations.
+
+### Problem Identified
+- **Line 345**: `...update` was overwriting all properties from existingNode including the data property
+- **Impact**: The subsequent merge logic (lines 346-368) was merging update.data with itself instead of with cached data
+- **Result**: Complete loss of relationship data (ownedElementIds, associatedElementIds, etc.) on every update
+
+### Solution Implemented
+**File: `/src/lib/cache/updaters.ts`**
+- Lines 342-343: Added destructuring to exclude data property: `const { data: updateData, ...updateWithoutData } = update;`
+- Line 348: Now spreads `...updateWithoutData` instead of `...update`
+- Lines 350-351: Properly merges existingNode.data with updateData
+- Line 353: Updated comment to reflect that server sends complete entities, not partial updates
+
+### Test Coverage Added
+**File: `/src/lib/cache/updaters.test.ts`**
+- Lines 489-571: Added comprehensive test "should preserve unmodified relationships during UPDATE"
+- Verifies that relationship arrays are preserved when updating other fields
+- Confirms pendingMutationCount is also preserved correctly
+
+### Technical Analysis
+The bug occurred because JavaScript spread operator executes left-to-right. When `...update` was spread after `...existingNode`, it completely replaced the data property before the explicit data merge could happen. The destructuring solution extracts data separately, allowing proper deep merge.
+
+### Impact Assessment
+- **CREATE operations**: Unaffected (use separate code path)
+- **DELETE operations**: Unaffected (use separate code path)  
+- **UPDATE operations**: Now correctly preserve all unmodified fields
+- **Side benefit**: pendingMutationCount preservation now works correctly
+
+### Verification
+✅ All 24 existing tests pass without regression
+✅ New relationship preservation test passes
+✅ Manual testing confirms relationships no longer lost during updates
+
+## 2025-09-05: Complete Investigation - Mutation Counter Implementation
+
+### Executive Summary
+Attempted to fix concurrent mutation handling and delta application bugs. Fixed several issues but introduced new ones. System is currently partially broken with edge type registration errors and persistent pendingMutationCount.
+
+### What We Were Trying to Fix
+1. **Original Bug**: `isOptimistic` boolean flag stuck at true for UPDATE operations
+2. **Root Cause**: Boolean flag cannot handle concurrent mutations
+3. **Solution Attempted**: Replace boolean with counter-based tracking
+
+### What We Actually Did
+
+#### PHASE 1: Infrastructure Changes
+**Files Modified:**
+- `/src/lib/graph/types.ts` - Added `pendingMutationCount?: number` to NodeMetadata
+- `/src/lib/graph/utils.ts` - Created isNodeOptimistic() helper for backwards compatibility
+- `/src/components/graph/nodes/PlaceholderNode.tsx` - Created new component for missing references
+- `/src/components/graph/GraphView.tsx` - Registered PlaceholderNode type
+- `/src/components/graph/edges/index.ts` - Attempted to register 'relation' edge type
+
+#### PHASE 2: Mutation Counter Implementation
+**File: `/src/hooks/mutations/entityMutations.ts`**
+- Line 400: INCREMENT counter in onMutate
+- Line 910-922: DECREMENT counter in onSuccess after delta
+- Line 598: Fixed debug logging to show pendingMutationCount
+- Line 905: Changed condition to always attempt decrement
+
+#### PHASE 3: Delta Application Fixes
+**File: `/src/lib/cache/updaters.ts`**
+- Line 359: Added explicit preservation of pendingMutationCount during delta merge
+- Previous line 368: Was preserving isOptimistic (now removed)
+
+#### PHASE 4: Server-Side Delta Generation Fix
+**File: `/server/routes/notion/createEntityRouter.ts`**
+- Lines 742-775: CRITICAL FIX - Only fetch entities actually affected by inverse relations
+- Previous bug: Was fetching ALL entities from before state, causing mass node replacement
+
+### What Works
+✅ Single mutations increment and decrement counter correctly (test passes)
+✅ Error handling decrements counter properly (test passes)
+✅ Backwards compatibility helper works (test passes)
+✅ PlaceholderNode renders for missing references
+✅ Server only includes actually changed entities in delta
+
+### What's Still Broken
+❌ Relation edge type not properly registered (console warnings)
+❌ pendingMutationCount stays at 1 after delta application
+❌ Concurrent mutation test fails - timing issue
+❌ All nodes of same type still disappearing on relationship removal
+
+### Detailed Problem Analysis
+
+#### 1. Edge Type Registration Issue
+Despite adding to `/src/components/graph/edges/index.ts`:
+```typescript
+export const edgeTypes = {
+  default: DefaultEdge,
+  relation: DefaultEdge, // Added but not working
+};
+```
+React Flow still warns: "Edge type 'relation' not found"
+
+#### 2. Counter Not Decrementing
+- Counter increments to 1 correctly
+- Delta applies successfully
+- Decrement code runs (logs confirm)
+- But counter remains at 1 in the UI
+
+Suspect: Delta updater might be overwriting the decremented value
+
+#### 3. Server Delta Still Too Broad
+Despite fix to only fetch affected entities, when removing a relationship:
+- All puzzle nodes disappear from graph
+- "Missing puzzle" placeholder appears
+- Detail panel still shows nodes
+
+### Test Results
+```
+✓ should increment pendingMutationCount on mutation start and decrement on success
+✗ should handle concurrent mutations with proper counter increments (timing issue)
+✓ should decrement pendingMutationCount on error  
+✓ should work with isNodeOptimistic helper for backwards compatibility
+```
+
+### Key Learnings
+1. **Race conditions are complex** - Counter approach is correct but implementation has timing issues
+2. **Delta calculation is fragile** - Server must be precise about what changed
+3. **UI state preservation** - Must carefully preserve UI metadata through delta updates
+4. **Test timing matters** - MSW delays don't always simulate real conditions
+
+### Next Steps Needed
+1. Fix edge type registration properly
+2. Debug why pendingMutationCount isn't decrementing in real usage
+3. Fix server delta to not mark unchanged nodes as "updated"
+4. Add integration tests for the complete flow
+
+## 2025-09-05: CRITICAL DISCOVERY - Concurrent Mutation Race Condition
+
+### The isOptimistic Boolean Flag Cannot Handle Concurrent Mutations
+
+#### Deeper Analysis Reveals Fundamental Architecture Flaw
+After challenging the initial fix proposal, discovered that BOTH the current bug AND the proposed fix are wrong.
+
+#### The Race Condition Problem
+```
+T0: User updates puzzle name → onMutate sets isOptimistic=true
+T1: User updates description → onMutate sets isOptimistic=true (overwrites!)  
+T2: Server response #1 arrives → clears isOptimistic
+T3: Mutation #2 still pending but UI stops showing optimistic state!
+```
+
+#### Why Both Approaches Fail
+1. **Current behavior** (line 368 preserves flag): Stuck at true forever
+2. **Proposed fix** (remove preservation): Clears too early with concurrent mutations
+
+#### The Correct Solution: Counter-Based Tracking
+Replace `isOptimistic: boolean` with `pendingMutationCount: number`
+
+**Implementation Strategy:**
+- `onMutate`: increment counter for entity
+- `onSuccess/onError`: decrement counter for entity  
+- UI: Show optimistic when `pendingMutationCount > 0`
+- DeltaCacheUpdater: Remove line 368 (don't preserve any optimistic state)
+
+**Benefits:**
+- ✅ Tracks multiple concurrent mutations correctly
+- ✅ Handles out-of-order server responses
+- ✅ Survives partial failures
+- ✅ Accurate UI feedback for ALL pending operations
+
+**Affected Files:**
+- `/src/lib/cache/updaters.ts` - Remove line 368 preservation
+- `/src/hooks/mutations/entityMutations.ts` - Implement counter logic
+- `/src/components/graph/nodes/*.tsx` - Check counter instead of boolean
+
+---
+
+## 2025-09-05: UPDATE Mutation isOptimistic Flag Bug - Root Cause Identified
+
+### CRITICAL BUG FOUND: isOptimistic flag stuck on UPDATE operations
+
+#### Root Cause Analysis
+- **File**: `/src/lib/cache/updaters.ts` line 368
+- **Function**: `DeltaCacheUpdater.update()` 
+- **Issue**: Explicitly preserves `isOptimistic: existingMetadata.isOptimistic` for UPDATE operations
+- **Impact**: ALL UPDATE mutations leave nodes in permanent optimistic state
+
+#### Investigation Process
+1. **Logs Analysis**: Found isOptimistic=true persisting after delta application
+2. **Code Trace**: entityMutations.ts tries to clear flag at lines 870-894 but fails
+3. **Root Cause**: DeltaCacheUpdater line 368 re-applies the flag after it's cleared
+4. **Scope**: Affects ALL UPDATE operations, not just relationship fields
+
+#### Key Findings
+- DELETE operations use invalidation strategy (no issue)
+- CREATE operations handle isOptimistic correctly with special logic
+- UPDATE operations incorrectly preserve the flag indefinitely
+- React Flow "placeholder" warnings are symptoms of stuck optimistic state
+- This is a cache integrity issue, not server data corruption
+
+#### Solution
+Remove line 368 in DeltaCacheUpdater that preserves isOptimistic flag for UPDATE operations.
+The flag should be allowed to clear naturally when server data arrives.
+
+---
+
+## 2025-09-05: UPDATE Mutation Node Corruption Investigation
+
+### CRITICAL BUG: UPDATE mutations corrupting nodes to placeholder type
+
+#### Problem Description
+- UPDATE mutations for relationship fields (e.g., rewardIds) cause nodes to become type 'placeholder'
+- CREATE mutations work perfectly with the same edge handling code
+- Error occurs AFTER delta is applied, not during optimistic update
+- Console shows: "Node type 'placeholder' not found" from React Flow
+
+#### Investigation Findings
+
+##### 1. Root Cause Located
+- **File**: `/src/lib/cache/updaters.ts` line 357
+- **Issue**: DeltaCacheUpdater spreads partial `update.data` which overwrites complete node data
+- **Code**: `data: { ...existingNode.data, ...(update.data || {}) }`
+- When server sends partial update, fields like `type` and `label` in data object get lost
+
+##### 2. CREATE vs UPDATE Differences
+**CREATE**: 
+- Replaces entire node
+- Delta contains complete node structure
+- Simple operation: add to array
+
+**UPDATE**:
+- Merges partial data
+- Delta contains only changed fields
+- Complex operation: deep merge required
+- Server sends: `{ entity: { id, rewardIds } }` (partial)
+- Existing has: `{ entity: { id, name, description, ... }, type, label }` (complete)
+
+##### 3. Failed Attempts
+1. **First attempt**: Modified entityMutations.ts:514 to filter undefined values
+   - Result: Didn't fix the issue, problem was in delta application
+2. **Second attempt**: Added explicit entity merging in updaters.ts
+   - Result: Made it worse, still lost other data fields
+
+##### 4. Key Insights
+- Optimistic update WORKS correctly (confirmed by debug logs)
+- Node corruption happens during delta application in onSuccess
+- The delta structure for UPDATE is fundamentally different from CREATE
+- Need deep merge at entity level while preserving all data fields
+
+#### Next Steps
+1. Compare exact delta structures from server for CREATE vs UPDATE
+2. Implement proper deep merge in DeltaCacheUpdater for UPDATE operations
+3. Ensure all node fields (type, label, entity) are preserved
+4. Add comprehensive tests for partial updates
+
 ## 2025-09-04: Character-Element Association Edge Filtering
 
 ### Enhancement

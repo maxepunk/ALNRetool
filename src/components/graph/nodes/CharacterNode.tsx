@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useGraphData } from '@/contexts/GraphDataContext';
 import { formatCountTooltip, characterTierDescriptions } from '@/lib/graph/tooltipHelpers';
+import { isNodeOptimistic } from '@/lib/graph/utils';
 
 /**
  * Custom React Flow node component for Character entities
@@ -22,7 +23,7 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
   const nodeData = data as GraphNodeData<Character>;
   const { entity, metadata } = nodeData;
   const hasError = metadata.errorState !== undefined;
-  const isOptimistic = (metadata as any).isOptimistic || false;
+  const isOptimistic = isNodeOptimistic(metadata);
   
   // Get entity lookup functions for tooltips
   const { getEntityNames } = useGraphData();
