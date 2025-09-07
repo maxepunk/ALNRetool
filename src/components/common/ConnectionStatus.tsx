@@ -11,28 +11,22 @@ interface ConnectionStatusProps {
   lastSyncTime: string
 }
 
-export default function ConnectionStatus({ 
-  isOnline, 
-  lastSyncTime 
+export default function ConnectionStatus({
+  isOnline,
+  lastSyncTime,
 }: ConnectionStatusProps) {
   return (
     <div className="flex items-center gap-2" data-testid="connection-status">
-      <Badge 
-        variant={isOnline ? "default" : "secondary"}
-        className={cn(
-          "flex items-center gap-1.5",
-          isOnline ? "bg-green-100 text-green-800 hover:bg-green-200" : "bg-gray-100 text-gray-600"
-        )}
-      >
-        <span 
+      <Badge variant={isOnline ? 'success' : 'secondary'}>
+        <span
           className={cn(
-            "w-2 h-2 rounded-full",
-            isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
+            'w-2 h-2 rounded-full',
+            isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
           )}
         />
         <span>{isOnline ? 'Connected' : 'Offline'}</span>
       </Badge>
-      
+
       {isOnline && lastSyncTime && (
         <span className="text-xs text-gray-500">
           Last synced: <time>{lastSyncTime}</time>

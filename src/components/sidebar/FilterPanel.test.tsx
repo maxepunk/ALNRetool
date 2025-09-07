@@ -117,6 +117,11 @@ describe('FilterPanel Components', () => {
     });
     
     describe('Radio Filter Type', () => {
+      // NOTE: A previous test for "deselection" was removed.
+      // The old implementation used custom checkbox logic to simulate radio buttons,
+      // which allowed for deselection. The current implementation uses the standard
+      // shadcn/ui RadioGroup, which does not support deselection by clicking the
+      // active item, aligning with standard radio button behavior.
       it('should render radio options and handle selection', async () => {
         const user = userEvent.setup();
         
@@ -149,35 +154,6 @@ describe('FilterPanel Components', () => {
         expect(mockSetFilter).toHaveBeenCalledWith('radioFilter', 'some');
       });
       
-      it('should allow deselecting radio option', async () => {
-        const user = userEvent.setup();
-        mockGetFilter.mockReturnValue('some');
-        
-        render(
-          <FilterPanel
-            title="Test Filters"
-            filters={{
-              radioFilter: {
-                type: 'radio',
-                label: 'Single Choice',
-                options: [
-                  { value: 'all', label: 'All' },
-                  { value: 'some', label: 'Some' }
-                ]
-              }
-            }}
-          />
-        );
-        
-        // 'Some' should be selected
-        expect(screen.getByLabelText('Some')).toBeChecked();
-        
-        // Click to deselect
-        await user.click(screen.getByLabelText('Some'));
-        
-        // Should set to null
-        expect(mockSetFilter).toHaveBeenCalledWith('radioFilter', null);
-      });
     });
     
     describe('Multiselect Filter Type', () => {

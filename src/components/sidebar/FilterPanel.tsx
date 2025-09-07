@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
-// Radio group removed - using checkboxes for all filters
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -89,30 +89,26 @@ export function FilterPanel({ title, filters, entityType }: FilterPanelProps) {
         );
       
       case 'radio':
-        // Use checkboxes with single selection behavior for radio
-        const currentValue = store.getFilter(key);
         return (
           <div key={key} className="space-y-2">
             <Label>{config.label}</Label>
-            {config.options?.map(option => (
-              <div key={option.value} className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${key}-${option.value}`}
-                  checked={currentValue === option.value}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      store.setFilter(key, option.value);
-                    } else {
-                      store.setFilter(key, null);
-                    }
-                  }}
-                />
-                <Label htmlFor={`${key}-${option.value}`}>{option.label}</Label>
-              </div>
-            ))}
+            <RadioGroup
+              value={store.getFilter(key) || ''}
+              onValueChange={(value) => store.setFilter(key, value)}
+            >
+              {config.options?.map((option) => (
+                <div
+                  key={option.value}
+                  className="flex items-center space-x-2"
+                >
+                  <RadioGroupItem value={option.value} id={`${key}-${option.value}`} />
+                  <Label htmlFor={`${key}-${option.value}`}>{option.label}</Label>
+                </div>
+              ))}
+            </RadioGroup>
           </div>
         );
-      
+
       case 'slider':
         // Use input with type=range for slider functionality
         return (
