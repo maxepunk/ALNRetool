@@ -195,18 +195,19 @@ export function FocusNodeSelector({
                             {type.charAt(0).toUpperCase() + type.slice(1)}s
                           </div>
                           {typeEntities.map(entity => (
-                            <button
+                            <Button
                               key={entity.id}
+                              variant="ghost"
+                              justify="start"
+                              className={cn(
+                                "w-full",
+                                selectedNodeId === entity.id && "bg-accent"
+                              )}
                               onClick={() => {
                                 setSelectedNode(entity.id === selectedNodeId ? null : entity.id);
                                 setOpen(false);
                                 setSearch('');
                               }}
-                              className={cn(
-                                "relative flex w-full cursor-pointer select-none items-center px-2 py-1.5 text-sm outline-none",
-                                "hover:bg-accent hover:text-accent-foreground",
-                                selectedNodeId === entity.id && "bg-accent"
-                              )}
                             >
                               <Check
                                 className={cn(
@@ -216,7 +217,7 @@ export function FocusNodeSelector({
                               />
                               <Icon className="mr-2 h-4 w-4" />
                               <span className="truncate">{entity.name}</span>
-                            </button>
+                            </Button>
                           ))}
                         </div>
                       );
@@ -226,18 +227,19 @@ export function FocusNodeSelector({
                     filteredEntities.map(entity => {
                       const Icon = entityIcons[entity.type];
                       return (
-                        <button
+                        <Button
                           key={entity.id}
+                          variant="ghost"
+                          justify="start"
+                          className={cn(
+                            "w-full",
+                            selectedNodeId === entity.id && "bg-accent"
+                          )}
                           onClick={() => {
                             setSelectedNode(entity.id === selectedNodeId ? null : entity.id);
                             setOpen(false);
                             setSearch('');
                           }}
-                          className={cn(
-                            "relative flex w-full cursor-pointer select-none items-center px-2 py-1.5 text-sm outline-none",
-                            "hover:bg-accent hover:text-accent-foreground",
-                            selectedNodeId === entity.id && "bg-accent"
-                          )}
                         >
                           <Check
                             className={cn(
@@ -247,7 +249,7 @@ export function FocusNodeSelector({
                           />
                           <Icon className="mr-2 h-4 w-4" />
                           <span className="truncate">{entity.name}</span>
-                        </button>
+                        </Button>
                       );
                     })
                   )}

@@ -157,9 +157,11 @@ const CollapsibleSection: React.FC<SectionProps> = ({
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
-      <button
+      <Button
+        variant="ghost"
+        justify="start"
+        className="w-full hover:text-foreground/80"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 w-full text-left hover:text-foreground/80 transition-colors"
       >
         {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
@@ -170,7 +172,7 @@ const CollapsibleSection: React.FC<SectionProps> = ({
             {badge}
           </Badge>
         )}
-      </button>
+      </Button>
       {isOpen && <div className="space-y-4 pl-6">{children}</div>}
     </div>
   );

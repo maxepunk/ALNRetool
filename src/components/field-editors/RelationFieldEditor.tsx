@@ -10,6 +10,7 @@
 import React, { useMemo, useCallback } from 'react';
 import { X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
@@ -245,14 +246,16 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
               <span className="mr-1">
                 {entity.name || entity.description || `ID: ${entity.id.slice(0, 8)}...`}
               </span>
-              <button
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => handleRemove(entity.id)}
                 disabled={disabled}
-                className="ml-1 hover:bg-white/20 rounded p-0.5 transition-colors disabled:opacity-50"
+                className="ml-1 h-auto p-0.5"
                 aria-label={`Remove ${entity.name || entity.description || entity.id}`}
               >
                 <X className="h-3 w-3" />
-              </button>
+              </Button>
             </Badge>
           ))}
         </div>

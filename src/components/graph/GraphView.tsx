@@ -66,6 +66,7 @@ import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 import { GraphDataContextProvider } from '@/contexts/GraphDataContext';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -414,12 +415,11 @@ function GraphViewComponent() {
       <div className="h-full w-full flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-500 mb-4">Error loading graph data</p>
-          <button 
+          <Button
             onClick={() => refetchAll()}
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
           >
             Retry
-          </button>
+          </Button>
         </div>
       </div>
     );

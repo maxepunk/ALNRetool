@@ -3,6 +3,7 @@ import { useFilterStore } from '@/stores/filterStore';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { 
   Users, 
   Puzzle, 
@@ -81,20 +82,24 @@ const EntityTypeToggle = memo(() => {
           </Badge>
         </div>
         <div className="flex gap-1">
-          <button
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={showAllEntities}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
             title="Show all entity types"
+            className="p-1"
           >
             <Eye className="h-4 w-4 text-gray-600" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={hideAllEntities}
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
             title="Hide all entity types"
+            className="p-1"
           >
             <EyeOff className="h-4 w-4 text-gray-600" />
-          </button>
+          </Button>
         </div>
       </div>
       

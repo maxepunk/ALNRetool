@@ -66,37 +66,42 @@ export function FloatingActionButton({ hidden }: FloatingActionButtonProps) {
           className="absolute top-16 right-0 w-48 bg-popover border rounded-md shadow-lg p-1"
           style={{ zIndex: zIndex.fabDropdown }}
         >
-          <button
-            className="w-full flex items-center px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+          <Button
+            variant="ghost"
+            justify="start"
+            className="w-full"
             onClick={() => handleMenuItemClick('character')}
           >
-            <User className="mr-2 h-4 w-4" />
+            <User className="h-4 w-4" />
             <span>New Character</span>
-          </button>
-          
-          <button
-            className="w-full flex items-center px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+          </Button>
+          <Button
+            variant="ghost"
+            justify="start"
+            className="w-full"
             onClick={() => handleMenuItemClick('element')}
           >
-            <Package className="mr-2 h-4 w-4" />
+            <Package className="h-4 w-4" />
             <span>New Element</span>
-          </button>
-          
-          <button
-            className="w-full flex items-center px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+          </Button>
+          <Button
+            variant="ghost"
+            justify="start"
+            className="w-full"
             onClick={() => handleMenuItemClick('puzzle')}
           >
-            <Puzzle className="mr-2 h-4 w-4" />
+            <Puzzle className="h-4 w-4" />
             <span>New Puzzle</span>
-          </button>
-          
-          <button
-            className="w-full flex items-center px-2 py-1.5 text-sm rounded-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+          </Button>
+          <Button
+            variant="ghost"
+            justify="start"
+            className="w-full"
             onClick={() => handleMenuItemClick('timeline')}
           >
-            <Calendar className="mr-2 h-4 w-4" />
+            <Calendar className="h-4 w-4" />
             <span>New Timeline Event</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

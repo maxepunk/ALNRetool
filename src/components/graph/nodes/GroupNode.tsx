@@ -3,6 +3,7 @@ import type { NodeProps } from '@xyflow/react';
 import { ChevronDown, ChevronRight, FileText, CheckCircle, Target } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface GroupNodeData extends Record<string, unknown> {
@@ -65,12 +66,14 @@ const GroupNode = memo(({ data, selected }: NodeProps) => {
       {/* Group header */}
       <div className="flex items-center justify-between p-3 border-b bg-white/80">
         <div className="flex items-center gap-2">
-          <button
-            className="p-1 hover:bg-gray-100 rounded transition-colors"
+          <Button
+            variant="ghost"
+            size="xs"
+            className="p-1"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
             {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
-          </button>
+          </Button>
           <span className="font-semibold text-sm">{nodeData.label}</span>
           {nodeData.childCount && (
             <span className="text-xs text-gray-500">({nodeData.childCount} puzzles)</span>
