@@ -28,8 +28,12 @@ interface FilterPanelProps {
   entityType?: 'character' | 'puzzle' | 'element' | 'timeline';
 }
 
-export function FilterPanel({ title, filters }: FilterPanelProps) {
+export function FilterPanel({ title, filters, entityType }: FilterPanelProps) {
   const store = useFilterStore();
+  const entityVisibility = useFilterStore(state => state.entityVisibility);
+  
+  // Check if this entity type is hidden
+  const isDisabled = entityType && !entityVisibility[entityType];
   
   const renderFilter = (key: string, config: FilterConfig) => {
     switch (config.type) {
@@ -181,11 +185,18 @@ export function FilterPanel({ title, filters }: FilterPanelProps) {
   };
   
   return (
-    <Card>
+    <Card className={isDisabled ? 'opacity-50' : ''}>
       <CardHeader>
-        <CardTitle>{title}</CardTitle>
+        <CardTitle className="flex items-center justify-between">
+          {title}
+          {isDisabled && (
+            <Badge variant="secondary" className="text-xs">
+              Hidden
+            </Badge>
+          )}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={`space-y-4 ${isDisabled ? 'pointer-events-none' : ''}`}>
         {Object.entries(filters).map(([key, config]) => renderFilter(key, config))}
       </CardContent>
     </Card>

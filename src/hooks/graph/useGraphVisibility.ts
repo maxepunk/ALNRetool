@@ -29,6 +29,7 @@ interface UseGraphVisibilityParams {
   // Visibility controls
   selectedNodeId: string | null;
   connectionDepth: number | null;
+  activeFilteredTypes: Set<string>;  // Entity types with active filters for focus mode
 }
 
 interface UseGraphVisibilityResult {
@@ -60,6 +61,7 @@ export function useGraphVisibility({
   allEdges,
   selectedNodeId,
   connectionDepth,
+  activeFilteredTypes,
 }: UseGraphVisibilityParams): UseGraphVisibilityResult {
   // DIAGNOSTIC: Log input edges
   // Note: Timeline nodes don't use 'timeline-' prefix, they use raw Notion IDs
@@ -68,12 +70,26 @@ export function useGraphVisibility({
     // Step 1: Get IDs of filtered nodes
     const filteredNodeIds = new Set(filteredNodes.map(n => n.id));
     
-    // Step 2: Apply visibility rules based on selection and depth
+    // Step 2: Determine expansion seed nodes based on active filters
+    let expansionSeedIds: Set<string> | null = null;
+    
+    if (activeFilteredTypes.size > 0) {
+      // Focus mode: only expand from nodes of actively filtered types
+      expansionSeedIds = new Set(
+        filteredNodes
+          .filter(n => n.data?.isFromFilteredType)  // Use the metadata we added in useGraphLayout
+          .map(n => n.id)
+      );
+    }
+    // If no active filters, expansionSeedIds stays null (expand from all - backward compatible)
+    
+    // Step 3: Apply visibility rules based on selection and depth
     const visibleNodeIds = getVisibleNodeIds(
       filteredNodeIds,
       allEdges,
       selectedNodeId,
-      connectionDepth || 0
+      connectionDepth || 0,
+      expansionSeedIds  // Pass the seed nodes for focused expansion
     );
     
     // Step 3: Build final nodes with metadata
@@ -116,6 +132,7 @@ export function useGraphVisibility({
     allEdges,
     // Visibility controls
     selectedNodeId,
-    connectionDepth
+    connectionDepth,
+    activeFilteredTypes  // Add to dependencies
   ]);
 }

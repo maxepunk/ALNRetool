@@ -120,13 +120,21 @@ export function getNodesWithinDepth(
 
 /**
  * Determine which nodes should be visible based on selection and connection depth.
- * Simplified logic without filter modes.
+ * Supports focus mode by accepting optional expansion seed nodes.
+ * 
+ * @param filteredNodeIds - All nodes that pass filters
+ * @param edges - All edges for traversal
+ * @param selectedNodeId - Currently selected node
+ * @param connectionDepth - How many hops to expand
+ * @param expansionSeedIds - Optional: Nodes to expand from (subset of filteredNodeIds for focus mode)
+ *                          If null, expands from all filtered nodes (backward compatibility)
  */
 export function getVisibleNodeIds(
   filteredNodeIds: Set<string>,
   edges: Edge[],
   selectedNodeId: string | null,
-  connectionDepth: number
+  connectionDepth: number,
+  expansionSeedIds: Set<string> | null = null
 ): Set<string> {
   // Priority 1: A specific node is selected. Handle this case first.
   // IMPORTANT: Always show selected node, even if it doesn't match filters
@@ -159,20 +167,32 @@ export function getVisibleNodeIds(
     return connectedNodes;
   }
   
-  // Priority 2: No selection, and depth is 0. Just show the base filtered nodes.
-  // This is now an explicit check and only runs if no node is selected.
+  // Priority 2: No selection, and depth is 0. 
+  // In focus mode, show ONLY the seed nodes. Otherwise show all filtered nodes.
   if (connectionDepth === 0) {
-    return filteredNodeIds;
+    return expansionSeedIds || filteredNodeIds;
   }
   
-  // Priority 3: No selection, but we need to expand from all filtered nodes.
-  const connectedIds = new Set(filteredNodeIds);
+  // Priority 3: No selection, but we need to expand from seed nodes.
+  // Use expansionSeedIds if provided (focus mode), otherwise all filtered nodes (legacy)
+  const seedNodes = expansionSeedIds || filteredNodeIds;
+  
+  // CRITICAL: In focus mode, start with ONLY seed nodes, not all filtered nodes
+  // This allows expansion to include connected nodes that don't match filters
+  const connectedIds = expansionSeedIds ? new Set(seedNodes) : new Set(filteredNodeIds);
   
   // IMPORTANT: Use ALL edges, not just filtered ones, to properly calculate connections
   // This ensures that when entity types are toggled visible, their connections are preserved
-  for (const nodeId of filteredNodeIds) {
+  // Expand only from seed nodes (focused expansion when seeds provided)
+  for (const nodeId of seedNodes) {
     const connections = getNodesWithinDepth(nodeId, edges, connectionDepth);
-    connections.forEach(id => connectedIds.add(id));
+    connections.forEach(id => {
+      // In focus mode, only add connections that exist in filteredNodeIds (are visible)
+      // In normal mode, add all connections
+      if (!expansionSeedIds || filteredNodeIds.has(id)) {
+        connectedIds.add(id);
+      }
+    });
   }
   
   return connectedIds;

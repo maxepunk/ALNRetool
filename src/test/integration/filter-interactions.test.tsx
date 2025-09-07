@@ -92,6 +92,7 @@ vi.mock('@/hooks/useViewConfig', () => ({
 vi.mock('@/services/graphApi', () => ({
   graphApi: {
     getComplete: vi.fn(() => {
+      console.log('Mock API called - returning test data');
       const response = {
       nodes: [
         {
@@ -257,6 +258,11 @@ describe('Filter Component Interactions', () => {
       await waitFor(() => {
         expect(screen.getByTestId('react-flow')).toBeInTheDocument();
       });
+
+      // Debug: Check what nodes are actually rendered
+      const reactFlow = screen.getByTestId('react-flow');
+      const allNodes = reactFlow.querySelectorAll('[data-testid^="node-"]');
+      console.log('Rendered nodes:', Array.from(allNodes).map(n => n.getAttribute('data-testid')));
 
       // Verify characters are initially visible
       expect(screen.getByTestId('node-char-alice')).toBeInTheDocument();

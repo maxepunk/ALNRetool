@@ -27,6 +27,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 // Import the 2 composable hooks (filtering is now inline, relationships come from server)
 import { useGraphVisibility } from './graph/useGraphVisibility';
 import { useLayoutEngine } from './graph/useLayoutEngine';
+import { useActiveFilteredTypes } from './graph/useActiveFilteredTypes';
 
 interface UseGraphLayoutParams {
   // Entities from server (with relationships already embedded)
@@ -116,6 +117,22 @@ export const useGraphLayout = ({
   // Debounce search term to prevent excessive recalculation (300ms delay)
   const debouncedSearchTerm = useDebounce(searchTerm || '', 300);
   
+  // Detect which entity types have active filters for focus mode
+  // Only consider filters active if the entity type is also visible
+  const activeFilteredTypes = useActiveFilteredTypes({
+    entityVisibility,
+    characterType,
+    characterSelectedTiers,
+    characterOwnershipStatus,
+    puzzleSelectedActs,
+    puzzleCompletionStatus,
+    elementBasicTypes,
+    elementStatus,
+    elementContentStatus,
+    elementHasIssues,
+    elementLastEditedRange
+  });
+  
   // Create Fuse instance for fuzzy search
   const searchMatcher = useMemo(() => {
     if (!nodes.length || !debouncedSearchTerm) return null;
@@ -134,7 +151,8 @@ export const useGraphLayout = ({
   }, [nodes, debouncedSearchTerm]);
   
   // Step 1: Apply filters to server-provided nodes
-  // Filter nodes out completely for proper layout recalculation and performance
+  // When focus mode is active (activeFilteredTypes.size > 0), we pass ALL visible nodes
+  // but mark which ones belong to filtered entity types for seed selection
   const filteredNodes = useMemo(() => {
     return nodes
       .filter((node: any) => {
@@ -174,7 +192,7 @@ export const useGraphLayout = ({
                   const hasOwned = entity.ownedElementIds?.length > 0;
                   const hasAccessible = entity.characterPuzzleIds?.length > 0;
                   const hasShared = entity.connections?.length > 0;
-                  const isLocked = !hasOwned && !hasAccessible && !hasShared;
+                  const isLocked = !hasOwned && !hasAccessible && !hasShared
                   
                   const ownershipMatches = 
                     (characterOwnershipStatus.has('Owned') && hasOwned) ||
@@ -267,7 +285,8 @@ export const useGraphLayout = ({
           }
         }
         
-        // Keep the node
+        // Keep the node if it passes visibility and search filters
+        // Entity-specific filters are applied ONLY to determine seed nodes
         return true;
       })
       .map(node => ({
@@ -281,13 +300,92 @@ export const useGraphLayout = ({
           // Add highlight shared flag for visual effect on character nodes
           highlightShared: characterHighlightShared && 
                           node.data?.metadata?.entityType === 'character' &&
-                          node.data?.entity?.connections?.length > 0
+                          node.data?.entity?.connections?.length > 0,
+          // Mark if this node's entity type has active filters AND passes those filters
+          // This determines if the node should be a seed for expansion
+          isFromFilteredType: (() => {
+            const entityType = node.data?.metadata?.entityType;
+            // CRITICAL: Only mark as seed if this entity type HAS active filters
+            if (!entityType || !activeFilteredTypes.has(entityType)) return false;
+            
+            // Check if this specific node passes its entity-type filters
+            const entity = node.data?.entity;
+            if (!entity) return false;
+            
+            switch (entityType) {
+              case 'character':
+                // Check all character filters - ALL must pass or be unset
+                if (characterType && characterType !== 'all' && entity.type !== characterType) return false;
+                if (characterSelectedTiers && characterSelectedTiers.size > 0 && !characterSelectedTiers.has(entity.tier || '')) return false;
+                if (characterOwnershipStatus && characterOwnershipStatus.size > 0) {
+                  const hasOwned = entity.ownedElementIds?.length > 0;
+                  const hasAccessible = entity.characterPuzzleIds?.length > 0;
+                  const hasShared = entity.connections?.length > 0;
+                  const isLocked = !hasOwned && !hasAccessible && !hasShared;
+                  const matches = 
+                    (characterOwnershipStatus.has('Owned') && hasOwned) ||
+                    (characterOwnershipStatus.has('Accessible') && hasAccessible) ||
+                    (characterOwnershipStatus.has('Shared') && hasShared) ||
+                    (characterOwnershipStatus.has('Locked') && isLocked);
+                  if (!matches) return false;
+                }
+                return true;
+                
+              case 'puzzle':
+                // Check puzzle filters - ALL must pass or be unset
+                if (puzzleSelectedActs && puzzleSelectedActs.size > 0) {
+                  const puzzleTiming = entity.timing || [];
+                  const hasMatch = puzzleTiming.some((act: string) => act && puzzleSelectedActs.has(act));
+                  if (!hasMatch) return false;
+                }
+                if (puzzleCompletionStatus && puzzleCompletionStatus !== 'all') {
+                  const isComplete = entity.rewardIds?.length > 0;
+                  if (puzzleCompletionStatus === 'completed' && !isComplete) return false;
+                  if (puzzleCompletionStatus === 'incomplete' && isComplete) return false;
+                }
+                return true;
+                
+              case 'element':
+                // Check element filters - ALL must pass or be unset
+                if (elementBasicTypes && elementBasicTypes.size > 0 && !elementBasicTypes.has(entity.basicType || '')) return false;
+                if (elementStatus && elementStatus.size > 0 && !elementStatus.has(entity.status || '')) return false;
+                if (elementContentStatus && elementContentStatus.size > 0) {
+                  const statusMap: Record<string, string> = {
+                    'Idea/Placeholder': 'draft',
+                    'In development': 'draft',
+                    'Writing Complete': 'review',
+                    'Design Complete': 'review',
+                    'Ready for Playtest': 'approved',
+                    'Done': 'published'
+                  };
+                  const mappedStatus = statusMap[entity.status] || 'draft';
+                  if (!elementContentStatus.has(mappedStatus as any)) return false;
+                }
+                if (elementHasIssues !== null && elementHasIssues !== undefined) {
+                  const hasIssuePattern = /TODO|FIXME|ISSUE|BUG/i.test(entity.descriptionText || '');
+                  if (elementHasIssues !== hasIssuePattern) return false;
+                }
+                if (elementLastEditedRange && elementLastEditedRange !== 'all') {
+                  const lastEdited = new Date(entity.lastEdited || 0);
+                  const now = new Date();
+                  const daysDiff = (now.getTime() - lastEdited.getTime()) / (1000 * 60 * 60 * 24);
+                  
+                  if (elementLastEditedRange === 'today' && daysDiff >= 1) return false;
+                  if (elementLastEditedRange === 'week' && daysDiff > 7) return false;
+                  if (elementLastEditedRange === 'month' && daysDiff > 30) return false;
+                }
+                return true;
+                
+              default:
+                return false; // Unknown entity types are never seeds
+            }
+          })()
         }
       } as GraphNode));
   }, [nodes, debouncedSearchTerm, searchMatcher, entityVisibility, characterType, characterSelectedTiers,
       characterOwnershipStatus, characterHighlightShared, puzzleSelectedActs, puzzleCompletionStatus,
       elementBasicTypes, elementStatus, elementContentStatus, elementHasIssues, elementLastEditedRange,
-      selectedNodeId]);
+      selectedNodeId, activeFilteredTypes]);
   
   // Step 2: Use server-provided edges directly, ensuring type compatibility
   const allEdges = edges as any[];
@@ -300,6 +398,7 @@ export const useGraphLayout = ({
     allEdges,
     selectedNodeId: selectedNodeId || null,
     connectionDepth: connectionDepth || null,
+    activeFilteredTypes,  // Pass active filter types for focus mode
   });
   
   
