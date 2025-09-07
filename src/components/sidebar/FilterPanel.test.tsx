@@ -293,13 +293,14 @@ describe('FilterPanel Components', () => {
           />
         );
         
-        // Check slider exists
-        const slider = container.querySelector('input[type="range"]');
+        // Check slider exists by its role
+        const slider = screen.getByRole('slider');
         expect(slider).toBeInTheDocument();
-        expect(slider).toHaveAttribute('min', '0');
-        expect(slider).toHaveAttribute('max', '10');
-        expect(slider).toHaveAttribute('step', '1');
-        expect(slider).toHaveValue('5');
+
+        // Check ARIA attributes for slider values
+        expect(slider).toHaveAttribute('aria-valuemin', '0');
+        expect(slider).toHaveAttribute('aria-valuemax', '10');
+        expect(slider).toHaveAttribute('aria-valuenow', '5');
         
         // Check value display
         expect(screen.getByText('5')).toBeInTheDocument();
@@ -323,12 +324,14 @@ describe('FilterPanel Components', () => {
           />
         );
         
-        const slider = container.querySelector('input[type="range"]') as HTMLInputElement;
+        const slider = screen.getByRole('slider');
         
-        // Change slider value using fireEvent for proper React event simulation
-        fireEvent.change(slider, { target: { value: '7' } });
+        // Use keyboard events to change slider value
+        slider.focus();
+        fireEvent.keyDown(slider, { key: 'ArrowRight' });
         
-        expect(mockSetFilter).toHaveBeenCalledWith('depthFilter', 7);
+        // Initial value is 3, step is 1, so it should become 4
+        expect(mockSetFilter).toHaveBeenCalledWith('depthFilter', 4);
       });
     });
   });

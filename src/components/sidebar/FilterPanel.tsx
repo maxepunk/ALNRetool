@@ -7,6 +7,7 @@ import { useFilterStore } from '@/stores/filterStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
 // Radio group removed - using checkboxes for all filters
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
@@ -122,10 +123,9 @@ export function FilterPanel({ title, filters, entityType }: FilterPanelProps) {
                 {store.getFilter(key) || config.min || 0}
               </span>
             </div>
-            <input
-              type="range"
-              value={store.getFilter(key) || config.min || 0}
-              onChange={(e) => store.setFilter(key, Number(e.target.value))}
+            <Slider
+              value={[store.getFilter(key) || config.min || 0]}
+              onValueChange={(value) => store.setFilter(key, value[0])}
               min={config.min}
               max={config.max}
               step={config.step}

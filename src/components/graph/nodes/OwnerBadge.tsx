@@ -1,6 +1,7 @@
-import { memo, useState } from 'react';
+import { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { HOVER_TRANSITIONS } from '@/lib/animations';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface OwnerBadgeProps {
   /** Character name to display */
@@ -26,8 +27,6 @@ const OwnerBadge = memo(({
   position = 'top-right',
   useAbsolutePosition = false
 }: OwnerBadgeProps) => {
-  const [imageFailed, setImageFailed] = useState(false);
-  
   if (!characterName) return null;
   
   // Extract initials from character name
@@ -82,10 +81,10 @@ const OwnerBadge = memo(({
   
   return (
     <div className="relative group inline-block">
-      <div 
+      <Avatar
         className={cn(
-          'w-7 h-7 rounded-full border-2 flex items-center justify-center',
-          'text-xs font-semibold cursor-help overflow-hidden',
+          'w-7 h-7 border-2', // Base size and border
+          'text-xs font-semibold cursor-help',
           'transition-all duration-200',
           HOVER_TRANSITIONS.scale,
           'hover:shadow-lg hover:z-10',
@@ -97,19 +96,15 @@ const OwnerBadge = memo(({
         )}
         title={`Owner: ${characterName} (${tier})`}
       >
-        {portraitUrl && !imageFailed ? (
-          <img 
-            src={portraitUrl} 
-            alt={characterName}
-            className="absolute inset-0 w-full h-full object-cover rounded-full transition-transform duration-200 group-hover:scale-105"
-            onError={() => setImageFailed(true)}
-          />
-        ) : (
-          <span className="relative z-[1] tracking-tighter transition-transform duration-200 group-hover:scale-110">
-            {initials}
-          </span>
-        )}
-      </div>
+        <AvatarImage
+          src={portraitUrl}
+          alt={characterName}
+          className="transition-transform duration-200 group-hover:scale-105"
+        />
+        <AvatarFallback className="bg-transparent tracking-tighter transition-transform duration-200 group-hover:scale-110">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
       {/* CSS-only tooltip */}
       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50
                       hidden group-hover:block
