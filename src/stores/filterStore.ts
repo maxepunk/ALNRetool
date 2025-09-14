@@ -770,9 +770,20 @@ export const useFilterStore = create<FilterStore>()(
               break;
               
             case 'depth':
+            case 'connectionDepth':
               if (typeof value === 'number') {
                 set({ connectionDepth: value });
               }
+              break;
+              
+            case 'entityVisibility':
+              if (typeof value === 'object' && value !== null) {
+                set({ entityVisibility: value });
+              }
+              break;
+              
+            case 'selectedNodeId':
+              set({ selectedNodeId: value });
               break;
               
             // Search

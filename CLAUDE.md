@@ -9,8 +9,8 @@ ALNRetool is a visualization and editing tool for the "About Last Night" murder 
 ## Tech Stack
 
 - **Frontend**: React 18, TypeScript, Vite, React Flow (@xyflow/react), Zustand, TanStack Query v5
-- **Backend**: Express.js v5, TypeScript, Notion API client
-- **Testing**: Vitest, Playwright, MSW for API mocking
+- **Backend**: Express.js v5, TypeScript, Notion API client with Bottleneck rate limiting
+- **Testing**: Vitest (unit/integration), Playwright (E2E), MSW for API mocking
 - **Styling**: Tailwind CSS v4, Framer Motion
 
 ## Development Commands
@@ -26,7 +26,7 @@ npm run build              # Build both client and server
 npm start                  # Start production server
 
 # Code Quality
-npm run lint               # Run ESLint
+npm run lint               # Run ESLint with type-aware rules
 npm run typecheck          # Run TypeScript type checking
 
 # Testing
@@ -53,15 +53,10 @@ npm run test:e2e:headed    # Run with visible browser
 # Integration & Smoke Tests
 npm run test:smoke         # Quick health check
 npm run test:integration   # Full integration suite
+
+# Schema Management
+npm run schema:fetch       # Fetch latest Notion database schemas
 ```
-
-## Intentional Design Patterns (DO NOT "FIX")
-
-These patterns may appear problematic but are deliberate architectural decisions:
-
-1. **Multiple API Calls in Inverse Relations**: The `updateInverseRelations` function creates many Notion API calls in parallel. This is SAFE because all calls go through the Bottleneck-limited client (3 req/sec).
-
-2. **Throwing Errors on Delta Failures**: Delta generation failures intentionally crash the request to ensure cache consistency. The primary operation succeeded, but we fail loudly to prevent UI inconsistencies.
 
 ## Critical Architecture Patterns
 
@@ -69,7 +64,7 @@ These patterns may appear problematic but are deliberate architectural decisions
 All entity mutations use a unified `useEntityMutation` hook with:
 - Optimistic updates via `pendingMutationCount` on nodes/edges
 - Atomic rollback through snapshot restoration
-- Concurrent mutation safety for same entity
+- Concurrent mutation safety using unique mutation IDs
 - React Query v5 lifecycle (onMutate/onError/onSettled)
 
 ```typescript
@@ -81,13 +76,20 @@ const mutation = useEntityMutation({
 });
 ```
 
-### 2. Graph State Management
+### 2. Factory Pattern for Entity Routers
+All entity routers are generated from `createEntityRouter` factory:
+- Consistent REST endpoints across all entity types
+- Automatic caching with configurable TTL
+- Inverse relation updates for bidirectional relationships
+- Delta generation for optimistic UI updates
+
+### 3. Graph State Management
 - **Nodes**: Character, Element, Puzzle, Timeline nodes with unique visual representations
 - **Edges**: Relationship edges with optimistic state tracking
-- **Filtering**: Multi-tier filter system with depth controls
+- **Filtering**: Multi-tier filter system with depth controls (acts 1-3, focus mode)
 - **Layout**: Dagre layout with force simulation for positioning
 
-### 3. Query Key Patterns
+### 4. Query Key Patterns
 Standardized query keys for cache management:
 ```typescript
 ['graph', 'full']                   // Full graph data
@@ -96,12 +98,28 @@ Standardized query keys for cache management:
 ['synthesized', characterId]        // Synthesized relationships
 ```
 
-### 4. Transform Pipeline
+### 5. Transform Pipeline
 Data flows through pure transform functions:
 ```
 Notion API → Raw Data → Transform → App Types → Graph Nodes → UI
 ```
 Each transform has single responsibility, no merge logic in transforms.
+
+### 6. Store Architecture (Zustand)
+- **filterStore**: Multi-layer filtering with acts, depth, and focus mode
+- **viewStore**: Graph viewport and zoom state
+- **creationStore**: UI state for entity creation panels
+- **uiStore**: General UI state (sidepanel, tooltips)
+
+## Intentional Design Patterns (DO NOT "FIX")
+
+1. **Multiple API Calls in Inverse Relations**: The `updateInverseRelations` function creates many Notion API calls in parallel. This is SAFE because all calls go through the Bottleneck-limited client (3 req/sec).
+
+2. **Throwing Errors on Delta Failures**: Delta generation failures intentionally crash the request to ensure cache consistency. The primary operation succeeded, but we fail loudly to prevent UI inconsistencies.
+
+3. **Breaking Changes OK**: Internal tool for 2-3 users - prioritize code quality over backward compatibility.
+
+4. **React Flow Excluded from optimizeDeps**: React Flow is excluded from Vite's dependency optimization to avoid bundling issues. Circular dependency warnings from React Flow are expected and suppressed.
 
 ## Critical Gotchas
 
@@ -122,16 +140,17 @@ Tests require 4GB memory allocation:
 NODE_OPTIONS='--max-old-space-size=4096' vitest run
 ```
 
-### API Rate Limiting (NO ACTION NEEDED)
-**IMPORTANT**: Inverse relation updates in `createEntityRouter` may appear to make many API calls, but they're automatically protected by Bottleneck rate limiting. Do NOT add additional rate limiting or worry about hitting Notion's limits - this is already handled in `server/services/notion.ts`.
+### API Rate Limiting
+Notion API calls are automatically rate-limited via Bottleneck (3 req/sec) in `server/services/notion.ts`. Do NOT add additional rate limiting.
 
-### Delta Generation Failures are INTENTIONAL
-When you see `throw new Error('Delta generation failed')` in `createEntityRouter.ts`, this is BY DESIGN. The comment "CHANGED: Make delta failures visible instead of silent" indicates this was a deliberate choice to prevent silent cache inconsistencies. Do NOT change this to return success with error indicators.
+### Delta Generation Failures
+When you see `throw new Error('Delta generation failed')` in `createEntityRouter.ts`, this is BY DESIGN to prevent silent cache inconsistencies.
 
-### Known Issues
-- **Auth middleware** requires Origin header to be localhost in development
-- **React Flow** excluded from optimizeDeps to avoid bundling issues
-- **Circular dependencies** warnings from React Flow are suppressed (expected)
+### ESLint Security Rule
+Direct `process.env` access is forbidden in server code (except server/config/*). Use the centralized config module from `server/config/index.js` for all environment variables.
+
+### Vitest Pool Configuration
+Tests run in forked processes with isolation for safety. Maximum 4 parallel processes configured to balance speed and memory usage.
 
 ## Environment Variables
 Required in `.env`:
@@ -141,33 +160,15 @@ NOTION_CHARACTERS_DB=database-id     # Characters database ID
 NOTION_ELEMENTS_DB=database-id       # Elements database ID  
 NOTION_PUZZLES_DB=database-id        # Puzzles database ID
 NOTION_TIMELINE_DB=database-id       # Timeline database ID
+
+# Optional
+PORT=3001                            # Server port (default: 3001)
+NODE_ENV=development                 # Environment (development/production)
+API_KEY=your-api-key                 # API authentication key
+CACHE_TTL=300                        # Cache TTL in seconds (default: 300)
+ADMIN_KEY=admin-key                 # Required for cache clear in production
+FRONTEND_URL=https://domain.com     # Production frontend URL for CORS
 ```
-
-## Key Architectural Decisions
-
-1. **Factory Pattern for Routers**: All entity routers generated from `createEntityRouter` factory for consistency
-2. **Pure Transform Functions**: Transforms have single responsibility - no merge logic
-3. **Relationship Types**: ROLLUP vs RELATION fields from Notion require different update strategies
-4. **Breaking Changes OK**: Internal tool for 2-3 users - prioritize code quality over backward compatibility
-5. **Optimistic Updates**: All mutations show immediate UI feedback with automatic rollback on failure
-6. **Unified Counter Approach**: Single `pendingMutationCount` pattern for tracking optimistic state
-7. **Automatic Rate Limiting**: Notion API calls are automatically rate-limited via Bottleneck (3 req/sec) in `server/services/notion.ts`
-8. **Intentional Delta Failures**: Delta generation errors intentionally fail requests for visibility (not silent degradation)
-9. **Inverse Relations Protected**: Bidirectional updates in `createEntityRouter` use the same rate-limited client
-
-## Testing Philosophy
-
-Three-tier approach:
-1. **Behavioral Tests**: Contract specifications independent of implementation
-2. **Unit Tests**: Realistic inputs matching runtime conditions  
-3. **Integration Tests**: Full flow through MSW handlers
-
-Test files use `.test.ts(x)` extension and run in isolated forks for safety.
-
-### Coverage Requirements
-- 80% minimum for branches, functions, lines, and statements
-- Coverage reports in text, JSON, and HTML formats
-- Build fails if thresholds not met
 
 ## File Organization
 
@@ -186,16 +187,32 @@ src/
 
 server/
 ├── routes/            # Express route handlers
-│   └── notion/        # Entity-specific routers
+│   └── notion/        # Entity-specific routers via createEntityRouter factory
 ├── services/          # Backend services (cache, Notion client)
+├── config/            # Centralized configuration (only place process.env allowed)
 └── utils/             # Server utilities
+
+scripts/               # Utility scripts for testing and debugging
+tests/
+└── e2e/              # Playwright E2E tests
 ```
 
-## Current Work Tracking
+## Testing Philosophy
 
-- Active development: See recent commits in git log
-- Change history: See `docs/CHANGELOG.md`
-- Architecture details: See `docs/ARCHITECTURE.md`
+Three-tier approach:
+1. **Behavioral Tests**: Contract specifications independent of implementation
+2. **Unit Tests**: Realistic inputs matching runtime conditions  
+3. **Integration Tests**: Full flow through MSW handlers
+
+Coverage requirements: 80% minimum for branches, functions, lines, and statements.
+
+## Playwright E2E Configuration
+
+- Runs with `npm run test:e2e`
+- Chromium by default, slow-network variant for testing degraded conditions
+- 1920x1080 viewport for consistent graph rendering
+- Automatic server startup with 2-minute timeout
+- Video/screenshot capture on failure
 
 ## Development Tips
 
@@ -204,13 +221,5 @@ server/
 3. **Test optimistic updates** - Ensure pendingMutationCount is properly managed
 4. **Watch for race conditions** - Multiple mutations on same entity need careful handling
 5. **Profile performance** - Graph with 100+ nodes should remain responsive
-
-## Precommit Validation Notes
-
-When running precommit validation, be aware that external tools may flag the following as issues when they are actually intentional:
-
-- **"API rate limiting risk"** - Already handled by Bottleneck in `server/services/notion.ts`
-- **"Delta generation failures"** - Intentionally fail requests for visibility
-- **"Too many Promise.allSettled calls"** - Rate limited by Bottleneck, safe to run in parallel
-
-Always verify against this document before making "fixes" to these patterns.
+6. **Use batch testing** - Run specific test suites without coverage for speed during development
+7. **Respect rate limits** - All Notion API calls automatically throttled to 3 req/sec

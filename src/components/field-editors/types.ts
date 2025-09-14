@@ -30,6 +30,7 @@ export interface FieldConfig {
   min?: number; // For number fields
   max?: number; // For number fields
   step?: number; // For number fields
+  entityType?: 'character' | 'element' | 'puzzle' | 'timeline'; // For relation fields
 }
 
 // Field editor props

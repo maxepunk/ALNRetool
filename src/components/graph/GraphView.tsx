@@ -472,9 +472,9 @@ function GraphViewComponent() {
           elementsSelectable={true}
           elevateNodesOnSelect={false}
           selectNodesOnDrag={false}
-          snapToGrid={true}
-          snapGrid={[25, 25]}
-          fitViewOptions={{ padding: 0.2, duration: 400 }}
+          snapToGrid={false}
+          fitViewOptions={{ padding: 0.2, duration: 200 }}
+          onlyRenderVisibleElements={true}
           deleteKeyCode="Delete"
           selectionKeyCode="Shift"
         >
