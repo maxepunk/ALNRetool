@@ -146,3 +146,52 @@ export function clearViewport(): void {
     console.warn('[viewportUtils] Failed to clear viewport:', error);
   }
 }
+
+/**
+ * Check if a node is well-visible in the current viewport.
+ * A node is considered well-visible if it's within the central 60% of the viewport.
+ * 
+ * @param node - The node to check
+ * @param viewport - Current viewport
+ * @param viewportBounds - The viewport bounds in graph coordinates
+ * @returns true if the node is well-visible
+ */
+export function isNodeWellVisible(
+  node: Node,
+  viewport: Viewport,
+  viewportBounds: { width: number; height: number }
+): boolean {
+  if (!node.position) return false;
+  
+  // Calculate the central area (60% of viewport, 20% margin on each side)
+  const margin = 0.2;
+  const viewportCenterX = -viewport.x / viewport.zoom + viewportBounds.width / 2;
+  const viewportCenterY = -viewport.y / viewport.zoom + viewportBounds.height / 2;
+  
+  const centralWidth = viewportBounds.width * (1 - 2 * margin) / viewport.zoom;
+  const centralHeight = viewportBounds.height * (1 - 2 * margin) / viewport.zoom;
+  
+  const centralLeft = viewportCenterX - centralWidth / 2;
+  const centralRight = viewportCenterX + centralWidth / 2;
+  const centralTop = viewportCenterY - centralHeight / 2;
+  const centralBottom = viewportCenterY + centralHeight / 2;
+  
+  // Get node bounds (considering its size)
+  const nodeWidth = node.width || 200; // Default width if not measured
+  const nodeHeight = node.height || 100; // Default height if not measured
+  
+  const nodeLeft = node.position.x;
+  const nodeRight = node.position.x + nodeWidth;
+  const nodeTop = node.position.y;
+  const nodeBottom = node.position.y + nodeHeight;
+  
+  // Check if node is mostly within the central area
+  const horizontalOverlap = Math.min(nodeRight, centralRight) - Math.max(nodeLeft, centralLeft);
+  const verticalOverlap = Math.min(nodeBottom, centralBottom) - Math.max(nodeTop, centralTop);
+  
+  // Node is well-visible if at least 50% of it is in the central area
+  const nodeArea = nodeWidth * nodeHeight;
+  const overlapArea = Math.max(0, horizontalOverlap) * Math.max(0, verticalOverlap);
+  
+  return overlapArea >= nodeArea * 0.5;
+}

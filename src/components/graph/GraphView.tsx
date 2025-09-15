@@ -67,7 +67,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import { useNavigationTracking } from '@/hooks/useNavigationTracking';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { getInitialViewNodes, saveViewport, loadViewport } from '@/lib/graph/viewportUtils';
+import { getInitialViewNodes, saveViewport, loadViewport, isNodeWellVisible } from '@/lib/graph/viewportUtils';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -138,6 +138,13 @@ function GraphViewComponent() {
   
   // Track if viewport has been initialized to prevent re-triggering
   const hasInitializedViewport = useRef(false);
+  
+  // Track previous values to detect actual changes
+  const previousSelectedNodeId = useRef<string | null>(null);
+  const previousSearchTerm = useRef<string>('');
+  
+  // Ref for React Flow container to get viewport bounds
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
   
   // State for layout progress tracking
   const [isLayouting, setIsLayouting] = useState(false);
@@ -340,6 +347,65 @@ function GraphViewComponent() {
     }
   }, [reactFlowNodes, reactFlowEdges, isMobile, fitView, setViewport]);
 
+  // Selection viewport focusing - center selected node if not well-visible
+  useEffect(() => {
+    if (selectedNodeId && selectedNodeId !== previousSelectedNodeId.current && hasInitializedViewport.current) {
+      const node = reactFlowNodes.find(n => n.id === selectedNodeId);
+      
+      if (node && reactFlowWrapper.current) {
+        const viewport = getViewport();
+        const bounds = reactFlowWrapper.current.getBoundingClientRect();
+        
+        // Check if node is already well-visible
+        if (!isNodeWellVisible(node, viewport, { width: bounds.width, height: bounds.height })) {
+          console.log(`[GraphView] Centering on selected node: ${selectedNodeId}`);
+          fitView({
+            nodes: [node],
+            padding: 0.3,
+            duration: 600,
+            maxZoom: 1.5 // Don't zoom in too much
+          });
+        } else {
+          console.log(`[GraphView] Selected node ${selectedNodeId} is already well-visible`);
+        }
+      }
+      
+      previousSelectedNodeId.current = selectedNodeId;
+    } else if (!selectedNodeId) {
+      previousSelectedNodeId.current = null;
+    }
+  }, [selectedNodeId, reactFlowNodes, fitView, getViewport]);
+  
+  // Search viewport focusing - debounced to avoid viewport jumps while typing
+  useEffect(() => {
+    if (searchTerm && searchTerm !== previousSearchTerm.current && hasInitializedViewport.current) {
+      // Debounce search focusing
+      const timer = setTimeout(() => {
+        const query = searchTerm.toLowerCase();
+        const matchingNodes = reactFlowNodes.filter(node => {
+          const label = node.data?.label?.toLowerCase() || '';
+          const id = node.id.toLowerCase();
+          return label.includes(query) || id.includes(query);
+        });
+        
+        if (matchingNodes.length > 0) {
+          console.log(`[GraphView] Focusing on ${matchingNodes.length} search results for "${searchTerm}"`);
+          fitView({
+            nodes: matchingNodes,
+            padding: 0.3,
+            duration: 600,
+            maxZoom: 1.2 // Keep reasonable zoom for multiple nodes
+          });
+        }
+      }, 500); // 500ms debounce for search
+      
+      previousSearchTerm.current = searchTerm;
+      return () => clearTimeout(timer);
+    } else if (!searchTerm) {
+      previousSearchTerm.current = '';
+    }
+  }, [searchTerm, reactFlowNodes, fitView]);
+  
   // Save viewport on user interactions
   const handleViewportChange = useCallback(() => {
     // Only save if viewport has been initialized
@@ -461,7 +527,7 @@ function GraphViewComponent() {
         )}
         
         <div className="flex-1 relative flex">
-          <div className="flex-1 relative">
+          <div className="flex-1 relative" ref={reactFlowWrapper}>
             {/* Unified toolbar with filter status, navigation breadcrumbs, and controls */}
             <UnifiedToolbar
               totalNodes={totalUniverseNodes}
