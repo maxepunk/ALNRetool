@@ -57,7 +57,7 @@ export default function AppLayout() {
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  }, [leftSidebarOpen, toggleSidebar])
 
   // Handle header minimization on scroll
   useEffect(() => {
@@ -131,7 +131,7 @@ export default function AppLayout() {
             {isMobile && (
               <Button
                 variant="ghost"
-                size="icon"
+                size="touch-icon"
                 onClick={toggleSidebar}
                 aria-label={leftSidebarOpen ? "Close menu" : "Open menu"}
                 aria-expanded={leftSidebarOpen}
