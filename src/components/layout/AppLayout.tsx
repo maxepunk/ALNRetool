@@ -39,6 +39,8 @@ export default function AppLayout() {
   const lastSyncTime = useLastSyncTime()
   const headerRef = useRef<HTMLElement>(null)
   const lastScrollY = useRef(0)
+  const isInitialMount = useRef(true)
+  const previousIsMobile = useRef<boolean | null>(null)
 
   // Handle responsive behavior
   useEffect(() => {
@@ -52,17 +54,35 @@ export default function AppLayout() {
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
   
-  // Auto-manage sidebar on initial mount based on screen size
+  // Consolidated sidebar management to prevent race conditions
   useEffect(() => {
-    const isMobileView = window.matchMedia('(max-width: 768px)').matches
-    
-    if (isMobileView && leftSidebarOpen) {
-      toggleSidebar() // Close on mobile
-    } else if (!isMobileView && !leftSidebarOpen) {
-      toggleSidebar() // Open on desktop
+    // Handle initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      previousIsMobile.current = isMobile
+      
+      // Set initial sidebar state based on screen size
+      if (isMobile && leftSidebarOpen) {
+        toggleSidebar() // Close on mobile
+      } else if (!isMobile && !leftSidebarOpen) {
+        toggleSidebar() // Open on desktop
+      }
+      return
     }
+    
+    // Handle screen size transitions (resize across 768px breakpoint)
+    if (previousIsMobile.current !== null && previousIsMobile.current !== isMobile) {
+      // Only toggle when actually crossing the breakpoint
+      if (isMobile && leftSidebarOpen) {
+        toggleSidebar() // Close sidebar when becoming mobile
+      } else if (!isMobile && !leftSidebarOpen) {
+        toggleSidebar() // Open sidebar when becoming desktop
+      }
+    }
+    
+    previousIsMobile.current = isMobile
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Only run once on mount
+  }, [isMobile]) // Only depend on isMobile to avoid circular updates
 
   // Handle header minimization on scroll
   useEffect(() => {
@@ -82,12 +102,15 @@ export default function AppLayout() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Close mobile menu on navigation
+  // Close mobile menu on navigation (only on mobile)
   useEffect(() => {
-    if (isMobile && leftSidebarOpen) {
+    // Only close on navigation if we're on mobile and sidebar is open
+    // Skip on initial mount to avoid race conditions
+    if (!isInitialMount.current && isMobile && leftSidebarOpen) {
       toggleSidebar()
     }
-  }, [location, isMobile, leftSidebarOpen, toggleSidebar])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location]) // Only depend on location to avoid multiple triggers
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
@@ -142,7 +165,7 @@ export default function AppLayout() {
                 aria-expanded={leftSidebarOpen}
                 className="text-foreground hover:bg-accent/50 transition-colors"
               >
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                   {leftSidebarOpen ? (
                     <motion.div
                       key="close"
