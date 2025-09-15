@@ -36,8 +36,11 @@ export function useNavigationTracking({ nodes }: UseNavigationTrackingProps) {
       return;
     }
     
-    // Extract node information from the node data
-    const nodeData = selectedNode.data as any;
+    // Extract node information from the node data with proper typing
+    const nodeData = selectedNode.data as {
+      metadata?: { entityType?: string };
+      label?: string;
+    };
     const nodeType = nodeData?.metadata?.entityType;
     const nodeName = nodeData?.label || selectedNodeId;
     
@@ -65,4 +68,11 @@ export function useNavigationTracking({ nodes }: UseNavigationTrackingProps) {
       lastTrackedNodeId.current = null;
     }
   }, [nodes.length]);
+  
+  // Clean up ref on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      lastTrackedNodeId.current = null;
+    };
+  }, []);
 }

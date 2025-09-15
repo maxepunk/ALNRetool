@@ -1,273 +1,462 @@
-diff --git a/package-lock.json b/package-lock.json
-index 18e41b2..d6c5617 100644
---- a/package-lock.json
-+++ b/package-lock.json
-@@ -11,8 +11,10 @@
-         "@notionhq/client": "^4.0.1",
-         "@radix-ui/react-accordion": "^1.2.12",
-         "@radix-ui/react-dialog": "^1.1.15",
-+        "@radix-ui/react-dropdown-menu": "^2.1.16",
-         "@radix-ui/react-popover": "^1.1.15",
-         "@radix-ui/react-scroll-area": "^1.2.10",
-+        "@radix-ui/react-slot": "^1.2.3",
-         "@radix-ui/react-tabs": "^1.1.13",
-         "@radix-ui/react-tooltip": "^1.2.8",
-         "@tanstack/react-query": "^5.85.0",
-@@ -2600,6 +2602,35 @@
-         }
-       }
-     },
-+    "node_modules/@radix-ui/react-dropdown-menu": {
-+      "version": "2.1.16",
-+      "resolved": "https://registry.npmjs.org/@radix-ui/react-dropdown-menu/-/react-dropdown-menu-2.1.16.tgz",
-+      "integrity": "sha512-1PLGQEynI/3OX/ftV54COn+3Sud/Mn8vALg2rWnBLnRaGtJDduNW/22XjlGgPdpcIbiQxjKtb7BkcjP00nqfJw==",
-+      "license": "MIT",
-+      "dependencies": {
-+        "@radix-ui/primitive": "1.1.3",
-+        "@radix-ui/react-compose-refs": "1.1.2",
-+        "@radix-ui/react-context": "1.1.2",
-+        "@radix-ui/react-id": "1.1.1",
-+        "@radix-ui/react-menu": "2.1.16",
-+        "@radix-ui/react-primitive": "2.1.3",
-+        "@radix-ui/react-use-controllable-state": "1.2.2"
-+      },
-+      "peerDependencies": {
-+        "@types/react": "*",
-+        "@types/react-dom": "*",
-+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
-+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
-+      },
-+      "peerDependenciesMeta": {
-+        "@types/react": {
-+          "optional": true
-+        },
-+        "@types/react-dom": {
-+          "optional": true
-+        }
-+      }
-+    },
-     "node_modules/@radix-ui/react-focus-guards": {
-       "version": "1.1.3",
-       "resolved": "https://registry.npmjs.org/@radix-ui/react-focus-guards/-/react-focus-guards-1.1.3.tgz",
-@@ -2658,6 +2689,46 @@
-         }
-       }
-     },
-+    "node_modules/@radix-ui/react-menu": {
-+      "version": "2.1.16",
-+      "resolved": "https://registry.npmjs.org/@radix-ui/react-menu/-/react-menu-2.1.16.tgz",
-+      "integrity": "sha512-72F2T+PLlphrqLcAotYPp0uJMr5SjP5SL01wfEspJbru5Zs5vQaSHb4VB3ZMJPimgHHCHG7gMOeOB9H3Hdmtxg==",
-+      "license": "MIT",
-+      "dependencies": {
-+        "@radix-ui/primitive": "1.1.3",
-+        "@radix-ui/react-collection": "1.1.7",
-+        "@radix-ui/react-compose-refs": "1.1.2",
-+        "@radix-ui/react-context": "1.1.2",
-+        "@radix-ui/react-direction": "1.1.1",
-+        "@radix-ui/react-dismissable-layer": "1.1.11",
-+        "@radix-ui/react-focus-guards": "1.1.3",
-+        "@radix-ui/react-focus-scope": "1.1.7",
-+        "@radix-ui/react-id": "1.1.1",
-+        "@radix-ui/react-popper": "1.2.8",
-+        "@radix-ui/react-portal": "1.1.9",
-+        "@radix-ui/react-presence": "1.1.5",
-+        "@radix-ui/react-primitive": "2.1.3",
-+        "@radix-ui/react-roving-focus": "1.1.11",
-+        "@radix-ui/react-slot": "1.2.3",
-+        "@radix-ui/react-use-callback-ref": "1.1.1",
-+        "aria-hidden": "^1.2.4",
-+        "react-remove-scroll": "^2.6.3"
-+      },
-+      "peerDependencies": {
-+        "@types/react": "*",
-+        "@types/react-dom": "*",
-+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
-+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
-+      },
-+      "peerDependenciesMeta": {
-+        "@types/react": {
-+          "optional": true
-+        },
-+        "@types/react-dom": {
-+          "optional": true
-+        }
-+      }
-+    },
-     "node_modules/@radix-ui/react-popover": {
-       "version": "1.1.15",
-       "resolved": "https://registry.npmjs.org/@radix-ui/react-popover/-/react-popover-1.1.15.tgz",
-diff --git a/package.json b/package.json
-index c248a08..7c60e12 100644
---- a/package.json
-+++ b/package.json
-@@ -35,8 +35,10 @@
-     "@notionhq/client": "^4.0.1",
-     "@radix-ui/react-accordion": "^1.2.12",
-     "@radix-ui/react-dialog": "^1.1.15",
-+    "@radix-ui/react-dropdown-menu": "^2.1.16",
-     "@radix-ui/react-popover": "^1.1.15",
-     "@radix-ui/react-scroll-area": "^1.2.10",
-+    "@radix-ui/react-slot": "^1.2.3",
-     "@radix-ui/react-tabs": "^1.1.13",
-     "@radix-ui/react-tooltip": "^1.2.8",
-     "@tanstack/react-query": "^5.85.0",
-diff --git a/src/components/common/Breadcrumbs.tsx b/src/components/common/Breadcrumbs.tsx
-deleted file mode 100644
-index 7d41684..0000000
---- a/src/components/common/Breadcrumbs.tsx
-+++ /dev/null
-@@ -1,53 +0,0 @@
--/**
-- * Breadcrumbs component
-- * Shows current navigation path
-- */
--
--import { Link, useLocation } from 'react-router-dom'
--import { ChevronRight } from 'lucide-react'
--
--export default function Breadcrumbs() {
--  const location = useLocation()
--  const pathnames = location.pathname.split('/').filter(x => x)
--
--  // Don't show breadcrumbs on root or single-level paths
--  if (pathnames.length <= 1) {
--    return null
--  }
--
--  return (
--    <nav aria-label="Breadcrumb" className="py-2">
--      <ol className="flex items-center space-x-1 text-sm">
--        <li className="flex items-center">
--          <Link 
--            to="/" 
--            className="text-gray-500 hover:text-gray-700 transition-colors"
--          >
--            Home
--          </Link>
--        </li>
--        {pathnames.map((value, index) => {
--          const to = `/${pathnames.slice(0, index + 1).join('/')}`
--          const isLast = index === pathnames.length - 1
--          const label = value.charAt(0).toUpperCase() + value.slice(1)
--
--          return (
--            <li key={to} className="flex items-center">
--              <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
--              {isLast ? (
--                <span className="text-gray-900 font-medium">{label}</span>
--              ) : (
--                <Link 
--                  to={to} 
--                  className="text-gray-500 hover:text-gray-700 transition-colors"
--                >
--                  {label}
--                </Link>
--              )}
--            </li>
--          )
--        })}
--      </ol>
--    </nav>
--  )
--}
-\ No newline at end of file
 diff --git a/src/components/graph/GraphView.tsx b/src/components/graph/GraphView.tsx
-index 560a5e5..80803b3 100644
+index 57f1dda..32d145a 100644
 --- a/src/components/graph/GraphView.tsx
 +++ b/src/components/graph/GraphView.tsx
-@@ -58,7 +58,7 @@ import { useGraphLayout } from '@/hooks/useGraphLayout';
- import { useFilterSelectors } from '@/hooks/useFilterSelectors';
- import { useFilterStore } from '@/stores/filterStore';
- import { useViewStore } from '@/stores/viewStore';
--import { FilterStatusBar } from './FilterStatusBar';
-+import { UnifiedToolbar } from './UnifiedToolbar';
- import { FloatingActionButton } from './FloatingActionButton';
- import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
- import { LayoutProgress } from './LayoutProgress/LayoutProgress';
-@@ -66,6 +66,7 @@ import { useGraphInteractions } from '@/hooks/useGraphInteractions';
- import { GraphDataContextProvider } from '@/contexts/GraphDataContext';
- import { useUIStore } from '@/stores/uiStore';
- import { cn } from '@/lib/utils';
-+import { useNavigationTracking } from '@/hooks/useNavigationTracking';
- 
- /**
-  * Wrapper to add data-testid to all node components for E2E testing
-@@ -337,6 +338,9 @@ function GraphViewComponent() {
-   const layoutedNodes = reactFlowNodes;
-   const totalUniverseNodes = serverNodes.length;
+@@ -134,7 +134,7 @@ function GraphViewComponent() {
+   const isDetailPanelMinimized = useUIStore(state => state.detailPanelMinimized);
    
-+  // Track navigation history
-+  useNavigationTracking({ nodes: layoutedNodes });
-+  
-   // Connect keyboard interactions and advanced graph handling
-   const {
-     handleNodeClick,              // Added to handle node selection
-@@ -443,8 +447,8 @@ function GraphViewComponent() {
-         
-         <div className="flex-1 relative flex">
-           <div className="flex-1 relative">
--            {/* Filter status bar with comprehensive feedback */}
--            <FilterStatusBar
-+            {/* Unified toolbar with filter status, navigation breadcrumbs, and controls */}
-+            <UnifiedToolbar
-               totalNodes={totalUniverseNodes}
-               visibleNodes={visibleNodeIds.size}
-               connectionDepth={connectionDepth ?? 0}
-diff --git a/src/components/layout/AppLayout.tsx b/src/components/layout/AppLayout.tsx
-index 1c21e9a..b82b31c 100644
---- a/src/components/layout/AppLayout.tsx
-+++ b/src/components/layout/AppLayout.tsx
-@@ -10,7 +10,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
- import { useOnlineStatus } from '@/hooks/useOnlineStatus'
- import { useLastSyncTime } from '@/hooks/useLastSyncTime'
- import { useUIStore } from '@/stores/uiStore'
--import Breadcrumbs from '@/components/common/Breadcrumbs'
-+import URLBreadcrumbs from '@/components/navigation/URLBreadcrumbs'
- import ConnectionStatus from '@/components/common/ConnectionStatus'
- import ErrorBoundary from '@/components/common/ErrorBoundary'
- import Sidebar from '@/components/layout/Sidebar'
-@@ -234,7 +234,7 @@ export default function AppLayout() {
-               transition={{ duration: 0.2, ease: "easeInOut" }}
-               className="px-4 md:px-6 py-2 overflow-hidden border-t border-border/20"
-             >
--              <Breadcrumbs />
-+              <URLBreadcrumbs />
-             </motion.div>
-           )}
-         </AnimatePresence>
-diff --git a/src/hooks/useGraphInteractions.ts b/src/hooks/useGraphInteractions.ts
-index 1794029..2d487de 100644
---- a/src/hooks/useGraphInteractions.ts
-+++ b/src/hooks/useGraphInteractions.ts
-@@ -19,6 +19,7 @@ import {
- import { useHotkeys } from 'react-hotkeys-hook';
- import toast from 'react-hot-toast';
- import { useFilterStore } from '@/stores/filterStore';
-+import { useNavigationStore } from '@/stores/navigationStore';
- 
- 
- 
-@@ -416,6 +417,23 @@ export function useGraphInteractions({
-     clearSelection();
-   }, [clearSelection]);
+   // React Flow instance for viewport control
+-  const { fitView, setViewport, getViewport } = useReactFlow();
++  const { fitView, setViewport, getViewport, getNodes } = useReactFlow();
    
-+  // Navigation history shortcuts
-+  useHotkeys('[', () => {
-+    const navigationStore = useNavigationStore.getState();
-+    const nodeId = navigationStore.goBack();
-+    if (nodeId) {
-+      setSelectedNode(nodeId);
-+    }
-+  }, [setSelectedNode]);
+   // Track if viewport has been initialized to prevent re-triggering
+   const hasInitializedViewport = useRef(false);
+@@ -142,6 +142,7 @@ function GraphViewComponent() {
+   // Track previous values to detect actual changes
+   const previousSelectedNodeId = useRef<string | null>(null);
+   const previousSearchTerm = useRef<string>('');
++  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
+   
+   // Ref for React Flow container to get viewport bounds
+   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+@@ -240,6 +241,11 @@ function GraphViewComponent() {
+     hasActiveFilters
+   } = filters;
+   
++  // Debug: Check if searchTerm is being received
++  useEffect(() => {
++    console.log('[GraphView] searchTerm from filters:', searchTerm);
++  }, [searchTerm]);
 +  
-+  useHotkeys(']', () => {
-+    const navigationStore = useNavigationStore.getState();
-+    const nodeId = navigationStore.goForward();
-+    if (nodeId) {
-+      setSelectedNode(nodeId);
-+    }
-+  }, [setSelectedNode]);
-+  
-   return {
-     // Selection state (computed from React Flow)
-     selectedNodes: getSelectedNodes(),
+   
+   // Removed graphVersion anti-pattern that caused infinite re-renders
+ 
+@@ -378,33 +384,95 @@ function GraphViewComponent() {
+   
+   // Search viewport focusing - debounced to avoid viewport jumps while typing
+   useEffect(() => {
+-    if (searchTerm && searchTerm !== previousSearchTerm.current && hasInitializedViewport.current) {
+-      // Debounce search focusing
+-      const timer = setTimeout(() => {
+-        const query = searchTerm.toLowerCase();
+-        const matchingNodes = reactFlowNodes.filter(node => {
+-          const label = node.data?.label?.toLowerCase() || '';
+-          const id = node.id.toLowerCase();
+-          return label.includes(query) || id.includes(query);
+-        });
+-        
+-        if (matchingNodes.length > 0) {
+-          console.log(`[GraphView] Focusing on ${matchingNodes.length} search results for "${searchTerm}"`);
+-          fitView({
+-            nodes: matchingNodes,
+-            padding: 0.3,
+-            duration: 600,
+-            maxZoom: 1.2 // Keep reasonable zoom for multiple nodes
++    console.log('[GraphView] Search effect running. searchTerm:', searchTerm, 'previous:', previousSearchTerm.current, 'hasInitialized:', hasInitializedViewport.current);
++    
++    // Only process if search actually changed (not just nodes updating)
++    if (searchTerm !== previousSearchTerm.current) {
++      // Clear any existing timer when search changes
++      if (searchTimerRef.current) {
++        console.log('[GraphView] Clearing previous search timer');
++        clearTimeout(searchTimerRef.current);
++        searchTimerRef.current = null;
++      }
++      
++      // Handle search clear - fit view to all visible nodes
++      // Check BEFORE updating the ref
++      if (hasInitializedViewport.current && !searchTerm && previousSearchTerm.current) {
++        console.log('[GraphView] Search cleared - fitting view to all visible nodes');
++        // Delay to ensure nodes have re-rendered and layout is complete
++        // Use requestAnimationFrame to batch with browser's next paint
++        setTimeout(() => {
++          requestAnimationFrame(() => {
++            const visibleNodes = reactFlowNodes.filter(node => visibleNodeIds.has(node.id));
++            if (visibleNodes.length > 0) {
++              fitView({
++                nodes: visibleNodes,
++                padding: 0.2,
++                duration: 600,
++                maxZoom: 1.0 // Don't zoom in too much when showing all
++              });
++            }
+           });
+-        }
+-      }, 500); // 500ms debounce for search
++        }, 800); // Match search timing - wait for nodes to fully update
++      }
+       
++      // Update ref after checking for clear
+       previousSearchTerm.current = searchTerm;
+-      return () => clearTimeout(timer);
+-    } else if (!searchTerm) {
+-      previousSearchTerm.current = '';
++      
++      // Only create new timer if viewport is ready and search is non-empty
++      if (hasInitializedViewport.current && searchTerm) {
++        console.log('[GraphView] Creating new search timer for:', searchTerm);
++        
++        // Create timer and store ref
++        searchTimerRef.current = setTimeout(() => {
++          console.log('[GraphView] Search timer executing for:', searchTerm);
++          searchTimerRef.current = null; // Clear ref after execution
++          
++          // Get FRESH node data from React Flow at execution time
++          const currentNodes = getNodes();
++          
++          // Filter to only nodes that:
++          // 1. Are visible (in the current node list from React Flow)
++          // 2. Actually match the search (have searchMatch metadata)
++          // Debug: Check what metadata we're getting
++          console.log('[GraphView] Debug - Search term:', searchTerm);
++          console.log('[GraphView] Debug - Current nodes count:', currentNodes.length);
++          console.log('[GraphView] Debug - Nodes sample:', currentNodes.slice(0, 3).map(n => ({
++            id: n.id,
++            label: n.data?.label,
++            metadata: n.data?.metadata
++          })));
++          
++          const actualSearchMatches = currentNodes.filter((node: any) => 
++            node.data?.metadata?.searchMatch === true
++          );
++          
++          if (actualSearchMatches.length > 0) {
++            console.log(`[GraphView] Focusing on ${actualSearchMatches.length} actual search matches for "${searchTerm}"`);
++            // Use requestAnimationFrame to avoid forced reflow
++            requestAnimationFrame(() => {
++              fitView({
++                nodes: actualSearchMatches,
++                padding: 0.3,
++                duration: 600,
++                maxZoom: 1.2 // Keep reasonable zoom for multiple nodes
++              });
++            });
++          } else {
++            console.log('[GraphView] No search matches found for:', searchTerm);
++          }
++        }, 800); // 800ms total (300ms for metadata update + 500ms for viewport)
++      }
+     }
+-  }, [searchTerm, reactFlowNodes, fitView]);
++    
++    // Cleanup on unmount only
++    return () => {
++      if (searchTimerRef.current && searchTerm !== previousSearchTerm.current) {
++        clearTimeout(searchTimerRef.current);
++        searchTimerRef.current = null;
++      }
++    };
++  }, [searchTerm, fitView]); // Only depend on searchTerm change, not nodes
+   
+   // Save viewport on user interactions
+   const handleViewportChange = useCallback(() => {
+diff --git a/src/hooks/graph/useGraphVisibility.ts b/src/hooks/graph/useGraphVisibility.ts
+index e81f863..53d338f 100644
+--- a/src/hooks/graph/useGraphVisibility.ts
++++ b/src/hooks/graph/useGraphVisibility.ts
+@@ -107,7 +107,9 @@ export function useGraphVisibility({
+           metadata: {
+             ...node.data.metadata,
+             isFiltered: filteredNodeIds.has(node.id),
+-            isSelected: node.id === selectedNodeId
++            isSelected: node.id === selectedNodeId,
++            // Preserve the search match flag from useGraphLayout
++            searchMatch: node.data.metadata?.searchMatch || false
+           }
+         }
+       }));
+diff --git a/src/hooks/useGraphLayout.ts b/src/hooks/useGraphLayout.ts
+index b14ec5f..506e285 100644
+--- a/src/hooks/useGraphLayout.ts
++++ b/src/hooks/useGraphLayout.ts
+@@ -297,6 +297,12 @@ export const useGraphLayout = ({
+         selected: node.id === selectedNodeId,
+         data: {
+           ...node.data,
++          // Add metadata for search matching
++          metadata: {
++            ...node.data.metadata,
++            // Track if this node specifically matches the search term
++            searchMatch: debouncedSearchTerm ? (searchMatcher?.has(node.id) || false) : false,
++          },
+           // Add highlight shared flag for visual effect on character nodes
+           highlightShared: characterHighlightShared && 
+                           node.data?.metadata?.entityType === 'character' &&
+diff --git a/zen_precommit.changeset b/zen_precommit.changeset
+index 2479383..9c2b056 100644
+--- a/zen_precommit.changeset
++++ b/zen_precommit.changeset
+@@ -1,273 +0,0 @@
+-diff --git a/package-lock.json b/package-lock.json
+-index 18e41b2..d6c5617 100644
+---- a/package-lock.json
+-+++ b/package-lock.json
+-@@ -11,8 +11,10 @@
+-         "@notionhq/client": "^4.0.1",
+-         "@radix-ui/react-accordion": "^1.2.12",
+-         "@radix-ui/react-dialog": "^1.1.15",
+-+        "@radix-ui/react-dropdown-menu": "^2.1.16",
+-         "@radix-ui/react-popover": "^1.1.15",
+-         "@radix-ui/react-scroll-area": "^1.2.10",
+-+        "@radix-ui/react-slot": "^1.2.3",
+-         "@radix-ui/react-tabs": "^1.1.13",
+-         "@radix-ui/react-tooltip": "^1.2.8",
+-         "@tanstack/react-query": "^5.85.0",
+-@@ -2600,6 +2602,35 @@
+-         }
+-       }
+-     },
+-+    "node_modules/@radix-ui/react-dropdown-menu": {
+-+      "version": "2.1.16",
+-+      "resolved": "https://registry.npmjs.org/@radix-ui/react-dropdown-menu/-/react-dropdown-menu-2.1.16.tgz",
+-+      "integrity": "sha512-1PLGQEynI/3OX/ftV54COn+3Sud/Mn8vALg2rWnBLnRaGtJDduNW/22XjlGgPdpcIbiQxjKtb7BkcjP00nqfJw==",
+-+      "license": "MIT",
+-+      "dependencies": {
+-+        "@radix-ui/primitive": "1.1.3",
+-+        "@radix-ui/react-compose-refs": "1.1.2",
+-+        "@radix-ui/react-context": "1.1.2",
+-+        "@radix-ui/react-id": "1.1.1",
+-+        "@radix-ui/react-menu": "2.1.16",
+-+        "@radix-ui/react-primitive": "2.1.3",
+-+        "@radix-ui/react-use-controllable-state": "1.2.2"
+-+      },
+-+      "peerDependencies": {
+-+        "@types/react": "*",
+-+        "@types/react-dom": "*",
+-+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+-+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+-+      },
+-+      "peerDependenciesMeta": {
+-+        "@types/react": {
+-+          "optional": true
+-+        },
+-+        "@types/react-dom": {
+-+          "optional": true
+-+        }
+-+      }
+-+    },
+-     "node_modules/@radix-ui/react-focus-guards": {
+-       "version": "1.1.3",
+-       "resolved": "https://registry.npmjs.org/@radix-ui/react-focus-guards/-/react-focus-guards-1.1.3.tgz",
+-@@ -2658,6 +2689,46 @@
+-         }
+-       }
+-     },
+-+    "node_modules/@radix-ui/react-menu": {
+-+      "version": "2.1.16",
+-+      "resolved": "https://registry.npmjs.org/@radix-ui/react-menu/-/react-menu-2.1.16.tgz",
+-+      "integrity": "sha512-72F2T+PLlphrqLcAotYPp0uJMr5SjP5SL01wfEspJbru5Zs5vQaSHb4VB3ZMJPimgHHCHG7gMOeOB9H3Hdmtxg==",
+-+      "license": "MIT",
+-+      "dependencies": {
+-+        "@radix-ui/primitive": "1.1.3",
+-+        "@radix-ui/react-collection": "1.1.7",
+-+        "@radix-ui/react-compose-refs": "1.1.2",
+-+        "@radix-ui/react-context": "1.1.2",
+-+        "@radix-ui/react-direction": "1.1.1",
+-+        "@radix-ui/react-dismissable-layer": "1.1.11",
+-+        "@radix-ui/react-focus-guards": "1.1.3",
+-+        "@radix-ui/react-focus-scope": "1.1.7",
+-+        "@radix-ui/react-id": "1.1.1",
+-+        "@radix-ui/react-popper": "1.2.8",
+-+        "@radix-ui/react-portal": "1.1.9",
+-+        "@radix-ui/react-presence": "1.1.5",
+-+        "@radix-ui/react-primitive": "2.1.3",
+-+        "@radix-ui/react-roving-focus": "1.1.11",
+-+        "@radix-ui/react-slot": "1.2.3",
+-+        "@radix-ui/react-use-callback-ref": "1.1.1",
+-+        "aria-hidden": "^1.2.4",
+-+        "react-remove-scroll": "^2.6.3"
+-+      },
+-+      "peerDependencies": {
+-+        "@types/react": "*",
+-+        "@types/react-dom": "*",
+-+        "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc",
+-+        "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc"
+-+      },
+-+      "peerDependenciesMeta": {
+-+        "@types/react": {
+-+          "optional": true
+-+        },
+-+        "@types/react-dom": {
+-+          "optional": true
+-+        }
+-+      }
+-+    },
+-     "node_modules/@radix-ui/react-popover": {
+-       "version": "1.1.15",
+-       "resolved": "https://registry.npmjs.org/@radix-ui/react-popover/-/react-popover-1.1.15.tgz",
+-diff --git a/package.json b/package.json
+-index c248a08..7c60e12 100644
+---- a/package.json
+-+++ b/package.json
+-@@ -35,8 +35,10 @@
+-     "@notionhq/client": "^4.0.1",
+-     "@radix-ui/react-accordion": "^1.2.12",
+-     "@radix-ui/react-dialog": "^1.1.15",
+-+    "@radix-ui/react-dropdown-menu": "^2.1.16",
+-     "@radix-ui/react-popover": "^1.1.15",
+-     "@radix-ui/react-scroll-area": "^1.2.10",
+-+    "@radix-ui/react-slot": "^1.2.3",
+-     "@radix-ui/react-tabs": "^1.1.13",
+-     "@radix-ui/react-tooltip": "^1.2.8",
+-     "@tanstack/react-query": "^5.85.0",
+-diff --git a/src/components/common/Breadcrumbs.tsx b/src/components/common/Breadcrumbs.tsx
+-deleted file mode 100644
+-index 7d41684..0000000
+---- a/src/components/common/Breadcrumbs.tsx
+-+++ /dev/null
+-@@ -1,53 +0,0 @@
+--/**
+-- * Breadcrumbs component
+-- * Shows current navigation path
+-- */
+--
+--import { Link, useLocation } from 'react-router-dom'
+--import { ChevronRight } from 'lucide-react'
+--
+--export default function Breadcrumbs() {
+--  const location = useLocation()
+--  const pathnames = location.pathname.split('/').filter(x => x)
+--
+--  // Don't show breadcrumbs on root or single-level paths
+--  if (pathnames.length <= 1) {
+--    return null
+--  }
+--
+--  return (
+--    <nav aria-label="Breadcrumb" className="py-2">
+--      <ol className="flex items-center space-x-1 text-sm">
+--        <li className="flex items-center">
+--          <Link 
+--            to="/" 
+--            className="text-gray-500 hover:text-gray-700 transition-colors"
+--          >
+--            Home
+--          </Link>
+--        </li>
+--        {pathnames.map((value, index) => {
+--          const to = `/${pathnames.slice(0, index + 1).join('/')}`
+--          const isLast = index === pathnames.length - 1
+--          const label = value.charAt(0).toUpperCase() + value.slice(1)
+--
+--          return (
+--            <li key={to} className="flex items-center">
+--              <ChevronRight className="h-4 w-4 mx-1 text-gray-400" />
+--              {isLast ? (
+--                <span className="text-gray-900 font-medium">{label}</span>
+--              ) : (
+--                <Link 
+--                  to={to} 
+--                  className="text-gray-500 hover:text-gray-700 transition-colors"
+--                >
+--                  {label}
+--                </Link>
+--              )}
+--            </li>
+--          )
+--        })}
+--      </ol>
+--    </nav>
+--  )
+--}
+-\ No newline at end of file
+-diff --git a/src/components/graph/GraphView.tsx b/src/components/graph/GraphView.tsx
+-index 560a5e5..80803b3 100644
+---- a/src/components/graph/GraphView.tsx
+-+++ b/src/components/graph/GraphView.tsx
+-@@ -58,7 +58,7 @@ import { useGraphLayout } from '@/hooks/useGraphLayout';
+- import { useFilterSelectors } from '@/hooks/useFilterSelectors';
+- import { useFilterStore } from '@/stores/filterStore';
+- import { useViewStore } from '@/stores/viewStore';
+--import { FilterStatusBar } from './FilterStatusBar';
+-+import { UnifiedToolbar } from './UnifiedToolbar';
+- import { FloatingActionButton } from './FloatingActionButton';
+- import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
+- import { LayoutProgress } from './LayoutProgress/LayoutProgress';
+-@@ -66,6 +66,7 @@ import { useGraphInteractions } from '@/hooks/useGraphInteractions';
+- import { GraphDataContextProvider } from '@/contexts/GraphDataContext';
+- import { useUIStore } from '@/stores/uiStore';
+- import { cn } from '@/lib/utils';
+-+import { useNavigationTracking } from '@/hooks/useNavigationTracking';
+- 
+- /**
+-  * Wrapper to add data-testid to all node components for E2E testing
+-@@ -337,6 +338,9 @@ function GraphViewComponent() {
+-   const layoutedNodes = reactFlowNodes;
+-   const totalUniverseNodes = serverNodes.length;
+-   
+-+  // Track navigation history
+-+  useNavigationTracking({ nodes: layoutedNodes });
+-+  
+-   // Connect keyboard interactions and advanced graph handling
+-   const {
+-     handleNodeClick,              // Added to handle node selection
+-@@ -443,8 +447,8 @@ function GraphViewComponent() {
+-         
+-         <div className="flex-1 relative flex">
+-           <div className="flex-1 relative">
+--            {/* Filter status bar with comprehensive feedback */}
+--            <FilterStatusBar
+-+            {/* Unified toolbar with filter status, navigation breadcrumbs, and controls */}
+-+            <UnifiedToolbar
+-               totalNodes={totalUniverseNodes}
+-               visibleNodes={visibleNodeIds.size}
+-               connectionDepth={connectionDepth ?? 0}
+-diff --git a/src/components/layout/AppLayout.tsx b/src/components/layout/AppLayout.tsx
+-index 1c21e9a..b82b31c 100644
+---- a/src/components/layout/AppLayout.tsx
+-+++ b/src/components/layout/AppLayout.tsx
+-@@ -10,7 +10,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+- import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+- import { useLastSyncTime } from '@/hooks/useLastSyncTime'
+- import { useUIStore } from '@/stores/uiStore'
+--import Breadcrumbs from '@/components/common/Breadcrumbs'
+-+import URLBreadcrumbs from '@/components/navigation/URLBreadcrumbs'
+- import ConnectionStatus from '@/components/common/ConnectionStatus'
+- import ErrorBoundary from '@/components/common/ErrorBoundary'
+- import Sidebar from '@/components/layout/Sidebar'
+-@@ -234,7 +234,7 @@ export default function AppLayout() {
+-               transition={{ duration: 0.2, ease: "easeInOut" }}
+-               className="px-4 md:px-6 py-2 overflow-hidden border-t border-border/20"
+-             >
+--              <Breadcrumbs />
+-+              <URLBreadcrumbs />
+-             </motion.div>
+-           )}
+-         </AnimatePresence>
+-diff --git a/src/hooks/useGraphInteractions.ts b/src/hooks/useGraphInteractions.ts
+-index 1794029..2d487de 100644
+---- a/src/hooks/useGraphInteractions.ts
+-+++ b/src/hooks/useGraphInteractions.ts
+-@@ -19,6 +19,7 @@ import {
+- import { useHotkeys } from 'react-hotkeys-hook';
+- import toast from 'react-hot-toast';
+- import { useFilterStore } from '@/stores/filterStore';
+-+import { useNavigationStore } from '@/stores/navigationStore';
+- 
+- 
+- 
+-@@ -416,6 +417,23 @@ export function useGraphInteractions({
+-     clearSelection();
+-   }, [clearSelection]);
+-   
+-+  // Navigation history shortcuts
+-+  useHotkeys('[', () => {
+-+    const navigationStore = useNavigationStore.getState();
+-+    const nodeId = navigationStore.goBack();
+-+    if (nodeId) {
+-+      setSelectedNode(nodeId);
+-+    }
+-+  }, [setSelectedNode]);
+-+  
+-+  useHotkeys(']', () => {
+-+    const navigationStore = useNavigationStore.getState();
+-+    const nodeId = navigationStore.goForward();
+-+    if (nodeId) {
+-+      setSelectedNode(nodeId);
+-+    }
+-+  }, [setSelectedNode]);
+-+  
+-   return {
+-     // Selection state (computed from React Flow)
+-     selectedNodes: getSelectedNodes(),

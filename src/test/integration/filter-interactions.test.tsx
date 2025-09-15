@@ -34,7 +34,13 @@ function renderWithProviders(component: React.ReactElement) {
   );
 }
 
-// Mock React Flow
+// Mock React Flow with proper provider context
+const mockFitView = vi.fn();
+const mockFitBounds = vi.fn();
+const mockSetViewport = vi.fn();
+const mockGetNodes = vi.fn().mockReturnValue([]);
+const mockGetEdges = vi.fn().mockReturnValue([]);
+
 vi.mock('@xyflow/react', () => ({
   ReactFlow: ({ nodes, onNodeClick }: any) => {
     console.log('ReactFlow received nodes:', nodes?.map((n: any) => ({ id: n.id, type: n.type })));
@@ -53,7 +59,10 @@ vi.mock('@xyflow/react', () => ({
       </div>
     );
   },
-  ReactFlowProvider: ({ children }: any) => <>{children}</>,
+  ReactFlowProvider: ({ children }: any) => {
+    // Provide the context that GraphView expects
+    return <div data-testid="react-flow-provider">{children}</div>;
+  },
   Background: () => null,
   Controls: () => null,
   MiniMap: () => null,
@@ -63,13 +72,21 @@ vi.mock('@xyflow/react', () => ({
     Cross: 'cross'
   },
   useReactFlow: () => ({
-    fitView: vi.fn(),
-    fitBounds: vi.fn(),
+    fitView: mockFitView,
+    fitBounds: mockFitBounds,
     getViewport: () => ({ x: 0, y: 0, zoom: 1 }),
-    setViewport: vi.fn(),
-    getNodes: vi.fn().mockReturnValue([]),
-    getEdges: vi.fn().mockReturnValue([]),
+    setViewport: mockSetViewport,
+    getNodes: mockGetNodes,
+    getEdges: mockGetEdges,
   })
+}));
+
+// Mock Tooltip components to avoid provider issues in tests
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: any) => children,
+  TooltipTrigger: ({ children }: any) => children,
+  TooltipContent: () => null,
+  TooltipProvider: ({ children }: any) => children
 }));
 
 // Mock hooks

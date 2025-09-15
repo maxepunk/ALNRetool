@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CreatePanel } from './CreatePanel';
 import { useFilterStore } from '@/stores/filterStore';
@@ -78,23 +78,28 @@ describe('CreatePanel - Refactored Creation Pipeline', () => {
     });
   });
   
-  const renderCreatePanel = (props = {}) => {
+  const renderCreatePanel = async (props = {}) => {
     const defaultProps = {
       entityType: 'character' as const,
       onClose: vi.fn(),
       onSuccess: vi.fn()
     };
     
-    return render(
-      <QueryClientProvider client={queryClient}>
-        <CreatePanel {...defaultProps} {...props} />
-      </QueryClientProvider>
-    );
+    let result: any;
+    await act(async () => {
+      result = render(
+        <QueryClientProvider client={queryClient}>
+          <CreatePanel {...defaultProps} {...props} />
+        </QueryClientProvider>
+      );
+    });
+    
+    return result;
   };
   
   describe('Puzzle Act Field', () => {
     it('should handle act field for puzzles correctly', async () => {
-      renderCreatePanel({ entityType: 'puzzle' });
+      await renderCreatePanel({ entityType: 'puzzle' });
       
       // Fill in required fields - use regex to handle the asterisk
       const nameInput = screen.getByLabelText(/Name/);

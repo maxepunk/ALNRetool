@@ -89,23 +89,35 @@ export const UnifiedToolbar = memo(function UnifiedToolbar({
   const currentIndex = useNavigationStore(state => state.currentIndex);
   
   const handleBack = () => {
-    const nodeId = goBack();
-    if (nodeId) {
-      setSelectedNode(nodeId);
+    try {
+      const nodeId = goBack();
+      if (nodeId) {
+        setSelectedNode(nodeId);
+      }
+    } catch (error) {
+      console.error('[UnifiedToolbar] Navigation back failed:', error);
     }
   };
   
   const handleForward = () => {
-    const nodeId = goForward();
-    if (nodeId) {
-      setSelectedNode(nodeId);
+    try {
+      const nodeId = goForward();
+      if (nodeId) {
+        setSelectedNode(nodeId);
+      }
+    } catch (error) {
+      console.error('[UnifiedToolbar] Navigation forward failed:', error);
     }
   };
   
   const handleBreadcrumbClick = (index: number) => {
-    const nodeId = navigateToIndex(index);
-    if (nodeId) {
-      setSelectedNode(nodeId);
+    try {
+      const nodeId = navigateToIndex(index);
+      if (nodeId) {
+        setSelectedNode(nodeId);
+      }
+    } catch (error) {
+      console.error('[UnifiedToolbar] Breadcrumb navigation failed:', error);
     }
   };
   
