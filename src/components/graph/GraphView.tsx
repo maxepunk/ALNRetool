@@ -454,7 +454,7 @@ function GraphViewComponent() {
             {/* Unified toolbar with filter status, navigation breadcrumbs, and controls */}
             <UnifiedToolbar
               totalNodes={totalUniverseNodes}
-              visibleNodes={isMobile && reactFlowNodes.length > 50 ? 50 : visibleNodeIds.size}
+              visibleNodes={visibleNodeIds.size}
               connectionDepth={connectionDepth ?? 0}
               selectedNode={selectedNodeData}
               hasActiveFilters={hasActiveFilters()}
@@ -496,7 +496,7 @@ function GraphViewComponent() {
             searchTerm={searchTerm}
             selectedNodeId={selectedNodeId}
             connectionDepth={connectionDepth}
-            nodes={isMobile && reactFlowNodes.length > 50 ? reactFlowNodes.slice(0, 50) : reactFlowNodes}
+            nodes={reactFlowNodes}
           />
           <Background 
             variant={BackgroundVariant.Dots} 

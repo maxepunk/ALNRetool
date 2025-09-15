@@ -289,10 +289,10 @@ export const ElementFilterPanel = () => (
         options: [
           { value: 'Set Dressing', label: 'Set Dressing' },
           { value: 'Prop', label: 'Prop' },
-          { value: 'Memory Token (Audio)', label: 'Memory Token (Audio)' },
-          { value: 'Memory Token (Video)', label: 'Memory Token (Video)' },
-          { value: 'Memory Token (Image)', label: 'Memory Token (Image)' },
-          { value: 'Memory Token (Audio+Image)', label: 'Memory Token (Audio+Image)' },
+          { value: 'Memory Token Audio', label: 'Memory Token (Audio)' },
+          { value: 'Memory Token Video', label: 'Memory Token (Video)' },
+          { value: 'Memory Token Image', label: 'Memory Token (Image)' },
+          { value: 'Memory Token Audio + Image', label: 'Memory Token (Audio+Image)' },
           { value: 'Document', label: 'Document' }
         ]
       },

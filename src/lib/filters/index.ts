@@ -219,7 +219,23 @@ export function applyContentFilters(
 ): Element[] {
   let filtered = [...elements];
 
-  // Filter by content status
+  // Filter by element basic types (Memory Token, Prop, Document, etc.)
+  if (filters.elementBasicTypes.size > 0) {
+    filtered = filtered.filter(element => {
+      if (!element.basicType) return false;
+      return filters.elementBasicTypes.has(element.basicType);
+    });
+  }
+
+  // Filter by element status (production status)
+  if (filters.elementStatus.size > 0) {
+    filtered = filtered.filter(element => {
+      if (!element.status) return false;
+      return filters.elementStatus.has(element.status);
+    });
+  }
+
+  // Filter by content status (this seems to be a different field, keeping for compatibility)
   if (filters.contentStatus.size > 0) {
     filtered = filtered.filter(element => {
       // Map element properties to content status
