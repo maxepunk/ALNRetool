@@ -45,19 +45,24 @@ export default function AppLayout() {
     const checkMobile = () => {
       const isMobileView = window.matchMedia('(max-width: 768px)').matches
       setIsMobile(isMobileView)
-      
-      // Auto-manage sidebar based on screen size
-      if (isMobileView && leftSidebarOpen) {
-        toggleSidebar() // Close on mobile
-      } else if (!isMobileView && !leftSidebarOpen) {
-        toggleSidebar() // Open on desktop
-      }
     }
     
     checkMobile()
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
-  }, [leftSidebarOpen, toggleSidebar])
+  }, [])
+  
+  // Auto-manage sidebar on initial mount based on screen size
+  useEffect(() => {
+    const isMobileView = window.matchMedia('(max-width: 768px)').matches
+    
+    if (isMobileView && leftSidebarOpen) {
+      toggleSidebar() // Close on mobile
+    } else if (!isMobileView && !leftSidebarOpen) {
+      toggleSidebar() // Open on desktop
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount
 
   // Handle header minimization on scroll
   useEffect(() => {
