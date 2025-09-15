@@ -36,6 +36,7 @@ import { useNavigationStore, useCanGoBack, useCanGoForward, useVisibleBreadcrumb
 import { useFilterStore } from '@/stores/filterStore';
 import { Puzzle, Users, Package, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 interface UnifiedToolbarProps {
   totalNodes: number;
@@ -70,6 +71,9 @@ export const UnifiedToolbar = memo(function UnifiedToolbar({
   selectedNode,
   hasActiveFilters
 }: UnifiedToolbarProps) {
+  // Check if mobile for touch-friendly sizing
+  const isMobile = useIsMobile();
+  
   // Filter-related hooks
   const clearAllFilters = useFilterStore((state) => state.clearAllFilters);
   const searchTerm = useFilterStore((state) => state.searchTerm);
@@ -130,7 +134,7 @@ export const UnifiedToolbar = memo(function UnifiedToolbar({
   return (
     <Card className="absolute top-4 left-4 right-4 z-20 shadow-lg border bg-white/95 dark:bg-gray-950/95 backdrop-blur-sm">
       <div className="px-4 py-2">
-        <div className="grid grid-cols-[1fr_auto_auto] gap-4 items-center">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-2 md:gap-4 items-center">
           {/* Left Section: Filter Status */}
           <div className="flex items-center gap-3 min-w-0">
             {showFilterInfo && (
@@ -188,9 +192,12 @@ export const UnifiedToolbar = memo(function UnifiedToolbar({
                 {hasActiveFilters && (
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size={isMobile ? "touch" : "sm"}
                     onClick={clearAllFilters}
-                    className="h-7 px-2 text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
+                    className={cn(
+                      isMobile ? "px-3" : "h-7 px-2",
+                      "text-slate-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
+                    )}
                   >
                     <X className="h-3.5 w-3.5 mr-1" />
                     Clear
@@ -251,11 +258,11 @@ export const UnifiedToolbar = memo(function UnifiedToolbar({
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size={isMobile ? "touch-icon" : "sm"}
                   onClick={handleBack}
                   disabled={!canGoBack}
                   className={cn(
-                    "h-8 w-8 p-0",
+                    isMobile ? "p-0" : "h-8 w-8 p-0",
                     canGoBack 
                       ? "text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" 
                       : "text-slate-400 dark:text-slate-600"
@@ -275,11 +282,11 @@ export const UnifiedToolbar = memo(function UnifiedToolbar({
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size={isMobile ? "touch-icon" : "sm"}
                   onClick={handleForward}
                   disabled={!canGoForward}
                   className={cn(
-                    "h-8 w-8 p-0",
+                    isMobile ? "p-0" : "h-8 w-8 p-0",
                     canGoForward 
                       ? "text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100" 
                       : "text-slate-400 dark:text-slate-600"

@@ -67,6 +67,7 @@ import { GraphDataContextProvider } from '@/contexts/GraphDataContext';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import { useNavigationTracking } from '@/hooks/useNavigationTracking';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -248,6 +249,9 @@ function GraphViewComponent() {
       console.warn('[GraphView] Missing entities detected:', graphData.metadata.missingEntities);
     }
   }, [graphData?.metadata]);
+  
+  // Check if mobile viewport for touch optimizations
+  const isMobile = useIsMobile();
   
   // Use consolidated filter selector for better performance (1 subscription vs 14+)
   const filters = useFilterSelectors();
@@ -450,7 +454,7 @@ function GraphViewComponent() {
             {/* Unified toolbar with filter status, navigation breadcrumbs, and controls */}
             <UnifiedToolbar
               totalNodes={totalUniverseNodes}
-              visibleNodes={visibleNodeIds.size}
+              visibleNodes={isMobile && reactFlowNodes.length > 50 ? 50 : visibleNodeIds.size}
               connectionDepth={connectionDepth ?? 0}
               selectedNode={selectedNodeData}
               hasActiveFilters={hasActiveFilters()}
@@ -465,9 +469,13 @@ function GraphViewComponent() {
             />
           )}
           
+          {/* Mobile performance optimization: limit visible nodes */}
           <ReactFlow
-          nodes={reactFlowNodes}
-          edges={reactFlowEdges}
+          nodes={isMobile && reactFlowNodes.length > 50 ? reactFlowNodes.slice(0, 50) : reactFlowNodes}
+          edges={isMobile && reactFlowNodes.length > 50 ? reactFlowEdges.filter(edge => {
+            const limitedNodeIds = new Set(reactFlowNodes.slice(0, 50).map(n => n.id));
+            return limitedNodeIds.has(edge.source) && limitedNodeIds.has(edge.target);
+          }) : reactFlowEdges}
           onNodeClick={handleNodeClick}
           onSelectionChange={handleSelectionChange}
           nodeTypes={nodeTypes}
@@ -481,12 +489,18 @@ function GraphViewComponent() {
           onlyRenderVisibleElements={true}
           deleteKeyCode="Delete"
           selectionKeyCode="Shift"
+          // Touch-specific optimizations
+          zoomOnPinch={true}
+          panOnScroll={!isMobile} // Disable scroll-to-pan on mobile for better UX
+          zoomOnDoubleClick={!isMobile} // Prevent accidental zooms on mobile
+          preventScrolling={isMobile} // Prevent page scroll during graph interaction on mobile
+          noDragClassName="nodrag" // Selective drag prevention
         >
           <ViewportController 
             searchTerm={searchTerm}
             selectedNodeId={selectedNodeId}
             connectionDepth={connectionDepth}
-            nodes={reactFlowNodes}
+            nodes={isMobile && reactFlowNodes.length > 50 ? reactFlowNodes.slice(0, 50) : reactFlowNodes}
           />
           <Background 
             variant={BackgroundVariant.Dots} 
@@ -495,35 +509,38 @@ function GraphViewComponent() {
             className="bg-gray-50 dark:bg-gray-900"
           />
           <Controls />
-          <MiniMap 
-            nodeColor={(node) => {
-              // Highlight selected nodes first
-              if (node.selected) return '#ff0072'; // Hot pink for selected
-              
-              // Then by type
-              switch (node.type) {
-                case 'puzzle': return '#f59e0b'; // amber
-                case 'character': return '#10b981'; // green
-                case 'element': return '#8b5cf6'; // purple
-                case 'timeline': return '#f97316'; // orange
-                default: 
-                  return '#6b7280'; // gray
-              }
-            }}
-            nodeStrokeWidth={3}
-            nodeStrokeColor="#000000"
-            nodeBorderRadius={4}
-            maskColor="rgba(100, 100, 100, 0.1)"
-            zoomable
-            pannable
-            style={{
-              width: 150,  // Reduced from 200
-              height: 100, // Reduced from 150
-              // Slight transparency for better UX
-              opacity: reactFlowNodes.length === 0 ? 0 : 0.9,
-              pointerEvents: reactFlowNodes.length === 0 ? 'none' : 'auto'
-            }}
-          />
+          {/* Hide MiniMap on mobile to save screen space */}
+          {!isMobile && (
+            <MiniMap 
+              nodeColor={(node) => {
+                // Highlight selected nodes first
+                if (node.selected) return '#ff0072'; // Hot pink for selected
+                
+                // Then by type
+                switch (node.type) {
+                  case 'puzzle': return '#f59e0b'; // amber
+                  case 'character': return '#10b981'; // green
+                  case 'element': return '#8b5cf6'; // purple
+                  case 'timeline': return '#f97316'; // orange
+                  default: 
+                    return '#6b7280'; // gray
+                }
+              }}
+              nodeStrokeWidth={3}
+              nodeStrokeColor="#000000"
+              nodeBorderRadius={4}
+              maskColor="rgba(100, 100, 100, 0.1)"
+              zoomable
+              pannable
+              style={{
+                width: 150,  // Reduced from 200
+                height: 100, // Reduced from 150
+                // Slight transparency for better UX
+                opacity: reactFlowNodes.length === 0 ? 0 : 0.9,
+                pointerEvents: reactFlowNodes.length === 0 ? 'none' : 'auto'
+              }}
+            />
+          )}
           </ReactFlow>
           
           {/* Floating Action Button - hide when detail panel is open */}

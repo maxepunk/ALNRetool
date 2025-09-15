@@ -101,6 +101,7 @@ import { useEntityMutation } from '@/hooks/mutations';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { validateField, fieldValidationConfigs } from '@/utils/fieldValidation';
 import { useUIStore } from '@/stores/uiStore';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 /**
  * Union type for all entity types.
@@ -271,6 +272,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   // Get UI store state and actions for minimization
   const isMinimized = useUIStore(state => state.detailPanelMinimized);
   const toggleMinimized = useUIStore(state => state.toggleDetailPanelMinimized);
+  const isMobile = useIsMobile();
   
   // Track if component is mounted to prevent stale callbacks (Bug 6 fix)
   const isMountedRef = useRef(true);
@@ -638,23 +640,24 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     return entityType.charAt(0).toUpperCase() + entityType.slice(1);
   };
 
-  // For minimized mode, render as a horizontal bar
+  // For minimized mode, render as a horizontal bar (bottom on mobile, top on desktop)
   if (isMinimized) {
     return (
       <div 
         data-testid="detail-panel"
         className={cn(
-          "w-full h-12 bg-white/10 backdrop-blur-md border-b border-white/20 flex items-center px-4 gap-4 transition-all duration-300",
+          "w-full bg-white/10 backdrop-blur-md border-white/20 flex items-center px-4 gap-4 transition-all duration-300",
+          isMobile ? "h-16 border-t fixed bottom-0 left-0 right-0 z-30" : "h-12 border-b",
           saveSuccess && "ring-2 ring-green-500/20"
         )}>
         <Button
           variant="ghost"
-          size="icon"
+          size={isMobile ? "touch-icon" : "icon"}
           onClick={toggleMinimized}
           className="hover:bg-white/10"
           title="Expand panel (Cmd/Ctrl+M)"
         >
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className={cn("h-4 w-4", isMobile && "rotate-180")} />
         </Button>
         <span className="text-xl" title={getEntityTypeName()}>{getEntityIcon()}</span>
         {entity && 'name' in entity && entity.name && (
@@ -667,7 +670,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         </Badge>
         <Button
           variant="ghost"
-          size="icon"
+          size={isMobile ? "touch-icon" : "icon"}
           onClick={onClose}
           className="hover:bg-white/10"
           title="Close panel"
@@ -678,14 +681,21 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
     );
   }
 
-  // Full panel mode - render as right sidebar
+  // Full panel mode - render as bottom sheet on mobile, right sidebar on desktop
   return (
     <div 
       data-testid="detail-panel"
       className={cn(
-      "w-96 h-full bg-white/10 backdrop-blur-md border-l border-white/20 flex flex-col transition-all duration-300",
-      isEntering && "animate-in slide-in-from-right duration-300",
-      isExiting && "animate-out slide-out-to-right duration-200",
+      "bg-white/10 backdrop-blur-md border-white/20 flex flex-col transition-all duration-300",
+      isMobile ? [
+        "fixed bottom-0 left-0 right-0 z-30 h-[70vh] rounded-t-xl border-t",
+        isEntering && "animate-in slide-in-from-bottom duration-300",
+        isExiting && "animate-out slide-out-to-bottom duration-200"
+      ] : [
+        "w-96 h-full border-l",
+        isEntering && "animate-in slide-in-from-right duration-300",
+        isExiting && "animate-out slide-out-to-right duration-200"
+      ],
       saveSuccess && "ring-2 ring-green-500/20",
       hasValidationError && "animate-shake"
     )}>
@@ -705,7 +715,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
-              size="icon"
+              size={isMobile ? "touch-icon" : "icon"}
               onClick={toggleMinimized}
               className="hover:bg-white/10"
               title="Minimize panel (Cmd/Ctrl+M)"
@@ -714,7 +724,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             </Button>
             <Button
               variant="ghost"
-              size="icon"
+              size={isMobile ? "touch-icon" : "icon"}
               onClick={() => setShowDeleteConfirm(true)}
               className="hover:bg-destructive/20 text-destructive"
               title="Delete entity"
@@ -728,7 +738,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             </Button>
             <Button
               variant="ghost"
-              size="icon"
+              size={isMobile ? "touch-icon" : "icon"}
               onClick={onClose}
               className="hover:bg-white/10"
             >
@@ -885,6 +895,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
         <div className="border-t border-white/10 p-4 flex gap-2">
           <Button
             variant="outline"
+            size={isMobile ? "touch" : "default"}
             onClick={handleCancel}
             disabled={!isDirty || isSaving}
             className="flex-1 bg-white/5 border-white/10 hover:bg-white/10"
@@ -893,6 +904,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             Cancel
           </Button>
           <Button
+            size={isMobile ? "touch" : "default"}
             onClick={handleSave}
             disabled={!isDirty || isSaving}
             className={cn(

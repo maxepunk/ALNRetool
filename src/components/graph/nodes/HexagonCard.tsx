@@ -13,6 +13,7 @@ import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { StatusTooltip } from './NodeTooltip';
 import type { GraphNodeData } from '@/lib/graph/types';
 import type { NodeDisplayFlags, NodeTextSizes } from '@/hooks/useNodeFilterStyles';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 export type NodeStatus = 'draft' | 'ready' | 'locked' | 'chained' | 'error';
 
@@ -123,6 +124,7 @@ const HexagonCard = memo(forwardRef<HTMLDivElement, HexagonCardProps>(({
 }, ref) => {
   const config = hexagonSizeConfigs[size];
   const tierTheme = tierColors[tier];
+  const isMobile = useIsMobile();
   
   // Default metadata for when none is provided
   const defaultMetadata: GraphNodeData['metadata'] = {
@@ -188,8 +190,8 @@ const HexagonCard = memo(forwardRef<HTMLDivElement, HexagonCardProps>(({
             'border-2',
             tierTheme.border,
             tierTheme.gradient,
-            tierTheme.glow,
-            tierTheme.shadow,
+            !isMobile && tierTheme.glow, // Disable glow on mobile
+            isMobile ? 'shadow-sm' : tierTheme.shadow, // Simpler shadow on mobile
             selected && 'ring-4 ring-blue-400 ring-opacity-50',
             highlighted && 'shadow-xl shadow-yellow-400/50',
             isNPC && 'border-dashed'
@@ -197,29 +199,36 @@ const HexagonCard = memo(forwardRef<HTMLDivElement, HexagonCardProps>(({
           style={{
             clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
             borderWidth: '2px',
-            boxShadow: `
-              0 20px 25px -5px rgba(0, 0, 0, 0.25),
-              0 10px 10px -5px rgba(0, 0, 0, 0.15),
-              inset 0 1px 0 rgba(255, 255, 255, 0.1)
-            `,
+            // Simplified shadow on mobile
+            boxShadow: isMobile 
+              ? '0 2px 4px rgba(0, 0, 0, 0.1)'
+              : `
+                0 20px 25px -5px rgba(0, 0, 0, 0.25),
+                0 10px 10px -5px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1)
+              `,
           }}
         >
-          {/* Glass shine effect - subtle on dark backgrounds */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent"
-            style={{
-              clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
-            }}
-          />
+          {/* Glass shine effect - disabled on mobile */}
+          {!isMobile && (
+            <div 
+              className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent"
+              style={{
+                clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+              }}
+            />
+          )}
           
-          {/* Hover glow overlay */}
-          <div
-            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-            style={{
-              background: 'radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%)',
-              clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
-            }}
-          />
+          {/* Hover glow overlay - disabled on mobile */}
+          {!isMobile && (
+            <div
+              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+              style={{
+                background: 'radial-gradient(circle at center, rgba(255,255,255,0.15) 0%, transparent 70%)',
+                clipPath: 'polygon(30% 0%, 70% 0%, 100% 50%, 70% 100%, 30% 100%, 0% 50%)',
+              }}
+            />
+          )}
         </div>
 
         {/* Content Container (not clipped) */}

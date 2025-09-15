@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import type { Character, Element, Puzzle, TimelineEvent } from '@/types/notion/app';
 import type { GraphNodeData } from '@/lib/graph/types';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 // Union type for all entity types
 export type EntityData = Character | Element | Puzzle | TimelineEvent;
@@ -37,12 +38,15 @@ export const NodePopover = memo(<T extends EntityData = EntityData>({
   const [isDragging, setIsDragging] = useState(false);
   const showTimeoutRef = useRef<NodeJS.Timeout>();
   const hideTimeoutRef = useRef<NodeJS.Timeout>();
+  const longPressTimeoutRef = useRef<NodeJS.Timeout>();
+  const isMobile = useIsMobile();
   
   // Enable popovers to help read node details when zoomed out
   const isEnabled = enabled && !isDragging;
   
+  // Desktop hover handlers
   const handleMouseEnter = useCallback(() => {
-    if (!isEnabled) return;
+    if (!isEnabled || isMobile) return; // Skip on mobile
     
     // Clear any pending hide timeout
     if (hideTimeoutRef.current) {
@@ -54,9 +58,11 @@ export const NodePopover = memo(<T extends EntityData = EntityData>({
     showTimeoutRef.current = setTimeout(() => {
       setOpen(true);
     }, 300);
-  }, [isEnabled]);
+  }, [isEnabled, isMobile]);
   
   const handleMouseLeave = useCallback(() => {
+    if (isMobile) return; // Skip on mobile
+    
     // Clear any pending show timeout
     if (showTimeoutRef.current) {
       clearTimeout(showTimeoutRef.current);
@@ -67,7 +73,46 @@ export const NodePopover = memo(<T extends EntityData = EntityData>({
     hideTimeoutRef.current = setTimeout(() => {
       setOpen(false);
     }, 150);
-  }, []);
+  }, [isMobile]);
+  
+  // Touch/pointer handlers for mobile
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (!isEnabled || !isMobile) return; // Only on mobile
+    
+    // Start long-press timer (500ms)
+    longPressTimeoutRef.current = setTimeout(() => {
+      setOpen(true);
+      // Prevent default to avoid triggering other interactions
+      e.preventDefault();
+    }, 500);
+  }, [isEnabled, isMobile]);
+  
+  const handlePointerUp = useCallback(() => {
+    if (!isMobile) return; // Only on mobile
+    
+    // Clear long-press timer if released early
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = undefined;
+    }
+    
+    // Auto-hide popover after 3 seconds on mobile
+    if (open) {
+      hideTimeoutRef.current = setTimeout(() => {
+        setOpen(false);
+      }, 3000);
+    }
+  }, [isMobile, open]);
+  
+  const handlePointerCancel = useCallback(() => {
+    if (!isMobile) return; // Only on mobile
+    
+    // Clear long-press timer if cancelled
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = undefined;
+    }
+  }, [isMobile]);
   
   // Close immediately on drag start
   const handleDragStart = useCallback(() => {
@@ -83,6 +128,10 @@ export const NodePopover = memo(<T extends EntityData = EntityData>({
       clearTimeout(hideTimeoutRef.current);
       hideTimeoutRef.current = undefined;
     }
+    if (longPressTimeoutRef.current) {
+      clearTimeout(longPressTimeoutRef.current);
+      longPressTimeoutRef.current = undefined;
+    }
   }, []);
   
   const handleDragEnd = useCallback(() => {
@@ -94,6 +143,7 @@ export const NodePopover = memo(<T extends EntityData = EntityData>({
     return () => {
       if (showTimeoutRef.current) clearTimeout(showTimeoutRef.current);
       if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+      if (longPressTimeoutRef.current) clearTimeout(longPressTimeoutRef.current);
     };
   }, []);
   
@@ -106,8 +156,16 @@ export const NodePopover = memo(<T extends EntityData = EntityData>({
   const childWithHandlers = React.cloneElement(children as React.ReactElement, {
     onMouseEnter: handleMouseEnter,
     onMouseLeave: handleMouseLeave,
+    onPointerDown: handlePointerDown,
+    onPointerUp: handlePointerUp,
+    onPointerCancel: handlePointerCancel,
     onDragStart: handleDragStart,
     onDragEnd: handleDragEnd,
+    style: {
+      ...(children as React.ReactElement).props.style,
+      // Prevent default touch behaviors on mobile
+      ...(isMobile ? { touchAction: 'none' } : {})
+    }
   });
   
   return (
