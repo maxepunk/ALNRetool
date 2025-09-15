@@ -3,19 +3,23 @@
  * Foundation component for all graph nodes using shadcn Card
  * Provides consistent styling, glassmorphism effects, and React Flow integration
  * Uses a slot-based architecture for flexible content arrangement
+ * Enhanced with dynamic typography and responsive sizing
  */
 
-import { memo, type ReactNode } from 'react';
+import { forwardRef, memo, type ReactNode } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
+import { NodeTooltip, StatusTooltip } from './NodeTooltip';
+import type { GraphNodeData } from '@/lib/graph/types';
 
 export type NodeType = 'puzzle' | 'character' | 'element' | 'timeline' | 'group';
 export type NodeSize = 'small' | 'medium' | 'large' | 'parent' | 'child';
 export type NodeStatus = 'draft' | 'ready' | 'locked' | 'chained' | 'error';
 
-interface BaseNodeCardProps extends Partial<NodeProps> {
+interface BaseNodeCardProps extends Partial<NodeProps>, Omit<React.HTMLAttributes<HTMLDivElement>, 'draggable'> {
   nodeType: NodeType;
   size?: NodeSize;
   status?: NodeStatus | NodeStatus[];
@@ -38,6 +42,8 @@ interface BaseNodeCardProps extends Partial<NodeProps> {
   outlineColor?: string;
   outlineWidth?: number;
   opacity?: number;
+  // NEW: Pass metadata for zoom-aware rendering
+  metadata?: GraphNodeData['metadata'];
 }
 
 // Node type color themes with WCAG AA compliant contrast
@@ -84,13 +90,13 @@ const nodeThemes = {
   },
 };
 
-// Size variants
-const sizeClasses = {
-  small: 'w-32 h-24 text-xs',
-  medium: 'w-44 h-32 text-sm',
-  large: 'w-56 h-40 text-base',
-  parent: 'w-60 h-44 text-base font-semibold',
-  child: 'w-36 h-28 text-xs',
+// Size configurations - now using base dimensions for responsive scaling
+const sizeConfigs = {
+  small: { baseWidth: 128, baseHeight: 96 },
+  medium: { baseWidth: 176, baseHeight: 128 },
+  large: { baseWidth: 224, baseHeight: 160 },
+  parent: { baseWidth: 240, baseHeight: 176 },
+  child: { baseWidth: 144, baseHeight: 112 },
 };
 
 // Status badge variants with improved contrast
@@ -102,7 +108,7 @@ const statusVariants = {
   error: { variant: 'destructive' as const, label: '⚠️ Error', className: 'bg-red-100 text-red-700 border-red-300 font-medium' },
 };
 
-const BaseNodeCard = memo(({
+const BaseNodeCard = memo(forwardRef<HTMLDivElement, BaseNodeCardProps>(({
   nodeType,
   size = 'medium',
   status,
@@ -123,13 +129,57 @@ const BaseNodeCard = memo(({
   outlineColor = '',
   outlineWidth = 0,
   opacity = 1,
-}: BaseNodeCardProps) => {
+  metadata,
+  ...rest
+}, ref) => {
   const theme = nodeThemes[nodeType];
-  const sizeClass = sizeClasses[size];
+  const config = sizeConfigs[size];
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
+  
+  // Default metadata for when none is provided
+  const defaultMetadata: GraphNodeData['metadata'] = {
+    entityType: 'element', // Safe default
+  };
+
+  // Always call the hook (React Rules of Hooks)
+  const hookResult = useNodeFilterStyles(metadata || defaultMetadata, selected);
+  
+  // Use hook results only if metadata was provided, otherwise use defaults
+  const {
+    displayFlags,
+    textSizes,
+    getResponsiveTextSize,
+    zoom = 1
+  } = metadata ? hookResult : {
+    displayFlags: {
+      showShape: true,
+      showIcon: true,
+      showTitle: true,
+      showTitleFull: true,
+      showBadges: true,
+      showStats: true,
+      showDetails: true,
+      showDescriptions: true,
+      enablePopovers: false,
+      enableTooltips: false,
+    },
+    textSizes: {
+      title: 'text-sm',
+      badge: 'text-xs',
+      stats: 'text-xs',
+      description: 'text-xs',
+    },
+    getResponsiveTextSize: (_size: string) => '1rem',
+    zoom: 1
+  };
+  
+  // Calculate dynamic dimensions based on zoom
+  const scaleFactor = Math.min(Math.max(zoom, 0.5), 1.5);
+  const scaledWidth = config.baseWidth * scaleFactor;
+  const scaledHeight = config.baseHeight * scaleFactor;
 
   return (
-    <div className="relative group" style={{ opacity }}>
+    <div ref={ref} className="relative group" style={{ opacity }} {...rest}>
       {/* Custom outline (behind main card) */}
       {outlineWidth > 0 && (
         <div
@@ -144,7 +194,7 @@ const BaseNodeCard = memo(({
       <Card
         className={cn(
           'relative transition-all duration-300 cursor-pointer overflow-hidden',
-          sizeClass,
+          // Remove fixed size class, now using dynamic sizing
           theme.border,
           theme.gradient,
           theme.hover,
@@ -162,6 +212,9 @@ const BaseNodeCard = memo(({
           className
         )}
         style={{
+          width: `${scaledWidth}px`,
+          height: `${scaledHeight}px`,
+          fontSize: getResponsiveTextSize('md'),
           boxShadow: selected 
             ? '0 10px 40px -10px rgba(0, 0, 0, 0.2), 0 0 25px -5px rgba(0, 0, 0, 0.1)'
             : '0 4px 20px -2px rgba(0, 0, 0, 0.1), 0 0 10px -2px rgba(0, 0, 0, 0.06)',
@@ -178,8 +231,8 @@ const BaseNodeCard = memo(({
         )}
         
         <CardContent className="p-2 h-full flex flex-col relative z-10">
-          {/* Header slot - for badges, status indicators */}
-          {(headerSlot || statuses.length > 0) && (
+          {/* Header slot - conditional rendering based on zoom */}
+          {displayFlags.showBadges && (headerSlot || statuses.length > 0) && (
             <div className="flex items-start justify-between gap-1 mb-1">
               {/* Custom header content */}
               {headerSlot && (
@@ -188,53 +241,79 @@ const BaseNodeCard = memo(({
                 </div>
               )}
               
-              {/* Status badges - always on the right */}
+              {/* Status badges with tooltips */}
               {statuses.length > 0 && (
                 <div className="flex gap-1 flex-shrink-0">
                   {statuses.map((s) => (
-                    <Badge
+                    <StatusTooltip
                       key={s}
-                      variant={statusVariants[s].variant}
-                      className={cn(
-                        "text-xs px-1.5 py-0 h-5 shadow-sm backdrop-blur-sm",
-                        statusVariants[s].className
-                      )}
+                      status={s}
+                      description={`Status: ${statusVariants[s].label}`}
+                      enabled={displayFlags.enableTooltips}
                     >
-                      {statusVariants[s].label}
-                    </Badge>
+                      <Badge
+                        variant={statusVariants[s].variant}
+                        className={cn(
+                          "px-1.5 py-0 h-5 shadow-sm backdrop-blur-sm",
+                          statusVariants[s].className,
+                          textSizes.badge
+                        )}
+                      >
+                        {statusVariants[s].label}
+                      </Badge>
+                    </StatusTooltip>
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Title section with icon */}
-          <div className={cn("flex items-center gap-2 mb-1", theme.text)}>
-            {icon && (
-              <div className="text-lg shrink-0 transition-transform duration-300 group-hover:scale-110">
-                {icon}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <h3 
-                className="font-semibold truncate" 
-                title={title.length > 20 ? title : undefined}
-              >
-                {title}
-              </h3>
+          {/* Title section with icon - responsive sizing */}
+          {(displayFlags.showIcon || displayFlags.showTitle) && (
+            <div className={cn("flex items-center gap-2 mb-1", theme.text)}>
+              {icon && displayFlags.showIcon && (
+                <div 
+                  className="shrink-0 transition-transform duration-300 group-hover:scale-110"
+                  style={{ fontSize: getResponsiveTextSize('lg') }}
+                >
+                  {icon}
+                </div>
+              )}
+              {displayFlags.showTitle && (
+                <div className="flex-1 min-w-0">
+                  <NodeTooltip
+                    enabled={displayFlags.enableTooltips && !displayFlags.showTitleFull && title.length > 20}
+                    content={title}
+                  >
+                    <h3 
+                      className={cn(
+                        "font-semibold",
+                        textSizes.title,
+                        !displayFlags.showTitleFull && "truncate"
+                      )}
+                    >
+                      {title}
+                    </h3>
+                  </NodeTooltip>
+                </div>
+              )}
             </div>
-          </div>
+          )}
 
-          {/* Main content area */}
-          {children && (
+          {/* Main content area - conditional */}
+          {displayFlags.showDetails && children && (
             <div className={cn("flex-1 overflow-hidden", theme.text)}>
               {children}
             </div>
           )}
 
-          {/* Footer slot - for stats, counts, etc */}
-          {footerSlot && (
-            <div className={cn("mt-auto pt-1 border-t border-gray-300/40 backdrop-blur-sm", theme.text)}>
+          {/* Footer slot - conditional with responsive text */}
+          {displayFlags.showStats && footerSlot && (
+            <div className={cn(
+              "mt-auto pt-1 border-t border-gray-300/40 backdrop-blur-sm",
+              theme.text,
+              textSizes.stats
+            )}>
               {footerSlot}
             </div>
           )}
@@ -268,7 +347,7 @@ const BaseNodeCard = memo(({
       </Card>
     </div>
   );
-});
+}));
 
 BaseNodeCard.displayName = 'BaseNodeCard';
 

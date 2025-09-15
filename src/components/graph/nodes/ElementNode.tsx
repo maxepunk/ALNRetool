@@ -9,8 +9,9 @@ import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useGraphData } from '@/contexts/GraphDataContext';
-import { formatCountTooltip, memoryTypeDescriptions } from '@/lib/graph/tooltipHelpers';
 import { isNodeOptimistic } from '@/lib/graph/utils';
+import { NodeTooltip, EntityListTooltip } from './NodeTooltip';
+import { NodePopover } from './NodePopover';
 import { 
   Package,
   Star,
@@ -48,9 +49,8 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
     outlineWidth,
     opacity,
     zIndex,
-    shouldShowBadges, 
-    shouldShowStats,
-    shouldShowDetails 
+    displayFlags,
+    textSizes
   } = useNodeFilterStyles(metadata, selected);
   
   // Determine visual style based on status
@@ -105,19 +105,14 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
   const statuses: NodeStatus[] = nodeStatus ? [nodeStatus] : [];
   
   // Header slot - badges arranged horizontally (zoom-aware)
-  const headerSlot = shouldShowBadges ? (
+  const headerSlot = displayFlags.showBadges ? (
     <div className="flex items-center justify-between gap-1">
       {/* Left side: SF and Memory Type badges */}
       <div className="flex gap-1 items-center">
         {hasSF && (
           <Badge 
             variant="default" 
-            className="text-xs px-1.5 py-0 h-5 bg-purple-600/90 backdrop-blur-sm flex items-center gap-1 border-purple-400"
-            title={`SF Pattern${entity.sfPatterns?.valueRating ? 
-              ` - Value: ${entity.sfPatterns.valueRating}/5` : ''
-            }${entity.sfPatterns?.memoryType ? 
-              ` - Type: ${entity.sfPatterns.memoryType}` : ''
-            }`}
+            className={cn("px-1.5 py-0 h-5 bg-purple-600/90 backdrop-blur-sm flex items-center gap-1 border-purple-400", textSizes.badge)}
           >
             <Shield className="h-3 w-3" />
             <span className="font-medium">SF</span>
@@ -141,8 +136,7 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
         {entity.sfPatterns?.memoryType && (
           <Badge 
             variant="outline" 
-            className={cn('text-xs px-1.5 py-0 h-5 flex items-center gap-1', getMemoryTypeColor())}
-            title={memoryTypeDescriptions[entity.sfPatterns.memoryType as keyof typeof memoryTypeDescriptions] || entity.sfPatterns.memoryType}
+            className={cn('px-1.5 py-0 h-5 flex items-center gap-1', getMemoryTypeColor(), textSizes.badge)}
           >
             {getMemoryTypeIcon()}
             <span className="font-medium">{entity.sfPatterns.memoryType[0]}</span>
@@ -154,35 +148,48 @@ const ElementNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-t
       {(isDualRole || isRequirement || isReward) && (
         <div className="flex gap-1">
           {isDualRole ? (
-            <Badge 
-              variant="outline" 
-              className="text-xs px-1.5 py-0 h-5 bg-gradient-to-r from-blue-100 to-green-100 border-purple-300 flex items-center gap-0.5"
-              title={`Dual-role Element
-${formatCountTooltip('Required for', requirementPuzzleNames)}
-${formatCountTooltip('Rewarded by', rewardPuzzleNames)}`}
+            <EntityListTooltip
+              title="Dual-role Element"
+              entities={[...requirementPuzzleNames.map(n => `Required for: ${n}`), ...rewardPuzzleNames.map(n => `Rewarded by: ${n}`)]}
+              enabled={displayFlags.enableTooltips}
             >
+              <Badge 
+                variant="outline" 
+                className={cn("px-1.5 py-0 h-5 bg-gradient-to-r from-blue-100 to-green-100 border-purple-300 flex items-center gap-0.5", textSizes.badge)}
+              >
               <ArrowLeft className="h-3 w-3 text-blue-600" />
               <Zap className="h-2.5 w-2.5 text-purple-600" />
               <ArrowRight className="h-3 w-3 text-green-600" />
-            </Badge>
+              </Badge>
+            </EntityListTooltip>
           ) : isRequirement ? (
-            <Badge 
-              variant="outline" 
-              className="text-xs px-1.5 py-0 h-5 bg-blue-100 border-blue-300 flex items-center gap-0.5"
-              title={formatCountTooltip('Required for puzzles', requirementPuzzleNames)}
+            <EntityListTooltip
+              title="Required for puzzles"
+              entities={requirementPuzzleNames}
+              enabled={displayFlags.enableTooltips}
             >
+              <Badge 
+                variant="outline" 
+                className={cn("px-1.5 py-0 h-5 bg-blue-100 border-blue-300 flex items-center gap-0.5", textSizes.badge)}
+              >
               <ArrowLeft className="h-3 w-3 text-blue-600" />
               <span className="font-medium text-blue-700">{entity.requiredForPuzzleIds.length}</span>
-            </Badge>
+              </Badge>
+            </EntityListTooltip>
           ) : (
-            <Badge 
-              variant="outline" 
-              className="text-xs px-1.5 py-0 h-5 bg-green-100 border-green-300 flex items-center gap-0.5"
-              title={formatCountTooltip('Reward from puzzles', rewardPuzzleNames)}
+            <EntityListTooltip
+              title="Reward from puzzles"
+              entities={rewardPuzzleNames}
+              enabled={displayFlags.enableTooltips}
             >
+              <Badge 
+                variant="outline" 
+                className={cn("px-1.5 py-0 h-5 bg-green-100 border-green-300 flex items-center gap-0.5", textSizes.badge)}
+              >
               <span className="font-medium text-green-700">{entity.rewardedByPuzzleIds.length}</span>
               <ArrowRight className="h-3 w-3 text-green-600" />
-            </Badge>
+              </Badge>
+            </EntityListTooltip>
           )}
         </div>
       )}
@@ -190,35 +197,47 @@ ${formatCountTooltip('Rewarded by', rewardPuzzleNames)}`}
   ) : undefined;
   
   // Footer slot - stats section with RFID and element type (zoom-aware)
-  const footerSlot = shouldShowStats ? (
-    <div className="flex justify-between items-center text-xs">
+  const footerSlot = displayFlags.showStats ? (
+    <div className={cn("flex justify-between items-center", textSizes.stats)}>
       {/* Element Type */}
-      <div 
-        className="flex items-center gap-1"
-        title={`${entity.isContainer ? 'Container' : 'Prop'} - ${
-          entity.basicType || 'Standard element'
-        }`}
+      <NodeTooltip
+        enabled={displayFlags.enableTooltips}
+        content={
+          <div>
+            <p className="font-semibold">{entity.isContainer ? 'Container' : 'Prop'}</p>
+            <p className="text-sm">{entity.basicType || 'Standard element'}</p>
+          </div>
+        }
       >
-        {entity.isContainer ? (
-          <Box className="h-3 w-3 text-violet-600" />
-        ) : (
-          <Package className="h-3 w-3 text-violet-600" />
-        )}
-        <span className="text-gray-700 font-medium">
-          {entity.basicType ? entity.basicType.replace(' Token', '') : 'Prop'}
-        </span>
-      </div>
+        <div className="flex items-center gap-1">
+          {entity.isContainer ? (
+            <Box className="h-3 w-3 text-violet-600" />
+          ) : (
+            <Package className="h-3 w-3 text-violet-600" />
+          )}
+          <span className="text-gray-700 font-medium">
+            {entity.basicType ? entity.basicType.replace(' Token', '') : 'Prop'}
+          </span>
+        </div>
+      </NodeTooltip>
       
       {/* RFID if present */}
       {entity.sfPatterns?.rfid && (
-        <span 
-          className="flex items-center text-violet-700 font-mono text-xs font-medium"
-          title={`Radio Frequency ID: ${entity.sfPatterns.rfid}
-Used for tracking and identification in the SF system`}
+        <NodeTooltip
+          enabled={displayFlags.enableTooltips}
+          content={
+            <div>
+              <p className="font-semibold">Radio Frequency ID</p>
+              <p className="text-sm font-mono">{entity.sfPatterns.rfid}</p>
+              <p className="text-xs text-muted-foreground">Used for tracking and identification in the SF system</p>
+            </div>
+          }
         >
-          <Hash className="h-3 w-3 mr-0.5" />
-          {entity.sfPatterns.rfid}
-        </span>
+          <span className={cn("flex items-center text-violet-700 font-mono font-medium", textSizes.stats)}>
+            <Hash className="h-3 w-3 mr-0.5" />
+            {entity.sfPatterns.rfid}
+          </span>
+        </NodeTooltip>
       )}
     </div>
   ) : undefined;
@@ -233,33 +252,35 @@ Used for tracking and identification in the SF system`}
   ) : undefined;
   
   // Main content with narrative threads (zoom-aware)
-  const content = shouldShowDetails ? (
+  const content = displayFlags.showDetails ? (
     <div className="space-y-1">
       {/* Narrative Threads */}
       {entity.narrativeThreads && entity.narrativeThreads.length > 0 && (
-        <div 
-          className="flex flex-wrap gap-1"
-          title={`All narrative threads (${entity.narrativeThreads.length}):
-${entity.narrativeThreads.join(', ')}`}
+        <EntityListTooltip
+          title={`Narrative Threads (${entity.narrativeThreads.length})`}
+          entities={entity.narrativeThreads}
+          enabled={displayFlags.enableTooltips}
         >
-          {entity.narrativeThreads.slice(0, 2).map((thread, i) => (
-            <Badge
-              key={i}
-              variant="secondary"
-              className="text-xs px-1 py-0 h-4 bg-purple-50 text-purple-700 border-purple-200"
-            >
-              {thread}
-            </Badge>
-          ))}
-          {entity.narrativeThreads.length > 2 && (
-            <Badge
-              variant="secondary"
-              className="text-xs px-1 py-0 h-4 bg-purple-50 text-purple-700 border-purple-200"
-            >
-              +{entity.narrativeThreads.length - 2}
-            </Badge>
-          )}
-        </div>
+          <div className="flex flex-wrap gap-1">
+            {entity.narrativeThreads.slice(0, 2).map((thread, i) => (
+              <Badge
+                key={i}
+                variant="secondary"
+                className={cn("px-1 py-0 h-4 bg-purple-50 text-purple-700 border-purple-200", textSizes.badge)}
+              >
+                {thread}
+              </Badge>
+            ))}
+            {entity.narrativeThreads.length > 2 && (
+              <Badge
+                variant="secondary"
+                className={cn("px-1 py-0 h-4 bg-purple-50 text-purple-700 border-purple-200", textSizes.badge)}
+              >
+                +{entity.narrativeThreads.length - 2}
+              </Badge>
+            )}
+          </div>
+        </EntityListTooltip>
       )}
     </div>
   ) : undefined;
@@ -280,28 +301,35 @@ ${entity.narrativeThreads.join(', ')}`}
 
   return (
     <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
-      <BaseNodeCard
-        nodeType="element"
-        size="medium"
-        status={statuses}
-        title={entity.name}
-        icon={getIcon()}
-        selected={selected}
-        highlighted={isHighlighted}
-        className={cardClassName}
-        headerSlot={headerSlot}
-        footerSlot={footerSlot}
-        cornerSlot={cornerSlot}
-        handlePositions={{
-          source: Position.Right,
-          target: Position.Left
-        }}
-        outlineColor={isOptimistic ? '#10b981' : outlineColor}
-        outlineWidth={isOptimistic ? 3 : outlineWidth}
-        opacity={isOptimistic ? 0.8 : opacity}
+      <NodePopover
+        enabled={displayFlags.enablePopovers}
+        entityType="element"
+        entityData={entity}
+        metadata={metadata}
       >
-        {content}
-      </BaseNodeCard>
+        <BaseNodeCard
+          nodeType="element"
+          size="medium"
+          status={statuses}
+          title={entity.name}
+          icon={getIcon()}
+          selected={selected}
+          highlighted={isHighlighted}
+          className={cardClassName}
+          headerSlot={headerSlot}
+          footerSlot={footerSlot}
+          cornerSlot={cornerSlot}
+          handlePositions={{
+            source: Position.Right,
+            target: Position.Left
+          }}
+          outlineColor={isOptimistic ? '#10b981' : outlineColor}
+          outlineWidth={isOptimistic ? 3 : outlineWidth}
+          opacity={isOptimistic ? 0.8 : opacity}
+        >
+          {content}
+        </BaseNodeCard>
+      </NodePopover>
     </div>
   );
 });

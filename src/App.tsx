@@ -23,6 +23,7 @@ import { Toaster } from 'react-hot-toast';
 import AppRouter from './router/AppRouter';
 import { ViewContextProvider } from '@/contexts/ViewContext';
 import { CreatePanelPortal } from '@/components/CreatePanelPortal';
+import { TooltipProvider } from '@/components/ui/tooltip';
 // GraphContextProvider removed in Phase 3 cleanup
 
 /**
@@ -78,13 +79,14 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <ViewContextProvider>
-          <AppRouter />
-        </ViewContextProvider>
-      </BrowserRouter>
-      {/* Global toast notification configuration */}
-      <Toaster 
+      <TooltipProvider delayDuration={200}>
+        <BrowserRouter>
+          <ViewContextProvider>
+            <AppRouter />
+          </ViewContextProvider>
+        </BrowserRouter>
+        {/* Global toast notification configuration */}
+        <Toaster 
         position="top-right"
         toastOptions={{
           duration: 4000, // Toast display duration in milliseconds
@@ -115,7 +117,8 @@ function App() {
           },
         }}
       />
-      <CreatePanelPortal />
+        <CreatePanelPortal />
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

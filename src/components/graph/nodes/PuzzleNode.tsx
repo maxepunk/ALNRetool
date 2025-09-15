@@ -6,8 +6,9 @@ import DiamondCard, { type NodeStatus } from './DiamondCard';
 import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
 import { Puzzle as PuzzleIcon, User } from 'lucide-react';
 import { useGraphData } from '@/contexts/GraphDataContext';
-import { formatCountTooltip, puzzleStatusDescriptions } from '@/lib/graph/tooltipHelpers';
+import { puzzleStatusDescriptions } from '@/lib/graph/tooltipHelpers';
 import { isNodeOptimistic } from '@/lib/graph/utils';
+import { NodePopover } from './NodePopover';
 
 /**
  * Custom React Flow node component for Puzzle entities
@@ -29,8 +30,7 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
     outlineWidth,
     opacity,
     zIndex,
-    shouldShowBadges, 
-    shouldShowStats 
+    displayFlags
   } = useNodeFilterStyles(metadata, selected);
   
   // Determine hierarchy
@@ -69,7 +69,7 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
   const ownerName = entity.ownerId ? getEntityName(entity.ownerId, 'character') : 'Unassigned';
   
   // Owner badge - simplified (only show when zoomed in enough)
-  const ownerBadge = shouldShowBadges && entity.ownerId ? (
+  const ownerBadge = displayFlags.showBadges && entity.ownerId ? (
     <div 
       className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100/80 backdrop-blur-sm"
       title={`Owner: ${ownerName}`}
@@ -82,9 +82,9 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
   const requirementNames = entity.puzzleElementIds ? getEntityNames(entity.puzzleElementIds, 'element') : [];
   const rewardNames = entity.rewardIds ? getEntityNames(entity.rewardIds, 'element') : [];
   
-  // Build tooltips
-  const requirementsTooltip = formatCountTooltip('Requirements', requirementNames);
-  const rewardsTooltip = formatCountTooltip('Rewards', rewardNames);
+  // Tooltips are now handled by EntityListTooltip in DiamondCard
+  const requirementsTooltip = requirementNames.length > 0 ? `Requirements: ${requirementNames.join(', ')}` : '';
+  const rewardsTooltip = rewardNames.length > 0 ? `Rewards: ${rewardNames.join(', ')}` : '';
   
   // Complexity tooltip
   const complexity = getComplexity();
@@ -93,29 +93,36 @@ const PuzzleNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-te
 
   return (
     <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
-      <DiamondCard
-        title={entity.name}
-        icon={<PuzzleIcon className="h-5 w-5" />}
-        selected={selected}
-        highlighted={isHighlighted}
-        statuses={shouldShowBadges ? statuses : []}
-        requirementsCount={shouldShowStats ? (entity.puzzleElementIds?.length || 0) : 0}
-        rewardsCount={shouldShowStats ? (entity.rewardIds?.length || 0) : 0}
-        ownerBadge={ownerBadge}
-        isParent={isParent}
-        isChild={isChild}
-        complexity={complexity}
-        size="medium"
-        maxCount={5}
-        outlineColor={isOptimistic ? '#10b981' : outlineColor}
-        outlineWidth={isOptimistic ? 3 : outlineWidth}
-        opacity={isOptimistic ? 0.8 : opacity}
-        className={isOptimistic ? 'animate-pulse' : undefined}
-        requirementsTooltip={requirementsTooltip}
-        rewardsTooltip={rewardsTooltip}
-        complexityTooltip={complexityTooltip}
-        statusTooltips={puzzleStatusDescriptions}
-      />
+      <NodePopover
+        enabled={displayFlags.enablePopovers}
+        entityType="puzzle"
+        entityData={entity}
+        metadata={metadata}
+      >
+        <DiamondCard
+          title={entity.name}
+          icon={<PuzzleIcon className="h-5 w-5" />}
+          selected={selected}
+          highlighted={isHighlighted}
+          statuses={displayFlags.showBadges ? statuses : []}
+          requirementsCount={displayFlags.showStats ? (entity.puzzleElementIds?.length || 0) : 0}
+          rewardsCount={displayFlags.showStats ? (entity.rewardIds?.length || 0) : 0}
+          ownerBadge={ownerBadge}
+          isParent={isParent}
+          isChild={isChild}
+          complexity={complexity}
+          size="medium"
+          maxCount={5}
+          outlineColor={isOptimistic ? '#10b981' : outlineColor}
+          outlineWidth={isOptimistic ? 3 : outlineWidth}
+          opacity={isOptimistic ? 0.8 : opacity}
+          className={isOptimistic ? 'animate-pulse' : undefined}
+          requirementsTooltip={requirementsTooltip}
+          rewardsTooltip={rewardsTooltip}
+          complexityTooltip={complexityTooltip}
+          statusTooltips={puzzleStatusDescriptions}
+        />
+      </NodePopover>
     </div>
   );
 });

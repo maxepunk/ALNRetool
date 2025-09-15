@@ -29,7 +29,6 @@ import {
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -310,8 +309,7 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
               {selectedEntities.map((entity) => {
                 const targetType = field.entityType || entityType;
                 return (
-                  <TooltipProvider key={entity.id}>
-                    <Tooltip>
+                  <Tooltip key={entity.id}>
                       <TooltipTrigger asChild>
                         <Badge
                           variant="secondary"
@@ -330,7 +328,6 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
                         <p>View {entity.name || 'entity'} in graph</p>
                       </TooltipContent>
                     </Tooltip>
-                  </TooltipProvider>
                 );
               })}
             </div>
@@ -364,8 +361,7 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
           {selectedEntities.map((entity) => {
             const targetType = field.entityType || entityType;
             return (
-              <TooltipProvider key={entity.id}>
-                <Tooltip>
+              <Tooltip key={entity.id}>
                   <TooltipTrigger asChild>
                     <Badge
                       variant="outline"
@@ -406,7 +402,6 @@ export const RelationFieldEditor: React.FC<RelationFieldEditorProps> = ({
                     </div>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
             );
           })}
         </div>

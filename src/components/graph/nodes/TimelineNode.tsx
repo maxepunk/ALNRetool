@@ -11,8 +11,11 @@ import {
   Search
 } from 'lucide-react';
 import { useGraphData } from '@/contexts/GraphDataContext';
-import { formatCountTooltip } from '@/lib/graph/tooltipHelpers';
 import { isNodeOptimistic } from '@/lib/graph/utils';
+import { NodeTooltip, EntityListTooltip, TextTooltip } from './NodeTooltip';
+import { NodePopover } from './NodePopover';
+import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
+import { cn } from '@/lib/utils';
 
 /**
  * Custom React Flow node component for Timeline Event entities
@@ -26,6 +29,9 @@ const TimelineNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-
   
   // Get entity lookup functions for tooltips
   const { getEntityNames } = useGraphData();
+  
+  // Use enhanced hook for filter styles
+  const { displayFlags, textSizes } = useNodeFilterStyles(metadata, selected);
   
   // Format date for display
   const formatDate = (dateStr: string) => {
@@ -63,19 +69,28 @@ const TimelineNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-
     minute: '2-digit'
   }) : '';
   
-  const badges = (
+  const badges = displayFlags.showBadges ? (
     <div className="flex gap-1">
       {entity.date && (
-        <Badge 
-          variant="outline" 
-          className="text-[10px] px-1 py-0 h-4"
-          title={fullDate}
+        <NodeTooltip
+          enabled={displayFlags.enableTooltips}
+          content={
+            <div>
+              <p className="font-semibold">Event Date</p>
+              <p className="text-sm">{fullDate}</p>
+            </div>
+          }
         >
-          {formatDate(entity.date)}
-        </Badge>
+          <Badge 
+            variant="outline" 
+            className={cn("px-1 py-0 h-4", textSizes.badge)}
+          >
+            {formatDate(entity.date)}
+          </Badge>
+        </NodeTooltip>
       )}
     </div>
-  );
+  ) : undefined;
   
   // Build stats section with tooltips
   const characterNames = entity.charactersInvolvedIds ? 
@@ -83,41 +98,50 @@ const TimelineNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-
   const evidenceNames = entity.memoryEvidenceIds ? 
     getEntityNames(entity.memoryEvidenceIds, 'element') : [];
   
-  const stats = (
-    <div className="flex justify-between items-center text-xs">
+  const stats = displayFlags.showStats ? (
+    <div className={cn("flex justify-between items-center", textSizes.stats)}>
       {entity.charactersInvolvedIds && entity.charactersInvolvedIds.length > 0 && (
-        <span 
-          className="flex items-center text-orange-600"
-          title={formatCountTooltip('Characters Involved', characterNames)}
+        <EntityListTooltip
+          title="Characters Involved"
+          entities={characterNames}
+          enabled={displayFlags.enableTooltips}
         >
-          <Users className="h-3 w-3 mr-0.5" />
-          {entity.charactersInvolvedIds.length}
-        </span>
+          <span className="flex items-center text-orange-600">
+            <Users className="h-3 w-3 mr-0.5" />
+            {entity.charactersInvolvedIds.length}
+          </span>
+        </EntityListTooltip>
       )}
       {entity.memoryEvidenceIds && entity.memoryEvidenceIds.length > 0 && (
-        <span 
-          className="flex items-center text-blue-600"
-          title={formatCountTooltip('Related Evidence', evidenceNames)}
+        <EntityListTooltip
+          title="Related Evidence"
+          entities={evidenceNames}
+          enabled={displayFlags.enableTooltips}
         >
-          <Search className="h-3 w-3 mr-0.5" />
-          {entity.memoryEvidenceIds.length}
-        </span>
+          <span className="flex items-center text-blue-600">
+            <Search className="h-3 w-3 mr-0.5" />
+            {entity.memoryEvidenceIds.length}
+          </span>
+        </EntityListTooltip>
       )}
     </div>
-  );
+  ) : undefined;
   
   // Main content with conditional tooltip
-  const isDescTruncated = entity.description && entity.description.length > 80;
-  const content = (
+  const isDescTruncated = !!(entity.description && entity.description.length > 80);
+  const content = displayFlags.showDetails ? (
     <div className="text-center">
-      <div 
-        className="text-xs text-gray-600 line-clamp-2"
-        title={isDescTruncated ? entity.description : undefined}
+      <TextTooltip
+        enabled={displayFlags.enableTooltips && isDescTruncated}
+        text={entity.description || ''}
+        title="Full Description"
       >
-        {entity.description}
-      </div>
+        <div className={cn("text-gray-600 line-clamp-2", textSizes.description)}>
+          {entity.description}
+        </div>
+      </TextTooltip>
     </div>
-  );
+  ) : undefined;
   
   // Custom handle positions for timeline
   const handlePositions = {
@@ -127,24 +151,31 @@ const TimelineNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data-
   
   return (
     <div data-testid={rest['data-testid'] || `node-${id}`}>
-      <BaseNodeCard
-      nodeType="timeline"
-      size={size}
-      status={statuses}
-      title={entity.description || 'Timeline Event'}
-      icon={<Calendar className="h-5 w-5" />}
-      selected={selected}
-      highlighted={metadata.searchMatch}
-      headerSlot={badges}
-      footerSlot={stats}
-      handlePositions={handlePositions}
-      className={isOptimistic ? 'animate-pulse' : undefined}
-      outlineColor={isOptimistic ? '#10b981' : undefined}
-      outlineWidth={isOptimistic ? 3 : undefined}
-      opacity={isOptimistic ? 0.8 : undefined}
-    >
-      {content}
-    </BaseNodeCard>
+      <NodePopover
+        enabled={displayFlags.enablePopovers}
+        entityType="timeline"
+        entityData={entity}
+        metadata={metadata}
+      >
+        <BaseNodeCard
+          nodeType="timeline"
+          size={size}
+          status={statuses}
+          title={entity.description || 'Timeline Event'}
+          icon={<Calendar className="h-5 w-5" />}
+          selected={selected}
+          highlighted={metadata.searchMatch}
+          headerSlot={badges}
+          footerSlot={stats}
+          handlePositions={handlePositions}
+          className={isOptimistic ? 'animate-pulse' : undefined}
+          outlineColor={isOptimistic ? '#10b981' : undefined}
+          outlineWidth={isOptimistic ? 3 : undefined}
+          opacity={isOptimistic ? 0.8 : undefined}
+        >
+          {content}
+        </BaseNodeCard>
+      </NodePopover>
     </div>
   );
 });

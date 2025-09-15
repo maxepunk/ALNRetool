@@ -12,8 +12,11 @@ import {
   Users
 } from 'lucide-react';
 import { useGraphData } from '@/contexts/GraphDataContext';
-import { formatCountTooltip, characterTierDescriptions } from '@/lib/graph/tooltipHelpers';
+import { characterTierDescriptions } from '@/lib/graph/tooltipHelpers';
 import { isNodeOptimistic } from '@/lib/graph/utils';
+import { NodeTooltip, EntityListTooltip, TextTooltip } from './NodeTooltip';
+import { NodePopover } from './NodePopover';
+import { cn } from '@/lib/utils';
 
 /**
  * Custom React Flow node component for Character entities
@@ -28,16 +31,15 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
   // Get entity lookup functions for tooltips
   const { getEntityNames } = useGraphData();
   
-  // Use shared hook for filter styles
+  // Use enhanced hook for filter styles and zoom-aware rendering
   const { 
     isHighlighted,
     outlineColor,
     outlineWidth,
     opacity,
     zIndex,
-    shouldShowBadges, 
-    shouldShowStats,
-    shouldShowDetails 
+    displayFlags,
+    textSizes
   } = useNodeFilterStyles(metadata, selected, nodeData.highlightShared);
   
   // Determine character properties
@@ -50,53 +52,79 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
   const statuses: NodeStatus[] = [];
   if (hasError) statuses.push('error');
   
-  // Build tier badge (zoom-aware) - simplified to just show tier
-  const headerSlot = shouldShowBadges && entity.tier ? (
-    <Badge 
-      variant="outline"
-      className="text-[10px] px-1.5 py-0 h-4 bg-white/80 text-blue-900 border-blue-300 font-semibold"
-      title={`Character Tier: ${characterTierDescriptions[entity.tier as keyof typeof characterTierDescriptions] || entity.tier}`}
+  // Build tier badge with enhanced tooltip
+  const headerSlot = displayFlags.showBadges && entity.tier ? (
+    <NodeTooltip
+      enabled={displayFlags.enableTooltips}
+      content={
+        <div>
+          <p className="font-semibold">Character Tier: {entity.tier}</p>
+          <p className="text-sm text-muted-foreground">
+            {characterTierDescriptions[entity.tier as keyof typeof characterTierDescriptions] || entity.tier}
+          </p>
+        </div>
+      }
     >
-      {entity.tier}
-    </Badge>
+      <Badge 
+        variant="outline"
+        className={cn(
+          "px-1.5 py-0 h-4 bg-white/80 text-blue-900 border-blue-300 font-semibold",
+          textSizes.badge
+        )}
+      >
+        {entity.tier}
+      </Badge>
+    </NodeTooltip>
   ) : undefined;
   
   // Build stats section (zoom-aware)
   const elementNames = entity.ownedElementIds ? getEntityNames(entity.ownedElementIds, 'element') : [];
   const puzzleNames = entity.characterPuzzleIds ? getEntityNames(entity.characterPuzzleIds, 'puzzle') : [];
   
-  const footerSlot = shouldShowStats ? (
-    <div className="flex justify-between items-center text-xs">
+  const footerSlot = displayFlags.showStats ? (
+    <div className={cn("flex justify-between items-center", textSizes.stats)}>
       {entity.ownedElementIds && entity.ownedElementIds.length > 0 && (
-        <span 
-          className="flex items-center text-white font-medium"
-          title={formatCountTooltip('Owned Elements', elementNames)}
+        <EntityListTooltip
+          title="Owned Elements"
+          entities={elementNames}
+          enabled={displayFlags.enableTooltips}
         >
-          <Package className="h-3 w-3 mr-0.5" />
-          {entity.ownedElementIds.length}
-        </span>
+          <span className="flex items-center text-white font-medium">
+            <Package className="h-3 w-3 mr-0.5" />
+            {entity.ownedElementIds.length}
+          </span>
+        </EntityListTooltip>
       )}
       {entity.characterPuzzleIds && entity.characterPuzzleIds.length > 0 && (
-        <span 
-          className="flex items-center text-white font-medium"
-          title={formatCountTooltip('Associated Puzzles', puzzleNames)}
+        <EntityListTooltip
+          title="Associated Puzzles"
+          entities={puzzleNames}
+          enabled={displayFlags.enableTooltips}
         >
-          <Puzzle className="h-3 w-3 mr-0.5" />
-          {entity.characterPuzzleIds.length}
-        </span>
+          <span className="flex items-center text-white font-medium">
+            <Puzzle className="h-3 w-3 mr-0.5" />
+            {entity.characterPuzzleIds.length}
+          </span>
+        </EntityListTooltip>
       )}
     </div>
   ) : undefined;
   
-  // Main content (zoom-aware)
-  const isLoglineTruncated = entity.characterLogline && entity.characterLogline.length > 60;
-  const content = shouldShowDetails && entity.characterLogline ? (
-    <div 
-      className="text-xs text-teal-800 italic line-clamp-2 text-center"
-      title={isLoglineTruncated ? entity.characterLogline : undefined}
+  // Main content with rich tooltip for truncated loglines
+  const isLoglineTruncated = !!(entity.characterLogline && entity.characterLogline.length > 60);
+  const content = displayFlags.showDetails && entity.characterLogline ? (
+    <TextTooltip
+      enabled={displayFlags.enableTooltips && isLoglineTruncated}
+      title="Character Logline"
+      text={entity.characterLogline}
     >
-      {entity.characterLogline}
-    </div>
+      <div className={cn(
+        "text-teal-800 italic line-clamp-2 text-center",
+        textSizes.description
+      )}>
+        {entity.characterLogline}
+      </div>
+    </TextTooltip>
   ) : undefined;
   
   // Choose icon based on character type
@@ -106,23 +134,34 @@ const CharacterNode = memo(({ data, selected, id, ...rest }: NodeProps & { 'data
   
   return (
     <div style={{ position: 'relative', zIndex }} data-testid={rest['data-testid'] || `node-${id}`}>
-      <HexagonCard
-        size={size}
-        title={entity.name}
-        icon={icon}
-        selected={selected}
-        highlighted={isHighlighted}
-        statuses={statuses}
-        tier={tier}
-        isNPC={isNPC}
-        headerSlot={headerSlot}
-        footerSlot={footerSlot}
-        outlineColor={isOptimistic ? '#10b981' : outlineColor}
-        outlineWidth={isOptimistic ? 3 : outlineWidth}
-        opacity={isOptimistic ? 0.8 : opacity}
+      <NodePopover
+        enabled={displayFlags.enablePopovers}
+        entityType="character"
+        entityData={entity}
+        metadata={metadata}
       >
-        {content}
-      </HexagonCard>
+        <HexagonCard
+          size={size}
+          title={entity.name}
+          icon={icon}
+          selected={selected}
+          highlighted={isHighlighted}
+          statuses={statuses}
+          tier={tier}
+          isNPC={isNPC}
+          headerSlot={headerSlot}
+          footerSlot={footerSlot}
+          outlineColor={isOptimistic ? '#10b981' : outlineColor}
+          outlineWidth={isOptimistic ? 3 : outlineWidth}
+          opacity={isOptimistic ? 0.8 : opacity}
+          // Pass new properties for zoom-aware rendering
+          metadata={metadata}
+          displayFlags={displayFlags}
+          textSizes={textSizes}
+        >
+          {content}
+        </HexagonCard>
+      </NodePopover>
     </div>
   );
 });

@@ -42,7 +42,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { 
@@ -162,8 +161,7 @@ export default function Sidebar() {
               Quick Filters
             </span>
             {totalActiveFilters > 0 && (
-              <TooltipProvider>
-                <Tooltip>
+              <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="ghost"
@@ -182,7 +180,6 @@ export default function Sidebar() {
                     <p>Clear all active filters</p>
                   </TooltipContent>
                 </Tooltip>
-              </TooltipProvider>
             )}
           </div>
           
@@ -193,8 +190,7 @@ export default function Sidebar() {
               const isCustom = preset.id === 'custom';
               
               return (
-                <TooltipProvider key={preset.id}>
-                  <Tooltip>
+                <Tooltip key={preset.id}>
                     <TooltipTrigger asChild>
                       <Button
                         variant={isActive ? "default" : "outline"}
@@ -223,7 +219,6 @@ export default function Sidebar() {
                       <p>{preset.tooltip}</p>
                     </TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
               );
             })}
           </div>

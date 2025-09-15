@@ -4,15 +4,19 @@
  * Provides visual distinction from rectangular elements and diamond puzzles
  */
 
-import { memo, type ReactNode } from 'react';
+import { forwardRef, memo, type ReactNode } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { NODE_SIZE_CONFIGS, NODE_TRANSITIONS, type NodeSize } from '@/lib/graph/nodeUtils';
+import { NODE_TRANSITIONS, type NodeSize } from '@/lib/graph/nodeUtils';
+import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
+import { StatusTooltip } from './NodeTooltip';
+import type { GraphNodeData } from '@/lib/graph/types';
+import type { NodeDisplayFlags, NodeTextSizes } from '@/hooks/useNodeFilterStyles';
 
 export type NodeStatus = 'draft' | 'ready' | 'locked' | 'chained' | 'error';
 
-interface HexagonCardProps extends Partial<NodeProps> {
+interface HexagonCardProps extends Partial<NodeProps>, Omit<React.HTMLAttributes<HTMLDivElement>, 'draggable'> {
   size?: NodeSize;
   title: string;
   icon?: ReactNode;
@@ -38,6 +42,10 @@ interface HexagonCardProps extends Partial<NodeProps> {
   outlineColor?: string;
   outlineWidth?: number;
   opacity?: number;
+  // NEW: Pass metadata for zoom-aware rendering
+  metadata?: GraphNodeData['metadata'];
+  displayFlags?: NodeDisplayFlags;
+  textSizes?: NodeTextSizes;
 }
 
 // Size configurations for hexagon
@@ -86,7 +94,7 @@ const tierColors = {
   }
 };
 
-const HexagonCard = memo(({
+const HexagonCard = memo(forwardRef<HTMLDivElement, HexagonCardProps>(({
   size = 'medium',
   title,
   icon,
@@ -107,14 +115,46 @@ const HexagonCard = memo(({
   children,
   outlineColor = '',
   outlineWidth = 0,
-  opacity = 1
-}: HexagonCardProps) => {
+  opacity = 1,
+  metadata,
+  displayFlags: propsDisplayFlags,
+  textSizes: propsTextSizes,
+  ...rest
+}, ref) => {
   const config = hexagonSizeConfigs[size];
-  const sizeConfig = NODE_SIZE_CONFIGS[size];
   const tierTheme = tierColors[tier];
+  
+  // Default metadata for when none is provided
+  const defaultMetadata: GraphNodeData['metadata'] = {
+    entityType: 'character', // Safe default for hexagon cards (usually characters)
+  };
+  
+  // Always call the hook (React Rules of Hooks)
+  const hookResult = useNodeFilterStyles(metadata || defaultMetadata, selected);
+  
+  // Use props if provided, otherwise use hook results (if metadata was provided), otherwise use defaults
+  const displayFlags = propsDisplayFlags || (metadata ? hookResult.displayFlags : null) || {
+    showShape: true,
+    showIcon: true,
+    showTitle: true,
+    showTitleFull: true,
+    showBadges: true,
+    showStats: true,
+    showDetails: true,
+    showDescriptions: true,
+    enablePopovers: false,
+    enableTooltips: false,
+  };
+  
+  const textSizes = propsTextSizes || (metadata ? hookResult.textSizes : null) || {
+    title: 'text-sm',
+    badge: 'text-xs',
+    stats: 'text-xs',
+    description: 'text-xs',
+  };
 
   return (
-    <div className="relative group" style={{ opacity }}>
+    <div ref={ref} className="relative group" style={{ opacity }} {...rest}>
       {/* Hexagon Container */}
       <div
         className={cn(
@@ -196,8 +236,8 @@ const HexagonCard = memo(({
             </div>
           )}
 
-          {/* Top Section: Status Badges or Header */}
-          {(headerSlot || statuses.length > 0) && (
+          {/* Top Section: Status Badges or Header - conditional based on zoom */}
+          {displayFlags.showBadges && (headerSlot || statuses.length > 0) && (
             <div className="flex justify-center mb-1">
               {headerSlot ? (
                 <div className="flex-1">
@@ -206,25 +246,32 @@ const HexagonCard = memo(({
               ) : (
                 <div className="flex gap-1">
                   {statuses.map((status) => (
-                    <Badge
+                    <StatusTooltip
                       key={status}
-                      variant={statusVariants[status].variant}
-                      className={cn(
-                        'text-xs px-1.5 py-0 h-4 backdrop-blur-sm',
-                        statusVariants[status].className
-                      )}
+                      status={status}
+                      description={`Status: ${statusVariants[status].label}`}
+                      enabled={displayFlags.enableTooltips}
                     >
-                      {statusVariants[status].label}
-                    </Badge>
+                      <Badge
+                        variant={statusVariants[status].variant}
+                        className={cn(
+                          'px-1.5 py-0 h-4 backdrop-blur-sm',
+                          statusVariants[status].className,
+                          textSizes.badge
+                        )}
+                      >
+                        {statusVariants[status].label}
+                      </Badge>
+                    </StatusTooltip>
                   ))}
                 </div>
               )}
             </div>
           )}
 
-          {/* Middle Section: Icon and Title */}
+          {/* Middle Section: Icon and Title - zoom-aware */}
           <div className="flex-1 flex flex-col items-center justify-center">
-            {icon && (
+            {icon && displayFlags.showIcon && (
               <div className={cn(
                 tierTheme.iconColor,
                 'mb-1 transition-transform duration-300 group-hover:scale-110'
@@ -232,31 +279,37 @@ const HexagonCard = memo(({
                 {icon}
               </div>
             )}
-            <h3 className={cn(
-              'font-semibold text-center leading-tight px-2',
-              tierTheme.accent,
-              sizeConfig.fontSize
-            )}>
-              {title}
-            </h3>
-            {/* NPC Indicator */}
-            {isNPC && (
-              <span className={cn('text-xs mt-0.5', tierTheme.accent)}>
+            {displayFlags.showTitle && (
+              <h3 className={cn(
+                'font-semibold text-center leading-tight px-2',
+                tierTheme.accent,
+                textSizes.title,
+                !displayFlags.showTitleFull && 'truncate max-w-full'
+              )}>
+                {title}
+              </h3>
+            )}
+            {/* NPC Indicator - show with badges */}
+            {isNPC && displayFlags.showBadges && (
+              <span className={cn('mt-0.5', tierTheme.accent, textSizes.badge)}>
                 (NPC)
               </span>
             )}
           </div>
 
-          {/* Main Content */}
-          {children && (
+          {/* Main Content - conditional based on zoom */}
+          {displayFlags.showDetails && children && (
             <div className="my-1 overflow-hidden">
               {children}
             </div>
           )}
 
-          {/* Bottom Section: Footer */}
-          {footerSlot && (
-            <div className="mt-auto pt-1 border-t border-green-300/30 backdrop-blur-sm">
+          {/* Bottom Section: Footer - conditional based on zoom */}
+          {displayFlags.showStats && footerSlot && (
+            <div className={cn(
+              "mt-auto pt-1 border-t border-green-300/30 backdrop-blur-sm",
+              textSizes.stats
+            )}>
               {footerSlot}
             </div>
           )}
@@ -321,7 +374,7 @@ const HexagonCard = memo(({
       </div>
     </div>
   );
-});
+}));
 
 HexagonCard.displayName = 'HexagonCard';
 

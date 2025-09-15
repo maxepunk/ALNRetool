@@ -4,15 +4,19 @@
  * Designed specifically for ALNRetool's puzzle data structure
  */
 
-import { memo, type ReactNode } from 'react';
+import { forwardRef, memo, type ReactNode } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useNodeFilterStyles } from '@/hooks/useNodeFilterStyles';
+import { StatusTooltip, NodeTooltip } from './NodeTooltip';
+import type { GraphNodeData } from '@/lib/graph/types';
+import type { NodeDisplayFlags, NodeTextSizes } from '@/hooks/useNodeFilterStyles';
 
 export type DiamondSize = 'small' | 'medium' | 'large' | 'parent' | 'child';
 export type NodeStatus = 'draft' | 'ready' | 'locked' | 'chained' | 'error';
 
-interface DiamondCardProps extends Partial<NodeProps> {
+interface DiamondCardProps extends Partial<NodeProps>, Omit<React.HTMLAttributes<HTMLDivElement>, 'draggable'> {
   size?: DiamondSize;
   title: string;
   icon?: ReactNode;
@@ -46,6 +50,10 @@ interface DiamondCardProps extends Partial<NodeProps> {
   rewardsTooltip?: string;
   statusTooltips?: Record<NodeStatus, string>;
   complexityTooltip?: string;
+  // NEW: Pass metadata for zoom-aware rendering
+  metadata?: GraphNodeData['metadata'];
+  displayFlags?: NodeDisplayFlags;
+  textSizes?: NodeTextSizes;
 }
 
 // Size configurations for diamond
@@ -115,7 +123,7 @@ const CountIndicator = ({ count, max = 5, color = 'amber' }: { count: number; ma
   );
 };
 
-const DiamondCard = memo(({
+const DiamondCard = memo(forwardRef<HTMLDivElement, DiamondCardProps>(({
   size = 'medium',
   title,
   icon,
@@ -142,14 +150,47 @@ const DiamondCard = memo(({
   rewardsTooltip,
   statusTooltips,
   complexityTooltip,
-}: DiamondCardProps) => {
+  metadata,
+  displayFlags: propsDisplayFlags,
+  textSizes: propsTextSizes,
+  ...rest
+}, ref) => {
   // Adjust size based on hierarchy
   const actualSize = isParent ? 'parent' : isChild ? 'child' : size;
   const config = sizeConfigs[actualSize];
   const complexityTheme = complexityColors[complexity];
   
+  // Default metadata for when none is provided
+  const defaultMetadata: GraphNodeData['metadata'] = {
+    entityType: 'puzzle', // Safe default for diamond cards (usually puzzles)
+  };
+  
+  // Always call the hook (React Rules of Hooks)
+  const hookResult = useNodeFilterStyles(metadata || defaultMetadata, selected);
+  
+  // Use props if provided, otherwise use hook results (if metadata was provided), otherwise use defaults
+  const displayFlags = propsDisplayFlags || (metadata ? hookResult.displayFlags : null) || {
+    showShape: true,
+    showIcon: true,
+    showTitle: true,
+    showTitleFull: true,
+    showBadges: true,
+    showStats: true,
+    showDetails: true,
+    showDescriptions: true,
+    enablePopovers: false,
+    enableTooltips: false,
+  };
+  
+  const textSizes = propsTextSizes || (metadata ? hookResult.textSizes : null) || {
+    title: 'text-sm',
+    badge: 'text-xs',
+    stats: 'text-xs',
+    description: 'text-xs',
+  };
+  
   return (
-    <div className="relative group" style={{ opacity }}>
+    <div ref={ref} className="relative group" style={{ opacity }} {...rest}>
       {/* Diamond Container */}
       <div
         className={cn(
@@ -214,28 +255,34 @@ const DiamondCard = memo(({
             padding: `${config.padding}px`,
           }}
         >
-          {/* Top Section: Status Badges */}
-          {statuses.length > 0 && (
+          {/* Top Section: Status Badges - conditional based on zoom */}
+          {displayFlags.showBadges && statuses.length > 0 && (
             <div className="flex justify-center gap-1 mb-1">
               {statuses.map((status) => (
-                <Badge
+                <StatusTooltip
                   key={status}
-                  variant={statusVariants[status].variant}
-                  className={cn(
-                    'text-xs px-1.5 py-0 h-4 backdrop-blur-sm',
-                    statusVariants[status].className
-                  )}
-                  title={statusTooltips?.[status]}
+                  status={status}
+                  description={statusTooltips?.[status] || `Status: ${statusVariants[status].label}`}
+                  enabled={displayFlags.enableTooltips}
                 >
-                  {statusVariants[status].label}
-                </Badge>
+                  <Badge
+                    variant={statusVariants[status].variant}
+                    className={cn(
+                      'px-1.5 py-0 h-4 backdrop-blur-sm',
+                      statusVariants[status].className,
+                      textSizes.badge
+                    )}
+                  >
+                    {statusVariants[status].label}
+                  </Badge>
+                </StatusTooltip>
               ))}
             </div>
           )}
 
-          {/* Middle Section: Icon and Title */}
+          {/* Middle Section: Icon and Title - zoom-aware */}
           <div className="flex-1 flex flex-col items-center justify-center">
-            {icon && (
+            {icon && displayFlags.showIcon && (
               <div className={cn(
                 complexityTheme.iconColor,
                 'mb-1 transition-transform duration-300 group-hover:scale-110',
@@ -244,58 +291,71 @@ const DiamondCard = memo(({
                 {icon}
               </div>
             )}
-            <h3 className={cn(
-              'font-bold text-center leading-tight px-2',
-              complexityTheme.accent,
-              isParent ? 'text-base' : isChild ? 'text-xs' : 'text-sm'
-            )}>
-              {title}
-            </h3>
-          </div>
-
-          {/* Bottom Section: Stats Bar */}
-          <div className="flex items-center justify-between gap-2 mt-1">
-            {/* Requirements */}
-            {requirementsCount > 0 && (
-              <div 
-                className="flex flex-col items-center"
-                title={requirementsTooltip}
-              >
-                <span className="text-xs font-semibold text-amber-600">↓{requirementsCount}</span>
-                <CountIndicator count={requirementsCount} max={maxCount} color="amber" />
-              </div>
-            )}
-            
-            {/* Owner Badge */}
-            {ownerBadge && (
-              <div className="flex items-center justify-center">
-                {ownerBadge}
-              </div>
-            )}
-            
-            {/* Rewards */}
-            {rewardsCount > 0 && (
-              <div 
-                className="flex flex-col items-center"
-                title={rewardsTooltip}
-              >
-                <span className="text-xs font-semibold text-emerald-600">↑{rewardsCount}</span>
-                <CountIndicator count={rewardsCount} max={maxCount} color="emerald" />
-              </div>
+            {displayFlags.showTitle && (
+              <h3 className={cn(
+                'font-bold text-center leading-tight px-2',
+                complexityTheme.accent,
+                textSizes.title,
+                !displayFlags.showTitleFull && 'truncate max-w-full'
+              )}>
+                {title}
+              </h3>
             )}
           </div>
 
-          {/* Complexity Indicator (corner dot) */}
-          <div 
-            className="absolute top-2 right-2"
-            title={complexityTooltip}
-          >
-            <div className={cn(
-              'w-3 h-3 rounded-full shadow-md ring-2 ring-white/30',
-              complexity === 'simple' ? 'bg-purple-500' :
-              complexity === 'complex' ? 'bg-purple-900' : 'bg-purple-700'
-            )} />
-          </div>
+          {/* Bottom Section: Stats Bar - conditional based on zoom */}
+          {displayFlags.showStats && (
+            <div className="flex items-center justify-between gap-2 mt-1">
+              {/* Requirements */}
+              {requirementsCount > 0 && (
+                <NodeTooltip
+                  enabled={displayFlags.enableTooltips}
+                  content={requirementsTooltip}
+                >
+                  <div className="flex flex-col items-center">
+                    <span className={cn("font-semibold text-amber-600", textSizes.stats)}>↓{requirementsCount}</span>
+                    <CountIndicator count={requirementsCount} max={maxCount} color="amber" />
+                  </div>
+                </NodeTooltip>
+              )}
+              
+              {/* Owner Badge */}
+              {ownerBadge && (
+                <div className="flex items-center justify-center">
+                  {ownerBadge}
+                </div>
+              )}
+              
+              {/* Rewards */}
+              {rewardsCount > 0 && (
+                <NodeTooltip
+                  enabled={displayFlags.enableTooltips}
+                  content={rewardsTooltip}
+                >
+                  <div className="flex flex-col items-center">
+                    <span className={cn("font-semibold text-emerald-600", textSizes.stats)}>↑{rewardsCount}</span>
+                    <CountIndicator count={rewardsCount} max={maxCount} color="emerald" />
+                  </div>
+                </NodeTooltip>
+              )}
+            </div>
+          )}
+
+          {/* Complexity Indicator (corner dot) - show with badges */}
+          {displayFlags.showBadges && (
+            <NodeTooltip
+              enabled={displayFlags.enableTooltips}
+              content={complexityTooltip}
+            >
+              <div className="absolute top-2 right-2">
+                <div className={cn(
+                  'w-3 h-3 rounded-full shadow-md ring-2 ring-white/30',
+                  complexity === 'simple' ? 'bg-purple-500' :
+                  complexity === 'complex' ? 'bg-purple-900' : 'bg-purple-700'
+                )} />
+              </div>
+            </NodeTooltip>
+          )}
         </div>
 
         {/* React Flow Handles positioned on diamond corners */}
@@ -348,7 +408,7 @@ const DiamondCard = memo(({
       </div>
     </div>
   );
-});
+}));
 
 DiamondCard.displayName = 'DiamondCard';
 
