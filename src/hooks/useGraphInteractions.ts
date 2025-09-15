@@ -19,6 +19,7 @@ import {
 import { useHotkeys } from 'react-hotkeys-hook';
 import toast from 'react-hot-toast';
 import { useFilterStore } from '@/stores/filterStore';
+import { useNavigationStore } from '@/stores/navigationStore';
 
 
 
@@ -415,6 +416,23 @@ export function useGraphInteractions({
   useHotkeys('escape', () => {
     clearSelection();
   }, [clearSelection]);
+  
+  // Navigation history shortcuts
+  useHotkeys('[', () => {
+    const navigationStore = useNavigationStore.getState();
+    const nodeId = navigationStore.goBack();
+    if (nodeId) {
+      setSelectedNode(nodeId);
+    }
+  }, [setSelectedNode]);
+  
+  useHotkeys(']', () => {
+    const navigationStore = useNavigationStore.getState();
+    const nodeId = navigationStore.goForward();
+    if (nodeId) {
+      setSelectedNode(nodeId);
+    }
+  }, [setSelectedNode]);
   
   return {
     // Selection state (computed from React Flow)

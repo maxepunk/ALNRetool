@@ -58,7 +58,7 @@ import { useGraphLayout } from '@/hooks/useGraphLayout';
 import { useFilterSelectors } from '@/hooks/useFilterSelectors';
 import { useFilterStore } from '@/stores/filterStore';
 import { useViewStore } from '@/stores/viewStore';
-import { FilterStatusBar } from './FilterStatusBar';
+import { UnifiedToolbar } from './UnifiedToolbar';
 import { FloatingActionButton } from './FloatingActionButton';
 import { GraphLoadingSkeleton } from './GraphLoadingSkeleton';
 import { LayoutProgress } from './LayoutProgress/LayoutProgress';
@@ -66,6 +66,7 @@ import { useGraphInteractions } from '@/hooks/useGraphInteractions';
 import { GraphDataContextProvider } from '@/contexts/GraphDataContext';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
+import { useNavigationTracking } from '@/hooks/useNavigationTracking';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -337,6 +338,9 @@ function GraphViewComponent() {
   const layoutedNodes = reactFlowNodes;
   const totalUniverseNodes = serverNodes.length;
   
+  // Track navigation history
+  useNavigationTracking({ nodes: layoutedNodes });
+  
   // Connect keyboard interactions and advanced graph handling
   const {
     handleNodeClick,              // Added to handle node selection
@@ -443,8 +447,8 @@ function GraphViewComponent() {
         
         <div className="flex-1 relative flex">
           <div className="flex-1 relative">
-            {/* Filter status bar with comprehensive feedback */}
-            <FilterStatusBar
+            {/* Unified toolbar with filter status, navigation breadcrumbs, and controls */}
+            <UnifiedToolbar
               totalNodes={totalUniverseNodes}
               visibleNodes={visibleNodeIds.size}
               connectionDepth={connectionDepth ?? 0}

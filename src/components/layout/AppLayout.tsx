@@ -10,7 +10,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { useLastSyncTime } from '@/hooks/useLastSyncTime'
 import { useUIStore } from '@/stores/uiStore'
-import Breadcrumbs from '@/components/common/Breadcrumbs'
+import URLBreadcrumbs from '@/components/navigation/URLBreadcrumbs'
 import ConnectionStatus from '@/components/common/ConnectionStatus'
 import ErrorBoundary from '@/components/common/ErrorBoundary'
 import Sidebar from '@/components/layout/Sidebar'
@@ -234,7 +234,7 @@ export default function AppLayout() {
               transition={{ duration: 0.2, ease: "easeInOut" }}
               className="px-4 md:px-6 py-2 overflow-hidden border-t border-border/20"
             >
-              <Breadcrumbs />
+              <URLBreadcrumbs />
             </motion.div>
           )}
         </AnimatePresence>

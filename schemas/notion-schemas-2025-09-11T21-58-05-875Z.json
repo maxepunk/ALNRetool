@@ -1,0 +1,903 @@
+{
+  "timestamp": "2025-09-11T21:58:05.875Z",
+  "version": "1.0.0",
+  "api_version": "2022-06-28",
+  "databases": {
+    "characters": {
+      "success": true,
+      "id": "18c2f33d-583f-8060-a6ab-de32ff06bca2",
+      "title": "About Last Night…Characters",
+      "created_time": "2025-01-31T09:06:00.000Z",
+      "last_edited_time": "2025-09-08T05:18:00.000Z",
+      "properties": {
+        "Events": {
+          "id": "%3A%60%3Dc",
+          "type": "relation",
+          "name": "Events",
+          "config": {
+            "database_id": "1b52f33d-583f-80de-ae5a-d20020c120dd",
+            "type": "dual_property",
+            "synced_property_id": "qY%3An",
+            "synced_property_name": "Characters Involved"
+          }
+        },
+        "Type": {
+          "id": "AUpr",
+          "type": "select",
+          "name": "Type",
+          "config": {
+            "options": [
+              {
+                "id": "tS:j",
+                "name": "NPC",
+                "color": "pink"
+              },
+              {
+                "id": "zWEi",
+                "name": "Player",
+                "color": "blue"
+              }
+            ]
+          }
+        },
+        "Created time": {
+          "id": "Mq%5D%40",
+          "type": "created_time",
+          "name": "Created time",
+          "config": {}
+        },
+        "Primary Action": {
+          "id": "N~ZP",
+          "type": "rich_text",
+          "name": "Primary Action",
+          "config": {}
+        },
+        "Character Logline": {
+          "id": "P%7B%3Cj",
+          "type": "rich_text",
+          "name": "Character Logline",
+          "config": {}
+        },
+        "Associated Elements": {
+          "id": "Ul%5Dy",
+          "type": "relation",
+          "name": "Associated Elements",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "single_property"
+          }
+        },
+        "Owned Elements": {
+          "id": "k%3AJv",
+          "type": "relation",
+          "name": "Owned Elements",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "dual_property",
+            "synced_property_id": "n%3BXL",
+            "synced_property_name": "Owner"
+          }
+        },
+        "Connections": {
+          "id": "kUh%5C",
+          "type": "rollup",
+          "name": "Connections",
+          "config": {
+            "relation_property_id": ":`=c",
+            "relation_property_name": "Events",
+            "rollup_property_id": "qY:n",
+            "rollup_property_name": "Characters Involved",
+            "function": "unique"
+          }
+        },
+        "Emotion towards CEO & others": {
+          "id": "mFSQ",
+          "type": "rich_text",
+          "name": "Emotion towards CEO & others",
+          "config": {}
+        },
+        "Character Puzzles": {
+          "id": "xs%40E",
+          "type": "relation",
+          "name": "Character Puzzles",
+          "config": {
+            "database_id": "1b62f33d-583f-80cc-87cf-d7d6c4b0b265",
+            "type": "single_property"
+          }
+        },
+        "Overview & Key Relationships": {
+          "id": "ysrS",
+          "type": "rich_text",
+          "name": "Overview & Key Relationships",
+          "config": {}
+        },
+        "Tier": {
+          "id": "%7B%3FXJ",
+          "type": "select",
+          "name": "Tier",
+          "config": {
+            "options": [
+              {
+                "id": "uNS>",
+                "name": "Core",
+                "color": "yellow"
+              },
+              {
+                "id": "=cqW",
+                "name": "Secondary",
+                "color": "brown"
+              },
+              {
+                "id": "HMHF",
+                "name": "Tertiary",
+                "color": "green"
+              },
+              {
+                "id": "14882962-52a4-4807-948e-984da939ca93",
+                "name": "Primary",
+                "color": "gray"
+              }
+            ]
+          }
+        },
+        "Last edited time": {
+          "id": "%7BsRQ",
+          "type": "last_edited_time",
+          "name": "Last edited time",
+          "config": {}
+        },
+        "Name": {
+          "id": "title",
+          "type": "title",
+          "name": "Name",
+          "config": {}
+        }
+      },
+      "property_count": 14
+    },
+    "elements": {
+      "success": true,
+      "id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+      "title": "About Last Night…Elements",
+      "created_time": "2025-01-31T08:59:00.000Z",
+      "last_edited_time": "2025-09-08T04:48:00.000Z",
+      "properties": {
+        "Timeline Event": {
+          "id": "%3DTPa",
+          "type": "relation",
+          "name": "Timeline Event",
+          "config": {
+            "database_id": "1b52f33d-583f-80de-ae5a-d20020c120dd",
+            "type": "dual_property",
+            "synced_property_id": "B%5EDP",
+            "synced_property_name": "Memory/Evidence"
+          }
+        },
+        "Contents": {
+          "id": "%3Df%3E%7D",
+          "type": "relation",
+          "name": "Contents",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "dual_property",
+            "synced_property_id": "R%7DYP",
+            "synced_property_name": "Container"
+          }
+        },
+        "Last edited by": {
+          "id": "%3EJgV",
+          "type": "last_edited_by",
+          "name": "Last edited by",
+          "config": {}
+        },
+        "Files & media": {
+          "id": "Av%3Fh",
+          "type": "files",
+          "name": "Files & media",
+          "config": {}
+        },
+        "Associated Characters": {
+          "id": "D%3AZK",
+          "type": "rollup",
+          "name": "Associated Characters",
+          "config": {
+            "relation_property_id": "=TPa",
+            "relation_property_name": "Timeline Event",
+            "rollup_property_id": "qY:n",
+            "rollup_property_name": "Characters Involved",
+            "function": "show_unique"
+          }
+        },
+        "Description/Text": {
+          "id": "E%40zH",
+          "type": "rich_text",
+          "name": "Description/Text",
+          "config": {}
+        },
+        "Last edited time": {
+          "id": "F~Zx",
+          "type": "last_edited_time",
+          "name": "Last edited time",
+          "config": {}
+        },
+        "Last edited by 1": {
+          "id": "JBli",
+          "type": "last_edited_by",
+          "name": "Last edited by 1",
+          "config": {}
+        },
+        "Puzzle Chain": {
+          "id": "JvCu",
+          "type": "rollup",
+          "name": "Puzzle Chain",
+          "config": {
+            "relation_property_id": "R}YP",
+            "relation_property_name": "Container",
+            "rollup_property_id": "`Eff",
+            "rollup_property_name": "Container Puzzle",
+            "function": "show_original"
+          }
+        },
+        "Production/Puzzle Notes": {
+          "id": "M~S%3F",
+          "type": "rich_text",
+          "name": "Production/Puzzle Notes",
+          "config": {}
+        },
+        "Content Link": {
+          "id": "Otoh",
+          "type": "url",
+          "name": "Content Link",
+          "config": {}
+        },
+        "Last edited time 1": {
+          "id": "QbY%3E",
+          "type": "last_edited_time",
+          "name": "Last edited time 1",
+          "config": {}
+        },
+        "Container": {
+          "id": "R%7DYP",
+          "type": "relation",
+          "name": "Container",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "dual_property",
+            "synced_property_id": "%3Df%3E%7D",
+            "synced_property_name": "Contents"
+          }
+        },
+        "Narrative Threads": {
+          "id": "S%40kU",
+          "type": "multi_select",
+          "name": "Narrative Threads",
+          "config": {
+            "options": [
+              {
+                "id": "xx:o",
+                "name": "Funding Competition",
+                "color": "default"
+              },
+              {
+                "id": "NBTn",
+                "name": "Underground Parties",
+                "color": "brown"
+              },
+              {
+                "id": "rjgt",
+                "name": "Memory Drug",
+                "color": "gray"
+              },
+              {
+                "id": "bbOG",
+                "name": "Corp. Espionage",
+                "color": "pink"
+              },
+              {
+                "id": "tZKh",
+                "name": "Marriage Troubles",
+                "color": "orange"
+              },
+              {
+                "id": "2bae6719-49f9-41b2-9fdc-36b53390a9d7",
+                "name": "Ephemeral Echo",
+                "color": "purple"
+              },
+              {
+                "id": "0ab5132d-fa99-457a-86ab-929ea7dfc3cf",
+                "name": "Ambition",
+                "color": "green"
+              },
+              {
+                "id": "f763cefd-ec1a-4b3c-907f-3c94d1a71547",
+                "name": "Tech Development",
+                "color": "yellow"
+              },
+              {
+                "id": "25399605-3ad0-4ec8-abc3-78506bed12ef",
+                "name": "Corporate Espionage",
+                "color": "red"
+              },
+              {
+                "id": "0a2f8688-ef26-451b-8ea6-bf77d1926092",
+                "name": "Character Backstory",
+                "color": "blue"
+              },
+              {
+                "id": "991de843-1558-4d2e-8450-3f33557b9550",
+                "name": "Advanced Technology",
+                "color": "green"
+              },
+              {
+                "id": "90e3dfda-fd43-4d2f-a905-ac8392455f7b",
+                "name": "Character Motivation",
+                "color": "orange"
+              },
+              {
+                "id": "6184f2cf-4596-413a-9c93-08f2d1443a34",
+                "name": "Character Philosophy",
+                "color": "brown"
+              },
+              {
+                "id": "3e292ace-74bf-4a15-b82a-1f4e9ed7dbc7",
+                "name": "Emergent Third Path",
+                "color": "gray"
+              },
+              {
+                "id": "43c7cf75-2e46-4419-b613-feb26faad37e",
+                "name": "Character Relationships",
+                "color": "yellow"
+              },
+              {
+                "id": "0744265f-2815-4a94-b27c-a00ed42428f7",
+                "name": "Blackmail",
+                "color": "yellow"
+              },
+              {
+                "id": "a330fd57-a2f1-451f-8f8b-0fa7dc293a36",
+                "name": "Unsanctioned Research",
+                "color": "blue"
+              },
+              {
+                "id": "f7f99862-e6d8-40a9-9376-5617bd34aa1c",
+                "name": "Anxious State",
+                "color": "gray"
+              },
+              {
+                "id": "7734d6ce-ce2c-4677-a46f-4a884931d05b",
+                "name": "Party Evidence",
+                "color": "pink"
+              },
+              {
+                "id": "997eef0b-49b9-4c03-96e4-4bc148cea81a",
+                "name": "Anxiety",
+                "color": "red"
+              },
+              {
+                "id": "81b4858a-8ed0-4ba1-851d-51ee1311a010",
+                "name": "Medication",
+                "color": "brown"
+              },
+              {
+                "id": "2bce6f34-1fc7-4922-9289-6905fce9dbbe",
+                "name": "Confrontation",
+                "color": "blue"
+              },
+              {
+                "id": "bf02a589-7c50-430b-9171-7c0d919b5db2",
+                "name": "Suspect Motive",
+                "color": "default"
+              },
+              {
+                "id": "d7834124-a96c-4b58-930a-3a6962628a3b",
+                "name": "Act 2 Memory Integration",
+                "color": "purple"
+              },
+              {
+                "id": "5267d4a2-2aa3-47b4-90bc-91d7d30d1f7e",
+                "name": "Class & Labor",
+                "color": "red"
+              },
+              {
+                "id": "8e294ec9-25c1-4605-a0d9-817819e9be87",
+                "name": "Murder Timeline",
+                "color": "green"
+              },
+              {
+                "id": "11320fb7-7f8e-4dfb-9e68-ffb40fd5640d",
+                "name": "test",
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "Created by": {
+          "id": "UOIs",
+          "type": "created_by",
+          "name": "Created by",
+          "config": {}
+        },
+        "Created by 1": {
+          "id": "Xgzr",
+          "type": "created_by",
+          "name": "Created by 1",
+          "config": {}
+        },
+        "Created time": {
+          "id": "%5DvTM",
+          "type": "created_time",
+          "name": "Created time",
+          "config": {}
+        },
+        "Status": {
+          "id": "%5Eo%5BU",
+          "type": "status",
+          "name": "Status",
+          "config": {
+            "options": [
+              {
+                "id": "e00f7914-4490-4a40-8903-9da546a670fc",
+                "name": "Idea/Placeholder",
+                "color": "default"
+              },
+              {
+                "id": "[u`>",
+                "name": "in space playtest ready",
+                "color": "blue"
+              },
+              {
+                "id": "0cb2aad3-f3aa-4e5c-9efd-c01e31539992",
+                "name": "In development",
+                "color": "orange"
+              },
+              {
+                "id": "skh:",
+                "name": "Writing Complete",
+                "color": "blue"
+              },
+              {
+                "id": "H_eE",
+                "name": "Design Complete",
+                "color": "purple"
+              },
+              {
+                "id": "HyZ@",
+                "name": "Source Prop/print",
+                "color": "purple"
+              },
+              {
+                "id": "AUb<",
+                "name": "Ready for Playtest",
+                "color": "yellow"
+              },
+              {
+                "id": "f1301db8-bfd4-4125-a85c-fd670d8bac68",
+                "name": "Done",
+                "color": "green"
+              }
+            ],
+            "groups": [
+              {
+                "id": "acd757e8-de47-4f34-baba-50d049c2c999",
+                "name": "To-do",
+                "color": "gray",
+                "option_ids": [
+                  "e00f7914-4490-4a40-8903-9da546a670fc"
+                ]
+              },
+              {
+                "id": "18893597-971a-4295-8a24-410ba2434170",
+                "name": "In progress",
+                "color": "blue",
+                "option_ids": [
+                  "[u`>",
+                  "0cb2aad3-f3aa-4e5c-9efd-c01e31539992",
+                  "skh:",
+                  "H_eE",
+                  "HyZ@",
+                  "AUb<"
+                ]
+              },
+              {
+                "id": "b1030ff9-206c-4940-96e1-941e4278a97f",
+                "name": "Complete",
+                "color": "green",
+                "option_ids": [
+                  "f1301db8-bfd4-4125-a85c-fd670d8bac68"
+                ]
+              }
+            ]
+          }
+        },
+        "Container Puzzle": {
+          "id": "%60Eff",
+          "type": "relation",
+          "name": "Container Puzzle",
+          "config": {
+            "database_id": "1b62f33d-583f-80cc-87cf-d7d6c4b0b265",
+            "type": "dual_property",
+            "synced_property_id": "HP%3Cq",
+            "synced_property_name": "Locked Item"
+          }
+        },
+        "Required For (Puzzle)": {
+          "id": "e%5EJh",
+          "type": "relation",
+          "name": "Required For (Puzzle)",
+          "config": {
+            "database_id": "1b62f33d-583f-80cc-87cf-d7d6c4b0b265",
+            "type": "dual_property",
+            "synced_property_id": "kyai",
+            "synced_property_name": "Puzzle Elements"
+          }
+        },
+        "Owner": {
+          "id": "n%3BXL",
+          "type": "relation",
+          "name": "Owner",
+          "config": {
+            "database_id": "18c2f33d-583f-8060-a6ab-de32ff06bca2",
+            "type": "dual_property",
+            "synced_property_id": "k%3AJv",
+            "synced_property_name": "Owned Elements"
+          }
+        },
+        "Rewarded by (Puzzle)": {
+          "id": "vK%7D%3D",
+          "type": "relation",
+          "name": "Rewarded by (Puzzle)",
+          "config": {
+            "database_id": "1b62f33d-583f-80cc-87cf-d7d6c4b0b265",
+            "type": "dual_property",
+            "synced_property_id": "PW~F",
+            "synced_property_name": "Rewards"
+          }
+        },
+        "First Available": {
+          "id": "wxX%3A",
+          "type": "select",
+          "name": "First Available",
+          "config": {
+            "options": [
+              {
+                "id": "_UQ`",
+                "name": "Act 2",
+                "color": "gray"
+              },
+              {
+                "id": "U>Iq",
+                "name": "Act 1",
+                "color": "yellow"
+              },
+              {
+                "id": "@xm<",
+                "name": "Act 0",
+                "color": "purple"
+              }
+            ]
+          }
+        },
+        "Basic Type": {
+          "id": "%7B%3EYn",
+          "type": "select",
+          "name": "Basic Type",
+          "config": {
+            "options": [
+              {
+                "id": "Othn",
+                "name": "Set Dressing",
+                "color": "blue"
+              },
+              {
+                "id": "A>`D",
+                "name": "Prop",
+                "color": "green"
+              },
+              {
+                "id": "oEwl",
+                "name": "Memory Token Image",
+                "color": "purple"
+              },
+              {
+                "id": "|Iwj",
+                "name": "Memory Token Audio",
+                "color": "yellow"
+              },
+              {
+                "id": "e1ff4a44-2c4e-4b98-aa3e-8438271f7ef1",
+                "name": "Memory Token Video",
+                "color": "red"
+              },
+              {
+                "id": "3ccc056d-9965-467d-81d9-c03359ba2d9a",
+                "name": "Document",
+                "color": "brown"
+              },
+              {
+                "id": "111a1235-8c09-44f4-9231-3fd60cdf12fd",
+                "name": "Memory Token Audio + Image",
+                "color": "gray"
+              },
+              {
+                "id": "9903c4c7-424d-4fe8-a9f5-919c083dd9ce",
+                "name": "Memory Token (Audio)",
+                "color": "orange"
+              },
+              {
+                "id": "d8c9da33-68ab-4f50-9413-5c7d879af5de",
+                "name": "Physical",
+                "color": "pink"
+              },
+              {
+                "id": "8aeb366b-9c4e-4bc4-8663-92e45c7edba0",
+                "name": "Clue",
+                "color": "default"
+              }
+            ]
+          }
+        },
+        "Container?": {
+          "id": "%7C%5DBL",
+          "type": "formula",
+          "name": "Container?",
+          "config": {
+            "expression": "not empty({{notion:block_property:%3Df%3E%7D:00000000-0000-0000-0000-000000000000:85b52ce3-b441-47b1-9d52-4ece9a297067}}) or not empty({{notion:block_property:%60Eff:00000000-0000-0000-0000-000000000000:85b52ce3-b441-47b1-9d52-4ece9a297067}})"
+          }
+        },
+        "Name": {
+          "id": "title",
+          "type": "title",
+          "name": "Name",
+          "config": {}
+        }
+      },
+      "property_count": 26
+    },
+    "puzzles": {
+      "success": true,
+      "id": "1b62f33d-583f-80cc-87cf-d7d6c4b0b265",
+      "title": "About Last Night…Puzzles",
+      "created_time": "2025-03-14T04:49:00.000Z",
+      "last_edited_time": "2025-09-08T05:18:00.000Z",
+      "properties": {
+        "Owner": {
+          "id": "BRdU",
+          "type": "rollup",
+          "name": "Owner",
+          "config": {
+            "relation_property_id": "HP<q",
+            "relation_property_name": "Locked Item",
+            "rollup_property_id": "n;XL",
+            "rollup_property_name": "Owner",
+            "function": "show_unique"
+          }
+        },
+        "Created by": {
+          "id": "DfvA",
+          "type": "created_by",
+          "name": "Created by",
+          "config": {}
+        },
+        "Asset Link": {
+          "id": "GP~Q",
+          "type": "url",
+          "name": "Asset Link",
+          "config": {}
+        },
+        "Locked Item": {
+          "id": "HP%3Cq",
+          "type": "relation",
+          "name": "Locked Item",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "dual_property",
+            "synced_property_id": "%60Eff",
+            "synced_property_name": "Container Puzzle"
+          }
+        },
+        "Parent item": {
+          "id": "NkRz",
+          "type": "relation",
+          "name": "Parent item",
+          "config": {
+            "database_id": "1b62f33d-583f-80cc-87cf-d7d6c4b0b265",
+            "type": "dual_property",
+            "synced_property_id": "fFr%3A",
+            "synced_property_name": "Sub-Puzzles"
+          }
+        },
+        "Rewards": {
+          "id": "PW~F",
+          "type": "relation",
+          "name": "Rewards",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "dual_property",
+            "synced_property_id": "vK%7D%3D",
+            "synced_property_name": "Rewarded by (Puzzle)"
+          }
+        },
+        "Story Reveals": {
+          "id": "PnRw",
+          "type": "rollup",
+          "name": "Story Reveals",
+          "config": {
+            "relation_property_id": "PW~F",
+            "relation_property_name": "Rewards",
+            "rollup_property_id": "=TPa",
+            "rollup_property_name": "Timeline Event",
+            "function": "show_unique"
+          }
+        },
+        "Description/Solution": {
+          "id": "%5C%7Din",
+          "type": "rich_text",
+          "name": "Description/Solution",
+          "config": {}
+        },
+        "Last edited time": {
+          "id": "%5D%3Fc%5B",
+          "type": "last_edited_time",
+          "name": "Last edited time",
+          "config": {}
+        },
+        "Timing": {
+          "id": "%5ECtI",
+          "type": "rollup",
+          "name": "Timing",
+          "config": {
+            "relation_property_id": "kyai",
+            "relation_property_name": "Puzzle Elements",
+            "rollup_property_id": "wxX:",
+            "rollup_property_name": "First Available",
+            "function": "show_unique"
+          }
+        },
+        "Last edited by": {
+          "id": "%60%5DBe",
+          "type": "last_edited_by",
+          "name": "Last edited by",
+          "config": {}
+        },
+        "Sub-Puzzles": {
+          "id": "fFr%3A",
+          "type": "relation",
+          "name": "Sub-Puzzles",
+          "config": {
+            "database_id": "1b62f33d-583f-80cc-87cf-d7d6c4b0b265",
+            "type": "dual_property",
+            "synced_property_id": "NkRz",
+            "synced_property_name": "Parent item"
+          }
+        },
+        "Narrative Threads": {
+          "id": "h%3Eul",
+          "type": "rollup",
+          "name": "Narrative Threads",
+          "config": {
+            "relation_property_id": "PW~F",
+            "relation_property_name": "Rewards",
+            "rollup_property_id": "S@kU",
+            "rollup_property_name": "Narrative Threads",
+            "function": "show_unique"
+          }
+        },
+        "Puzzle Elements": {
+          "id": "kyai",
+          "type": "relation",
+          "name": "Puzzle Elements",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "dual_property",
+            "synced_property_id": "e%5EJh",
+            "synced_property_name": "Required For (Puzzle)"
+          }
+        },
+        "Created time": {
+          "id": "%7BQiC",
+          "type": "created_time",
+          "name": "Created time",
+          "config": {}
+        },
+        "Puzzle": {
+          "id": "title",
+          "type": "title",
+          "name": "Puzzle",
+          "config": {}
+        }
+      },
+      "property_count": 16
+    },
+    "timeline": {
+      "success": true,
+      "id": "1b52f33d-583f-80de-ae5a-d20020c120dd",
+      "title": "About Last Night…Timeline",
+      "created_time": "2025-03-13T18:55:00.000Z",
+      "last_edited_time": "2025-09-08T05:19:00.000Z",
+      "properties": {
+        "Last edited by": {
+          "id": "%3DW_W",
+          "type": "last_edited_by",
+          "name": "Last edited by",
+          "config": {}
+        },
+        "mem type": {
+          "id": "%3FeEY",
+          "type": "rollup",
+          "name": "mem type",
+          "config": {
+            "relation_property_id": "B^DP",
+            "relation_property_name": "Memory/Evidence",
+            "rollup_property_id": "{>Yn",
+            "rollup_property_name": "Basic Type",
+            "function": "show_unique"
+          }
+        },
+        "Memory/Evidence": {
+          "id": "B%5EDP",
+          "type": "relation",
+          "name": "Memory/Evidence",
+          "config": {
+            "database_id": "18c2f33d-583f-8020-91bc-d84c7dd94306",
+            "type": "dual_property",
+            "synced_property_id": "%3DTPa",
+            "synced_property_name": "Timeline Event"
+          }
+        },
+        "Last edited time": {
+          "id": "T%3BjH",
+          "type": "last_edited_time",
+          "name": "Last edited time",
+          "config": {}
+        },
+        "Created time": {
+          "id": "XYZI",
+          "type": "created_time",
+          "name": "Created time",
+          "config": {}
+        },
+        "Date": {
+          "id": "%5D%3DKK",
+          "type": "date",
+          "name": "Date",
+          "config": {}
+        },
+        "Characters Involved": {
+          "id": "qY%3An",
+          "type": "relation",
+          "name": "Characters Involved",
+          "config": {
+            "database_id": "18c2f33d-583f-8060-a6ab-de32ff06bca2",
+            "type": "dual_property",
+            "synced_property_id": "%3A%60%3Dc",
+            "synced_property_name": "Events"
+          }
+        },
+        "Created by": {
+          "id": "s%7CE%3E",
+          "type": "created_by",
+          "name": "Created by",
+          "config": {}
+        },
+        "Notes": {
+          "id": "urNO",
+          "type": "rich_text",
+          "name": "Notes",
+          "config": {}
+        },
+        "Description": {
+          "id": "title",
+          "type": "title",
+          "name": "Description",
+          "config": {}
+        }
+      },
+      "property_count": 10
+    }
+  },
+  "summary": {
+    "total_databases": 4,
+    "successful": 4,
+    "failed": 0
+  }
+}
