@@ -469,13 +469,9 @@ function GraphViewComponent() {
             />
           )}
           
-          {/* Mobile performance optimization: limit visible nodes */}
           <ReactFlow
-          nodes={isMobile && reactFlowNodes.length > 50 ? reactFlowNodes.slice(0, 50) : reactFlowNodes}
-          edges={isMobile && reactFlowNodes.length > 50 ? reactFlowEdges.filter(edge => {
-            const limitedNodeIds = new Set(reactFlowNodes.slice(0, 50).map(n => n.id));
-            return limitedNodeIds.has(edge.source) && limitedNodeIds.has(edge.target);
-          }) : reactFlowEdges}
+          nodes={reactFlowNodes}
+          edges={reactFlowEdges}
           onNodeClick={handleNodeClick}
           onSelectionChange={handleSelectionChange}
           nodeTypes={nodeTypes}

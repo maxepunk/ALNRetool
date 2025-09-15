@@ -139,18 +139,16 @@ const handlePointerUp = useCallback(() => {
 
 ### Phase 5: Performance Optimizations (10% impact)
 
-#### 5.1 Limit Visible Nodes on Mobile
+#### 5.1 ~~Limit Visible Nodes on Mobile~~ REMOVED
 **File:** `src/components/graph/GraphView.tsx`
 ```typescript
-// Line 474-478, limiting nodes and edges on mobile
-nodes={isMobile && reactFlowNodes.length > 50 ? reactFlowNodes.slice(0, 50) : reactFlowNodes}
-edges={isMobile && reactFlowNodes.length > 50 ? reactFlowEdges.filter(edge => {
-  const limitedNodeIds = new Set(reactFlowNodes.slice(0, 50).map(n => n.id));
-  return limitedNodeIds.has(edge.source) && limitedNodeIds.has(edge.target);
-}) : reactFlowEdges}
+// REMOVED in Session 6 - User requested removal of 50-node limit
+// Now renders all nodes on mobile without limitation
+nodes={reactFlowNodes}
+edges={reactFlowEdges}
 ```
 
-**Status:** ✅ Completed
+**Status:** ❌ Removed (Session 6)
 
 #### 5.2 Simplify Node Rendering
 **File:** `src/components/graph/nodes/HexagonCard.tsx`
@@ -181,7 +179,7 @@ boxShadow: isMobile ? '0 2px 4px rgba(0, 0, 0, 0.1)' : '...complex shadow...',
 ## Success Metrics
 - Touch target compliance: 100% of interactive elements ≥44px
 - Load time on 4G: <3 seconds
-- Frame rate with 50 nodes: >30fps
+- ~~Frame rate with 50 nodes: >30fps~~ (50-node limit removed)
 - Zero desktop regression bugs
 
 ## Anti-Overengineering Principles
@@ -223,10 +221,10 @@ boxShadow: isMobile ? '0 2px 4px rgba(0, 0, 0, 0.1)' : '...complex shadow...',
   - Added long-press detection (500ms threshold)
   - Auto-hide after 3 seconds on mobile
   - Kept hover behavior for desktop
-- ✅ Added mobile performance limits:
-  - Limited graph to 50 nodes maximum on mobile
-  - Filtered edges to match limited nodes
-  - Updated UnifiedToolbar to show correct count
+- ~~Added mobile performance limits~~ REMOVED in Session 6:
+  - ~~Limited graph to 50 nodes maximum on mobile~~
+  - ~~Filtered edges to match limited nodes~~
+  - Note: User explicitly requested removal, accepting performance trade-offs
 - ✅ Simplified node rendering on mobile:
   - Disabled glass shine effects
   - Removed hover glow overlays
@@ -271,5 +269,21 @@ boxShadow: isMobile ? '0 2px 4px rgba(0, 0, 0, 0.1)' : '...complex shadow...',
 - Hamburger button is always responsive to taps
 - TypeScript compilation passes without errors
 
+### Session 6 - Removed 50-Node Mobile Limit
+- ✅ Removed the 50-node performance limit on mobile:
+  - Eliminated node slicing logic from GraphView.tsx
+  - Removed corresponding edge filtering
+  - All nodes now render on mobile regardless of count
+- ⚠️ Performance considerations:
+  - Limit was originally added for mobile performance (Session 3)
+  - Large graphs (100+ nodes) may cause lag on low-end devices
+  - User explicitly requested removal, accepting performance trade-offs
+- ✅ Updated documentation to reflect changes
+
+**Note:** If performance issues arise with large graphs on mobile, consider:
+- Using React Flow's `onlyRenderVisibleElements` (already enabled)
+- Implementing viewport-based culling
+- Adding user-configurable performance settings
+
 ---
-*Last Updated: Session 5 - Resolved hamburger button reliability issues*
+*Last Updated: Session 6 - Removed 50-node mobile limit per user request*
