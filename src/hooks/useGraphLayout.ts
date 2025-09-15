@@ -297,6 +297,12 @@ export const useGraphLayout = ({
         selected: node.id === selectedNodeId,
         data: {
           ...node.data,
+          // Add metadata for search matching
+          metadata: {
+            ...node.data.metadata,
+            // Track if this node specifically matches the search term
+            searchMatch: debouncedSearchTerm ? (searchMatcher?.has(node.id) || false) : false,
+          },
           // Add highlight shared flag for visual effect on character nodes
           highlightShared: characterHighlightShared && 
                           node.data?.metadata?.entityType === 'character' &&

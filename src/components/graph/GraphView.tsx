@@ -134,7 +134,7 @@ function GraphViewComponent() {
   const isDetailPanelMinimized = useUIStore(state => state.detailPanelMinimized);
   
   // React Flow instance for viewport control
-  const { fitView, setViewport, getViewport } = useReactFlow();
+  const { fitView, setViewport, getViewport, getNodes } = useReactFlow();
   
   // Track if viewport has been initialized to prevent re-triggering
   const hasInitializedViewport = useRef(false);
@@ -142,6 +142,7 @@ function GraphViewComponent() {
   // Track previous values to detect actual changes
   const previousSelectedNodeId = useRef<string | null>(null);
   const previousSearchTerm = useRef<string>('');
+  const searchTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Ref for React Flow container to get viewport bounds
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -239,6 +240,7 @@ function GraphViewComponent() {
     elementLastEditedRange,
     hasActiveFilters
   } = filters;
+  
   
   
   // Removed graphVersion anti-pattern that caused infinite re-renders
@@ -378,33 +380,76 @@ function GraphViewComponent() {
   
   // Search viewport focusing - debounced to avoid viewport jumps while typing
   useEffect(() => {
-    if (searchTerm && searchTerm !== previousSearchTerm.current && hasInitializedViewport.current) {
-      // Debounce search focusing
-      const timer = setTimeout(() => {
-        const query = searchTerm.toLowerCase();
-        const matchingNodes = reactFlowNodes.filter(node => {
-          const label = node.data?.label?.toLowerCase() || '';
-          const id = node.id.toLowerCase();
-          return label.includes(query) || id.includes(query);
-        });
-        
-        if (matchingNodes.length > 0) {
-          console.log(`[GraphView] Focusing on ${matchingNodes.length} search results for "${searchTerm}"`);
-          fitView({
-            nodes: matchingNodes,
-            padding: 0.3,
-            duration: 600,
-            maxZoom: 1.2 // Keep reasonable zoom for multiple nodes
-          });
-        }
-      }, 500); // 500ms debounce for search
+    // Only process if search actually changed (not just nodes updating)
+    if (searchTerm !== previousSearchTerm.current) {
+      // Clear any existing timer when search changes
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = null;
+      }
       
+      // Handle search clear - fit view to all visible nodes
+      // Check BEFORE updating the ref
+      if (hasInitializedViewport.current && !searchTerm && previousSearchTerm.current) {
+        // Delay to ensure nodes have re-rendered and layout is complete
+        // Use requestAnimationFrame to batch with browser's next paint
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            const visibleNodes = reactFlowNodes.filter(node => visibleNodeIds.has(node.id));
+            if (visibleNodes.length > 0) {
+              fitView({
+                nodes: visibleNodes,
+                padding: 0.2,
+                duration: 600,
+                maxZoom: 1.0 // Don't zoom in too much when showing all
+              });
+            }
+          });
+        }, 800); // 800ms = 300ms debounce (useGraphLayout) + 500ms for React Flow render/animation
+      }
+      
+      // Update ref after checking for clear
       previousSearchTerm.current = searchTerm;
-      return () => clearTimeout(timer);
-    } else if (!searchTerm) {
-      previousSearchTerm.current = '';
+      
+      // Only create new timer if viewport is ready and search is non-empty
+      if (hasInitializedViewport.current && searchTerm) {
+        // Create timer and store ref
+        searchTimerRef.current = setTimeout(() => {
+          searchTimerRef.current = null; // Clear ref after execution
+          
+          // Get FRESH node data from React Flow at execution time
+          const currentNodes = getNodes();
+          
+          // Filter to only nodes that:
+          // 1. Are visible (in the current node list from React Flow)
+          // 2. Actually match the search (have searchMatch metadata)
+          const actualSearchMatches = currentNodes.filter((node: any) => 
+            node.data?.metadata?.searchMatch === true
+          );
+          
+          if (actualSearchMatches.length > 0) {
+            // Use requestAnimationFrame to avoid forced reflow
+            requestAnimationFrame(() => {
+              fitView({
+                nodes: actualSearchMatches,
+                padding: 0.3,
+                duration: 600,
+                maxZoom: 1.2 // Keep reasonable zoom for multiple nodes
+              });
+            });
+          }
+        }, 800); // 800ms total (300ms for metadata update + 500ms for viewport animation)
+      }
     }
-  }, [searchTerm, reactFlowNodes, fitView]);
+    
+    // Cleanup timer on effect re-run or unmount
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+        searchTimerRef.current = null;
+      }
+    };
+  }, [searchTerm, fitView]); // Only depend on searchTerm change, not nodes
   
   // Save viewport on user interactions
   const handleViewportChange = useCallback(() => {

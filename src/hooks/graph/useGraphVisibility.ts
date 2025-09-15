@@ -107,7 +107,9 @@ export function useGraphVisibility({
           metadata: {
             ...node.data.metadata,
             isFiltered: filteredNodeIds.has(node.id),
-            isSelected: node.id === selectedNodeId
+            isSelected: node.id === selectedNodeId,
+            // Preserve the search match flag from useGraphLayout
+            searchMatch: node.data.metadata?.searchMatch || false
           }
         }
       }));
