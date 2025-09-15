@@ -32,16 +32,16 @@
  * @see {@link applyPureDagreLayout} for layout algorithm
  */
 
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useState, useRef, useCallback } from 'react';
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
   BackgroundVariant,
-  ReactFlowProvider
+  ReactFlowProvider,
+  useReactFlow
 } from '@xyflow/react';
-import type { Node } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import PuzzleNode from './nodes/PuzzleNode';
@@ -53,7 +53,6 @@ import { DetailPanel } from '@/components/DetailPanel';
 import { useViewConfig } from '@/hooks/useViewConfig';
 import { useQuery } from '@tanstack/react-query';
 import { graphApi } from '@/services/graphApi';
-import { useViewportManager } from '@/hooks/useGraphState';
 import { useGraphLayout } from '@/hooks/useGraphLayout';
 import { useFilterSelectors } from '@/hooks/useFilterSelectors';
 import { useFilterStore } from '@/stores/filterStore';
@@ -68,6 +67,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import { useNavigationTracking } from '@/hooks/useNavigationTracking';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { getInitialViewNodes, saveViewport, loadViewport } from '@/lib/graph/viewportUtils';
 
 /**
  * Wrapper to add data-testid to all node components for E2E testing
@@ -103,53 +103,6 @@ const nodeTypes = {
   placeholder: withTestId(PlaceholderNode),
 };
 
-/**
- * ViewportController - Component that manages viewport within React Flow context
- * Must be rendered as a child of ReactFlow to access useReactFlow hook
- */
-function ViewportController({ 
-  searchTerm,
-  selectedNodeId,
-  connectionDepth,
-  nodes 
-}: { 
-  searchTerm: string;
-  selectedNodeId: string | null;
-  connectionDepth: number | null;
-  nodes: Node[];
-}) {
-  const viewportControls = useViewportManager(searchTerm, selectedNodeId, null, connectionDepth, nodes);
-  
-  // Initial fit to view on mount or when nodes change significantly
-  const fitAll = viewportControls.fitAll;
-  
-  // Track previous node count to detect true 0→>0 transitions
-  const previousNodeCountRef = useRef(nodes.length);
-  
-  useEffect(() => {
-    const previousCount = previousNodeCountRef.current;
-    const currentCount = nodes.length;
-    
-    // Only fit when truly going from 0 to >0 nodes (initial load or after complete clear)
-    // Ignore temporary empty states during mutations
-    if (previousCount === 0 && currentCount > 0) {
-      // Small delay to ensure nodes are rendered
-      const timer = setTimeout(() => {
-        fitAll();
-      }, 100);
-      
-      // Update ref after scheduling fitAll
-      previousNodeCountRef.current = currentCount;
-      
-      return () => clearTimeout(timer);
-    }
-    
-    // Always update the ref to track current count
-    previousNodeCountRef.current = currentCount;
-  }, [nodes.length, fitAll]); // Track actual count, not boolean
-  
-  return null; // This component doesn't render anything
-}
 
 /**
  * GraphViewComponent - Internal graph visualization component.
@@ -180,7 +133,11 @@ function GraphViewComponent() {
   // Get UI store state for DetailPanel minimization
   const isDetailPanelMinimized = useUIStore(state => state.detailPanelMinimized);
   
-  // React Flow instance not needed anymore since double-click removed
+  // React Flow instance for viewport control
+  const { fitView, setViewport, getViewport } = useReactFlow();
+  
+  // Track if viewport has been initialized to prevent re-triggering
+  const hasInitializedViewport = useRef(false);
   
   // State for layout progress tracking
   const [isLayouting, setIsLayouting] = useState(false);
@@ -338,6 +295,60 @@ function GraphViewComponent() {
     }
   }, [reactFlowNodes.length, isLayouting]);
 
+  // Smart initial viewport positioning
+  useEffect(() => {
+    // Only run once when nodes are first loaded
+    if (reactFlowNodes.length > 0 && !hasInitializedViewport.current) {
+      hasInitializedViewport.current = true;
+      
+      // Short delay to ensure React Flow has rendered the nodes
+      setTimeout(() => {
+        // Try to restore saved viewport first
+        const savedViewport = loadViewport();
+        if (savedViewport) {
+          console.log('[GraphView] Restoring saved viewport');
+          setViewport(savedViewport, { duration: 800 });
+        } else {
+          // Calculate most connected nodes for initial view
+          const initialNodeIds = getInitialViewNodes(
+            reactFlowNodes,
+            reactFlowEdges,
+            isMobile
+          );
+          
+          if (initialNodeIds && initialNodeIds.length > 0) {
+            // Filter to get the actual node objects
+            const nodesToFocus = reactFlowNodes.filter(node => 
+              initialNodeIds.includes(node.id)
+            );
+            
+            console.log(`[GraphView] Focusing on ${nodesToFocus.length} most connected nodes`);
+            
+            // Use fitView to focus on the selected nodes
+            fitView({
+              nodes: nodesToFocus,
+              padding: 0.3,
+              duration: 800
+            });
+          } else {
+            // Fallback: fit all nodes if something goes wrong
+            console.log('[GraphView] Fallback: fitting all nodes');
+            fitView({ padding: 0.2, duration: 800 });
+          }
+        }
+      }, 100); // Small delay for React Flow to finish rendering
+    }
+  }, [reactFlowNodes, reactFlowEdges, isMobile, fitView, setViewport]);
+
+  // Save viewport on user interactions
+  const handleViewportChange = useCallback(() => {
+    // Only save if viewport has been initialized
+    if (hasInitializedViewport.current) {
+      const currentViewport = getViewport();
+      saveViewport(currentViewport);
+    }
+  }, [getViewport]);
+
   // For compatibility with existing code
   const layoutedNodes = reactFlowNodes;
   const totalUniverseNodes = serverNodes.length;
@@ -474,6 +485,7 @@ function GraphViewComponent() {
           edges={reactFlowEdges}
           onNodeClick={handleNodeClick}
           onSelectionChange={handleSelectionChange}
+          onMoveEnd={handleViewportChange}
           nodeTypes={nodeTypes}
           minZoom={0.05}
           maxZoom={2}
@@ -492,12 +504,6 @@ function GraphViewComponent() {
           preventScrolling={isMobile} // Prevent page scroll during graph interaction on mobile
           noDragClassName="nodrag" // Selective drag prevention
         >
-          <ViewportController 
-            searchTerm={searchTerm}
-            selectedNodeId={selectedNodeId}
-            connectionDepth={connectionDepth}
-            nodes={reactFlowNodes}
-          />
           <Background 
             variant={BackgroundVariant.Dots} 
             gap={16} 
